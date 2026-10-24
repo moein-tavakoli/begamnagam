@@ -70,7 +70,8 @@ class RewriteUnavailable(Exception):
 
 def normalized(text):
     text = unicodedata.normalize("NFKC", text).translate(str.maketrans({"ي": "ی", "ك": "ک"}))
-    text = "".join(c for c in text if unicodedata.category(c) not in {"Mn", "Cf"})
+    # Tatweel is visual elongation, not a letter; strip it before abuse matching.
+    text = "".join(c for c in text if c != "\u0640" and unicodedata.category(c) not in {"Mn", "Cf"})
     return re.sub(r"\s+", " ", text).strip()
 
 

@@ -1,5 +1,20 @@
 # Versions
 
+## 0.3.1 — Infrastructure and moderation verification
+
+- A fixed 120-case synthetic Persian/English corpus covers normal topics, prompt
+  injection, contact details and obfuscated abuse; Arabic tatweel bypass is fixed.
+- Fully resolved backend dependency lock is used by Docker and CI.
+- Celery event/control queues use exclusive connections for RabbitMQ4.4; durable
+  task messages keep late acknowledgement and worker-loss redelivery.
+- Current phase index now follows the approved proposal numbering.
+- Full Compose image build succeeds with an optional verified wheel cache.
+- Fresh isolated PostgreSQL17/Redis7.4/RabbitMQ4.4 environment passes readiness,
+  demo smoke and all 46 backend tests (no skips).
+- Actual broker/worker/beat outage preserves the paid outbox and recovers the same
+  order; database inspection confirms one capture and one delivery attempt.
+- No changes to real-provider activation or push authorization.
+
 ## 0.3.0 — Phase-two local demo and PWA
 
 - Final message preview includes service identity, opt-out URL, segment count and frozen recipient.

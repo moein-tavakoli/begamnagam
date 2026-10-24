@@ -1,6 +1,6 @@
 # مراجع فنی
 
-تاریخ بررسی: ۲۴ اکتبر ۲۰۲۶. ابتدا `resolve-library-id` از Context7 MCP فراخوانی شد؛ سرویس خطای `Monthly quota exceeded` برگرداند. ادامهٔ پیاده‌سازی بر اساس مستندات رسمی و آزمون اجرای محلی انجام شد. نسخه‌های دقیق بسته‌ها در `backend/requirements.txt` و `frontend/package-lock.json` مرجع نصب‌اند.
+تاریخ بررسی: ۲۴ اکتبر ۲۰۲۶. ابتدا `resolve-library-id` از Context7 MCP فراخوانی شد؛ سرویس خطای `Monthly quota exceeded` برگرداند. ادامهٔ پیاده‌سازی بر اساس مستندات رسمی و آزمون اجرای محلی انجام شد. نسخه‌های دقیق بسته‌ها در `backend/requirements.lock.txt` و `frontend/package-lock.json` مرجع نصب‌اند.
 
 - [Django 5.2 documentation](https://docs.djangoproject.com/en/5.2/) — تنظیمات، احراز هویت، CSRF، تراکنش و پنل مدیریت.
 - [Django transactions](https://docs.djangoproject.com/en/5.2/topics/db/transactions/) — atomic و ثبت کار پس از commit.
@@ -17,3 +17,5 @@
 - [Ollama generate API](https://docs.ollama.com/api/generate) — انتخاب اختیاری متن با مدل محلی؛ نصب یا دانلود خودکار مدل انجام نمی‌شود.
 
 کتابخانهٔ ناشناس‌سازی کامل، تضمین درستی مدل یا تضمین تحویل پیامک فرض نشده است. مستندات فازبندی، قابلیت‌های فعلی را از نیازمندی‌های عرضهٔ عمومی جدا می‌کنند.
+
+مراجع اصلاح صف در نسخه۰٫۳٫۱: [تنظیمات Celery5.6](https://docs.celeryq.dev/en/v5.6.3/userguide/configuration.html) و [انواع صف RabbitMQ4.4](https://www.rabbitmq.com/docs/queues). نتیجه عملی در [گزارش زیرساخت](phase-two/INFRASTRUCTURE.md) ثبت است.

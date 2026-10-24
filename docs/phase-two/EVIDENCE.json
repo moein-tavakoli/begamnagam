@@ -1,0 +1,83 @@
+{
+  "release": "0.3.1",
+  "date": "2026-10-24",
+  "branch": "codex/product-mvp",
+  "push_performed": false,
+  "implementation_scope": [
+    0,
+    1,
+    2
+  ],
+  "phase_three_started": false,
+  "live_providers_called": false,
+  "g2_acceptance": "OPEN_FOR_DEVICE_ACCESSIBILITY_AND_REMAINING_MATRIX_EVIDENCE",
+  "backend": {
+    "native": {
+      "tests": 46,
+      "failed": 0,
+      "skipped": 0,
+      "database": "PostgreSQL17",
+      "cache_database": 15
+    },
+    "linux_container": {
+      "tests": 46,
+      "failed": 0,
+      "skipped": 0,
+      "database": "PostgreSQL17",
+      "cache_database": 15
+    },
+    "synthetic_moderation_cases": 120,
+    "accepted_only_as_reviewed_template": 48,
+    "rejected": 72
+  },
+  "frontend": {
+    "tests": 10,
+    "failed": 0,
+    "typecheck": "PASS",
+    "native_production_build": "PASS",
+    "linux_image_build": "PASS"
+  },
+  "clean_stack": {
+    "project": "begamnagam-g2",
+    "origin": "http://localhost:3080",
+    "api_port": 8088,
+    "database_initialization": "fresh named volumes",
+    "rabbitmq": "4.4",
+    "readiness": "PASS",
+    "migration_consistency": "PASS",
+    "pip_check": "PASS",
+    "smoke": "PASS",
+    "foundation_probe": "PASS",
+    "actual_broker_worker_beat_outage_recovery": "PASS",
+    "paid_order_single_capture_and_delivery_attempt": "PASS",
+    "cleanup": "test containers/network removed after verification; named volumes preserved"
+  },
+  "browser": {
+    "environment": "desktop Chromium in-app browser, mobile viewport; not physical phone",
+    "latest_viewport": [
+      390,
+      844
+    ],
+    "horizontal_overflow": false,
+    "visible_version": "0.3.1",
+    "demo_journey": "PASS",
+    "private_cache_allowlist_inspection": "PASS",
+    "dirty_checkout_update_rejected": "PASS",
+    "explicit_safe_update": "PASS",
+    "logout_and_back_private_state_reset": "PASS"
+  },
+  "not_tested": [
+    "physical Android/iOS installation and standalone journey",
+    "complete WCAG2.2AA audit and screenreader matrix",
+    "full two-tab update/rollback matrix",
+    "mobile performance budgets and field Core Web Vitals",
+    "GitHub hosted CI (no push)",
+    "live model quality/providers/pilot/load and later operational gates"
+  ],
+  "historical_packages_manifest_validation": "PASS_UNCHANGED",
+  "prior_local_commits": {
+    "0.2.0": "4a327a1",
+    "0.3.0": "00d558b"
+  },
+  "local_preview": "http://localhost:3000/ — version0.3.1 checked after final restart"
+}

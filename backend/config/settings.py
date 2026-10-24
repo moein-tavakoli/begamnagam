@@ -126,3 +126,12 @@ SESSION_COOKIE_AGE = 60 * 60 * 24 * 7
 LOGGING = {"version": 1, "disable_existing_loggers": False,
     "handlers": {"console": {"class": "logging.StreamHandler"}},
     "root": {"handlers": ["console"], "level": "INFO"}}
+
+# RabbitMQ >=4.3 rejects transient non-exclusive event/control queues.
+# These short-lived Celery queues belong to a single connection; task queues
+# remain durable and persistent. Do not re-enable deprecated broker features.
+CELERY_EVENT_QUEUE_EXCLUSIVE = True
+CELERY_CONTROL_QUEUE_EXCLUSIVE = True
+CELERY_TASK_DEFAULT_DELIVERY_MODE = "persistent"
+CELERY_TASK_ACKS_LATE = True
+CELERY_TASK_REJECT_ON_WORKER_LOST = True

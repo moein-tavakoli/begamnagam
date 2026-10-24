@@ -1,0 +1,93 @@
+{
+  "package_id": "BN-G2-LOCAL-031",
+  "release": "0.3.1",
+  "date": "2026-10-24",
+  "formal_g2_acceptance": "OPEN",
+  "path_base": "repository_root",
+  "files": [
+    {
+      "path": "docs/phase-two/AUTHORIZATION.json",
+      "sha256": "fe0d58c93897b19d8d52d607163420f09199c13ae63a7360e4ef118558d121ee"
+    },
+    {
+      "path": "docs/phase-two/EVIDENCE.json",
+      "sha256": "b4bcb0e7333a81a7268e753ec467c28e9431cd80bfe2e97a5b68f325edaf4790"
+    },
+    {
+      "path": "docs/phase-two/INFRASTRUCTURE.md",
+      "sha256": "df64006aeee937109064d98169f0b5e057a09a0ce4f3d41af124e9f4329f234c"
+    },
+    {
+      "path": "docs/phase-two/README.fa.md",
+      "sha256": "12ec616b35bff7b40213985978829dc39590a35ba9689fe61a1c6482ab45243f"
+    },
+    {
+      "path": "docs/phase-two/demo-receipt.png",
+      "sha256": "cb8df52e1a90fbb0af7ec5e0e7363b757abadcafb4df4dab39be483b24744ab3"
+    },
+    {
+      "path": "docs/phase-two/mobile-home.png",
+      "sha256": "f402bbfbbb29d678e12e751994646c2c1876e2ed0a9ad2d21a2dc40a8aad2318"
+    },
+    {
+      "path": "README.md",
+      "sha256": "5d14c97e11cb6b9554b1056a2fb24d3c89b03bb6de11bdaa45a9a45cac8e5cf7"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "be44c007241b667c18c9a910888a1cd5601249cf3908f4083cfa94ff2c9f9f72"
+    },
+    {
+      "path": "docs/phases.md",
+      "sha256": "057ab41dd8cd9648b5f6610e9cfe91ae1eb4e594af0ed37aad0dcae83e23b1d1"
+    },
+    {
+      "path": "docs/verification.md",
+      "sha256": "730c4f959d9e2ee7a1ee4d77415503e9f2a105bd4d521cd2990f9d4664a1ca0f"
+    },
+    {
+      "path": "docs/operations.md",
+      "sha256": "1fb91b52f1d25bfdc54b9c0f8bbe95e7aadeb41f307819fa7cacb8a248f8e4b6"
+    },
+    {
+      "path": "backend/config/settings.py",
+      "sha256": "cc998a7f2684a58f00a06ffc4cda6891bc0fb6eb836d08cf0096af03bc017a99"
+    },
+    {
+      "path": "backend/core/moderation.py",
+      "sha256": "2c10cecf1bead508cee71b4c55e8d7e35510238cbfaa56522e18d608f8ac03c2"
+    },
+    {
+      "path": "backend/core/test_moderation_corpus.py",
+      "sha256": "2d7094f20566f2f9458916d8e94e397b4cd3056426f741b31b4840e1423c24f4"
+    },
+    {
+      "path": "backend/core/fixtures/moderation-corpus.json",
+      "sha256": "958f6ecba42fc44c6432f3a8f98896686faaef60e71c9a086623a2e1c9f3f501"
+    },
+    {
+      "path": "backend/requirements.lock.txt",
+      "sha256": "ccd03a7dcc0661759eecbdefe140c466fc682a22a7b75f46ade1bf265059df6e"
+    },
+    {
+      "path": "backend/Dockerfile",
+      "sha256": "217c36f2b7aad2ce8837f6ef9db1a8fa5104b85790746af5bd2fe11211f91660"
+    },
+    {
+      "path": "frontend/package.json",
+      "sha256": "f84728f686afedfb678999f7f5264143ad7403361d0c32e7a6b1416dbebc917f"
+    },
+    {
+      "path": "frontend/package-lock.json",
+      "sha256": "0e0a37ad77818fedc0a33b0fc15c099aa771239737345832dfdd3169e760e1f2"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "2a109f7e06727a3a1e81c131918727a86a906f16011aa6c2839be45b20b31c4b"
+    },
+    {
+      "path": "docs/references.md",
+      "sha256": "f519a20177993ca6b10f64217b76abc8dbed81d58dc7dd5f80ae668db0efe9db"
+    }
+  ]
+}

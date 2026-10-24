@@ -1,5 +1,14 @@
 # Versions
 
+## 0.8.1 — Kavenegar environment configuration
+
+- Exposed existing Kavenegar OTP/SMS/status credentials in the root environment
+  template and shared backend/worker Compose environment, with release placeholders.
+- Documented API key, sender line and OTP template setup; credentials stay server-side.
+- Demo and disabled provider-network defaults remain in effect; no vendor calls.
+- All42 provider/API tests pass on PostgreSQL and Redis; synthetic Compose checks
+  confirm credentials reach backend services only and the private env stays ignored.
+
 ## 0.8.0 — Full-screen mobile onboarding and composer
 
 - Replaced the scrolling home page with intro/composer slides and explicit Next/Back controls.

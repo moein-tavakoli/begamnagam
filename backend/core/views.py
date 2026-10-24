@@ -1,5 +1,6 @@
 import hmac
 import json
+import logging
 import secrets
 import uuid
 from datetime import timedelta
@@ -17,6 +18,21 @@ from .models import Account, ModerationAudit, OTPChallenge, Order, Preview, Reci
 from .moderation import CATEGORIES, ModerationRejected, RewriteUnavailable, rewrite
 from .privacy import DIGITS, decrypt, digest, encrypt, mask, normalize_phone
 from .services import APIError, api, is_product_authenticated, limited
+
+logger = logging.getLogger(__name__)
+
+
+def otp_failure_reason(error):
+    reason = str(error)
+    known = {'tls_certificate_verification_failed', 'provider_connection_failed',
+        'daily_budget_exhausted', 'provider_cost_halt', 'cost_ceiling_missing',
+        'missing_sms_key', 'invalid_otp_configuration', 'outside_pilot_allowlist',
+        'outside_otp_test_allowlist', 'provider_network_disabled', 'local_real_otp_scope_violation',
+        'http_uncertain', 'transport_or_format', 'sms_unknown_response',
+        'sms_ambiguous_entries', 'sms_unbound_response', 'sms_delivery_failed', 'sms_delivery_unknown'}
+    if reason in known or (reason.startswith('sms_rejected_') and len(reason) == 16 and reason[-3:].isdigit()):
+        return reason
+    return 'provider_failure'
 
 
 def body(request):
@@ -98,6 +114,7 @@ def request_otp(request):
         return {"challenge_id": str(challenge_id), "debug_code": code, "demo_mode": True, "expires_in": 300}
     from .providers import Kavenegar, ProviderDisabled, ProviderUnknown, ProviderRejected
     from .budget import reserve_cost
+    delivery_status = 'accepted'
     try:
         if settings.PROVIDER_NETWORK_MODE == 'external' and phone_hash not in settings.PILOT_RECIPIENT_HASHES:
             raise ProviderDisabled('outside_pilot_allowlist')
@@ -105,13 +122,24 @@ def request_otp(request):
         result = Kavenegar().otp(phone=phone, code=code)
         from .budget import observe_cost
         observe_cost("otp:" + str(challenge_id), result.cost_rial)
-    except (ProviderRejected, ProviderDisabled):
+        if result.status == 'failed':
+            raise ProviderRejected('sms_delivery_failed')
+        if result.status not in {'accepted', 'delivered'}:
+            raise ProviderUnknown('sms_delivery_unknown')
+    except (ProviderRejected, ProviderDisabled) as error:
+        reason = otp_failure_reason(error)
+        logger.warning('OTP unavailable request_id=%s reason=%s', request.public_request_id, reason)
         OTPChallenge.objects.filter(pk=challenge_id).update(consumed_at=timezone.now())
-        raise APIError('otp_unavailable', 'ارسال کد فعلاً ممکن نیست؛ کمی بعد تلاش کن.', 503) from None
-    except ProviderUnknown:
+        message = ('ارتباط امن با سرویس پیامک برقرار نشد؛ تنظیمات اتصال سرور باید بررسی شود.'
+            if reason == 'tls_certificate_verification_failed' else 'ارسال کد فعلاً ممکن نیست؛ کمی بعد تلاش کن.')
+        raise APIError('otp_unavailable', message, 503) from None
+    except ProviderUnknown as error:
         # The OTP may arrive; retain this challenge and never expose its code.
-        pass
-    return {"challenge_id": str(challenge_id), "demo_mode": False, "expires_in": 300}
+        delivery_status = 'unknown'
+        logger.warning('OTP outcome unknown request_id=%s reason=%s', request.public_request_id, otp_failure_reason(error))
+    else:
+        logger.info('OTP provider accepted request_id=%s reference=%s', request.public_request_id, result.reference)
+    return {"challenge_id": str(challenge_id), "demo_mode": False, "expires_in": 300, "delivery_status": delivery_status}
 
 
 @api(["POST"])

@@ -1,5 +1,7 @@
 import json
 import re
+import socket
+import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -74,6 +76,16 @@ def post(base, path, payload, allowed_hosts, form=False, *, otp=False):
             if not isinstance(result, dict):
                 raise ProviderUnknown('invalid_response')
             return result
+    except urllib.error.URLError as exc:
+        # Certificate/DNS/connect rejection occurs before an HTTP submission.
+        # Never stringify the error: it can contain a key-bearing request URL.
+        if isinstance(exc.reason, ssl.SSLCertVerificationError):
+            raise ProviderRejected('tls_certificate_verification_failed') from None
+        if isinstance(exc.reason, (socket.gaierror, ConnectionRefusedError)):
+            raise ProviderRejected('provider_connection_failed') from None
+        raise ProviderUnknown('transport_or_format') from None
+    except ssl.SSLCertVerificationError:
+        raise ProviderRejected('tls_certificate_verification_failed') from None
     except (OSError, ValueError, TypeError) as exc:
         # HTTP errors include request URLs (Kavenegar embeds its key). Discard them.
         raise ProviderUnknown('transport_or_format') from None

@@ -1,5 +1,19 @@
 # Versions
 
+## 0.8.4 — Native OTP TLS failure and diagnostics
+
+- Configured the private native Python runtime to use the system CA bundle;
+  certificate and hostname verification remain enabled. Public no-key probe succeeds.
+- Distinguish pre-submission certificate/DNS/connect failures from ambiguous timeouts:
+  definite failure returns503, unknown keeps its challenge without automatic resend.
+- Added safe OTP diagnostics and explicit accepted/unknown response/UI status;
+  failed provider delivery status cannot claim acceptance.
+- Fixed HTTP test doubles to model the response object actually read by urllib;
+  regression cases cover TLS privacy, DNS, timeout and failed provider status.
+-99 backend tests and13 frontend tests/typecheck pass. A single authorized real
+  OTP was accepted by Kavenegar; the user completed code verification in the browser.
+- Payment/order delivery remain demo. Native services restarted; no image build or push.
+
 ## 0.8.3 — Isolated real OTP testing in the local demo
 
 - Added explicit local OTP authorization with a keyed test-number allowlist,

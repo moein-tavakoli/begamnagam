@@ -19,6 +19,7 @@ export function AuthGate({
   const [code, setCode] = useState("");
   const [challenge, setChallenge] = useState("");
   const [debugCode, setDebugCode] = useState("");
+  const [deliveryStatus, setDeliveryStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [fieldError, setFieldError] = useState("");
@@ -51,12 +52,13 @@ export function AuthGate({
     setFieldError("");
     setBusy(true);
     try {
-      const result = await api<{ challenge_id: string; debug_code?: string }>(
+      const result = await api<{ challenge_id: string; debug_code?: string; delivery_status?: string }>(
         "/auth/request-otp",
         { method: "POST", body: { phone: normalizePhone(phone) } },
       );
       setChallenge(result.challenge_id);
       setDebugCode(result.debug_code || "");
+      setDeliveryStatus(result.delivery_status || "");
       window.setTimeout(() => document.getElementById("otp-code")?.focus(), 0);
     } catch (error) {
       setError(errorMessage(error));
@@ -155,6 +157,11 @@ export function AuthGate({
           <label htmlFor="otp-code">
             کد تأیید شماره <bdi>{normalizePhone(phone)}</bdi>
           </label>
+          {deliveryStatus === "unknown" && (
+            <p className="muted small" role="status">
+              نتیجهٔ ارسال کد هنوز مشخص نیست. اگر پیامک رسید، کد را وارد کن؛ ارسال خودکار تکرار نمی‌شود.
+            </p>
+          )}
           {data?.demo_mode && debugCode && (
             <p className="demo-code">
               کد ورود آزمایشی: <strong dir="ltr">{debugCode}</strong> — پیامک

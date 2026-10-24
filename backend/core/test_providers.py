@@ -3,6 +3,9 @@ import json
 import os
 import subprocess
 import sys
+import ssl
+import socket
+import urllib.error
 from urllib.parse import parse_qs
 from unittest.mock import patch
 from datetime import timedelta
@@ -213,6 +216,7 @@ class ProviderContracts(TestCase):
         response = self.post('/auth/request-otp', {'phone':'09911234567'})
         self.assertEqual(response.status_code, 200)
         self.assertNotIn('debug_code', response.json())
+        self.assertEqual(response.json()['delivery_status'], 'unknown')
         self.assertEqual(self.fixture.calls.count('send'), 1)
         verified = self.post('/auth/verify-otp', {'challenge_id':response.json()['challenge_id'],
             'code': self.fixture.codes['09911234567']})
@@ -295,7 +299,7 @@ class LocalRealOTPTests(TestCase):
         self.addCleanup(self.config.disable)
         self.wire = patch('core.providers.http.urllib.request.build_opener').start()
         self.addCleanup(patch.stopall)
-        self.wire.return_value.open.return_value.__enter__.return_value.read.return_value = json.dumps(
+        self.wire.return_value.open.return_value.read.return_value = json.dumps(
             {'return': {'status': 200}, 'entries': [{'messageid':700, 'status':1, 'cost':500}]}).encode()
         self.client.get('/api/v1/bootstrap')
 
@@ -306,6 +310,7 @@ class LocalRealOTPTests(TestCase):
         response = self.submit('/auth/request-otp', {'phone':'09911234567'})
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.json()['demo_mode'])
+        self.assertEqual(response.json()['delivery_status'], 'accepted')
         self.assertNotIn('debug_code', response.json())
         request = self.wire.return_value.open.call_args.args[0]
         self.assertEqual(request.full_url, 'https://api.kavenegar.com/v1/synthetic-key/sms/send.json')
@@ -397,3 +402,38 @@ class LocalRealOTPTests(TestCase):
                 {'KAVENEGAR_BASE_URL':'https://api.kavenegar.com/extra'}):
             with self.subTest(fields=tuple(invalid)):
                 self.assertNotEqual(subprocess.run(command,env=dict(env,**invalid),capture_output=True).returncode, 0)
+
+    def test_certificate_failure_is_definite_and_logged_without_private_data(self):
+        from .models import OTPChallenge
+        sensitive = 'https://api.kavenegar.com/v1/synthetic-key/sms/send.json?phone=09911234567&code=123456'
+        error = urllib.error.URLError(ssl.SSLCertVerificationError(1, sensitive))
+        self.wire.return_value.open.side_effect = error
+        with self.assertLogs('core.views', level='WARNING') as logs:
+            response = self.submit('/auth/request-otp', {'phone':'09911234567'})
+        self.assertEqual(response.status_code, 503)
+        self.assertNotIn('challenge_id', response.json())
+        self.assertNotIn('debug_code', response.json())
+        self.assertIn('tls_certificate_verification_failed', '\n'.join(logs.output))
+        for private in ('synthetic-key', '09911234567', '123456', 'https://'):
+            self.assertNotIn(private, '\n'.join(logs.output))
+            self.assertNotIn(private, response.content.decode())
+        self.assertIsNotNone(OTPChallenge.objects.latest('created_at').consumed_at)
+        self.assertEqual(self.wire.return_value.open.call_count, 1)
+
+    def test_dns_failure_and_uncertain_timeout_have_distinct_outcomes(self):
+        self.wire.return_value.open.side_effect = urllib.error.URLError(socket.gaierror('synthetic lookup failure'))
+        response = self.submit('/auth/request-otp', {'phone':'09911234567'})
+        self.assertEqual(response.status_code, 503)
+        self.wire.return_value.open.side_effect = urllib.error.URLError(TimeoutError('synthetic timeout'))
+        response = self.submit('/auth/request-otp', {'phone':'09911234567'})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['delivery_status'], 'unknown')
+        self.assertNotIn('debug_code', response.json())
+        self.assertEqual(self.wire.return_value.open.call_count, 2)
+
+    def test_provider_failed_status_does_not_claim_accepted(self):
+        self.wire.return_value.open.return_value.read.return_value = json.dumps(
+            {'return': {'status': 200}, 'entries': [{'messageid':700, 'status':6, 'cost':500}]}).encode()
+        response = self.submit('/auth/request-otp', {'phone':'09911234567'})
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(self.wire.return_value.open.call_count, 1)

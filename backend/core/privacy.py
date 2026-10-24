@@ -2,7 +2,7 @@ import hashlib
 import hmac
 import re
 
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, MultiFernet
 from django.conf import settings
 
 
@@ -33,7 +33,8 @@ def encrypt(value):
 
 
 def decrypt(value):
-    return Fernet(settings.PHONE_ENCRYPTION_KEY.encode()).decrypt(value.encode()).decode()
+    keys = [settings.PHONE_ENCRYPTION_KEY, *settings.PHONE_ENCRYPTION_FALLBACK_KEYS]
+    return MultiFernet([Fernet(k.encode()) for k in keys]).decrypt(value.encode()).decode()
 
 
 def mask(phone):

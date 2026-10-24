@@ -1,5 +1,19 @@
 # Versions
 
+## 0.5.0 — Recipient safety and operations
+
+- Activated256-bit fragment capabilities for account-free stop/report; GET is inert,
+  CSRF is required, reports deduplicate and expose no party identity.
+- Capability snapshots/report details encrypted at rest; additive data migration,
+  recent OTP for reactivation/deletion, key rotation and bounded retention/holds.
+- Audited, permission-scoped halt/resume/suspend/triage/manual-refund actions and
+  aggregate alerts; observed provider cost overages stop further spending.
+- Sending-hour/positive-pilot gates, cross-tab logout/account reset and all-tab
+  idle acknowledgements before a PWA update can activate.
+- Encrypted backup and non-destructive restore rehearsal with latest privacy overlays,
+  finance validation and query-only recovery; restored dispatch stays halted.
+-79 backend/13 frontend tests pass; human evaluation stays deferred.
+
 ## 0.4.0 — Provider protocols and reconciliation
 
 - Bounded Kavenegar OTP/SMS/status and Zarinpal request/verify/inquiry/reverse clients,

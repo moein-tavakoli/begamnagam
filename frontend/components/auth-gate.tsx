@@ -9,10 +9,12 @@ import { Icon } from "./icons";
 
 export function AuthGate({
   purpose = "برای ادامه، شماره خودت را تأیید کن.",
+  forceReverify = false,
 }: {
   purpose?: string;
+  forceReverify?: boolean;
 }) {
-  const { data, authenticate } = useApp();
+  const { data, authenticate, reload } = useApp();
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [challenge, setChallenge] = useState("");
@@ -21,7 +23,7 @@ export function AuthGate({
   const [error, setError] = useState("");
   const [fieldError, setFieldError] = useState("");
   const confirmation = useRef<HTMLDivElement>(null);
-  if (data?.authenticated)
+  if (data?.authenticated && !forceReverify)
     return (
       <div
         className="auth-confirmed"
@@ -82,6 +84,7 @@ export function AuthGate({
         body: { challenge_id: challenge, code: latinDigits(code) },
       });
       authenticate(result.phone_masked);
+      await reload();
       window.setTimeout(
         () => confirmation.current?.focus({ preventScroll: true }),
         0,

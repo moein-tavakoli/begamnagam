@@ -12,6 +12,9 @@ export type Bootstrap = {
   categories: Category[];
   rewrite_mode: string;
   payment_backend?: string;
+  recent_auth?: boolean;
+  support_contact?: string;
+  session_identity?: string;
 };
 export type Preview = {
   preview_id: string;
@@ -127,7 +130,7 @@ export async function api<T>(
         "پاسخ سرویس معتبر نیست. دوباره تلاش کنید.",
         "invalid_response",
       );
-    if(path === "/auth/logout" && typeof window !== "undefined") window.dispatchEvent(new Event("privacy-reset"));
+    if(["/auth/logout", "/auth/verify-otp"].includes(path) && typeof window !== "undefined") window.dispatchEvent(new Event("privacy-reset"));
     return data as T;
   } catch (error) {
     if (timedOut)

@@ -34,6 +34,8 @@ def apply_result(order, state, event, delivery, result):
         delivery.provider_reference = result.reference
     if result.status in {'accepted', 'delivered'}:
         if not delivery.accepted_at:
+            from .recipient import activate_grant
+            activate_grant(order)
             delivery.accepted_at = timezone.now()
             state.last_sent_at = timezone.now()
             state.save(update_fields=['last_sent_at', 'updated_at'])
@@ -68,7 +70,9 @@ def submit_delivery(event_id):
         delivery = MessageDelivery.objects.select_for_update().get(order=order)
         if delivery.status != 'queued' or event.state != 'pending' or event.available_at > timezone.now():
             return
-        if state.blocked or order.owner.account.suspended:
+        from .safety import defer_until_open
+        if defer_until_open(event): return
+        if state.blocked or order.owner.account.suspended or order.owner.account.deletion_requested_at:
             fail_paid(order, event, delivery, 'recipient_unavailable', True)
             return
         if settings.SMS_BACKEND != 'kavenegar':
@@ -115,6 +119,8 @@ def submit_delivery(event_id):
             event.state = 'unknown'
             event.save(update_fields=['state'])
         else:
+            from .budget import observe_cost
+            observe_cost("sms:" + str(delivery.submission_key), result.cost_rial)
             apply_result(order, state, event, delivery, result)
 
 

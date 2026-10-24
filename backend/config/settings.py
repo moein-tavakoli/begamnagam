@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions", "django.contrib.messages", "django.contrib.staticfiles", "core",
 ]
 MIDDLEWARE = [
+    "core.middleware.PrivateResponses",
     "django.middleware.security.SecurityMiddleware", "whitenoise.middleware.WhiteNoiseMiddleware", "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware", "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware", "django.contrib.messages.middleware.MessageMiddleware",
@@ -82,7 +83,7 @@ if not DEMO_MODE and not DATABASE_URL:
 
 REDIS_URL = os.getenv("REDIS_URL", "")
 if REDIS_URL:
-    CACHES = {"default": {"BACKEND": "django.core.cache.backends.redis.RedisCache", "LOCATION": REDIS_URL}}
+    CACHES = {"default": {"BACKEND": "django.core.cache.backends.redis.RedisCache", "LOCATION": REDIS_URL, "KEY_PREFIX": os.getenv("CACHE_KEY_PREFIX", "")}}
 else:
     CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "begamnagam"}}
 if not DEMO_MODE and not REDIS_URL:
@@ -168,3 +169,24 @@ if PROVIDER_NETWORK_MODE == 'external':
         raise ImproperlyConfigured('External providers require credentials and an explicit pilot recipient allowlist')
     if min(PROVIDER_DAILY_BUDGET_RIAL, SMS_MAX_COST_RIAL, OTP_MAX_COST_RIAL) <= 0:
         raise ImproperlyConfigured('External providers require positive bounded cost configuration')
+
+PHONE_ENCRYPTION_FALLBACK_KEYS = list(filter(None, os.getenv('PHONE_ENCRYPTION_FALLBACK_KEYS', '').split(',')))
+SENDING_WINDOW_ENABLED = flag('SENDING_WINDOW_ENABLED', not DEMO_MODE)
+SENDING_START_HOUR = int(os.getenv('SENDING_START_HOUR', '9'))
+SENDING_END_HOUR = int(os.getenv('SENDING_END_HOUR', '21'))
+PILOT_POSITIVE_ONLY = flag('PILOT_POSITIVE_ONLY', not DEMO_MODE)
+SUPPORT_CONTACT = os.getenv('SUPPORT_CONTACT', '')
+if not 0 <= SENDING_START_HOUR < SENDING_END_HOUR <= 24:
+    raise ImproperlyConfigured('Invalid sending window')
+for fallback_key in PHONE_ENCRYPTION_FALLBACK_KEYS:
+    try:
+        Fernet(fallback_key.encode())
+    except (ValueError, TypeError):
+        raise ImproperlyConfigured('Invalid fallback encryption key') from None
+
+if PROVIDER_NETWORK_MODE == 'external' and (not SUPPORT_CONTACT or not flag('TERMS_APPROVED') or not flag('PRIVACY_POLICY_APPROVED')):
+    raise ImproperlyConfigured('External activation requires support contact and reviewed terms/privacy policy')
+
+CELERY_TASK_DEFAULT_QUEUE = os.getenv('CELERY_TASK_DEFAULT_QUEUE', 'celery')
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+BENCHMARK_RUN_ID = os.getenv('BENCHMARK_RUN_ID', '') if DEMO_MODE else ''

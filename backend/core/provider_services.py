@@ -19,6 +19,8 @@ def request_refund(payment, reason):
 def begin_payment(user, order_id, key):
     if settings.PAYMENT_BACKEND != 'zarinpal':
         raise APIError('payment_disabled', 'درگاه هنوز فعال نشده است.', 503)
+    from .safety import ensure_open
+    ensure_open()
     try:
         request_key = uuid.UUID(str(key))
     except (ValueError, TypeError, AttributeError):
@@ -87,7 +89,7 @@ def verify_payment(attempt_id):
         return
     with transaction.atomic():
         order = Order.objects.select_for_update().get(pk=meta['order_id'])
-        state = RecipientState.objects.select_for_update().get(phone_hash=order.recipient_hash)
+        state = RecipientState.objects.select_for_update().filter(phone_hash=order.recipient_hash).first()
         attempt = PaymentAttempt.objects.select_for_update().get(pk=attempt_id)
         if attempt.status == 'verified':
             return
@@ -97,7 +99,7 @@ def verify_payment(attempt_id):
         attempt.lease_until = None
         FinancialEvent.objects.get_or_create(payment=attempt, kind='payment', defaults={'amount_toman': amount})
         valid = not order.paid_at and order.status == 'awaiting_payment' and order.created_at + PAYMENT_WINDOW > timezone.now()
-        valid = valid and not state.blocked and not order.owner.account.suspended
+        valid = valid and state is not None and not state.blocked and not order.owner.account.suspended and not order.owner.account.deletion_requested_at
         if valid:
             attempt.applied_to_order = True
             order.paid_at = timezone.now()
@@ -111,6 +113,9 @@ def verify_payment(attempt_id):
         else:
             # Late success or extra receipt is captured but never creates another SMS.
             request_refund(attempt, 'late_or_unavailable')
+            if not order.paid_at:
+                order.status = 'cancelled'
+                order.save(update_fields=['status', 'updated_at'])
         attempt.save(update_fields=['provider_reference', 'status', 'checked_at', 'lease_until', 'applied_to_order', 'updated_at'])
 
 

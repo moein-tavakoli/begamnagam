@@ -21,6 +21,7 @@ const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const generation=useRef(0);
+  const identity=useRef<string|undefined>(undefined);
   const [privacyEpoch,setPrivacyEpoch]=useState(0);
   const [data, setData] = useState<Bootstrap | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,7 +32,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setError("");
     try {
       const result=await api<Bootstrap>("/bootstrap");
-      if(current===generation.current) setData(result);
+      if(current===generation.current) {
+        if(identity.current !== result.session_identity) setPrivacyEpoch(v=>v+1);
+        identity.current=result.session_identity;
+        setData(result);
+      }
     } catch (error) {
       if(current===generation.current){setData(null);setError(errorMessage(error));}
     } finally {
@@ -42,11 +47,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     void reload();
   }, [reload]);
   useEffect(()=>{
-    const clear=()=>{generation.current+=1;setData(null);setPrivacyEpoch(v=>v+1);};
-    const restore=(event:PageTransitionEvent)=>{if(event.persisted){clear();void reload();}};
-    window.addEventListener('privacy-reset',clear);
+    const channel=typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('begamnagam-session') : null;
+    const clear=()=>{generation.current+=1;identity.current=undefined;setData(null);setPrivacyEpoch(v=>v+1);void reload();};
+    const local=()=>{clear();channel?.postMessage('session-changed');};
+    const remote=(event:MessageEvent)=>{if(event.data==='session-changed')clear();};
+    const restore=(event:PageTransitionEvent)=>{if(event.persisted)clear();};
+    const focus=()=>{void reload();};
+    window.addEventListener('privacy-reset',local);
     window.addEventListener('pageshow',restore);
-    return ()=>{window.removeEventListener('privacy-reset',clear);window.removeEventListener('pageshow',restore);};
+    window.addEventListener('focus',focus);
+    channel?.addEventListener('message',remote);
+    return ()=>{window.removeEventListener('privacy-reset',local);window.removeEventListener('pageshow',restore);window.removeEventListener('focus',focus);channel?.close();};
   },[reload]);
   const authenticate = (phone: string) =>
     setData((current) =>

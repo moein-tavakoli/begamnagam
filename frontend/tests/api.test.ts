@@ -103,3 +103,14 @@ test("offline and non-JSON proxy failures become recoverable service errors", as
       error instanceof ApiError && error.code === "service_error",
   );
 });
+
+
+test('gateway navigation is restricted to documented HTTPS hosts or explicit demo loopback', async () => {
+  const {approvedPaymentRedirect}=await import('../lib/api.ts');
+  assert.match(approvedPaymentRedirect('https://sandbox.zarinpal.com/pg/StartPay/S123',false),/^https:/);
+  assert.throws(()=>approvedPaymentRedirect('https://sandbox.zarinpal.com.evil.invalid/pg/StartPay/S123',false));
+  assert.throws(()=>approvedPaymentRedirect('http://www.zarinpal.com/pg/StartPay/S123',false));
+  assert.throws(()=>approvedPaymentRedirect('javascript:alert(1)',true));
+  assert.throws(()=>approvedPaymentRedirect('http://127.0.0.1:9999/pg/StartPay/S123',false));
+  assert.match(approvedPaymentRedirect('http://127.0.0.1:9999/pg/StartPay/S123',true),/^http:/);
+});

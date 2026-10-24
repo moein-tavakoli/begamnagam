@@ -112,3 +112,18 @@ def rewrite(category, text):
     output = TEMPLATES[category][template_id]
     moderate(output)
     return output, "ollama_curated" if settings.AI_MODE == "ollama" else "template"
+
+
+# Short reviewed variants leave room for the256-bit recipient capability URL.
+# Existing variants stay available for already frozen quotes/orders.
+SHORT_TEMPLATES = {
+    'appreciation': 'یک تشکر دوستانه: مهربانی و همراهی شما دیده می‌شود و ارزشمند است. از توجهتان سپاسگزاریم.',
+    'encouragement': 'یک پیام دلگرمی: تلاش شما ارزشمند است. با قدم‌های کوچک و به اندازه توانتان ادامه دهید. روزتان خوش.',
+    'congratulations': 'یک تبریک دوستانه: موفقیتتان مبارک! برایتان روزهای روشن و تجربه‌های خوش بیشتری آرزو می‌کنیم.',
+    'body': 'یک یادآوری دوستانه: توجه به بهداشت روزانه، بوی بدن و تازگی لباس، حضور در جمع را دلپذیرتر می‌کند.',
+    'breath': 'یک یادآوری با احترام: توجه بیشتر به بهداشت دهان و تازگی نفس، گفت‌وگوهای نزدیک را دلپذیرتر می‌کند.',
+    'noise': 'یک درخواست دوستانه: هنگام خوردن و نوشیدن، کمی بیشتر مراقب صداها باشیم. ممنون از همراهی شما.',
+    'shared_space': 'یک یادآوری دوستانه: پس از استفاده از فضای مشترک، وسایل را مرتب و محیط را تمیز نگه داریم. سپاس از شما.',
+}
+for _category, _text in SHORT_TEMPLATES.items():
+    TEMPLATES[_category].insert(0, _text)

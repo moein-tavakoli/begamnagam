@@ -29,9 +29,11 @@ def deliver_message(event_id):
         event = Outbox.objects.select_for_update().get(pk=event_id)
         if event.state != "pending" or event.available_at > timezone.now():
             return
+        from .safety import defer_until_open
+        if defer_until_open(event): return
         if order.status != Order.Status.QUEUED or not order.paid_at:
             event.state = "cancelled"
-        elif state.blocked:
+        elif state.blocked or order.owner.account.suspended or order.owner.account.deletion_requested_at:
             order.status = Order.Status.CANCELLED
             event.state = "cancelled"
             event.last_error_code = "recipient_unavailable"
@@ -53,6 +55,8 @@ def deliver_message(event_id):
                 logger.info("Demo SMS simulated order=%s recipient=%s", order.id, order.recipient_masked)
                 state.last_sent_at = timezone.now()
                 state.save(update_fields=["last_sent_at", "updated_at"])
+                from .recipient import activate_grant
+                activate_grant(order)
                 order.status = Order.Status.DELIVERED_DEMO
                 event.state = "sent"
         delivery, _ = MessageDelivery.objects.get_or_create(order=order)
@@ -95,6 +99,8 @@ def reconcile_providers():
     from .provider_services import reconcile_payments, process_refund
     from .provider_delivery import reconcile_delivery
     from .models import Refund
+    from .safety import refresh_alerts
+    refresh_alerts()
     reconcile_payments()
     for delivery_id in MessageDelivery.objects.filter(provider='kavenegar', status__in=['submitting', 'unknown', 'accepted']).values_list('pk', flat=True)[:100]:
         reconcile_delivery(delivery_id)

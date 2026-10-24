@@ -19,5 +19,8 @@ urlpatterns = [
     path("api/v1/orders/<uuid:order_id>", views.order_detail),
     path("api/v1/orders/<uuid:order_id>/payments", views.begin_payment),
     path("api/v1/payments/return/zarinpal", views.payment_return),
+    path("api/v1/recipient/actions/<str:action>", views.recipient_action),
+    path("api/v1/account/deletion", views.request_deletion),
+    path("api/v1/operations/status", views.operations_status),
     path("api/v1/preferences", views.preferences),
 ]

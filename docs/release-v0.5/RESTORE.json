@@ -1,0 +1,16 @@
+{
+  "action": "restore",
+  "target_database": "begamnagam_restore_v05_rehearsal",
+  "overwrote_existing_database": false,
+  "dispatch_halted": true,
+  "financial_invariant_failures": 0,
+  "post_snapshot_financial_events_missing": 0,
+  "suppression_overlay_mismatches": 0,
+  "recipient_states_overlaid": 11,
+  "deletion_requests_overlaid": 0,
+  "encrypted_fields_validated": 56,
+  "duration_seconds": 3.033,
+  "archive_age_seconds": 3.61,
+  "rehearsal_pass": true,
+  "production_resume_authorized": false
+}

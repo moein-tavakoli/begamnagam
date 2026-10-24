@@ -48,7 +48,9 @@ def health(request):
             raise RuntimeError()
     except Exception:
         raise APIError("not_ready", "سرویس آماده نیست.", 503)
-    return {"status": "ok", "demo_mode": settings.DEMO_MODE}
+    value = {"status": "ok", "demo_mode": settings.DEMO_MODE}
+    if settings.BENCHMARK_RUN_ID: value["benchmark_run_id"] = settings.BENCHMARK_RUN_ID
+    return value
 
 
 @ensure_csrf_cookie
@@ -57,8 +59,10 @@ def bootstrap(request):
     session_key(request)
     authenticated = is_product_authenticated(request.user)
     data = {"demo_mode": settings.DEMO_MODE, "authenticated": authenticated,
-        "price_toman": settings.PRICE_TOMAN, "categories": CATEGORIES, "rewrite_mode": settings.AI_MODE, "payment_backend": settings.PAYMENT_BACKEND}
+        "price_toman": settings.PRICE_TOMAN, "categories": [c for c in CATEGORIES if not settings.PILOT_POSITIVE_ONLY or c["id"] in {"appreciation", "encouragement", "congratulations"}], "rewrite_mode": settings.AI_MODE, "payment_backend": settings.PAYMENT_BACKEND, "support_contact": settings.SUPPORT_CONTACT}
     if authenticated:
+        data["recent_auth"] = timezone.now().timestamp() - request.session.get("phone_verified_at", 0) <= 300
+        data["session_identity"] = digest("session-identity:" + request.session.session_key)
         data["phone_masked"] = request.user.account.phone_masked
         data["recipient_blocked"] = RecipientState.objects.filter(phone_hash=request.user.account.phone_hash, blocked=True).exists()
     return data
@@ -91,7 +95,9 @@ def request_otp(request):
         if settings.PROVIDER_NETWORK_MODE == 'external' and phone_hash not in settings.PILOT_RECIPIENT_HASHES:
             raise ProviderDisabled('outside_pilot_allowlist')
         reserve_cost('otp:' + str(challenge_id), 'otp', settings.OTP_MAX_COST_RIAL)
-        Kavenegar().otp(phone=phone, code=code)
+        result = Kavenegar().otp(phone=phone, code=code)
+        from .budget import observe_cost
+        observe_cost("otp:" + str(challenge_id), result.cost_rial)
     except (ProviderRejected, ProviderDisabled):
         OTPChallenge.objects.filter(pk=challenge_id).update(consumed_at=timezone.now())
         raise APIError('otp_unavailable', 'ارسال کد فعلاً ممکن نیست؛ کمی بعد تلاش کن.', 503) from None
@@ -135,6 +141,9 @@ def verify_otp(request):
                 user.save(update_fields=["password"])
             Account.objects.get_or_create(user=user, defaults={"phone_hash": challenge.phone_hash,
                 "phone_cipher": challenge.phone_cipher, "phone_masked": mask(phone)})
+            challenge.phone_cipher = ""
+            challenge.code_digest = ""
+            challenge.save(update_fields=["phone_cipher", "code_digest"])
             if not user.is_active:
                 invalid = True
     if invalid:
@@ -144,8 +153,9 @@ def verify_otp(request):
     # Switching from a different authenticated account flushes the old session.
     # Create the new key now rather than waiting for SessionMiddleware.save().
     new_session = session_key(request)
+    request.session["phone_verified_at"] = timezone.now().timestamp()
     Preview.objects.filter(session_key=old_session, owner__isnull=True).update(owner=user, session_key=new_session)
-    return {"authenticated": True, "phone_masked": user.account.phone_masked}
+    return {"authenticated": True, "phone_masked": user.account.phone_masked, "recent_auth": True}
 
 
 @api(["POST"], authenticated=True)
@@ -163,6 +173,8 @@ def preview(request):
     text = data.get("text", "")
     if not isinstance(category, str):
         raise APIError("invalid_input", "دسته‌بندی معتبر را انتخاب کنید.")
+    if settings.PILOT_POSITIVE_ONLY and category not in {"appreciation", "encouragement", "congratulations"}:
+        raise APIError("category_unavailable", "این موضوع فعلاً فعال نیست.", 422)
     owner = request.user if is_product_authenticated(request.user) else None
     if owner:
         limited("preview-user", str(owner.pk), 20, 600)
@@ -180,12 +192,17 @@ def preview(request):
         recipient_hash = digest(normalize_phone(data["recipient_phone"]))
         if recipient_hash == owner.account.phone_hash:
             raise APIError("recipient_unavailable", "ارسال به این شماره اکنون ممکن نیست.", 422)
-    full_sms = rewritten + "\nبگم نگم | لغو: " + settings.APP_BASE_URL + "/preferences"
+    token = secrets.token_urlsafe(32) if recipient_hash else ""
+    full_sms = rewritten + "\nبگم نگم | لغو: " + settings.APP_BASE_URL + ("/r#" + token if token else "/preferences")
     if len(full_sms.encode("utf-16-le")) // 2 > 201:
         raise APIError("message_too_long", "متن نهایی بیش از سه بخش پیامک است؛ موضوع دیگری انتخاب کن.", 422)
     expires_at = timezone.now() + timedelta(minutes=15)
-    item = Preview.objects.create(owner=owner, session_key=session_key(request), category=category,
-        text=rewritten, full_sms=full_sms, recipient_hash=recipient_hash, moderation_mode=mode, expires_at=expires_at, price_toman=settings.PRICE_TOMAN)
+    with transaction.atomic():
+        item = Preview.objects.create(owner=owner, session_key=session_key(request), category=category,
+            text=rewritten, full_sms=full_sms, recipient_hash=recipient_hash, moderation_mode=mode, expires_at=expires_at, price_toman=settings.PRICE_TOMAN)
+        if token:
+            from .models import RecipientGrant
+            RecipientGrant.objects.create(preview=item, token_digest=digest("recipient-token:" + token), recipient_hash=recipient_hash)
     ModerationAudit.objects.create(owner=owner, category=category, outcome="accepted", reason_code=mode, content_digest=digest(str(text)))
     return {"preview_id": str(item.id), "rewritten_text": item.text, "price_toman": item.price_toman,
         "expires_at": expires_at.isoformat(), "moderation_mode": mode, "full_sms": item.full_sms, "sms_segments": 1 if len(full_sms.encode("utf-16-le")) // 2 <= 70 else (len(full_sms.encode("utf-16-le")) // 2 + 66) // 67}
@@ -221,6 +238,8 @@ def preferences(request):
         value = body(request).get("blocked")
         if type(value) is not bool:
             raise APIError("invalid_input", "وضعیت دریافت پیام باید بله یا خیر باشد.")
+        if value is False and timezone.now().timestamp() - request.session.get("phone_verified_at", 0) > 300:
+            raise APIError("reauthentication_required", "برای فعال‌سازی دوباره، شماره خودت را مجدداً تأیید کن.", 403)
         with transaction.atomic():
             RecipientState.objects.get_or_create(phone_hash=phone_hash)
             state = RecipientState.objects.select_for_update().get(phone_hash=phone_hash)
@@ -266,3 +285,41 @@ def payment_return(request):
         except Exception:
             pass  # Independent reconciler will verify the durable attempt.
     return HttpResponseRedirect(settings.APP_BASE_URL + '/history?payment_return=1')
+
+
+@api(["POST"])
+def recipient_action(request, action):
+    from . import recipient
+    data = body(request)
+    token = data.get('token')
+    # Token is in JSON only, never request paths/query/access logs.
+    limited('recipient-action-session', session_key(request), 30, 600)
+    limited('recipient-action-token', digest(str(token)[:100]), 30, 600)
+    if action == 'inspect': return recipient.inspect(token)
+    if action == 'stop': return recipient.stop(token)
+    if action == 'report': return recipient.report(token, data.get('reason'), data.get('details', ''))
+    raise APIError('not_found', 'درخواست پیدا نشد.', 404)
+
+
+@api(["POST"], authenticated=True)
+def request_deletion(request):
+    body(request)
+    if timezone.now().timestamp() - request.session.get('phone_verified_at', 0) > 300:
+        raise APIError('reauthentication_required', 'برای درخواست حذف، شماره خودت را مجدداً تأیید کن.', 403)
+    from .models import OperatorAudit
+    with transaction.atomic():
+        account = Account.objects.select_for_update().get(user=request.user)
+        if not account.deletion_requested_at:
+            account.deletion_requested_at = timezone.now()
+            account.suspended = True
+            account.save(update_fields=['deletion_requested_at', 'suspended'])
+            OperatorAudit.objects.create(actor=request.user, action='account_delete_requested', object_id=str(account.pk), reason='verified_owner_request')
+    return {'requested': True, 'redaction_within_days': 30}
+
+
+@api(["GET"])
+def operations_status(request):
+    if not request.user.is_active or not request.user.is_staff or not request.user.has_perm('core.view_operations'):
+        raise APIError('forbidden', 'مجوز مشاهده عملیات را ندارید.', 403)
+    from .safety import snapshot
+    return snapshot()

@@ -187,3 +187,14 @@ class ProviderContracts(TestCase):
         self.assertEqual(Refund.objects.get().status, 'unknown')
         self.assertEqual(self.fixture.calls.count('reverse'), 0)
         self.assertFalse(FinancialEvent.objects.filter(kind='refund').exists())
+
+    def test_very_late_receipt_after_private_redaction_is_still_captured_and_refunded(self):
+        r = begin_payment(self.user, self.o['id'], uuid.uuid4())
+        a = PaymentAttempt.objects.get(pk=r['attempt_id'])
+        self.fixture.payments[a.authority]['status'] = 'PAID'
+        Order.objects.filter(pk=self.o['id']).update(status='cancelled', recipient_hash='', recipient_cipher='', created_at=timezone.now()-timedelta(days=32))
+        verify_payment(a.pk)
+        self.assertEqual(FinancialEvent.objects.filter(kind='payment').count(),1)
+        self.assertEqual(Refund.objects.count(),1)
+        self.assertEqual(self.client.get('/api/v1/orders/'+self.o['id']).json()['financial_status'],'refund_pending')
+        self.assertFalse(Outbox.objects.exists())

@@ -81,9 +81,11 @@ def get_owned_order(user, order_id):
 
 
 def serialize_order(order):
-    payment = order.payment_attempts.filter(applied_to_order=True).first()
+    payment = order.payment_attempts.filter(applied_to_order=True).first() or order.payment_attempts.order_by("-created_at").first()
     delivery = MessageDelivery.objects.filter(order=order).first()
-    return {"financial_status": "refunded" if payment and payment.refunds.filter(status="refunded").exists() else "refund_pending" if payment and payment.refunds.exists() else payment.status if payment else "legacy_demo_paid" if order.paid_at else "unpaid",
+    from .models import Refund
+    open_refund = Refund.objects.filter(payment__order=order).exclude(status="refunded").exists()
+    return {"financial_status": "refunded" if payment and payment.refunds.filter(status="refunded").exists() else "refund_pending" if open_refund else payment.status if payment else "legacy_demo_paid" if order.paid_at else "unpaid",
         "delivery_status": delivery.status if delivery else "not_ready","id": str(order.id), "status": order.status, "amount_toman": order.amount_toman,
         "payment_mode": order.payment_mode, "recipient_masked": order.recipient_masked,
         "text": order.full_sms or order.text, "category": order.category, "paid_at": order.paid_at.isoformat() if order.paid_at else None,
@@ -107,7 +109,9 @@ def create_order(user, session_key, data, idempotency_key):
             if previous.preview_id != preview_id or previous.recipient_hash != phone_hash:
                 raise APIError("idempotency_conflict", "این کلید برای درخواست دیگری استفاده شده است.", 409)
             return previous
-        if user.account.suspended:
+        from .safety import ensure_open
+        ensure_open()
+        if user.account.suspended or user.account.deletion_requested_at:
             raise APIError("account_unavailable", "این حساب فعلاً اجازه ارسال ندارد.", 403)
         limited("orders", str(user.pk), 10, 60)
         if user.account.phone_hash == phone_hash:
@@ -148,6 +152,8 @@ def models_busy_query(now):
 def pay_order(user, order_id):
     if not settings.DEMO_MODE or settings.PAYMENT_BACKEND != "demo":
         raise APIError("payment_disabled", "پرداخت واقعی هنوز فعال نشده است.", 503)
+    from .safety import ensure_open
+    ensure_open()
     now = timezone.now()
     with transaction.atomic():
         try:
@@ -189,7 +195,14 @@ def record_demo_refund(order, reason):
     from .models import PaymentAttempt, Refund, FinancialEvent
     payment = PaymentAttempt.objects.filter(order=order, applied_to_order=True).first()
     if payment:
-        refund, _ = Refund.objects.get_or_create(payment=payment, reason_code=reason,
-            defaults={"amount_toman": payment.amount_toman, "status": "refunded"})
+        if payment.provider != "demo":
+            from .provider_services import request_refund
+            request_refund(payment, reason)
+            return
+        refund, _ = Refund.objects.get_or_create(payment=payment,
+            defaults={"reason_code": reason, "amount_toman": payment.amount_toman, "status": "refunded"})
+        if refund.status != "refunded":
+            refund.status = "refunded"
+            refund.save(update_fields=["status", "updated_at"])
         FinancialEvent.objects.get_or_create(refund=refund,
             defaults={"payment": payment, "kind": "refund", "amount_toman": refund.amount_toman})

@@ -16,6 +16,7 @@ export function Preferences() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [deleteConfirmed, setDeleteConfirmed] = useState(false);
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -74,6 +75,7 @@ export function Preferences() {
         <AuthGate purpose="شماره‌ای که می‌خوای دریافتش متوقف بشه، تأیید کن." />
         {data?.authenticated && (
           <div className="preferences-state">
+            {!data.recent_auth && <AuthGate forceReverify purpose="برای فعال‌سازی دوباره یا درخواست حذف، شماره خودت را مجدداً تأیید کن."/>}
             <ErrorBox message={error}>
               {blocked === null && (
                 <button className="text-button" onClick={() => void load()}>
@@ -108,6 +110,7 @@ export function Preferences() {
                 <BusyButton
                   className={`button ${blocked ? "secondary" : "primary"} full-width`}
                   busy={busy}
+                  disabled={!!blocked && !data.recent_auth}
                   onClick={save}
                 >
                   {blocked
@@ -120,6 +123,7 @@ export function Preferences() {
                 </p>
               </>
             )}
+            <details className="recipient-report"><summary>درخواست حذف داده‌های حساب</summary><p>ارسال جدید حساب متوقف می‌شود و شماره قابل‌بازیابی حداکثر۳۰روز بعد حذف می‌شود. سوابق مالی حداقلی و توقف دریافت مستقل حفظ می‌شوند.</p><label className="checkbox-label"><input type="checkbox" checked={deleteConfirmed} onChange={e=>setDeleteConfirmed(e.target.checked)}/><span>می‌خواهم حذف داده‌های حسابم ثبت شود.</span></label><BusyButton className="button secondary" busy={busy} disabled={!deleteConfirmed || !data.recent_auth} onClick={()=>{setBusy(true);setError("");void api("/account/deletion",{method:"POST",body:{}}).then(()=>{setNotice("درخواست حذف ثبت شد؛ ارسال جدید حساب متوقف است.");setDeleteConfirmed(false);}).catch(e=>setError(errorMessage(e))).finally(()=>setBusy(false));}}>ثبت درخواست حذف</BusyButton>{!data.recent_auth && <p>ابتدا با تأیید دوباره شماره وارد شو.</p>}</details>
             <p className="success-notice" role="status">
               {notice}
             </p>
@@ -223,7 +227,8 @@ export function History() {
                         {data.demo_mode ? " · آزمایشی" : ""}
                       </span>
                     </div>
-                    <p>{message.text}</p>
+                    <p>{message.text || "متن این پیام طبق سیاست نگهداری حذف شده است."}</p>
+                    <p className="small muted">مالی: {message.financial_status === "refund_pending" ? "بازپرداخت در حال پیگیری است" : message.financial_status === "refunded" ? "مسترد شد" : message.financial_status === "verified" ? "تأیید شد" : message.financial_status === "unknown" ? "نیازمند بررسی؛ دوباره پرداخت نکن" : "در انتظار"}</p>
                     <div className="history-message-bottom">
                       <time dateTime={message.created_at}>
                         {new Intl.DateTimeFormat("fa-IR", {

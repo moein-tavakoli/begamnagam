@@ -2,6 +2,7 @@ import uuid
 
 from django.conf import settings
 from django.db import models
+from .fields import EncryptedTextField
 
 
 class Account(models.Model):
@@ -10,7 +11,11 @@ class Account(models.Model):
     phone_cipher = models.TextField()
     phone_masked = models.CharField(max_length=20)
     suspended = models.BooleanField(default=False)
+    deletion_requested_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        permissions = [('suspend_account', 'Suspend or resume product senders')]
 
 
 class OTPChallenge(models.Model):
@@ -27,7 +32,7 @@ class OTPChallenge(models.Model):
 
 class Preview(models.Model):
     recipient_hash = models.CharField(max_length=64, blank=True)
-    full_sms = models.TextField(blank=True)
+    full_sms = EncryptedTextField(blank=True)
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.CASCADE)
     session_key = models.CharField(max_length=64)
@@ -47,7 +52,7 @@ class RecipientState(models.Model):
 
 
 class Order(models.Model):
-    full_sms = models.TextField(blank=True)
+    full_sms = EncryptedTextField(blank=True)
 
     class Status(models.TextChoices):
         AWAITING_PAYMENT = "awaiting_payment", "منتظر پرداخت آزمایشی"
@@ -234,6 +239,62 @@ class SpendReservation(models.Model):
     operation_key = models.CharField(max_length=100, unique=True)
     budget = models.ForeignKey(SpendBudget, on_delete=models.PROTECT)
     amount_rial = models.PositiveBigIntegerField()
+    actual_rial = models.PositiveBigIntegerField(null=True, blank=True)
     kind = models.CharField(max_length=12)
     state = models.CharField(max_length=12, default='reserved')
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class RecipientGrant(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    preview = models.OneToOneField(Preview, on_delete=models.CASCADE, related_name='recipient_grant')
+    token_digest = models.CharField(max_length=64, unique=True)
+    recipient_hash = models.CharField(max_length=64, db_index=True)
+    activated_at = models.DateTimeField(null=True, blank=True)
+    stop_expires_at = models.DateTimeField(null=True, blank=True)
+    report_expires_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class AbuseReport(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    grant = models.OneToOneField(RecipientGrant, on_delete=models.PROTECT, related_name='report')
+    reason = models.CharField(max_length=24)
+    details = EncryptedTextField(blank=True)
+    status = models.CharField(max_length=12, default='open')
+    closed_at = models.DateTimeField(null=True, blank=True)
+    hold_until = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        permissions = [('triage_report', 'Triage abuse reports')]
+
+
+class OperatorAudit(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.PROTECT)
+    action = models.CharField(max_length=32)
+    object_id = models.CharField(max_length=100, blank=True)
+    reason = models.CharField(max_length=200)
+    before = models.JSONField(default=dict)
+    after = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class SafetyControl(models.Model):
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    halted = models.BooleanField(default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        permissions = [('operate_safety', 'Halt or resume sending'), ('view_operations', 'Inspect operational metrics'), ('confirm_refund', 'Confirm documented manual refunds')]
+        constraints = [models.CheckConstraint(condition=models.Q(id=1), name='single_safety_control')]
+
+
+class OperationalAlert(models.Model):
+    code = models.CharField(max_length=40, unique=True)
+    severity = models.CharField(max_length=12)
+    active = models.BooleanField(default=True)
+    count = models.PositiveIntegerField(default=0)
+    acknowledged_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    updated_at = models.DateTimeField(auto_now=True)

@@ -4,17 +4,22 @@ import { test } from 'node:test';
 import { runInNewContext } from 'node:vm';
 
 const code = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8');
-function worker(fetcher = async (_request: unknown) => new Response('online')) {
+function worker(fetcher = async (_request: unknown) => new Response('online'), clients: Array<{postMessage:(data:any,ports:any[])=>void}> = []) {
+  let activations=0;
+  class TestChannel {
+    port1: {onmessage:((event:any)=>void)|null;close:()=>void} = {onmessage:null,close:()=>{}};
+    port2 = {postMessage:(data:any)=>queueMicrotask(()=>this.port1.onmessage?.({data}))};
+  }
   const handlers: Record<string, (event: any) => void> = {};
   const writes: string[][] = [];
   const cache = {
     addAll: async (paths: string[]) => { writes.push([...paths]); },
     match: async (path: unknown) => path === '/offline.html' ? new Response('public offline') : undefined,
   };
-  const context = { self: { location: {origin:'https://example.test'}, addEventListener: (name: string, listener: (event:any)=>void) => { handlers[name] = listener; } },
+  const context = { MessageChannel:TestChannel, setTimeout:(fn:()=>void,ms:number)=>setTimeout(fn,Math.min(ms,10)), clearTimeout, self: { clients:{matchAll:async()=>clients}, skipWaiting:async()=>{activations+=1;}, location: {origin:'https://example.test'}, addEventListener: (name: string, listener: (event:any)=>void) => { handlers[name] = listener; } },
     caches: { open: async () => cache, keys: async () => [], delete: async () => true }, URL, Response, fetch: fetcher };
   runInNewContext(code, context);
-  return { handlers, writes };
+  return { handlers, writes, activations:()=>activations };
 }
 
 test('service worker never intercepts API, RSC, third-party fetches or mutations', () => {
@@ -40,4 +45,24 @@ test('failed private navigation returns anonymous fallback without persisting pr
   handlers.fetch({request:{method:'GET',url:'https://example.test/history',mode:'navigate'},respondWith:(p:Promise<Response>)=>{response=p;}});
   assert.equal(await(await response).text(),'public offline');
   assert.equal(writes.length,0);
+});
+
+
+test('waiting update cannot activate while another tab is dirty or does not acknowledge', async () => {
+  for(const state of [false, null]) {
+    const w=worker(undefined,[{postMessage:(_data,ports)=>ports[0].postMessage({idle:true})},{postMessage:(_data,ports)=>{if(state!==null)ports[0].postMessage({idle:state});}}]);
+    let pending:Promise<unknown>=Promise.resolve(); let blocked=false;
+    w.handlers.message({data:{type:'ACTIVATE_APPROVED_UPDATE'},source:{postMessage:()=>{blocked=true;}},waitUntil:(p:Promise<unknown>)=>{pending=p;}});
+    await pending;
+    assert.equal(w.activations(),0);
+    assert.equal(blocked,true);
+  }
+});
+
+test('waiting update activates only after every tab acknowledges idle', async () => {
+  const w=worker(undefined,[{postMessage:(_data,ports)=>ports[0].postMessage({idle:true})},{postMessage:(_data,ports)=>ports[0].postMessage({idle:true})}]);
+  let pending:Promise<unknown>=Promise.resolve();
+  w.handlers.message({data:{type:'ACTIVATE_APPROVED_UPDATE'},waitUntil:(p:Promise<unknown>)=>{pending=p;}});
+  await pending;
+  assert.equal(w.activations(),1);
 });

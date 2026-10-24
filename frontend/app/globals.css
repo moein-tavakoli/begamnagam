@@ -139,3 +139,8 @@ body:has(input:focus,textarea:focus) .mobile-nav { display: none; }
 @media(min-width:700px) { .inline-form { flex-direction: row; } .inline-form input { flex: 1; width: 0 !important; } }
 .pwa-controls { display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:12px; padding:12px 20px; background:#e9e0fb; font-size:12px; }
 .pwa-controls p { margin:0; }.pwa-controls summary { min-height:44px; cursor:pointer; display:flex; align-items:center; }
+
+.recipient-report { margin-block: 1.5rem; border-top: 1px solid var(--line, #e7e1ef); padding-top: 1rem; }
+.recipient-report summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 600; }
+.recipient-report select { width: 100%; min-height: 52px; margin-block: .5rem 1rem; border: 1px solid #625b70; border-radius: 18px; padding: .75rem; font: inherit; background: white; color: #201c29; }
+.recipient-report form { margin-top: 1rem; }

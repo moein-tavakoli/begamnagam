@@ -2,7 +2,7 @@
  * No private pages, API/RSC responses or requests are ever persisted/replayed.
  * Activation requires an explicit client action; other clients never reload automatically.
  */
-const CACHE = 'begamnagam-public-shell-v2';
+const CACHE = 'begamnagam-public-shell-v3';
 const PUBLIC = ['/offline.html', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/maskable-512.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(PUBLIC)));
@@ -33,6 +33,22 @@ self.addEventListener('fetch', event => {
   }
 });
 // Only an explicit action in an idle client can activate a waiting update.
+function clientIsIdle(client) {
+  return new Promise(resolve => {
+    const channel = new MessageChannel();
+    const timer = setTimeout(() => { channel.port1.close(); resolve(false); }, 2500);
+    channel.port1.onmessage = event => {
+      clearTimeout(timer); channel.port1.close(); resolve(event.data?.idle === true);
+    };
+    client.postMessage({type:'CHECK_UPDATE_SAFETY'}, [channel.port2]);
+  });
+}
 self.addEventListener('message', event => {
-  if (event.data?.type === 'ACTIVATE_APPROVED_UPDATE') self.skipWaiting();
+  if (event.data?.type !== 'ACTIVATE_APPROVED_UPDATE') return;
+  event.waitUntil((async () => {
+    const windows = await self.clients.matchAll({type:'window',includeUncontrolled:true});
+    const idle = await Promise.all(windows.map(clientIsIdle));
+    if (idle.length && idle.every(Boolean)) await self.skipWaiting();
+    else event.source?.postMessage({type:'UPDATE_BLOCKED_BY_CLIENT'});
+  })());
 });

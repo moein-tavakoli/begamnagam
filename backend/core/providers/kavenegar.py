@@ -12,12 +12,12 @@ class SMSResult:
 
 
 class Kavenegar:
-    def _call(self, method, payload):
+    def _call(self, method, payload, *, otp=False):
         key = settings.KAVENEGAR_API_KEY
         if not re.fullmatch(r'[A-Za-z0-9_-]{1,256}', key):
             raise ProviderRejected('missing_sms_key')
         result = post(settings.KAVENEGAR_BASE_URL, f'/v1/{key}/{method}.json', payload,
-                      {'api.kavenegar.com'}, form=True)
+                      {'api.kavenegar.com'}, form=True, otp=otp)
         status = result.get('return', {}).get('status') if isinstance(result.get('return'), dict) else None
         if status != 200:
             if status in {400, 401, 402, 403, 404, 405, 406, 407, 411, 412, 413, 414, 416, 417, 418, 420, 422, 424, 426, 427, 429, 431, 432, 451, 501}:
@@ -59,14 +59,18 @@ class Kavenegar:
         return self._result(entry, message_id=message_id or None, local_id=None if message_id else local_id)
 
     def otp(self, *, phone, code):
+        if settings.LOCAL_REAL_OTP_ENABLED:
+            from ..privacy import digest, normalize_phone
+            if digest(normalize_phone(phone)) not in settings.OTP_TEST_RECIPIENT_HASHES:
+                raise ProviderRejected('outside_otp_test_allowlist')
         if not isinstance(code, str) or not re.fullmatch(r'[0-9]{6}', code):
             raise ProviderRejected('invalid_otp_code')
         if settings.KAVENEGAR_OTP_MODE == 'sms':
             # Fixed server-owned text; never dispatch user input through the OTP path.
             return self._result(self._call('sms/send', {'receptor': phone,
                 'message': f'بگم نگم\nکد ورود: {code}\nاعتبار: ۵ دقیقه\nکد را در اختیار کسی نگذارید.',
-                'sender': settings.KAVENEGAR_SENDER, 'hide': 1}))
+                'sender': settings.KAVENEGAR_SENDER, 'hide': 1}, otp=True))
         if settings.KAVENEGAR_OTP_MODE == 'lookup' and settings.KAVENEGAR_OTP_TEMPLATE:
             return self._result(self._call('verify/lookup', {'receptor': phone, 'token': code,
-                'template': settings.KAVENEGAR_OTP_TEMPLATE, 'type': 'sms'}))
+                'template': settings.KAVENEGAR_OTP_TEMPLATE, 'type': 'sms'}, otp=True))
         raise ProviderRejected('invalid_otp_configuration')

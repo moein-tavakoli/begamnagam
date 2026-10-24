@@ -114,6 +114,12 @@ export function AuthGate({
         سوءاستفاده است.
       </p>
       <ErrorBox message={error} />
+      {data?.otp_is_real && (
+        <p className="muted small" role="status">
+          کد ورود با پیامک واقعی می‌رسد.
+          {data.demo_mode && " پرداخت و ارسال پیام به گیرنده در این محیط آزمایشی‌اند."}
+        </p>
+      )}
       {!challenge ? (
         <form onSubmit={requestCode} noValidate>
           <label htmlFor="sender-phone">شماره موبایل خودت</label>

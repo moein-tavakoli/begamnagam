@@ -1,5 +1,18 @@
 # Versions
 
+## 0.8.3 — Isolated real OTP testing in the local demo
+
+- Added explicit local OTP authorization with a keyed test-number allowlist,
+  positive per-code/daily budgets and fixed official Kavenegar HTTPS routing.
+- Keep general provider networking disabled, order SMS simulated and payments demo;
+  reject configurations that broaden this exception to other providers or origins.
+- Publish `otp_is_real` in bootstrap/health and clarify login/payment UI labels;
+  real OTP never exposes a debug code. Smoke refuses live OTP before requesting a code.
+-96 backend tests and13 frontend tests/typecheck pass, including CSRF, allowlist,
+  budget exhaustion, expiry/replay, network scope and a full simulated checkout.
+- Private one-number test configuration activated under explicit user instruction;
+  phone receipt remains for user testing. No image rebuild, public deployment or push.
+
 ## 0.8.2 — Ordinary SMS for OTP
 
 - Default Kavenegar OTP to ordinary `sms/send` using the configured sender and

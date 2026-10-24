@@ -1,4 +1,5 @@
 import json
+import re
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -24,11 +25,20 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
-def endpoint(base, path, allowed_hosts):
+def endpoint(base, path, allowed_hosts, *, otp=False):
     parsed = urllib.parse.urlparse(base)
     mode = settings.PROVIDER_NETWORK_MODE
     if parsed.username or parsed.password or parsed.query or parsed.fragment:
         raise ProviderDisabled('unsafe_endpoint')
+    if otp and settings.LOCAL_REAL_OTP_ENABLED:
+        if (not settings.DEMO_MODE or mode != 'disabled' or settings.LIVE_PROVIDERS_ENABLED
+                or settings.OTP_BACKEND != 'kavenegar' or settings.SMS_BACKEND != 'console'
+                or settings.PAYMENT_BACKEND != 'demo'
+                or urllib.parse.urlparse(settings.APP_BASE_URL).hostname not in {'localhost', '127.0.0.1', '::1'}
+                or base != 'https://api.kavenegar.com'
+                or not re.fullmatch(r'/v1/[A-Za-z0-9_-]{1,256}/(?:sms/send|verify/lookup)\.json', path)):
+            raise ProviderDisabled('local_real_otp_scope_violation')
+        return base + path
     if mode == 'local':
         if not settings.DEMO_MODE or parsed.scheme != 'http' or parsed.hostname not in {'127.0.0.1', 'localhost', '::1'}:
             raise ProviderDisabled('local_contract_only')
@@ -40,8 +50,8 @@ def endpoint(base, path, allowed_hosts):
     return base.rstrip('/') + path
 
 
-def post(base, path, payload, allowed_hosts, form=False):
-    url = endpoint(base, path, allowed_hosts)
+def post(base, path, payload, allowed_hosts, form=False, *, otp=False):
+    url = endpoint(base, path, allowed_hosts, otp=otp)
     body = urllib.parse.urlencode(payload).encode() if form else json.dumps(payload).encode()
     request = urllib.request.Request(url, data=body, headers={
         'Content-Type': 'application/x-www-form-urlencoded' if form else 'application/json',

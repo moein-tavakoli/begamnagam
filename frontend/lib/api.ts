@@ -6,6 +6,7 @@ export type Category = {
 };
 export type Bootstrap = {
   demo_mode: boolean;
+  otp_is_real?: boolean;
   authenticated: boolean;
   phone_masked?: string;
   price_toman: number;

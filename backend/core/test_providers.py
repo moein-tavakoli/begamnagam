@@ -1,5 +1,12 @@
 import uuid
+import json
+import os
+import subprocess
+import sys
+from urllib.parse import parse_qs
+from unittest.mock import patch
 from datetime import timedelta
+from django.conf import settings
 from django.test import TestCase, override_settings
 from django.utils import timezone
 from .tests import APITestCase
@@ -10,6 +17,7 @@ from .provider_services import begin_payment, verify_payment, process_refund, re
 from .provider_delivery import submit_delivery, reconcile_delivery
 from .budget import reserve_cost
 from .services import APIError
+from .privacy import digest
 
 
 class ProviderContracts(TestCase):
@@ -266,3 +274,126 @@ class ProviderContracts(TestCase):
         self.assertEqual(self.fixture.calls.count('send'),0)
         self.assertEqual(Outbox.objects.get().state,'pending')
         self.assertEqual(MessageDelivery.objects.get().status,'queued')
+
+
+class LocalRealOTPTests(TestCase):
+    post, preview, order = APITestCase.post, APITestCase.preview, APITestCase.order
+
+    def setUp(self):
+        from django.core.cache import cache
+        from django.test import Client
+        cache.clear()
+        self.client = Client(enforce_csrf_checks=True)
+        self.config = override_settings(DEMO_MODE=True, LOCAL_REAL_OTP_ENABLED=True,
+            OTP_TEST_RECIPIENT_HASHES={digest('09911234567')}, OTP_BACKEND='kavenegar',
+            SMS_BACKEND='console', PAYMENT_BACKEND='demo', PROVIDER_NETWORK_MODE='disabled',
+            LIVE_PROVIDERS_ENABLED=False, KAVENEGAR_BASE_URL='https://api.kavenegar.com',
+            KAVENEGAR_API_KEY='synthetic-key', KAVENEGAR_SENDER='10000000',
+            KAVENEGAR_OTP_MODE='sms', KAVENEGAR_OTP_TEMPLATE='',
+            APP_BASE_URL='http://localhost:3000', PROVIDER_DAILY_BUDGET_RIAL=1000, OTP_MAX_COST_RIAL=500)
+        self.config.enable()
+        self.addCleanup(self.config.disable)
+        self.wire = patch('core.providers.http.urllib.request.build_opener').start()
+        self.addCleanup(patch.stopall)
+        self.wire.return_value.open.return_value.__enter__.return_value.read.return_value = json.dumps(
+            {'return': {'status': 200}, 'entries': [{'messageid':700, 'status':1, 'cost':500}]}).encode()
+        self.client.get('/api/v1/bootstrap')
+
+    def submit(self, path, data=None, **headers):
+        return self.post(path, data, HTTP_X_CSRFTOKEN=self.client.cookies['csrftoken'].value, **headers)
+
+    def request_code(self):
+        response = self.submit('/auth/request-otp', {'phone':'09911234567'})
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()['demo_mode'])
+        self.assertNotIn('debug_code', response.json())
+        request = self.wire.return_value.open.call_args.args[0]
+        self.assertEqual(request.full_url, 'https://api.kavenegar.com/v1/synthetic-key/sms/send.json')
+        payload = parse_qs(request.data.decode())
+        code = payload['message'][0].split('\n')[1].split(': ')[1]
+        return response.json()['challenge_id'], code
+
+    def test_real_otp_login_keeps_checkout_and_delivery_simulated(self):
+        bootstrap = self.client.get('/api/v1/bootstrap').json()
+        self.assertTrue(bootstrap['demo_mode'])
+        self.assertTrue(bootstrap['otp_is_real'])
+        self.assertEqual(bootstrap['payment_backend'], 'demo')
+        challenge, code = self.request_code()
+        verified = self.submit('/auth/verify-otp', {'challenge_id':challenge, 'code':code})
+        self.assertEqual(verified.status_code, 200)
+        preview = self.submit('/messages/preview', {'category':'appreciation','text':'از همراهی شما ممنونم.'}).json()
+        order = self.submit('/orders', {'preview_id':preview['preview_id'],'recipient_phone':'09901234567'},
+            HTTP_IDEMPOTENCY_KEY=str(uuid.uuid4())).json()
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.submit('/orders/'+order['id']+'/pay-demo')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Order.objects.get(pk=order['id']).status, 'delivered_demo')
+        self.assertEqual(FinancialEvent.objects.get(kind='payment').payment.provider, 'demo')
+        self.assertEqual(self.wire.return_value.open.call_count, 1)
+        self.assertEqual(SpendBudget.objects.get().reserved_rial, 500)
+
+    def test_other_numbers_are_blocked_without_challenge_budget_or_network(self):
+        from .models import OTPChallenge
+        response = self.submit('/auth/request-otp', {'phone':'09911234568'})
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json()['error']['code'], 'otp_unavailable')
+        self.assertFalse(OTPChallenge.objects.exists())
+        self.assertFalse(SpendBudget.objects.exists())
+        self.wire.assert_not_called()
+        with self.assertRaises(ProviderRejected):
+            Kavenegar().otp(phone='09911234568', code='123456')
+        self.wire.assert_not_called()
+
+    def test_csrf_and_daily_budget_apply_before_real_network(self):
+        response = self.post('/auth/request-otp', {'phone':'09911234567'})
+        self.assertEqual(response.status_code, 403)
+        self.wire.assert_not_called()
+        self.request_code()
+        self.request_code()
+        response = self.submit('/auth/request-otp', {'phone':'09911234567'})
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(self.wire.return_value.open.call_count, 2)
+
+    def test_general_sms_payment_status_and_redirects_remain_blocked(self):
+        from .providers.http import endpoint
+        with self.assertRaises(ProviderDisabled):
+            Kavenegar().submit(phone='09911234567', text='Do not send', local_id=1)
+        with self.assertRaises(ProviderDisabled):
+            Kavenegar().status(local_id=1)
+        with self.assertRaises(ProviderDisabled):
+            endpoint('https://sandbox.zarinpal.com', '/pg/v4/payment/request.json', {'sandbox.zarinpal.com'})
+        with self.assertRaises(ProviderDisabled):
+            endpoint('https://api.kavenegar.com', '/v1/synthetic-key/sms/status.json', {'api.kavenegar.com'}, otp=True)
+        with override_settings(KAVENEGAR_BASE_URL='https://example.invalid'):
+            with self.assertRaises(ProviderDisabled):
+                Kavenegar().otp(phone='09911234567', code='123456')
+        self.wire.assert_not_called()
+        from .providers.http import NoRedirect
+        self.assertIsNone(NoRedirect().redirect_request(None, None, 302, '', {}, 'https://example.invalid'))
+
+    def test_expired_and_replayed_real_codes_cannot_authenticate(self):
+        from .models import OTPChallenge
+        challenge, code = self.request_code()
+        OTPChallenge.objects.filter(pk=challenge).update(expires_at=timezone.now()-timedelta(seconds=1))
+        self.assertEqual(self.submit('/auth/verify-otp', {'challenge_id':challenge,'code':code}).status_code, 400)
+        challenge, code = self.request_code()
+        self.assertEqual(self.submit('/auth/verify-otp', {'challenge_id':challenge,'code':code}).status_code, 200)
+        self.assertEqual(self.submit('/auth/verify-otp', {'challenge_id':challenge,'code':code}).status_code, 400)
+
+    def test_startup_accepts_only_isolated_bounded_test_configuration(self):
+        env = dict(os.environ, DEMO_MODE='1', DEBUG='1', PROVIDER_NETWORK_MODE='disabled',
+            LIVE_PROVIDERS_ENABLED='0', LOCAL_REAL_OTP_ENABLED='1', OTP_BACKEND='kavenegar',
+            SMS_BACKEND='console', PAYMENT_BACKEND='demo', KAVENEGAR_API_KEY='synthetic-key',
+            KAVENEGAR_SENDER='10000000', KAVENEGAR_BASE_URL='https://api.kavenegar.com',
+            KAVENEGAR_OTP_MODE='sms', KAVENEGAR_OTP_TEMPLATE='',
+            OTP_TEST_RECIPIENT_HASHES='a'*64, PROVIDER_DAILY_BUDGET_RIAL='1000',
+            OTP_MAX_COST_RIAL='500', APP_BASE_URL='http://localhost:3000')
+        command = [sys.executable,'-c',"import runpy; runpy.run_path('config/settings.py')"]
+        self.assertEqual(subprocess.run(command,env=env,capture_output=True).returncode, 0)
+        for invalid in ({'SMS_BACKEND':'kavenegar'}, {'PAYMENT_BACKEND':'zarinpal'},
+                {'OTP_TEST_RECIPIENT_HASHES':''}, {'OTP_MAX_COST_RIAL':'0'},
+                {'OTP_MAX_COST_RIAL':'1001'}, {'KAVENEGAR_API_KEY':''},
+                {'APP_BASE_URL':'https://example.invalid'}, {'PROVIDER_NETWORK_MODE':'external'},
+                {'KAVENEGAR_BASE_URL':'https://api.kavenegar.com/extra'}):
+            with self.subTest(fields=tuple(invalid)):
+                self.assertNotEqual(subprocess.run(command,env=dict(env,**invalid),capture_output=True).returncode, 0)

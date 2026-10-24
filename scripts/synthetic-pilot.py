@@ -33,7 +33,7 @@ def main():
         CACHE_KEY_PREFIX='pilot:'+run_id,DEBUG='1',DEMO_MODE='1',DJANGO_TESTING='0',
         CELERY_BROKER_URL='memory://',CELERY_TASK_ALWAYS_EAGER='1',PROVIDER_NETWORK_MODE='disabled',
         SMS_BACKEND='console',OTP_BACKEND='demo',PAYMENT_BACKEND='demo',AI_MODE='template',
-        PILOT_POSITIVE_ONLY='0',SENDING_WINDOW_ENABLED='0',LIVE_PROVIDERS_ENABLED='0')
+        PILOT_POSITIVE_ONLY='0',SENDING_WINDOW_ENABLED='0',LIVE_PROVIDERS_ENABLED='0',LOCAL_REAL_OTP_ENABLED='0')
     folder=ROOT/'.local'/('pilot-'+run_id);folder.mkdir(parents=True)
     try:
         with (folder/'migrate.log').open('w') as log:

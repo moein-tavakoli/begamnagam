@@ -62,6 +62,7 @@ def main():
     sender = Client()
     bootstrap = sender.call("/bootstrap")
     assert bootstrap["demo_mode"] is True, "Smoke test refuses non-demo instances."
+    assert not bootstrap.get("otp_is_real"), "Smoke test refuses real OTP instances before requesting any code."
     assert bootstrap["price_toman"] > 0
     assert {"appreciation", "encouragement", "congratulations"}.issubset({item["id"] for item in bootstrap["categories"]})
     # These values exist only in the local demo database. No SMS adapter is live.

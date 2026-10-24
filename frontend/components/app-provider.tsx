@@ -84,7 +84,9 @@ export function EnvironmentBanner() {
     <div className={`environment-banner ${data?.demo_mode ? "is-demo" : ""}`}>
       <span className="status-dot" />
       {data?.demo_mode
-        ? "نسخه آزمایشی محلی؛ هیچ پیامک واقعی یا برداشت وجهی انجام نمی‌شود."
+        ? data.otp_is_real
+          ? "کد ورود واقعی است؛ پرداخت و ارسال پیام به گیرنده آزمایشی‌اند."
+          : "نسخه آزمایشی محلی؛ هیچ پیامک واقعی یا برداشت وجهی انجام نمی‌شود."
         : loading
           ? "در حال بررسی اتصال به سرویس…"
           : !data

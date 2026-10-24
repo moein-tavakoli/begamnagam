@@ -38,14 +38,16 @@ await fetch('/api/v1/messages/preview', {
 
 | روش و مسیر | ورودی | خروجی مهم |
 | --- | --- | --- |
-| `GET /bootstrap` | ندارد | `demo_mode`, `authenticated`, `phone_masked`, `price_toman`, `categories`, `rewrite_mode` |
-| `POST /auth/request-otp` | `phone` | `challenge_id`؛ فقط در demo، `debug_code` |
+| `GET /bootstrap` | ندارد | `demo_mode`, `otp_is_real`, `authenticated`, `phone_masked`, `price_toman`, `categories`, `rewrite_mode` |
+| `POST /auth/request-otp` | `phone` | `challenge_id`؛ فقط در حالت OTP شبیه‌سازی‌شده، `debug_code` |
 | `POST /auth/verify-otp` | `challenge_id`, `code` | `authenticated: true`, `phone_masked`؛ تنظیم نشست |
 | `POST /auth/logout` | `{}` | خروج و بی‌اعتبارشدن نشست |
 
 هر دسته شامل `id`, `label`, `description`, `example` است. شناسه‌های دسته: `appreciation`, `encouragement`, `congratulations`, `body`, `breath`, `noise`, `shared_space`. پیام‌های مثبت هم از همان پیش‌نمایش، تأیید شماره، پرداخت و کنترل‌های گیرنده می‌گذرند؛ ارسال گروهی در این API وجود ندارد.
 
-OTP به نشست درخواست‌کننده متصل، زمان‌دار و محدود به تعداد تلاش است. در demo کد در پاسخ و رابط نمایش داده می‌شود و SMS ندارد. این رفتار ورود واقعی محسوب نمی‌شود و در حالت غیرآزمایشی فعال نیست.
+OTP به نشست درخواست‌کننده متصل، زمان‌دار و محدود به تعداد تلاش است. در حالت پیش‌فرض `OTP_BACKEND=demo` کد در پاسخ و رابط نمایش داده می‌شود و SMS ندارد. این رفتار ورود واقعی محسوب نمی‌شود و در حالت غیرآزمایشی فعال نیست.
+
+از نسخه۰٫۸٫۳، تست محلیِ صریحاً فعال‌شده می‌تواند `demo_mode=true` و `otp_is_real=true` داشته باشد: کد ورود واقعی است، اما پرداخت و پیام به گیرنده شبیه‌سازی می‌شوند. `POST /auth/request-otp` در این حالت فقط برای هش‌های `OTP_TEST_RECIPIENT_HASHES` کار می‌کند؛ شمارهٔ دیگر خطای عمومی `otp_unavailable` می‌گیرد و هیچ هزینه/ارسالی ثبت نمی‌شود. پاسخ کد واقعی هرگز `debug_code` ندارد و `demo_mode=false` در پاسخ همان درخواست OTP است؛ `demo_mode` در bootstrap همچنان محیط پرداخت/پیام را توصیف می‌کند. `GET /healthz` هم `otp_is_real` را بدون افشای شماره یا اعتبارنامه برمی‌گرداند. smoke قبل از درخواست کد، چنین محیطی را رد می‌کند.
 
 ## پیش‌نمایش
 

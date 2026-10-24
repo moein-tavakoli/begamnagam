@@ -48,7 +48,7 @@ def health(request):
             raise RuntimeError()
     except Exception:
         raise APIError("not_ready", "سرویس آماده نیست.", 503)
-    value = {"status": "ok", "demo_mode": settings.DEMO_MODE}
+    value = {"status": "ok", "demo_mode": settings.DEMO_MODE, "otp_is_real": otp_is_real()}
     if settings.BENCHMARK_RUN_ID: value["benchmark_run_id"] = settings.BENCHMARK_RUN_ID
     return value
 
@@ -59,13 +59,18 @@ def bootstrap(request):
     session_key(request)
     authenticated = is_product_authenticated(request.user)
     data = {"demo_mode": settings.DEMO_MODE, "authenticated": authenticated,
-        "price_toman": settings.PRICE_TOMAN, "categories": [c for c in CATEGORIES if not settings.PILOT_POSITIVE_ONLY or c["id"] in {"appreciation", "encouragement", "congratulations"}], "rewrite_mode": settings.AI_MODE, "payment_backend": settings.PAYMENT_BACKEND, "support_contact": settings.SUPPORT_CONTACT}
+        "price_toman": settings.PRICE_TOMAN, "categories": [c for c in CATEGORIES if not settings.PILOT_POSITIVE_ONLY or c["id"] in {"appreciation", "encouragement", "congratulations"}], "rewrite_mode": settings.AI_MODE, "payment_backend": settings.PAYMENT_BACKEND, "support_contact": settings.SUPPORT_CONTACT,
+        "otp_is_real": otp_is_real()}
     if authenticated:
         data["recent_auth"] = timezone.now().timestamp() - request.session.get("phone_verified_at", 0) <= 300
         data["session_identity"] = digest("session-identity:" + request.session.session_key)
         data["phone_masked"] = request.user.account.phone_masked
         data["recipient_blocked"] = RecipientState.objects.filter(phone_hash=request.user.account.phone_hash, blocked=True).exists()
     return data
+
+
+def otp_is_real():
+    return settings.OTP_BACKEND == 'kavenegar' and (settings.LOCAL_REAL_OTP_ENABLED or settings.PROVIDER_NETWORK_MODE == 'external')
 
 
 @api(["POST"])
@@ -82,6 +87,8 @@ def request_otp(request):
     demo_otp = settings.DEMO_MODE and settings.OTP_BACKEND == "demo" and settings.SMS_BACKEND == "console"
     if not demo_otp and settings.OTP_BACKEND != "kavenegar":
         raise APIError("sms_disabled", "ارسال کد فعلاً فعال نیست.", 503)
+    if settings.LOCAL_REAL_OTP_ENABLED and phone_hash not in settings.OTP_TEST_RECIPIENT_HASHES:
+        raise APIError('otp_unavailable', 'ارسال کد فعلاً ممکن نیست؛ کمی بعد تلاش کن.', 503)
     code = f"{secrets.randbelow(1000000):06}"
     challenge_id = uuid.uuid4()
     OTPChallenge.objects.create(id=challenge_id, phone_hash=phone_hash, phone_cipher=encrypt(phone),

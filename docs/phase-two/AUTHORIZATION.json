@@ -1,0 +1,11 @@
+{
+  "date": "2026-10-24",
+  "user_instruction": "فاز ۰ و۱و۲ رو کامل تا اخر برو؛ از منم دیگه نپرس؛ پوش نکن؛ فقط هر نسخه در نسخه بندی که تغییر پیدا کرد کامیت بکن",
+  "authorized_phases": [0, 1, 2],
+  "local_commits_authorized": true,
+  "push_authorized": false,
+  "live_providers_authorized": false,
+  "phase_three_authorized": false,
+  "baseline": "BN-G0-001 v1.0 for local/demo implementation with CR-001 visual direction",
+  "commercial_decisions": "deferred until live-provider phase; no implicit provider or price approval"
+}

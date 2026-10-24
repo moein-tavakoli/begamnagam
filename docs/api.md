@@ -94,3 +94,18 @@ OTP به نشست درخواست‌کننده متصل، زمان‌دار و م
 ## سلامت و مدیریت
 
 `GET /healthz` خارج از prefix API سلامت پایگاه و کش را برای Compose بررسی می‌کند. پنل Django در `/admin/` با حساب مدیر ساخته‌شده توسط اپراتور در دسترس است. هیچ رمز پیش‌فرضی وجود ندارد. دسترسی API عمومی با دسترسی مدیر یکسان نیست.
+
+## Version 0.3.0 additions (local demo)
+
+`POST /messages/preview` accepts optional `recipient_phone` for compatibility. A
+recipient-bound quote requires a verified sender and cannot be retargeted at
+checkout. The UI always uses this bound form. Response adds `full_sms` and
+`sms_segments`; `rewritten_text` remains the reviewed body for existing clients.
+The server rejects final messages over three Unicode SMS segments.
+
+Order responses add `financial_status` and `delivery_status`. `text` now exposes
+the frozen full SMS including the service/footer URL; internal reviewed body is
+kept separately. Live delivery/read receipts are never inferred from demo states.
+Demo payment, capture event, delivery and outbox are written atomically; worker
+suppression/failure records one compensating demo refund. These endpoints do not
+move money or call a real provider.

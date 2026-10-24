@@ -10,7 +10,7 @@ from django.db import transaction
 from django.http import JsonResponse
 from django.utils import timezone
 
-from .models import Order, Outbox, Preview, RecipientState
+from .models import Order, Outbox, Preview, RecipientState, PaymentAttempt, MessageDelivery, FinancialEvent
 from .privacy import digest, encrypt, mask, normalize_phone
 
 logger = logging.getLogger(__name__)
@@ -81,9 +81,12 @@ def get_owned_order(user, order_id):
 
 
 def serialize_order(order):
-    return {"id": str(order.id), "status": order.status, "amount_toman": order.amount_toman,
+    payment = order.payment_attempts.filter(applied_to_order=True).first()
+    delivery = MessageDelivery.objects.filter(order=order).first()
+    return {"financial_status": "refunded" if payment and payment.refunds.filter(status="refunded").exists() else payment.status if payment else "legacy_demo_paid" if order.paid_at else "unpaid",
+        "delivery_status": delivery.status if delivery else "not_ready","id": str(order.id), "status": order.status, "amount_toman": order.amount_toman,
         "payment_mode": order.payment_mode, "recipient_masked": order.recipient_masked,
-        "text": order.text, "category": order.category, "paid_at": order.paid_at.isoformat() if order.paid_at else None,
+        "text": order.full_sms or order.text, "category": order.category, "paid_at": order.paid_at.isoformat() if order.paid_at else None,
         "created_at": order.created_at.isoformat(), "payment_expires_at": (order.created_at + PAYMENT_WINDOW).isoformat()}
 
 
@@ -113,6 +116,8 @@ def create_order(user, session_key, data, idempotency_key):
             raise APIError("preview_expired", "پیش‌نمایش معتبر نیست؛ دوباره متن را آماده کنید.", 409)
         if preview.owner_id != user.pk and not (preview.owner_id is None and preview.session_key == session_key):
             raise APIError("not_found", "پیش‌نمایش پیدا نشد.", 404)
+        if preview.recipient_hash and preview.recipient_hash != phone_hash:
+            raise APIError("quote_recipient_changed", "شماره عوض شده؛ پیش‌نمایش تازه بساز.", 409)
         if preview.expires_at <= now or Order.objects.filter(preview=preview).exists():
             raise APIError("preview_expired", "پیش‌نمایش منقضی یا استفاده شده است؛ دوباره متن را آماده کنید.", 409)
         if Order.objects.filter(owner=user, created_at__gte=now - timedelta(hours=24)).count() >= settings.SENDER_DAILY_LIMIT:
@@ -122,11 +127,14 @@ def create_order(user, session_key, data, idempotency_key):
         busy = Order.objects.filter(recipient_hash=phone_hash).filter(
             models_busy_query(now)
         ).exists()
+        if Order.objects.filter(owner=user, recipient_hash=phone_hash, status=Order.Status.DELIVERED_DEMO,
+                updated_at__gte=now - timedelta(days=30)).exists():
+            raise recipient_unavailable()
         if state.blocked or busy or (state.last_sent_at and state.last_sent_at > now - timedelta(hours=settings.RECIPIENT_COOLDOWN_HOURS)):
             raise recipient_unavailable()
         return Order.objects.create(owner=user, preview=preview, idempotency_key=key,
             recipient_hash=phone_hash, recipient_cipher=encrypt(phone), recipient_masked=mask(phone),
-            text=preview.text, category=preview.category, amount_toman=preview.price_toman,
+            text=preview.text, full_sms=preview.full_sms, category=preview.category, amount_toman=preview.price_toman,
             payment_mode="demo" if settings.DEMO_MODE else "disabled")
 
 
@@ -154,8 +162,11 @@ def pay_order(user, order_id):
         order.status = Order.Status.QUEUED
         order.paid_at = now
         order.save(update_fields=["status", "paid_at", "updated_at"])
-        state.last_sent_at = now
-        state.save(update_fields=["last_sent_at", "updated_at"])
+        payment, _ = PaymentAttempt.objects.get_or_create(order=order, applied_to_order=True,
+            defaults={"amount_toman": order.amount_toman, "status": "verified", "provider_reference": f"demo-payment-{order.id}"})
+        FinancialEvent.objects.get_or_create(payment=payment, kind="payment",
+            defaults={"amount_toman": payment.amount_toman})
+        MessageDelivery.objects.get_or_create(order=order, defaults={"status": "queued"})
         event, _ = Outbox.objects.get_or_create(order=order, defaults={"available_at": now})
         transaction.on_commit(lambda: dispatch(event.pk))
     order.refresh_from_db()
@@ -169,3 +180,14 @@ def dispatch(event_id):
     except Exception:
         # The committed outbox remains pending. Beat/management command retries it.
         logger.warning("Outbox publish deferred event=%s", event_id)
+
+
+def record_demo_refund(order, reason):
+    """Called inside the worker transaction; repeated tasks never refund twice."""
+    from .models import PaymentAttempt, Refund, FinancialEvent
+    payment = PaymentAttempt.objects.filter(order=order, applied_to_order=True).first()
+    if payment:
+        refund, _ = Refund.objects.get_or_create(payment=payment, reason_code=reason,
+            defaults={"amount_toman": payment.amount_toman, "status": "refunded"})
+        FinancialEvent.objects.get_or_create(refund=refund,
+            defaults={"payment": payment, "kind": "refund", "amount_toman": refund.amount_toman})

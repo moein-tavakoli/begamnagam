@@ -150,7 +150,7 @@ class APITestCase(TestCase):
         response = self.post("/orders", {"preview_id": preview["preview_id"], "recipient_phone": "09901234567",
             "amount_toman": 1, "text": "unsafe override", "status": "delivered"}, HTTP_IDEMPOTENCY_KEY=str(uuid.uuid4()))
         self.assertEqual(response.json()["amount_toman"], settings.PRICE_TOMAN)
-        self.assertEqual(response.json()["text"], preview["rewritten_text"])
+        self.assertEqual(response.json()["text"], preview["full_sms"])
         self.assertEqual(response.json()["status"], "awaiting_payment")
 
     def test_preview_price_is_snapshot_even_when_configuration_changes(self):

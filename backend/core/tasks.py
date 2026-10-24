@@ -6,7 +6,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
-from .models import Order, Outbox, RecipientState
+from .models import Order, Outbox, RecipientState, MessageDelivery
 from .moderation import TEMPLATES, ModerationRejected, moderate
 
 logger = logging.getLogger(__name__)
@@ -48,8 +48,18 @@ def deliver_message(event_id):
             else:
                 # No phone, message content or sender identity is logged.
                 logger.info("Demo SMS simulated order=%s recipient=%s", order.id, order.recipient_masked)
+                state.last_sent_at = timezone.now()
+                state.save(update_fields=["last_sent_at", "updated_at"])
                 order.status = Order.Status.DELIVERED_DEMO
                 event.state = "sent"
+        delivery, _ = MessageDelivery.objects.get_or_create(order=order)
+        delivery.status = {"sent": "delivered_demo", "cancelled": "suppressed", "failed": "failed"}[event.state]
+        delivery.attempts += 1
+        delivery.resolved_at = timezone.now()
+        delivery.save(update_fields=["status", "attempts", "resolved_at", "updated_at"])
+        if event.state in {"cancelled", "failed"}:
+            from .services import record_demo_refund
+            record_demo_refund(order, "delivery_unavailable")
         event.attempts += 1
         event.processed_at = timezone.now()
         event.save(update_fields=["state", "attempts", "processed_at", "last_error_code"])

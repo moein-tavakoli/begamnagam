@@ -74,3 +74,20 @@ class FinancialFoundationTests(TestCase):
         for name in ['disabled', 'live', 'unknown']:
             with self.assertRaises(AdapterDisabled): payment_adapter(name)
             with self.assertRaises(AdapterDisabled): sms_adapter(name)
+
+    def test_demo_checkout_records_one_capture_delivery_and_compensating_refund(self):
+        from .models import RecipientState, Outbox
+        from .services import pay_order
+        from .tasks import deliver_message
+        RecipientState.objects.create(phone_hash=self.order.recipient_hash)
+        pay_order(self.user, self.order.id)
+        pay_order(self.user, self.order.id)
+        self.assertEqual(PaymentAttempt.objects.filter(order=self.order).count(), 1)
+        self.assertEqual(FinancialEvent.objects.filter(payment__order=self.order, kind='payment').count(), 1)
+        RecipientState.objects.filter(phone_hash=self.order.recipient_hash).update(blocked=True)
+        event = Outbox.objects.get(order=self.order)
+        deliver_message(event.id)
+        deliver_message(event.id)
+        self.assertEqual(Refund.objects.filter(payment__order=self.order, status='refunded').count(), 1)
+        self.assertEqual(FinancialEvent.objects.filter(payment__order=self.order, kind='refund').count(), 1)
+        self.assertEqual(MessageDelivery.objects.get(order=self.order).status, 'suppressed')

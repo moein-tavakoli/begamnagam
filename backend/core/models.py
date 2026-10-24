@@ -25,6 +25,8 @@ class OTPChallenge(models.Model):
 
 
 class Preview(models.Model):
+    recipient_hash = models.CharField(max_length=64, blank=True)
+    full_sms = models.TextField(blank=True)
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.CASCADE)
     session_key = models.CharField(max_length=64)
@@ -44,6 +46,8 @@ class RecipientState(models.Model):
 
 
 class Order(models.Model):
+    full_sms = models.TextField(blank=True)
+
     class Status(models.TextChoices):
         AWAITING_PAYMENT = "awaiting_payment", "منتظر پرداخت آزمایشی"
         QUEUED = "queued", "در صف شبیه‌سازی"

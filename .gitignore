@@ -26,3 +26,5 @@ playwright-report/
 test-results/
 backups/
 .local/
+# Optional verified local wheel cache; never commit dependency binaries.
+*.whl

@@ -15,6 +15,8 @@ export type Bootstrap = {
 export type Preview = {
   preview_id: string;
   rewritten_text: string;
+  full_sms?: string;
+  sms_segments?: number;
   price_toman: number;
   expires_at: string;
   moderation_mode: string;
@@ -24,6 +26,8 @@ export type Order = {
   status: string;
   amount_toman: number;
   payment_mode?: string;
+  financial_status?: string;
+  delivery_status?: string;
 };
 export type Message = Order & {
   recipient_masked: string;
@@ -122,6 +126,7 @@ export async function api<T>(
         "پاسخ سرویس معتبر نیست. دوباره تلاش کنید.",
         "invalid_response",
       );
+    if(path === "/auth/logout" && typeof window !== "undefined") window.dispatchEvent(new Event("privacy-reset"));
     return data as T;
   } catch (error) {
     if (timedOut)

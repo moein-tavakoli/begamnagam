@@ -110,6 +110,8 @@ export function Composer() {
     event.preventDefault();
     setError("");
     setFields({});
+    if (!data?.authenticated) { setError("اول شماره خودت رو تأیید کن."); return; }
+    if (!validPhone(recipient)) { setError("شماره گیرنده را درست وارد کن."); return; }
     if (text.trim().length < 3) {
       setFields({
         text: "حرفت را در حداقل ۳ حرف بنویس یا از مثال موضوع استفاده کن.",
@@ -121,7 +123,7 @@ export function Composer() {
     try {
       const result = await api<Preview>("/messages/preview", {
         method: "POST",
-        body: { category, text: text.trim() },
+        body: { category, text: text.trim(), recipient_phone: normalizePhone(recipient) },
       });
       setPreview(result);
       setStep(1);
@@ -224,6 +226,7 @@ export function Composer() {
   }
   return (
     <section
+      data-update-blocked={!!(step > 0 || text || recipient || order)}
       id="compose"
       className="compose-section wrap"
       aria-labelledby="compose-title"
@@ -288,6 +291,8 @@ export function Composer() {
           <ServiceState />
           <ErrorBox message={error} />
           {step === 0 && (
+            <>
+            <AuthGate />
             <form onSubmit={makePreview} noValidate>
               <h3 className="form-heading" tabIndex={-1} ref={heading}>
                 چه حرفی توی دلت مونده؟
@@ -372,17 +377,20 @@ export function Composer() {
                     : "منظورت به یک متن آمادهٔ بررسی‌شده تبدیل می‌شه. در این حالت، بازنویسی آزاد با هوش مصنوعی انجام نمی‌شه."}
                 </p>
               </div>
+              <label htmlFor="quote-recipient">شماره گیرنده برای پیش‌نمایش نهایی</label>
+              <input id="quote-recipient" type="tel" inputMode="tel" dir="ltr" value={recipient} onChange={e=>setRecipient(e.target.value)} autoComplete="off" placeholder="09…" />
               <div className="form-actions">
                 <span className="small muted">دیدن پیش‌نمایش رایگانه</span>
                 <BusyButton
                   busy={busy}
                   className="button primary"
-                  disabled={!data || !data.categories.length}
+                  disabled={!data?.authenticated || !data.categories.length}
                 >
                   دیدن متن نهایی <Icon name="arrow" size={19} />
                 </BusyButton>
               </div>
             </form>
+            </>
           )}
 
           {step === 1 && preview && (
@@ -399,7 +407,7 @@ export function Composer() {
                   <Icon name="leaf" size={19} />
                   <span>متن نهایی پیام</span>
                 </div>
-                <p>{preview.rewritten_text}</p>
+                <p>{preview.full_sms || preview.rewritten_text}</p>
                 <div className="final-message-footer">
                   <Icon name="shield" size={15} /> بدون نمایش شماره فرستنده به
                   گیرنده
@@ -417,7 +425,7 @@ export function Composer() {
                     : "متن آمادهٔ بررسی‌شده"}
                 </span>
                 <span>
-                  هزینه: <b>{toman(preview.price_toman)}</b>
+                  هزینه: <b>{toman(preview.price_toman)}</b> · {preview.sms_segments || "—"} بخش پیامک
                 </span>
               </div>
               <div className="form-actions">
@@ -455,6 +463,7 @@ export function Composer() {
                   inputMode="tel"
                   dir="ltr"
                   autoComplete="off"
+                  readOnly
                   value={recipient}
                   onChange={(event) => {
                     setRecipient(event.target.value);
@@ -534,7 +543,7 @@ export function Composer() {
                 </div>
                 <div>
                   <span>متن تأییدشده</span>
-                  <p>{preview?.rewritten_text}</p>
+                  <p>{preview?.full_sms || preview?.rewritten_text}</p>
                 </div>
                 <div>
                   <span>هزینه کل</span>
@@ -594,6 +603,7 @@ export function Composer() {
                       ? "آزمایش ارسال ثبت شد."
                       : "وضعیت پیامت ثبت شد."}
               </h3>
+              <p className="small">مالی: {order.financial_status === "refunded" ? "مسترد شد (آزمایشی)" : order.financial_status === "verified" ? "تأیید شد (آزمایشی)" : "در انتظار"}</p>
               <p className="receipt-status" role="status">
                 {statusLabel(order.status)}
               </p>

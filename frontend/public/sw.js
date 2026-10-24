@@ -1,8 +1,8 @@
-/* Phase-one PWA foundation. Version this when the public fallback changes.
+/* Phase-two public offline shell. Version this when the public fallback changes.
  * No private pages, API/RSC responses or requests are ever persisted/replayed.
- * No skipWaiting/reload: an update waits until existing clients close.
+ * Activation requires an explicit client action; other clients never reload automatically.
  */
-const CACHE = 'begamnagam-public-foundation-v1';
+const CACHE = 'begamnagam-public-shell-v2';
 const PUBLIC = ['/offline.html', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/maskable-512.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(PUBLIC)));
@@ -31,4 +31,8 @@ self.addEventListener('fetch', event => {
       });
     }));
   }
+});
+// Only an explicit action in an idle client can activate a waiting update.
+self.addEventListener('message', event => {
+  if (event.data?.type === 'ACTIVATE_APPROVED_UPDATE') self.skipWaiting();
 });

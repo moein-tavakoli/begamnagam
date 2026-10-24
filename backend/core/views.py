@@ -157,12 +157,22 @@ def preview(request):
         raise APIError("moderation_rejected", "این متن قابل ارسال نیست. لطفاً موضوعی محترمانه و بدون توهین، تهدید یا اطلاعات شخصی انتخاب کنید.", 422)
     except RewriteUnavailable:
         raise APIError("rewrite_unavailable", "آماده‌سازی متن موقتاً در دسترس نیست؛ کمی بعد تلاش کنید.", 503)
+    recipient_hash = ""
+    if data.get("recipient_phone"):
+        if not owner:
+            raise APIError("authentication_required", "ابتدا شماره خودت را تأیید کن.", 401)
+        recipient_hash = digest(normalize_phone(data["recipient_phone"]))
+        if recipient_hash == owner.account.phone_hash:
+            raise APIError("recipient_unavailable", "ارسال به این شماره اکنون ممکن نیست.", 422)
+    full_sms = rewritten + "\nبگم نگم | لغو: " + settings.APP_BASE_URL + "/preferences"
+    if len(full_sms.encode("utf-16-le")) // 2 > 201:
+        raise APIError("message_too_long", "متن نهایی بیش از سه بخش پیامک است؛ موضوع دیگری انتخاب کن.", 422)
     expires_at = timezone.now() + timedelta(minutes=15)
     item = Preview.objects.create(owner=owner, session_key=session_key(request), category=category,
-        text=rewritten, moderation_mode=mode, expires_at=expires_at, price_toman=settings.PRICE_TOMAN)
+        text=rewritten, full_sms=full_sms, recipient_hash=recipient_hash, moderation_mode=mode, expires_at=expires_at, price_toman=settings.PRICE_TOMAN)
     ModerationAudit.objects.create(owner=owner, category=category, outcome="accepted", reason_code=mode, content_digest=digest(str(text)))
     return {"preview_id": str(item.id), "rewritten_text": item.text, "price_toman": item.price_toman,
-        "expires_at": expires_at.isoformat(), "moderation_mode": mode}
+        "expires_at": expires_at.isoformat(), "moderation_mode": mode, "full_sms": item.full_sms, "sms_segments": 1 if len(full_sms.encode("utf-16-le")) // 2 <= 70 else (len(full_sms.encode("utf-16-le")) // 2 + 66) // 67}
 
 
 @api(["POST"], authenticated=True)

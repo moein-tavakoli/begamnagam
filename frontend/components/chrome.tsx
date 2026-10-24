@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { version } from "../package.json";
 import { usePathname } from "next/navigation";
 import { Icon } from "./icons";
 
@@ -54,7 +55,7 @@ export function Footer() {
         </nav>
       </div>
       <div className="wrap footer-bottom">
-        <span>بگم نگم · نسخه اولیه برای آزمودن یک ایده</span>
+        <span>بگم نگم · نسخه {version} آزمایشی</span>
         <span>با احترام، برای بهتر شدن</span>
       </div>
     </footer>

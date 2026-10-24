@@ -1,5 +1,14 @@
 # Versions
 
+## 0.3.2 — UI hot reload workflow
+
+- `make dev-ui` runs the native Next.js development server with Fast Refresh on
+  loopback, using the existing backend without building Docker images.
+- Generated `next-env.d.ts` is ignored; typecheck generates route types without
+  a production build, so fresh checkouts and dev/release switching stay clean.
+- Contributor and operating guides require hot reload for UI edit loops; package
+  installation and production/PWA image validation are separate steps.
+
 ## 0.3.1 — Infrastructure and moderation verification
 
 - A fixed 120-case synthetic Persian/English corpus covers normal topics, prompt

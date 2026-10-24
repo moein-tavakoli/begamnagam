@@ -2,7 +2,17 @@
 
 این راهنما برای demo محلی است. Compose عمداً `DEBUG=1` و `DEMO_MODE=1` را ثابت نگه می‌دارد؛ صرف تغییر `.env` آن را به سرویس واقعی تبدیل نمی‌کند. پورت‌ها روی `127.0.0.1` هستند و نباید بدون تکمیل فاز انتشار به اینترنت باز شوند.
 
-## شروع
+## گردش‌کار روزمره UI
+
+با backend فعال روی localhost:8000، از ریشه `make dev-ui` را اجرا کنید. این فرمان فقط `npm run dev` است و Next.js Fast Refresh را فعال می‌کند؛ ذخیرهٔ فایل تغییر را در مرورگر اعمال می‌کند. `npm ci` فقط در نصب اول یا تغییر lockfile لازم است.
+
+اگر frontend کانتینری پورت۳۰۰۰ را گرفته است، `docker compose stop frontend` بزنید و بقیه سرویس‌ها را روشن نگه دارید. اگر frontend نیتیو در حالت `next start` اجرا می‌شود، همان پردازش را یک بار متوقف و با `make dev-ui` جایگزین کنید. هنگام ویرایش‌های بعدی سرور را restart نکنید و image نسازید. تغییر متغیرهای محیط/پیکربندی ممکن است restart یک‌باره بخواهد.
+
+SW فقط در production ثبت می‌شود؛ سناریوهای نصب و آفلاین را در بررسی انتشار جدا اجرا کنید. این کار نیازی به ساخت image در هر ویرایش UI ایجاد نمی‌کند. [راهنمای رسمی Fast Refresh](https://nextjs.org/docs/architecture/fast-refresh) و [فرمان next dev](https://nextjs.org/docs/app/api-reference/cli/next) مبنای این گردش‌کارند.
+
+در نسخه۰٫۳٫۲، رفت‌وبرگشت یک متغیر CSS آزمایشی در مرورگر با ثابت‌ماندن `performance.timeOrigin` تأیید شد؛ صفحه reload و image ساخته نشد. تغییر آزمایشی برگشت داده شد. ۱۰ تست فرانت و typecheck نیز موفق بودند. فایل تولیدی `next-env.d.ts` از Git خارج شده و `npm run typecheck` ابتدا `next typegen` را بدون build تولیدی اجرا می‌کند.
+
+## شروع کامل demo
 
 از ریشهٔ مخزن:
 
@@ -42,7 +52,7 @@ npm ci
 npm run dev
 ```
 
-سپس رابط روی `http://localhost:3000` است. `frontend/.env.example` تنظیم `INTERNAL_API_URL` را توضیح می‌دهد. در خروجی standalone، rewrite هنگام build ثبت می‌شود؛ بعد از تغییر مقصد API دوباره build کنید. برای تست PostgreSQL و RabbitMQ از Compose استفاده کنید.
+سپس رابط روی `http://localhost:3000` است. `frontend/.env.example` تنظیم `INTERNAL_API_URL` را توضیح می‌دهد. در dev پس از تغییر مقصد API، dev server را یک بار restart کنید. در خروجی standalone، rewrite هنگام build ثبت می‌شود؛ بعد از تغییر مقصد API دوباره build کنید. برای تست PostgreSQL و RabbitMQ از Compose استفاده کنید.
 
 ## تنظیمات مهم
 

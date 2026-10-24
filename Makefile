@@ -1,8 +1,9 @@
-.PHONY: init up down logs test backend-test frontend-check smoke admin
+.PHONY: init up down logs test backend-test frontend-check smoke admin dev-ui
 
 init:
 	python3 scripts/init-local.py
 
+# Initial full demo/release validation; do not use for UI edit loops.
 up: init
 	docker compose up --build -d --wait --wait-timeout 300
 
@@ -30,3 +31,7 @@ admin:
 foundation-check:
 	docker compose exec -T backend python manage.py check_foundation
 	python3 scripts/verify-foundation.py
+
+# Backend is already available on localhost:8000. No Docker build or npm install.
+dev-ui:
+	cd frontend && npm run dev

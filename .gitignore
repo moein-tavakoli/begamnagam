@@ -28,3 +28,6 @@ backups/
 .local/
 # Optional verified local wheel cache; never commit dependency binaries.
 *.whl
+
+# Next.js generates different route type references in dev and production.
+frontend/next-env.d.ts

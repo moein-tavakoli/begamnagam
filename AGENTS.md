@@ -33,13 +33,26 @@ do not invent current APIs.
 - Keep phones encrypted at rest and use keyed hashes for matching. Do not log full
   phones, OTPs or private input. Do not commit `.env`, local databases or secrets.
 
+## UI development workflow
+
+- Use `make dev-ui` / `npm run dev` for all UI editing and previews. Next.js
+  Fast Refresh must apply source changes while the dev server stays running.
+- Do not rebuild Docker images, run `make up`, or restart the frontend for each
+  UI edit. Keep the backend/data services running and run the UI natively.
+- `npm ci` is for initial setup or lockfile changes, not each UI edit.
+- Production builds and Compose image builds are separate release/PWA checks,
+  run only when that validation is needed; service-worker installation/offline
+  acceptance is checked in production mode, not inferred from hot reload.
+
 ## Validation
 
 Backend: `DJANGO_TESTING=1 python manage.py test` inside `backend/`, with
 `DATABASE_URL` and `REDIS_URL` supplied for PostgreSQL integration tests. Check
 migration consistency after model changes. SQLite skips row-lock concurrency tests.
 
-Frontend: `npm test`, `npm run typecheck`, `npm run build` inside `frontend/`.
+Frontend: use hot reload during UI iteration. Run `npm test` and
+`npm run typecheck` inside `frontend/` as appropriate; reserve `npm run build`
+for release/PWA validation rather than each visual edit.
 Check the full journey at desktop and 375px mobile widths, including OTP, retry,
 history and recipient preferences. Keep labels, focus, keyboard navigation,
 Persian typography and reduced motion intact.

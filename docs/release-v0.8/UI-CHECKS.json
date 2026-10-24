@@ -1,0 +1,208 @@
+{
+  "version": "0.8.0",
+  "kind": "automated_chromium_dev_browser",
+  "frontend_tests": 13,
+  "typecheck_pass": true,
+  "ui_edit_mode": "hot_reload",
+  "docker_images_built": 0,
+  "production_build_run": false,
+  "hot_reload_kept_document": true,
+  "intro_portrait_layouts": [
+    {
+      "width": 320,
+      "height": 568,
+      "documentHeight": 568,
+      "documentWidth": 320,
+      "heroHeight": 544,
+      "heroContentHeight": 544,
+      "nextBottom": 472.9296875,
+      "footerVisible": false,
+      "headerPresent": false,
+      "bannerPresent": false,
+      "promiseStripPresent": false
+    },
+    {
+      "width": 360,
+      "height": 640,
+      "documentHeight": 640,
+      "documentWidth": 360,
+      "heroHeight": 616,
+      "heroContentHeight": 616,
+      "nextBottom": 544.8125,
+      "footerVisible": false,
+      "headerPresent": false,
+      "bannerPresent": false,
+      "promiseStripPresent": false
+    },
+    {
+      "width": 375,
+      "height": 667,
+      "documentHeight": 667,
+      "documentWidth": 375,
+      "heroHeight": 643,
+      "heroContentHeight": 643,
+      "nextBottom": 564.25,
+      "footerVisible": false,
+      "headerPresent": false,
+      "bannerPresent": false,
+      "promiseStripPresent": false
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "documentHeight": 844,
+      "documentWidth": 390,
+      "heroHeight": 820,
+      "heroContentHeight": 820,
+      "nextBottom": 694.1875,
+      "footerVisible": false,
+      "headerPresent": false,
+      "bannerPresent": false,
+      "promiseStripPresent": false
+    },
+    {
+      "width": 412,
+      "height": 915,
+      "documentHeight": 915,
+      "documentWidth": 412,
+      "heroHeight": 891,
+      "heroContentHeight": 891,
+      "nextBottom": 746.703125,
+      "footerVisible": false,
+      "headerPresent": false,
+      "bannerPresent": false,
+      "promiseStripPresent": false
+    },
+    {
+      "width": 502,
+      "height": 827,
+      "documentHeight": 827,
+      "documentWidth": 502,
+      "heroHeight": 803,
+      "heroContentHeight": 803,
+      "nextBottom": 693.8046875,
+      "footerVisible": false,
+      "headerPresent": false,
+      "bannerPresent": false,
+      "promiseStripPresent": false
+    }
+  ],
+  "composer_portrait_layouts": [
+    {
+      "width": 320,
+      "height": 568,
+      "documentHeight": 568,
+      "documentWidth": 320,
+      "panelHeight": 482,
+      "panelContentHeight": 482,
+      "nextBottom": 544
+    },
+    {
+      "width": 360,
+      "height": 640,
+      "documentHeight": 640,
+      "documentWidth": 360,
+      "panelHeight": 491,
+      "panelContentHeight": 491,
+      "nextBottom": 616
+    },
+    {
+      "width": 375,
+      "height": 667,
+      "documentHeight": 667,
+      "documentWidth": 375,
+      "panelHeight": 518,
+      "panelContentHeight": 518,
+      "nextBottom": 643
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "documentHeight": 844,
+      "documentWidth": 390,
+      "panelHeight": 685,
+      "panelContentHeight": 685,
+      "nextBottom": 818
+    },
+    {
+      "width": 412,
+      "height": 915,
+      "documentHeight": 915,
+      "documentWidth": 412,
+      "panelHeight": 756,
+      "panelContentHeight": 756,
+      "nextBottom": 889
+    },
+    {
+      "width": 502,
+      "height": 827,
+      "documentHeight": 827,
+      "documentWidth": 502,
+      "panelHeight": 668,
+      "panelContentHeight": 668,
+      "nextBottom": 801
+    }
+  ],
+  "topic_clicks": [
+    {
+      "topic": "appreciation",
+      "nonempty_text": true,
+      "example_button_present": false
+    },
+    {
+      "topic": "encouragement",
+      "nonempty_text": true,
+      "example_button_present": false
+    },
+    {
+      "topic": "congratulations",
+      "nonempty_text": true,
+      "example_button_present": false
+    },
+    {
+      "topic": "body",
+      "nonempty_text": true,
+      "example_button_present": false
+    },
+    {
+      "topic": "breath",
+      "nonempty_text": true,
+      "example_button_present": false
+    },
+    {
+      "topic": "noise",
+      "nonempty_text": true,
+      "example_button_present": false
+    },
+    {
+      "topic": "shared_space",
+      "nonempty_text": true,
+      "example_button_present": false
+    }
+  ],
+  "empty_draft_blocked": true,
+  "empty_recipient_blocked": true,
+  "draft_preserved_on_previous": true,
+  "draft_preserved_on_browser_back": true,
+  "otp_to_preview_to_demo_receipt_pass": true,
+  "receipt_document_height": 827,
+  "reduced_motion_transition_duration": "0s",
+  "wheel_keeps_intro": {
+    "scrollY": 0,
+    "introVisible": true,
+    "documentHeight": 827,
+    "height": 827
+  },
+  "help_mobile": {
+    "footerVisible": false,
+    "documentHeight": 2362,
+    "height": 827,
+    "bodyOverflow": "visible"
+  },
+  "desktop_footer_visible": true,
+  "native_touch_swipe_tested": false,
+  "physical_devices_tested": false,
+  "public_providers_used": false,
+  "human_checks": "KEPT_PENDING",
+  "fresh_history_load_without_hydration_issue": true
+}

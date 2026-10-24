@@ -1,0 +1,80 @@
+{
+  "version": "0.8.0",
+  "parent_revision": "e45c864082551d1654eb8a7fa3f2572af537faec",
+  "self_excluded": true,
+  "backend_changed": false,
+  "entries": [
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "6473b9ad0b7e03ce30235dab6bc0e7f82eeafdca5171c499072bbdbbd32b0f74"
+    },
+    {
+      "path": "README.md",
+      "sha256": "88c31b90cfc5cfd47a0d59b8295bd05aafb21df7801dce2e6a45adce00ac0b49"
+    },
+    {
+      "path": "design-system/begamnagam/pages/home.md",
+      "sha256": "46c369365c1d9b14bc989ccf5d5246113038014956b06b795b4d8fb77dee8ed9"
+    },
+    {
+      "path": "docs/release-v0.8/README.fa.md",
+      "sha256": "ecd935714dff7181fb7b742f56668db19de4728f1e8480ef1404b8db9e68a201"
+    },
+    {
+      "path": "docs/release-v0.8/UI-CHECKS.json",
+      "sha256": "78afc3cf6057d0a2b5f3762ac28923a09364ac2533ef4dd9978082be3f238968"
+    },
+    {
+      "path": "docs/release-v0.8/compose-mobile.png",
+      "sha256": "80128c6e36fc7cbe761f3d1f777bf79e7ed0b68ef2bf3e7eedee7f9feaf55353"
+    },
+    {
+      "path": "docs/release-v0.8/intro-mobile.png",
+      "sha256": "6899e35dffa597fb5165f334a2a96256e092944ff2504a2a008afa2cd7cd41ec"
+    },
+    {
+      "path": "docs/verification.md",
+      "sha256": "c1555f4dc3e976fedd0a5f08419da6a5ce190d04ea1e4142670107b815377e97"
+    },
+    {
+      "path": "frontend/app/globals.css",
+      "sha256": "b7f225d851a0d447d22efb732695bb54a4e12f5de98b60b322bf490d6cfe6eba"
+    },
+    {
+      "path": "frontend/app/help/page.tsx",
+      "sha256": "5e42169af7c7e5888f66a1b65e128756a5b1bd8f939fc06df839c2f13c72ef98"
+    },
+    {
+      "path": "frontend/app/layout.tsx",
+      "sha256": "22ef49ffa3018ef859d0ac296d6afa0fc623a55811a0b89bcc8e13affc7e0f7e"
+    },
+    {
+      "path": "frontend/app/page.tsx",
+      "sha256": "ae706f1aa91c9f9d971d61a22b9096badf1b44bb712c6a4422254e81541dca8b"
+    },
+    {
+      "path": "frontend/components/app-provider.tsx",
+      "sha256": "415492ed1f5844273a786f3310f5ff1f579c5f6c0720c77184fe554b77393862"
+    },
+    {
+      "path": "frontend/components/chrome.tsx",
+      "sha256": "d6572fef1bce566a28f06b743d383f713a5d34a39784137404d525570361efd0"
+    },
+    {
+      "path": "frontend/components/composer.tsx",
+      "sha256": "04f69c0a6c5039ad854876bcd11d4854bb30d272d2f5ba6fe8e007246d81f75a"
+    },
+    {
+      "path": "frontend/components/home-flow.tsx",
+      "sha256": "3218b60e7fa7eb90865db69ad00a0f802eebab467a67f24b65a32d918888736e"
+    },
+    {
+      "path": "frontend/package-lock.json",
+      "sha256": "a254205c1182328fff4acbc1c1464c9c80cb79ec8d1c40bb06d45b220453fdd4"
+    },
+    {
+      "path": "frontend/package.json",
+      "sha256": "279b1b944f080f5d3216e2521a948c5b1e40f9e18c60f6b89c78366d9473d66e"
+    }
+  ]
+}

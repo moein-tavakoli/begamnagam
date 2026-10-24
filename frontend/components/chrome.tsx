@@ -20,11 +20,13 @@ export function Brand() {
 }
 
 export function Header() {
+  const path = usePathname();
+  if (path === "/") return null;
   return (
     <header className="site-header wrap">
       <Brand />
       <nav className="main-nav" aria-label="منوی اصلی">
-        <Link href="/#how-it-works">چطور کار می‌کنه؟</Link>
+        <Link href="/help#how-it-works">چطور کار می‌کنه؟</Link>
         <Link href="/help">راهنما و هزینه</Link>
         <Link href="/history" className="nav-account">
           <Icon name="receipt" size={18} /> پیام‌های من
@@ -64,6 +66,7 @@ export function Footer() {
 
 export function MobileNav() {
   const path = usePathname();
+  if (path === "/") return null;
   const links = [
     {href:"/", label:"خونه", icon:"space" as const},
     {href:"/#compose", label:"نوشتن پیام", icon:"chat" as const},

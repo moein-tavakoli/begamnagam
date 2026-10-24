@@ -32,9 +32,9 @@ const categoryIcons: Record<string, IconName> = {
   encouragement: "leaf",
   congratulations: "sparkle",
 };
-const stepLabels = ["حرفت رو بنویس", "متن نهایی رو ببین", "شماره و ارسال"];
+const stepLabels = ["حرفت رو بنویس", "شماره گیرنده", "متن نهایی", "تأیید و ارسال"];
 
-export function Composer() {
+export function Composer({ onExit }: { onExit?: () => void }) {
   const { data, reload } = useApp();
   const [step, setStep] = useState(0);
   const [category, setCategory] = useState("appreciation");
@@ -107,6 +107,18 @@ export function Composer() {
     }
   }
 
+  function advanceDraft(event: React.FormEvent) {
+    event.preventDefault();
+    setError("");
+    setFields({});
+    if (text.trim().length < 3) {
+      setFields({ text: "حرفت را در حداقل ۳ حرف بنویس یا یک موضوع را انتخاب کن." });
+      document.getElementById("message-text")?.focus();
+      return;
+    }
+    setStep(1);
+  }
+
   async function makePreview(event: React.FormEvent) {
     event.preventDefault();
     setError("");
@@ -127,7 +139,7 @@ export function Composer() {
         body: { category, text: text.trim(), recipient_phone: normalizePhone(recipient) },
       });
       setPreview(result);
-      setStep(1);
+      setStep(2);
       idempotencyKey.current = "";
     } catch (error) {
       handleError(error);
@@ -238,15 +250,19 @@ export function Composer() {
     <section
       data-update-blocked={!!(step > 0 || text || recipient || order)}
       id="compose"
-      className="compose-section wrap"
+      className={`compose-section wrap ${!data?.authenticated ? "composer-auth-only" : ""}`}
+      data-screen={awaitingPayment ? "payment" : finished ? "receipt" : step}
       aria-labelledby="compose-title"
     >
-      <div className="section-heading">
-        <span className="eyebrow">
-          <span className="tiny-line" /> یک حرف خوب، از سرِ توجه
-        </span>
-        <h2 id="compose-title">از همین‌جا شروع کن.</h2>
-        <p>چند قدم کوتاه، برای حرفی که می‌تونه حالِ رابطه‌ها رو بهتر کنه.</p>
+      <div className="compose-toolbar">
+        <button type="button" className="flow-back" disabled={busy} aria-label={step === 0 || order ? "بازگشت به معرفی" : "مرحله قبل"}
+          onClick={() => step === 0 || order ? onExit?.() : goBack()}>
+          <Icon name="arrow" size={20} /><span>قبلی</span>
+        </button>
+        <h1 id="compose-title" tabIndex={-1} ref={heading}>
+          {awaitingPayment ? "یک نگاه آخر" : finished ? "رسید پیامت" : !data?.authenticated ? "اول شماره خودت رو تأیید کن" : stepLabels[step]}
+        </h1>
+        <span className="flow-page-count">۲ از ۲</span>
       </div>
       <div className="compose-layout">
         <aside className="compose-aside">
@@ -270,6 +286,7 @@ export function Composer() {
                     {
                       [
                         "موضوع و منظور اصلی",
+                        "یک گیرنده آشنا",
                         "یک لحن محترمانه‌تر",
                         "تأیید و پرداخت آزمایشی",
                       ][index]
@@ -295,18 +312,17 @@ export function Composer() {
           <div className="panel-top">
             <span>یک پیام، یک فرصت برای حال بهتر</span>
             <span className="step-count">
-              {new Intl.NumberFormat("fa-IR").format(step + 1)} از ۳
+              {new Intl.NumberFormat("fa-IR").format(step + 1)} از ۴
             </span>
           </div>
           <ServiceState />
           <ErrorBox message={error} />
-          {step === 0 && (
-            <>
-            <AuthGate />
-            <form onSubmit={makePreview} noValidate>
-              <h3 className="form-heading" tabIndex={-1} ref={heading}>
+          {step === 0 && !data?.authenticated && <AuthGate />}
+          {step === 0 && data?.authenticated && (
+            <form className="draft-form" onSubmit={advanceDraft} noValidate>
+              <h2 className="form-heading" tabIndex={-1}>
                 چه حرفی توی دلت مونده؟
-              </h3>
+              </h2>
               <p className="muted form-intro">
                 اول موضوع رو انتخاب کن؛ بعد خیلی ساده منظورت رو بنویس.
               </p>
@@ -319,7 +335,13 @@ export function Composer() {
                       className={`category-card ${category === item.id ? "selected" : ""}`}
                       key={item.id}
                       type="button"
-                      onClick={() => setCategory(item.id)}
+                      disabled={busy}
+                      onClick={() => {
+                        setCategory(item.id);
+                        setText(item.example);
+                        setFields({});
+                        setError("");
+                      }}
                       aria-pressed={category === item.id}
                     >
                       <Icon name={categoryIcons[item.id] || "chat"} />
@@ -340,20 +362,6 @@ export function Composer() {
               </fieldset>
               <div className="field-label-row">
                 <label htmlFor="message-text">حرفی که می‌خوای برسونی</label>
-                <button
-                  type="button"
-                  className="text-button"
-                  disabled={!data}
-                  onClick={() => {
-                    setText(
-                      data?.categories.find((item) => item.id === category)
-                        ?.example || "",
-                    );
-                    setFields({});
-                  }}
-                >
-                  استفاده از مثال
-                </button>
               </div>
               <textarea
                 id="message-text"
@@ -383,12 +391,10 @@ export function Composer() {
                 <Icon name="sparkle" size={19} />
                 <p>
                   {data?.rewrite_mode === "ollama"
-                    ? "با کمک هوش مصنوعی، یک متن از میان پیام‌های بررسی‌شده انتخاب می‌کنیم. متن نهایی را خودت تأیید می‌کنی."
-                    : "منظورت به یک متن آمادهٔ بررسی‌شده تبدیل می‌شه. در این حالت، بازنویسی آزاد با هوش مصنوعی انجام نمی‌شه."}
+                    ? "انتخاب متن بررسی‌شده با کمک هوش مصنوعی."
+                    : "انتخاب از متن‌های آمادهٔ بررسی‌شده."}
                 </p>
               </div>
-              <label htmlFor="quote-recipient">شماره گیرنده برای پیش‌نمایش نهایی</label>
-              <input id="quote-recipient" type="tel" inputMode="tel" dir="ltr" value={recipient} onChange={e=>setRecipient(e.target.value)} autoComplete="off" placeholder="09…" />
               <div className="form-actions">
                 <span className="small muted">دیدن پیش‌نمایش رایگانه</span>
                 <BusyButton
@@ -396,18 +402,37 @@ export function Composer() {
                   className="button primary"
                   disabled={!data?.authenticated || !data.categories.length}
                 >
-                  دیدن متن نهایی <Icon name="arrow" size={19} />
+                  بعدی؛ شماره گیرنده <Icon name="arrow" size={19} />
                 </BusyButton>
               </div>
             </form>
-            </>
           )}
 
-          {step === 1 && preview && (
+          {step === 1 && (
+            <form className="recipient-form" onSubmit={makePreview} noValidate>
+              <h2 className="form-heading">به دست چه کسی برسه؟</h2>
+              <p className="muted form-intro">شماره کسی رو وارد کن که می‌شناسی. شماره تو به او نمایش داده نمی‌شه.</p>
+              <AuthGate />
+              <label htmlFor="quote-recipient">شماره موبایل گیرنده</label>
+              <input id="quote-recipient" type="tel" inputMode="tel" dir="ltr"
+                value={recipient} onChange={e => setRecipient(e.target.value)}
+                autoComplete="off" placeholder="0912 345 6789" disabled={busy}
+                aria-describedby="quote-recipient-hint" />
+              <p id="quote-recipient-hint" className="small muted">فقط یک شماره موبایل ایران؛ ارسال به خودت مجاز نیست.</p>
+              <div className="form-actions">
+                <span className="small muted">قبل از ارسال، متن نهایی و هزینه رو می‌بینی.</span>
+                <BusyButton busy={busy} className="button primary full-width" disabled={!data?.authenticated}>
+                  بعدی؛ دیدن متن نهایی <Icon name="arrow" size={19} />
+                </BusyButton>
+              </div>
+            </form>
+          )}
+
+          {step === 2 && preview && (
             <div>
-              <h3 className="form-heading" tabIndex={-1} ref={heading}>
+              <h2 className="form-heading" tabIndex={-1}>
                 این‌طوری مهربون‌تره.
-              </h3>
+              </h2>
               <p className="muted form-intro">
                 این متن به‌جای حرف اولیه‌ات ثبت می‌شه. قبل از ادامه با دقت
                 بخونش.
@@ -439,14 +464,14 @@ export function Composer() {
                 </span>
               </div>
               <div className="form-actions">
-                <button className="button ghost" type="button" onClick={goBack}>
+                <button className="button ghost" type="button" onClick={() => { setStep(0); setError(""); setFields({}); }}>
                   اصلاح حرفم
                 </button>
                 <button
                   className="button primary"
                   type="button"
                   onClick={() => {
-                    setStep(2);
+                    setStep(3);
                     setError("");
                   }}
                 >
@@ -456,11 +481,11 @@ export function Composer() {
             </div>
           )}
 
-          {step === 2 && preview && !order && (
+          {step === 3 && preview && !order && (
             <div>
-              <h3 className="form-heading" tabIndex={-1} ref={heading}>
-                به دست چه کسی برسه؟
-              </h3>
+              <h2 className="form-heading" tabIndex={-1}>
+                با خیال راحت تأیید کن.
+              </h2>
               <p className="muted form-intro">
                 شماره رو با دقت وارد کن؛ گیرنده باید همون کسی باشه که واقعاً
                 می‌شناسی.
@@ -496,7 +521,6 @@ export function Composer() {
                   </p>
                 )}
               </form>
-              <AuthGate />
               <label className="checkbox-label" htmlFor="respect-consent">
                 <input
                   id="respect-consent"
@@ -543,9 +567,9 @@ export function Composer() {
 
           {awaitingPayment && order && (
             <div>
-              <h3 className="form-heading" tabIndex={-1} ref={heading}>
+              <h2 className="form-heading" tabIndex={-1}>
                 یک نگاه آخر، بعد ارسال.
-              </h3>
+              </h2>
               <div className="payment-summary">
                 <div>
                   <span>شماره گیرنده</span>
@@ -604,7 +628,7 @@ export function Composer() {
                   size={32}
                 />
               </div>
-              <h3 className="form-heading" tabIndex={-1} ref={heading}>
+              <h2 className="form-heading" tabIndex={-1}>
                 {isPending(order.status)
                   ? "پیامت در مسیر پردازشه."
                   : unsuccessful
@@ -612,7 +636,7 @@ export function Composer() {
                     : data?.demo_mode
                       ? "آزمایش ارسال ثبت شد."
                       : "وضعیت پیامت ثبت شد."}
-              </h3>
+              </h2>
               <p className="small">مالی: {order.financial_status === "refunded" ? "مسترد شد" : order.financial_status === "refund_pending" ? "بازپرداخت در حال پیگیری است" : order.financial_status === "verified" ? "تأیید شد" : "در انتظار"}</p>
               <p className="receipt-status" role="status">
                 {statusLabel(order.status)}

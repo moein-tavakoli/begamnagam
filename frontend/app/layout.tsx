@@ -4,7 +4,7 @@ import "@fontsource/vazirmatn/500.css";
 import "@fontsource/vazirmatn/600.css";
 import "@fontsource/vazirmatn/700.css";
 import "./globals.css";
-import { AppProvider, EnvironmentBanner } from "@/components/app-provider";
+import { AppProvider } from "@/components/app-provider";
 import { Header, Footer, MobileNav } from "@/components/chrome";
 
 import { PWAFoundation } from "@/components/pwa-foundation";
@@ -39,7 +39,6 @@ export default function RootLayout({
           رفتن به محتوای اصلی
         </a>
         <AppProvider>
-          <EnvironmentBanner />
           <PWAFoundation />
           <Header />
           <main id="main-content">{children}</main>

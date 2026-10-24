@@ -67,7 +67,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     );
   return (
     <AppContext.Provider value={{ data, loading, error, reload, authenticate }}>
-      <div key={privacyEpoch}>{children}</div>
+      <div key={privacyEpoch} className="app-shell">{children}</div>
     </AppContext.Provider>
   );
 }

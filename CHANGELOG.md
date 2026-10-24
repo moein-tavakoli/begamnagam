@@ -1,5 +1,14 @@
 # Versions
 
+## 0.8.0 — Full-screen mobile onboarding and composer
+
+- Replaced the scrolling home page with intro/composer slides and explicit Next/Back controls.
+- Removed the top environment banner, home header and promise strip; hid the mobile footer.
+- Split composing into viewport-sized writing, recipient, preview and confirmation screens.
+- Topic selection now inserts its example directly into the editable message field.
+- Verified six portrait sizes, seven topics, draft preservation, validation and a complete
+  demo checkout in the browser;13 frontend tests/typecheck pass. UI uses hot reload only.
+
 ## 0.7.0 — Local release candidate and evidence
 
 - Measured1000 synthetic accounts,30 complete flows and2400 successful reads across

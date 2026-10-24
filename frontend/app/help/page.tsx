@@ -19,7 +19,7 @@ export default function HelpPage() {
         </p>
       </div>
       <Pricing />
-      <section className="guidelines">
+      <section className="guidelines" id="how-it-works">
         <h2>چطور حرفم رو بهتر برسونم؟</h2>
         <div className="guideline-grid">
           <article>
@@ -101,7 +101,7 @@ export default function HelpPage() {
         <details>
           <summary>نسخه آزمایشی پیامک واقعی می‌فرسته؟</summary>
           <p>
-            وقتی نوار «نسخه آزمایشی محلی» رو می‌بینی، کد ورود در همین صفحه نمایش
+            در حالت آزمایشی، کد ورود با برچسب «کد ورود آزمایشی» در صفحه نمایش
             داده می‌شه و پرداخت و ارسال شبیه‌سازی می‌شن. هیچ پولی کسر نمی‌شه و
             پیامکی ارسال نمی‌شه.
           </p>

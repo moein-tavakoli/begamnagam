@@ -19,6 +19,7 @@ x-backend-environment: &backend-environment
   AI_MODE: ${AI_MODE:-template}
   KAVENEGAR_API_KEY: ${KAVENEGAR_API_KEY:-}
   KAVENEGAR_SENDER: ${KAVENEGAR_SENDER:-}
+  KAVENEGAR_OTP_MODE: ${KAVENEGAR_OTP_MODE:-sms}
   KAVENEGAR_OTP_TEMPLATE: ${KAVENEGAR_OTP_TEMPLATE:-}
   OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
   OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:7b}

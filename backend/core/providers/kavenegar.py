@@ -59,5 +59,14 @@ class Kavenegar:
         return self._result(entry, message_id=message_id or None, local_id=None if message_id else local_id)
 
     def otp(self, *, phone, code):
-        return self._result(self._call('verify/lookup', {'receptor': phone, 'token': code,
-            'template': settings.KAVENEGAR_OTP_TEMPLATE, 'type': 'sms'}))
+        if not isinstance(code, str) or not re.fullmatch(r'[0-9]{6}', code):
+            raise ProviderRejected('invalid_otp_code')
+        if settings.KAVENEGAR_OTP_MODE == 'sms':
+            # Fixed server-owned text; never dispatch user input through the OTP path.
+            return self._result(self._call('sms/send', {'receptor': phone,
+                'message': f'بگم نگم\nکد ورود: {code}\nاعتبار: ۵ دقیقه\nکد را در اختیار کسی نگذارید.',
+                'sender': settings.KAVENEGAR_SENDER, 'hide': 1}))
+        if settings.KAVENEGAR_OTP_MODE == 'lookup' and settings.KAVENEGAR_OTP_TEMPLATE:
+            return self._result(self._call('verify/lookup', {'receptor': phone, 'token': code,
+                'template': settings.KAVENEGAR_OTP_TEMPLATE, 'type': 'sms'}))
+        raise ProviderRejected('invalid_otp_configuration')

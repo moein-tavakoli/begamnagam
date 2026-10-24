@@ -145,6 +145,7 @@ PROVIDER_TIMEOUT_SECONDS = float(os.getenv('PROVIDER_TIMEOUT_SECONDS', '8'))
 KAVENEGAR_BASE_URL = os.getenv('KAVENEGAR_BASE_URL', 'https://api.kavenegar.com')
 KAVENEGAR_API_KEY = os.getenv('KAVENEGAR_API_KEY', '')
 KAVENEGAR_SENDER = os.getenv('KAVENEGAR_SENDER', '')
+KAVENEGAR_OTP_MODE = os.getenv('KAVENEGAR_OTP_MODE', 'sms')
 KAVENEGAR_OTP_TEMPLATE = os.getenv('KAVENEGAR_OTP_TEMPLATE', '')
 ZARINPAL_BASE_URL = os.getenv('ZARINPAL_BASE_URL', 'https://sandbox.zarinpal.com')
 ZARINPAL_REDIRECT_BASE = os.getenv('ZARINPAL_REDIRECT_BASE', 'https://sandbox.zarinpal.com')
@@ -162,11 +163,15 @@ if PROVIDER_NETWORK_MODE not in {'disabled', 'local', 'external'} or PROVIDER_EN
     raise ImproperlyConfigured('Invalid provider mode or environment')
 if not 0 < PROVIDER_TIMEOUT_SECONDS <= 15:
     raise ImproperlyConfigured('Provider timeout must be at most15 seconds')
+if KAVENEGAR_OTP_MODE not in {'sms', 'lookup'}:
+    raise ImproperlyConfigured('Kavenegar OTP mode must be sms or lookup')
 if PROVIDER_NETWORK_MODE == 'external':
     if DEMO_MODE or not LIVE_PROVIDERS_ENABLED or not OPERATIONS_OWNER or not PROVIDER_CONTRACT_APPROVED or not REFUND_PROCESS_APPROVED:
         raise ImproperlyConfigured('External providers require non-demo mode, operations/contract/refund approval')
-    if not all([KAVENEGAR_API_KEY, KAVENEGAR_SENDER, KAVENEGAR_OTP_TEMPLATE, ZARINPAL_MERCHANT_ID, PILOT_RECIPIENT_HASHES]):
+    if not all([KAVENEGAR_API_KEY, KAVENEGAR_SENDER, ZARINPAL_MERCHANT_ID, PILOT_RECIPIENT_HASHES]):
         raise ImproperlyConfigured('External providers require credentials and an explicit pilot recipient allowlist')
+    if OTP_BACKEND == 'kavenegar' and KAVENEGAR_OTP_MODE == 'lookup' and not KAVENEGAR_OTP_TEMPLATE:
+        raise ImproperlyConfigured('Kavenegar lookup OTP requires an approved template')
     if min(PROVIDER_DAILY_BUDGET_RIAL, SMS_MAX_COST_RIAL, OTP_MAX_COST_RIAL) <= 0:
         raise ImproperlyConfigured('External providers require positive bounded cost configuration')
 

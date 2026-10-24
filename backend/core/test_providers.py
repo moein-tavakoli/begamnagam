@@ -24,7 +24,8 @@ class ProviderContracts(TestCase):
         self.config = override_settings(PROVIDER_NETWORK_MODE='local', PROVIDER_TIMEOUT_SECONDS=1,
             KAVENEGAR_BASE_URL=self.fixture.url, ZARINPAL_BASE_URL=self.fixture.url,
             ZARINPAL_REDIRECT_BASE=self.fixture.url, KAVENEGAR_API_KEY='synthetic-key',
-            ZARINPAL_MERCHANT_ID='synthetic-merchant', KAVENEGAR_OTP_TEMPLATE='test',
+            ZARINPAL_MERCHANT_ID='synthetic-merchant', KAVENEGAR_SENDER='10000000',
+            KAVENEGAR_OTP_MODE='sms', KAVENEGAR_OTP_TEMPLATE='',
             PAYMENT_BACKEND='zarinpal', PROVIDER_ENVIRONMENT='sandbox', PROVIDER_DAILY_BUDGET_RIAL=10000,
             OTP_MAX_COST_RIAL=500, SMS_MAX_COST_RIAL=2000)
         self.config.enable()
@@ -158,16 +159,66 @@ class ProviderContracts(TestCase):
     def test_external_network_and_redirects_cannot_escape_local_contract(self):
         with override_settings(KAVENEGAR_BASE_URL='https://api.kavenegar.com'):
             with self.assertRaises(ProviderDisabled): Kavenegar().otp(phone='09901234567', code='123456')
-        self.fixture.modes['lookup'] = 'redirect'
+        self.fixture.modes['send'] = 'redirect'
         with self.assertRaises(ProviderUnknown): Kavenegar().otp(phone='09901234567', code='123456')
-        self.assertEqual(self.fixture.calls.count('lookup'), 1)
+        self.assertEqual(self.fixture.calls.count('send'), 1)
 
     @override_settings(OTP_BACKEND='kavenegar')
     def test_real_otp_protocol_never_exposes_debug_code(self):
         response = self.post('/auth/request-otp', {'phone':'09911234567'})
         self.assertEqual(response.status_code, 200)
         self.assertNotIn('debug_code', response.json())
-        self.assertIn('09911234567', self.fixture.codes)
+        self.assertFalse(response.json()['demo_mode'])
+        self.assertEqual(self.fixture.calls.count('send'), 1)
+        self.assertNotIn('lookup', self.fixture.calls)
+        payload = self.fixture.otp_requests[0]
+        code = self.fixture.codes['09911234567']
+        self.assertEqual(payload['sender'], '10000000')
+        self.assertEqual(payload['hide'], '1')
+        self.assertNotIn('template', payload)
+        self.assertEqual(payload['message'], f'بگم نگم\nکد ورود: {code}\nاعتبار: ۵ دقیقه\nکد را در اختیار کسی نگذارید.')
+        verified = self.post('/auth/verify-otp', {'challenge_id':response.json()['challenge_id'], 'code':code})
+        self.assertEqual(verified.status_code, 200)
+
+    @override_settings(KAVENEGAR_OTP_MODE='lookup', KAVENEGAR_OTP_TEMPLATE='approved-login')
+    def test_lookup_remains_explicit_and_uses_approved_template(self):
+        result = Kavenegar().otp(phone='09911234567', code='012345')
+        self.assertEqual(result.status, 'accepted')
+        self.assertEqual(self.fixture.calls.count('lookup'), 1)
+        self.assertNotIn('send', self.fixture.calls)
+        self.assertEqual(self.fixture.otp_requests[0]['template'], 'approved-login')
+        self.assertEqual(self.fixture.codes['09911234567'], '012345')
+
+    def test_invalid_otp_input_or_configuration_does_not_dispatch(self):
+        for code in ('12345', '1234567', '123456\nمتن اضافی', '۱۲۳۴۵۶', None):
+            with self.assertRaises(ProviderRejected):
+                Kavenegar().otp(phone='09911234567', code=code)
+        for mode in ('lookup', 'invalid'):
+            with override_settings(KAVENEGAR_OTP_MODE=mode, KAVENEGAR_OTP_TEMPLATE=''):
+                with self.assertRaises(ProviderRejected):
+                    Kavenegar().otp(phone='09911234567', code='123456')
+        self.assertFalse(self.fixture.calls)
+
+    @override_settings(OTP_BACKEND='kavenegar')
+    def test_lost_ordinary_otp_response_does_not_repeat_or_expose_code(self):
+        self.fixture.modes['send'] = 'drop_after_accept'
+        response = self.post('/auth/request-otp', {'phone':'09911234567'})
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn('debug_code', response.json())
+        self.assertEqual(self.fixture.calls.count('send'), 1)
+        verified = self.post('/auth/verify-otp', {'challenge_id':response.json()['challenge_id'],
+            'code': self.fixture.codes['09911234567']})
+        self.assertEqual(verified.status_code, 200)
+
+    @override_settings(OTP_BACKEND='kavenegar')
+    def test_rejected_ordinary_otp_cannot_be_verified(self):
+        from .models import OTPChallenge
+        self.fixture.modes['send'] = 'reject'
+        response = self.post('/auth/request-otp', {'phone':'09911234567'})
+        self.assertEqual(response.status_code, 503)
+        self.assertNotIn('debug_code', response.json())
+        self.assertIsNotNone(OTPChallenge.objects.latest('created_at').consumed_at)
+        self.assertEqual(self.fixture.calls.count('send'), 1)
 
     @override_settings(SMS_BACKEND='kavenegar')
     def test_aged_uncertain_sms_still_creates_refund_when_status_endpoint_is_down(self):

@@ -1,5 +1,17 @@
 # Versions
 
+## 0.8.2 — Ordinary SMS for OTP
+
+- Default Kavenegar OTP to ordinary `sms/send` using the configured sender and
+  fixed six-digit login text; no approved template is needed in `sms` mode.
+- Keep opt-in `lookup` mode for a future approved template; reject invalid modes,
+  missing lookup templates and non-code OTP input without dispatching.
+- Expose `KAVENEGAR_OTP_MODE=sms` in environment templates and backend Compose wiring.
+- Preserve OTP privacy, expiry, throttling, budget and network activation gates.
+- All90 backend tests pass on PostgreSQL/Redis, including ordinary OTP login,
+  lookup opt-in, invalid input/configuration, rejection and a lost send response.
+- Compose configuration validates; no live SMS, UI image builds or Git push.
+
 ## 0.8.1 — Kavenegar environment configuration
 
 - Exposed existing Kavenegar OTP/SMS/status credentials in the root environment

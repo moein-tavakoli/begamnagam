@@ -1,0 +1,141 @@
+{
+  "version": "0.7.0",
+  "human_testing": "DEFERRED_BY_OWNER",
+  "checks": [
+    {
+      "id": "scope_freeze",
+      "title": "تأیید دامنه و Freeze",
+      "procedure": "نسخه نامزد و تغییرهای۰٫۴تا۰٫۷، قیمت و تعرفه واقعی و محدودیت هفت موضوع را امضا کنید.",
+      "status": "NOT_TESTED",
+      "reviewer": null,
+      "reviewed_at": null,
+      "evidence": null
+    },
+    {
+      "id": "persian_tone",
+      "title": "لحن و معنای فارسی",
+      "procedure": "قالب‌های مثبت و حساس و۱۲۰ ورودی corpus را با بزرگسالان بازبینی کنید؛ تحقیر، ابهام پزشکی و ناراحتی ناخواسته ثبت شود.",
+      "status": "NOT_TESTED",
+      "reviewer": null,
+      "reviewed_at": null,
+      "evidence": null
+    },
+    {
+      "id": "android_standalone",
+      "title": "Android واقعی",
+      "procedure": "Chrome پایدار: نصب، standalone، حذف/نصب مجدد، back، foreground/background، OTP و قطع شبکه؛ مدل گوشی و نسخه مرورگر ثبت شود.",
+      "status": "NOT_TESTED",
+      "reviewer": null,
+      "reviewed_at": null,
+      "evidence": null
+    },
+    {
+      "id": "ios_standalone",
+      "title": "iOS واقعی",
+      "procedure": "Safari: Share/Add to Home Screen، اجرای مستقل، safe area، کیبورد، back، خروج/بازگشت و نصب مجدد؛ تفاوت با Android ثبت شود.",
+      "status": "NOT_TESTED",
+      "reviewer": null,
+      "reviewed_at": null,
+      "evidence": null
+    },
+    {
+      "id": "mobile_accessibility",
+      "title": "دسترس‌پذیری موبایل",
+      "procedure": "VoiceOver/TalkBack، کیبورد، فوکوس، پیام خطا، بزرگنمایی۲۰۰٪، کاهش حرکت و کنتراست WCAG2.2AA را روی تمام مسیرها بررسی کنید.",
+      "status": "NOT_TESTED",
+      "reviewer": null,
+      "reviewed_at": null,
+      "evidence": null
+    },
+    {
+      "id": "payment_return_devices",
+      "title": "بازگشت درگاه روی دستگاه",
+      "procedure": "موفق/لغو/نامعلوم/قطع شبکه/برگشت به مرورگر و PWA، چندتب و خرید تکراری؛ یک capture و یک ارسال تأیید شود.",
+      "status": "NOT_TESTED",
+      "reviewer": null,
+      "reviewed_at": null,
+      "evidence": null
+    },
+    {
+      "id": "shared_device_privacy",
+      "title": "حریم خصوصی دستگاه مشترک",
+      "procedure": "خروج و تعویض حساب در دو تب، Back/bfcache، آفلاین، tab غیرپاسخگو و update/rollback را بدون مشاهده متن/شماره حساب قبلی تأیید کنید.",
+      "status": "NOT_TESTED",
+      "reviewer": null,
+      "reviewed_at": null,
+      "evidence": null
+    },
+    {
+      "id": "volunteer_consent",
+      "title": "رضایت داوطلبان",
+      "procedure": "فقط بزرگسالان و دریافت‌کنندگان آگاه؛ رضایت، راه خروج، محدوده موضوع، مدت و سقف هزینه پیش از ارسال واقعی ثبت شود.",
+      "status": "NOT_TESTED",
+      "reviewer": null,
+      "reviewed_at": null,
+      "evidence": null
+    },
+    {
+      "id": "volunteer_pilot",
+      "title": "پایلوت انسانی محدود",
+      "procedure": "ابتدا موضوع مثبت، بودجه محدود،۷تا۱۴روز مشاهده، شکایت/توقف/هزینه/تطبیق کامل و بازخورد کیفی؛ ارسال بیشتر به‌تنهایی پذیرش نیست.",
+      "status": "NOT_TESTED",
+      "reviewer": null,
+      "reviewed_at": null,
+      "evidence": null
+    },
+    {
+      "id": "support_drill",
+      "title": "تمرین پشتیبانی",
+      "procedure": "افراد و شیفت واقعی، نقش حداقلی، MFA/VPN پنل عملیاتی، رسیدگی به گزارش، توقف اضطراری، unknown و refund و اطلاع‌رسانی رخداد تمرین شوند.",
+      "status": "NOT_TESTED",
+      "reviewer": null,
+      "reviewed_at": null,
+      "evidence": null
+    },
+    {
+      "id": "provider_acceptance",
+      "title": "پذیرش ارائه‌دهندگان",
+      "procedure": "کلید/قرارداد/تعرفه، OTP، متن دارای لینک توقف، localid، DLR و callback مستقل در sandbox/آزمون واقعی مجاز؛ محدودیت خط خدماتی و مقصدهای داوطلب تأیید شود.",
+      "status": "NOT_TESTED",
+      "reviewer": null,
+      "reviewed_at": null,
+      "evidence": null
+    },
+    {
+      "id": "post_settlement_refund",
+      "title": "بازپرداخت پس از تسویه",
+      "procedure": "reverse پیش از تسویه و refund پس از تسویه جدا آزموده شوند؛ فرایند دستی مستند، مسئول و مرجع تأیید بانکی برای مسیر پشتیبانی باقی بماند.",
+      "status": "NOT_TESTED",
+      "reviewer": null,
+      "reviewed_at": null,
+      "evidence": null
+    },
+    {
+      "id": "public_tls",
+      "title": "TLS و انتشار کنترل‌شده",
+      "procedure": "دامنه مصوب، گواهی معتبر، هدرهای proxy، نبود پورت عمومی DB/API/صف و عبور نکردن کاربر از هشدار مرورگر تأیید شود؛ بازگشت image و سازگاری asset قدیمی تمرین شود.",
+      "status": "NOT_TESTED",
+      "reviewer": null,
+      "reviewed_at": null,
+      "evidence": null
+    },
+    {
+      "id": "offsite_restore",
+      "title": "بازیابی خارج دستگاه",
+      "procedure": "نسخه رمز‌شده و کلید جدا در محل دیگر، قطع منبع اصلی، حفظ suppression/حذف پس از snapshot و تطبیق مالی؛ RPO/RTO واقعی اندازه‌گیری شود.",
+      "status": "NOT_TESTED",
+      "reviewer": null,
+      "reviewed_at": null,
+      "evidence": null
+    },
+    {
+      "id": "owner_release_decision",
+      "title": "تصمیم نهایی انتشار",
+      "procedure": "پذیرش شواهد G0تاG6، رفع موارد بحرانی/شدید، بودجه/مخاطب/محیط/نسخه دقیق و اجازه جداگانه انتشار عمومی ثبت شود.",
+      "status": "NOT_TESTED",
+      "reviewer": null,
+      "reviewed_at": null,
+      "evidence": null
+    }
+  ]
+}

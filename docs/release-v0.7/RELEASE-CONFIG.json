@@ -1,0 +1,10 @@
+{
+  "compose_config_valid": true,
+  "only_proxy_publishes_ports": true,
+  "source_bind_mounts": false,
+  "runtime_images_review_required": true,
+  "tls_certificate_issuance_tested": false,
+  "deployed": false,
+  "runtime_error_log_query_scrub_tested": true,
+  "test_network": "isolated_container_loopback_only"
+}

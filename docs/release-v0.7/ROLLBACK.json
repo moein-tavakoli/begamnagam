@@ -1,0 +1,14 @@
+{
+  "kind": "isolated_local_failed_candidate_recovery",
+  "project": "begamnagam-g6",
+  "injected_frontend_exit_code": 23,
+  "failed_candidate_observed": true,
+  "restored_exact_image_id": "sha256:cdfa0661ecee763cb380e2c87a8a3c15926eed30b412c72af3af6c2de9506cdb",
+  "health_and_homepage_recovered": true,
+  "financial_watermark_unchanged": true,
+  "migrations_reversed": false,
+  "duration_seconds": 12.817,
+  "cross_version_browser_assets_tested": false,
+  "public_rollout_tested": false,
+  "passed": true
+}

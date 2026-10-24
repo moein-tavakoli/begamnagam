@@ -1,0 +1,83 @@
+{
+  "version": "0.7.0",
+  "generated_utc": "2026-10-24T10:56:06.088833+00:00",
+  "executor": "automated_local_agent",
+  "human_approval_recorded": false,
+  "push_performed": false,
+  "external_deployment_performed": false,
+  "live_provider_calls": 0,
+  "live_money_moved": false,
+  "backend": {
+    "native_tests": 86,
+    "native_pass": true,
+    "postgresql": 17,
+    "redis_test_database": 15,
+    "docker_tests": 86,
+    "docker_pass": true,
+    "final_readiness_tests_rerun": 3,
+    "skipped": 0,
+    "schema_tip": "0008_order_consent_at_order_terms_version_and_more"
+  },
+  "frontend": {
+    "tests": 13,
+    "typecheck_pass": true,
+    "native_production_build_pass": true,
+    "docker_production_build_pass": true,
+    "ui_development_uses_hot_reload": true,
+    "sw_sha256": "985fb3cc2fab23769c48237499b93c849efaefdc54ffdb43cd4bc9f16fc3f5bc"
+  },
+  "compose": {
+    "project": "begamnagam-g6",
+    "clean_database": true,
+    "rabbitmq_version": "4.4.0",
+    "redis_branch": "7.4",
+    "postgresql_branch": "17",
+    "smoke_pass": true,
+    "foundation_pass": true,
+    "readiness_pass": true,
+    "dependency_lock_check_pass": true,
+    "initial_broker_health_transient_failure": true,
+    "same_container_became_healthy_and_up_retry_passed": true,
+    "temporary_project_removed_with_volumes_preserved": true
+  },
+  "release": {
+    "topology_lint_pass": true,
+    "caddy_validate_pass": true,
+    "django_deploy_check_warnings": 0,
+    "workflow_actionlint_pass": true,
+    "github_workflows_executed": false,
+    "reviewed_public_domain_supplied": false,
+    "public_certificate_tested": false,
+    "readiness_blocks_launch": true,
+    "human_checks_pending": 15,
+    "staged_secret_scan_pass": true,
+    "final_readiness_docker_tests_pass": true,
+    "proxy_error_query_scrub_test_pass": true
+  },
+  "runtime_source_sha256": "03db440a3ac1fd9935e4221fe743a7b35a0c6c15595200332236c0e575915921",
+  "local_image_ids": {
+    "backend": "sha256:c63dada9f4e99c83851de46bbfa58720c1240147b960c615f6f39f26145b3668",
+    "migrate": "sha256:d7d5e79ac217c29719b7d709bc3aaaef356fb1c26bd99fd72fb877dd19461140",
+    "worker": "sha256:4a06a743cf36e509718556e40f791dbd6e2b1024b36f952766f16702c7c2208c",
+    "beat": "sha256:fb887861b066105a59767e2f28da185ba19bfb3338f34d28930565a5a6ec3e8c",
+    "frontend": "sha256:cdfa0661ecee763cb380e2c87a8a3c15926eed30b412c72af3af6c2de9506cdb"
+  },
+  "evidence_files": [
+    "BENCHMARK.json",
+    "PWA-BROWSER.json",
+    "RESTORE.json",
+    "ROLLBACK.json",
+    "READINESS.json",
+    "RELEASE-CONFIG.json",
+    "../release-v0.6/SYNTHETIC-PILOT.json"
+  ],
+  "limitations": [
+    "human_and_physical_device_tests_deferred",
+    "vendor_sandbox_live_acceptance_not_run",
+    "post_settlement_refund_not_automated",
+    "cross_version_browser_asset_rollback_not_run",
+    "offsite_restore_and_post_snapshot_deletion_not_exercised",
+    "benchmark_shared_native_host_broker4.2.9_not_release_sizing"
+  ],
+  "final_dev_frontend_and_backend_health_pass": true
+}

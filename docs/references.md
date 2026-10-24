@@ -19,3 +19,12 @@
 کتابخانهٔ ناشناس‌سازی کامل، تضمین درستی مدل یا تضمین تحویل پیامک فرض نشده است. مستندات فازبندی، قابلیت‌های فعلی را از نیازمندی‌های عرضهٔ عمومی جدا می‌کنند.
 
 مراجع اصلاح صف در نسخه۰٫۳٫۱: [تنظیمات Celery5.6](https://docs.celeryq.dev/en/v5.6.3/userguide/configuration.html) و [انواع صف RabbitMQ4.4](https://www.rabbitmq.com/docs/queues). نتیجه عملی در [گزارش زیرساخت](phase-two/INFRASTRUCTURE.md) ثبت است.
+
+
+مراجع تکمیل تنظیم انتشار۰٫۷ (بررسی۲۴اکتبر۲۰۲۶):
+
+- [Docker Compose production](https://docs.docker.com/compose/how-tos/production/): جداسازی تنظیم محیط و نبود bind کد توسعه در انتشار.
+- [Caddy reverse proxy](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy): مسیریابی خصوصی و بازنویسی header بالادست.
+- [Django proxy scheme trust](https://docs.djangoproject.com/en/5.2/ref/settings/#secure-proxy-ssl-header): اعتماد به header فقط پشت proxy کنترل‌شده و backend غیرعمومی.
+
+- [Caddy log filter](https://caddyserver.com/docs/caddyfile/directives/log#filter): حذف request و response headers از لاگ runtime proxy.

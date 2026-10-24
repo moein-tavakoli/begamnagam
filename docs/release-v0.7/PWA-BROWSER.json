@@ -1,0 +1,27 @@
+{
+  "kind": "automated_desktop_chromium_native_production",
+  "version": "0.7.0",
+  "two_tabs_controlled": true,
+  "dirty_tab_blocks_activation": true,
+  "draft_preserved_when_blocked": true,
+  "explicit_idle_update_reloads_only_initiator": true,
+  "original_worker_restored": true,
+  "other_tab_not_reloaded_during_worker_rollback": true,
+  "cache": {
+    "keys": [
+      "begamnagam-public-shell-v3"
+    ],
+    "urls": [
+      "/offline.html",
+      "/icons/icon-192.png",
+      "/icons/icon-512.png",
+      "/icons/maskable-512.png"
+    ]
+  },
+  "real_server_outage_returns_anonymous_offline_fallback": true,
+  "physical_device_tested": false,
+  "full_application_blue_green_rollback_tested": false,
+  "initial_encoded_js_bytes": 157401,
+  "initial_transferred_resources_bytes": 304723,
+  "field_core_web_vitals_measured": false
+}

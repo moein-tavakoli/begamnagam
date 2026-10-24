@@ -1,0 +1,63 @@
+{
+  "runtime_source_sha256": "03db440a3ac1fd9935e4221fe743a7b35a0c6c15595200332236c0e575915921",
+  "source_unchanged_during_run": true,
+  "rabbitmq_version": "4.2.9",
+  "redis_version": "7.4.11",
+  "run_id": "c5674a03f5d7",
+  "date_utc": "2026-10-24T10:39:46.672779+00:00",
+  "database": "begamnagam_bench_c5674a03f5d7",
+  "environment": {
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "logical_cpu_count": 8,
+    "python": "3.13.2",
+    "http_server": "native gunicorn2 workers x2 threads",
+    "queue_worker": "Celery threads concurrency2",
+    "dependencies": "local Docker PostgreSQL17/Redis/RabbitMQ; shared development host"
+  },
+  "configured": {
+    "baseline_duration_seconds": 900,
+    "baseline_rps": 2,
+    "burst_duration_seconds": 60,
+    "burst_rps": 10
+  },
+  "seeded_accounts": 1000,
+  "active_sessions": 10,
+  "successful_message_flows": 30,
+  "payment_captures": 30,
+  "delivery_attempt_mismatches": 0,
+  "outbox_not_sent": 0,
+  "full_demo_flow_p95_ms": 399.529,
+  "http": {
+    "baseline": {
+      "requests": 1800,
+      "successful": 1800,
+      "unexpected_errors": 0,
+      "p50_ms": 18.26,
+      "p95_ms": 145.576,
+      "p99_ms": 431.051,
+      "error_rate": 0.0,
+      "operations": {
+        "/bootstrap": 600,
+        "/messages": 600,
+        "/preferences": 600
+      }
+    },
+    "burst": {
+      "requests": 600,
+      "successful": 600,
+      "unexpected_errors": 0,
+      "p50_ms": 20.908,
+      "p95_ms": 212.385,
+      "p99_ms": 393.198,
+      "error_rate": 0.0,
+      "operations": {
+        "/bootstrap": 200,
+        "/messages": 200,
+        "/preferences": 200
+      }
+    }
+  },
+  "real_provider_capacity_measured": false,
+  "frontend_or_device_performance_measured": false,
+  "passed": true
+}

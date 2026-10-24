@@ -1,5 +1,16 @@
 # Versions
 
+## 0.7.0 — Local release candidate and evidence
+
+- Measured1000 synthetic accounts,30 complete flows and2400 successful reads across
+  a15-minute baseline and60-second burst; fixed source hash and actual runtime versions recorded.
+- Exercised multi-tab PWA update safety, anonymous offline fallback, encrypted restore
+  preserving a post-snapshot stop, and recovery from an intentionally failed frontend candidate.
+- Added isolated HTTPS release topology, strict proxy settings, aggregate readiness audit,
+  required human-evidence checklist and current56-requirement traceability.
+- 86 backend/13 frontend tests pass; clean Compose/RabbitMQ4.4, builds and checks verified.
+- Human/device/vendor acceptance and public deployment remain pending; no push or live spend.
+
 ## 0.6.0 — Synthetic pilot and final dispatch safeguards
 
 - Twelve app/HTTP-provider rehearsal scenarios pass for all seven topics, independent

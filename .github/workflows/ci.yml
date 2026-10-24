@@ -82,6 +82,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - run: python3 scripts/init-local.py
       - run: docker compose config --quiet
+      - run: python3 scripts/verify-release-config.py
       - run: docker compose up --build -d --wait --wait-timeout 300
       - run: python3 scripts/smoke.py
       - run: docker compose exec -T backend python manage.py check_foundation

@@ -1,0 +1,19 @@
+{
+  "action": "restore",
+  "target_database": "begamnagam_restore_v07_rehearsal",
+  "overwrote_existing_database": false,
+  "dispatch_halted": true,
+  "financial_invariant_failures": 0,
+  "post_snapshot_financial_events_missing": 0,
+  "suppression_overlay_mismatches": 0,
+  "recipient_states_overlaid": 14,
+  "deletion_requests_overlaid": 0,
+  "encrypted_fields_validated": 66,
+  "duration_seconds": 4.438,
+  "archive_age_seconds": 5.534,
+  "rehearsal_pass": true,
+  "production_resume_authorized": false,
+  "synthetic_stop_added_after_snapshot_preserved": true,
+  "post_snapshot_deletion_exercised": false,
+  "schema_tip": "0008_order_consent_at_order_terms_version_and_more"
+}

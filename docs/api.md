@@ -1,6 +1,6 @@
 # قرارداد API نسخه اول
 
-مبنای مسیرها `/api/v1` است؛ بدون slash پایانی. فرانت همه درخواست‌ها را از همان مبدأ می‌فرستد و Next.js آن‌ها را به Django بازنویسی می‌کند. API برای محصول محلی طراحی شده و اتصال زنده به درگاه یا SMS در این نسخه ندارد.
+مبنای مسیرها `/api/v1` است؛ بدون slash پایانی. فرانت همه درخواست‌ها را از همان مبدأ می‌فرستد و Next.js آن‌ها را به Django بازنویسی می‌کند. نسخه۰٫۷ اتصال‌های محافظت‌شده ارائه‌دهندگان را دارد؛ اجرای پیش‌فرض محلی همچنان demo و شبکه خارجی خاموش است. در تنظیم انتشار، Caddy مسیرهای API/admin را مستقیم به backend خصوصی می‌رساند.
 
 ## نشست و CSRF
 
@@ -14,7 +14,7 @@ await fetch('/api/v1/messages/preview', {
     'Content-Type': 'application/json',
     'X-CSRFToken': csrfTokenFromCookie,
   },
-  body: JSON.stringify({ category: 'appreciation', text: 'از همراهی شما ممنونم.' }),
+  body: JSON.stringify({ category: 'appreciation', text: 'از همراهی شما ممنونم.', recipient_phone: '09xxxxxxxxx' }),
 });
 ```
 
@@ -55,7 +55,7 @@ OTP به نشست درخواست‌کننده متصل، زمان‌دار و م
 {"category":"appreciation","text":"از همراهی شما ممنونم."}
 ```
 
-پاسخ شامل `preview_id`, `rewritten_text`, `price_toman`, `expires_at`, `moderation_mode` است. متن ورودی حداکثر ۲۸۰ نویسه است. `template` یعنی انتخاب قالب بررسی‌شده بدون مدل؛ `ollama_curated` یعنی انتخاب محدود قالب با مدل محلی. متن خام کاربر و خروجی آزاد مدل وارد SMS نمی‌شوند. خطای مدل یا ورودی ممنوع پیش‌نمایش معتبر تولید نمی‌کند.
+پاسخ شامل `preview_id`, `rewritten_text`, `full_sms`, `sms_segments`, `price_toman`, `expires_at`, `moderation_mode`, `terms_version` است. متن ورودی حداکثر ۲۸۰ نویسه است. `template` یعنی انتخاب قالب بررسی‌شده بدون مدل؛ `ollama_curated` یعنی انتخاب محدود قالب با مدل محلی. متن خام کاربر و خروجی آزاد مدل وارد SMS نمی‌شوند. خطای مدل یا ورودی ممنوع پیش‌نمایش معتبر تولید نمی‌کند.
 
 پیش‌نمایش به نشست سازنده متصل است و پس از تأیید شماره در همان نشست قابل استفاده می‌ماند. متن و مبلغ قابل تغییر از سمت کلاینت نیستند. تغییر موضوع یا متن نیازمند پیش‌نمایش تازه است.
 
@@ -64,7 +64,7 @@ OTP به نشست درخواست‌کننده متصل، زمان‌دار و م
 `POST /orders` نیازمند ورود است. هدر `Idempotency-Key` باید UUID تازه‌ای برای هر قصد خرید باشد؛ در retry همان کلید حفظ می‌شود.
 
 ```json
-{"preview_id":"uuid","recipient_phone":"09xxxxxxxxx"}
+{"preview_id":"uuid","recipient_phone":"09xxxxxxxxx","consent":true,"terms_version":"نسخه بازگشتی از quote"}
 ```
 
 پاسخ: `id`, `status`, `amount_toman`, `payment_mode`. یک پیش‌نمایش برای یک سفارش است. استفاده دوباره از همان کلید با محتوای متفاوت باید خطای تعارض بدهد. فرستادن به شماره خود و سفارش خارج از محدودیت‌ها پذیرفته نمی‌شود. API علت خصوصی عدم امکان ارسال به گیرنده را نمایش نمی‌دهد.
@@ -89,7 +89,7 @@ OTP به نشست درخواست‌کننده متصل، زمان‌دار و م
 {"blocked":true}
 ```
 
-این API وضعیت یک شمارهٔ دلخواه را نمی‌پذیرد و ابزار جست‌وجوی گیرنده نیست. توقف دریافت دوباره پیش از پردازش نهایی کنترل می‌شود. مسیر فعلی OTP آزمایشی است؛ لینک امن پیام، گزارش سوءاستفاده و پشتیبانی در فاز انتشار تکمیل می‌شوند.
+این API وضعیت یک شمارهٔ دلخواه را نمی‌پذیرد و ابزار جست‌وجوی گیرنده نیست. توقف دریافت دوباره پیش از پردازش نهایی کنترل می‌شود. بازفعال‌سازی `blocked:false` به تأیید OTP حداکثر۵دقیقه‌ای نیاز دارد. مسیر بی‌حساب گیرنده در ادامه آمده است.
 
 ## سلامت و مدیریت
 
@@ -109,3 +109,24 @@ kept separately. Live delivery/read receipts are never inferred from demo states
 Demo payment, capture event, delivery and outbox are written atomically; worker
 suppression/failure records one compensating demo refund. These endpoints do not
 move money or call a real provider.
+
+
+## نسخه۰٫۷: اتصال، رضایت و کنترل گیرنده
+
+UI همیشه quote دارای گیرنده می‌سازد. `terms_version` همراه quote ثابت می‌شود؛ ایجاد سفارش در حالت خارجی به `consent:true` و همان نسخه نیاز دارد. `consent_at` و نسخه در سرور ثبت می‌شوند؛ تغییر تنظیم شرایط، snapshot قبلی را عوض نمی‌کند. بدنهٔ پیام و قیمت/گیرنده را از کلاینت نمی‌پذیریم.
+
+`POST /orders/{id}/payments` با `{}`، برای مالک سفارش یک intent مستقل می‌سازد و `redirect_url` معتبر همان provider را برمی‌گرداند. تکرار درخواست همان تلاش حل‌نشده را استفاده می‌کند و پرداخت تازهٔ کور ایجاد نمی‌کند. `GET /payments/return/zarinpal?Authority=…&Status=…` فقط محرک verify مستقل سمت سرور است؛ query و نشست مرورگر اثبات پرداخت نیستند. callback به history با پرچم عمومی بازمی‌گردد. pay-demo بیرون حالت demo غیرفعال است.
+
+وضعیت‌های افزوده: `accepted` یعنی پذیرش ارائه‌دهنده، `delivered` یعنی DLR تحویل، `unknown` یعنی نتیجه نیازمند تطبیق. هیچ‌کدام خوانده‌شدن یا هویت گیرنده را ثابت نمی‌کند. پاسخ سفارش، `financial_status` و `delivery_status` مستقل دارد؛ refund باز `refund_pending` و refund تأییدشده `refunded` است. توقف بعد پرداخت، موفقیت دیرهنگام و مبلغ نامطابق به رسیدگی مستقل می‌روند؛ ارسال دوم از حدس نتیجه مجاز نیست. تاریخچه پس از retention متن پاک‌شده را با placeholder نشان می‌دهد.
+
+لینک گیرنده `/r#<capability>` است. fragment به access log نمی‌رود؛ توکن را هرگز در query/path یا analytics ارسال نکنید. ابتدا bootstrap و CSRF دریافت و سپس:
+
+| مسیر POST | JSON | خروجی |
+| --- | --- | --- |
+| `/recipient/actions/inspect` | `token` | `active`, `can_report`؛ بدون هویت/متن |
+| `/recipient/actions/stop` | `token` | `blocked:true` |
+| `/recipient/actions/report` | `token`, `reason`, `details` | `receipt` UUID و `blocked:true` |
+
+`reason` یکی از `unwanted`, `harassment`, `wrong_number`, `other` و توضیح حداکثر۵۰۰نویسه است. token۲۵۶بیتی فقط پس از پذیرش ارسال فعال می‌شود؛ stop۳۶۵روز و report۳۰روز معتبر است. GET هیچ تغییری نمی‌دهد. گزارش تکراری همان پرونده را می‌دهد؛ علت خصوصی/شماره/فرستنده بازگردانده نمی‌شوند. پاسخ همه این مسیرها `no-store` و `no-referrer` است.
+
+`POST /account/deletion` با `{}` و OTP تازه، درخواست حذف شماره طی۳۰روز را ثبت و ارسال جدید حساب را متوقف می‌کند؛ رکورد حداقلی مالی و منع دریافت باقی می‌مانند. `GET /operations/status` فقط برای staff فعال با `core.view_operations` مجاز و خروجی آن جمعی است. اقدام‌های مدیریتی حساس از admin با مجوز مستقل، دلیل و audit انجام می‌شوند. bootstrap یک `session_identity` غیرقابل‌استفاده به‌عنوان اعتبارنامه دارد؛ فقط برای تشخیص تعویض حساب و پاک‌کردن حافظه خصوصی تب‌هاست.

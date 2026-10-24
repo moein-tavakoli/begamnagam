@@ -1,0 +1,121 @@
+# Standalone candidate configuration. Do not merge with compose.yaml (dev ports).
+# Supply reviewed digest references and .env.release; this file does not deploy itself.
+name: begamnagam-release
+
+x-app: &app
+  image: ${BACKEND_IMAGE:?Set a reviewed backend image digest}
+  env_file: ${RELEASE_ENV_FILE:-.env.release}
+  environment:
+    DJANGO_SETTINGS_MODULE: config.release_settings
+    DEBUG: "0"
+    DEMO_MODE: "0"
+    TRUST_RELEASE_PROXY: "1"
+    CELERY_TASK_ALWAYS_EAGER: "0"
+  init: true
+  restart: unless-stopped
+  security_opt: [no-new-privileges:true]
+  cap_drop: [ALL]
+  read_only: true
+  tmpfs: [/tmp]
+  networks: [private]
+
+services:
+  proxy:
+    image: ${PROXY_IMAGE:?Set a reviewed Caddy image digest}
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?Set the approved public hostname}
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [private]
+    restart: unless-stopped
+    depends_on: [frontend, backend]
+  postgres:
+    image: ${POSTGRES_IMAGE:?Set a reviewed PostgreSQL17 image digest}
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Required}
+      POSTGRES_DB: ${POSTGRES_DB:?Required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Required}
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    networks: [private]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      retries: 20
+    restart: unless-stopped
+  redis:
+    image: ${REDIS_IMAGE:?Set a reviewed Redis7.4 image digest}
+    command: [redis-server, --appendonly, "yes", --maxmemory, 128mb, --maxmemory-policy, noeviction]
+    volumes: [redis-data:/data]
+    networks: [private]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      retries: 20
+    restart: unless-stopped
+  rabbitmq:
+    image: ${RABBITMQ_IMAGE:?Set a reviewed RabbitMQ4.4 image digest}
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:?Required}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:?Required}
+    volumes: [rabbitmq-data:/var/lib/rabbitmq]
+    networks: [private]
+    healthcheck:
+      test: [CMD, rabbitmq-diagnostics, -q, ping]
+      interval: 10s
+      retries: 20
+    restart: unless-stopped
+  migrate:
+    <<: *app
+    command: [python, manage.py, migrate, --noinput]
+    restart: "no"
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      rabbitmq: {condition: service_healthy}
+  backend:
+    <<: *app
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; r=urllib.request.Request('http://127.0.0.1:8000/healthz',headers={'Host':__import__('os').environ['APP_DOMAIN'],'X-Forwarded-Proto':'https'}); urllib.request.urlopen(r,timeout=4)"]
+      interval: 10s
+      retries: 12
+  worker:
+    <<: *app
+    command: [celery, -A, config, worker, --loglevel=INFO, --concurrency=2]
+    depends_on:
+      backend: {condition: service_healthy}
+  beat:
+    <<: *app
+    command: [celery, -A, config, beat, --loglevel=INFO, --schedule=/tmp/celerybeat-schedule]
+    depends_on:
+      backend: {condition: service_healthy}
+  frontend:
+    image: ${FRONTEND_IMAGE:?Set a reviewed frontend image digest}
+    environment:
+      INTERNAL_API_URL: http://backend:8000
+      NODE_ENV: production
+    init: true
+    read_only: true
+    tmpfs: [/tmp, /app/.next/cache]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    networks: [private]
+    restart: unless-stopped
+    depends_on:
+      backend: {condition: service_healthy}
+
+volumes:
+  postgres-data:
+  redis-data:
+  rabbitmq-data:
+  caddy-data:
+  caddy-config:
+
+# No backend/database/queue host ports. Use a dedicated host/project with no
+# untrusted workloads attached to this network. Egress is needed for vendors.
+networks:
+  private:

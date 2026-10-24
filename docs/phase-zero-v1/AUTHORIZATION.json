@@ -1,0 +1,17 @@
+{
+  "package_id": "BN-G0-001",
+  "date": "2026-10-24",
+  "user_message": "نسخه ۰٫۲ رو تأیید می‌کنم، فقط فاز صفر رو شروع کن و خروجی‌هاش رو برای بررسی بده. قبل از تأیید ما وارد فاز بعد و پیاده‌سازی نشو.",
+  "approved_input_proposal": "0.2",
+  "phase_zero_authorized": true,
+  "phase_zero_deliverables_status": "READY_FOR_REVIEW",
+  "g0_acceptance": "PENDING_OWNER_REVIEW",
+  "freeze_candidate": "1.0",
+  "freeze_status": "NOT_FROZEN",
+  "phase_one_authorized": false,
+  "implementation_authorized": false,
+  "provider_contact_authorized": false,
+  "live_sms_authorized": false,
+  "payments_or_spending_authorized": false,
+  "deployment_authorized": false
+}

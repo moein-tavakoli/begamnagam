@@ -1,0 +1,17 @@
+{
+  "date": "2026-10-24",
+  "phase": 1,
+  "user_request": "خوب ادامه بده بریم برای پیاده سازی؛ UI موبایل به سبک فان و رنگ‌بندی تصویر پیوست باشد",
+  "input_package": "BN-G0-001 / 1.0",
+  "authorization": "LOCAL_PHASE_ONE_FOUNDATION_AND_VISUAL_DIRECTION",
+  "baseline_scope": "Use phase-zero recommendations for local foundation; commercial and live-service decisions remain open",
+  "implementation_authorized": true,
+  "phase_one_authorized": true,
+  "phase_two_authorized": false,
+  "live_sms_authorized": false,
+  "live_payment_authorized": false,
+  "provider_spending_authorized": false,
+  "deployment_authorized": false,
+  "g1_acceptance": "PENDING_REVIEW_WITH_OPEN_BUILD_BLOCKER",
+  "visual_change": "CR-001: playful mobile UI using yellow, lavender, purple, coral and black pill buttons"
+}

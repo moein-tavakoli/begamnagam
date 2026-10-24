@@ -1,0 +1,376 @@
+{
+  "version": "1.0",
+  "coverage_count": 56,
+  "records": [
+    {
+      "id": "FR-01",
+      "test_id": "T-FR-01",
+      "gate": "G2",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "FR-02",
+      "test_id": "T-FR-02",
+      "gate": "G2/G3",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "FR-03",
+      "test_id": "T-FR-03",
+      "gate": "G2",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "FR-04",
+      "test_id": "T-FR-04",
+      "gate": "G2",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "FR-05",
+      "test_id": "T-FR-05",
+      "gate": "G2/G3",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "FR-06",
+      "test_id": "T-FR-06",
+      "gate": "G2",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "FR-07",
+      "test_id": "T-FR-07",
+      "gate": "G2",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "FR-08",
+      "test_id": "T-FR-08",
+      "gate": "G2/G3",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "FR-09",
+      "test_id": "T-FR-09",
+      "gate": "G2/G3",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "FR-10",
+      "test_id": "T-FR-10",
+      "gate": "G2/G3",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "FR-11",
+      "test_id": "T-FR-11",
+      "gate": "G2/G4",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "FR-12",
+      "test_id": "T-FR-12",
+      "gate": "G4",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "FR-13",
+      "test_id": "T-FR-13",
+      "gate": "G2",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "FR-14",
+      "test_id": "T-FR-14",
+      "gate": "G2/G4",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "FR-15",
+      "test_id": "T-FR-15",
+      "gate": "G1/G4",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "FR-16",
+      "test_id": "T-FR-16",
+      "gate": "G3",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "FR-17",
+      "test_id": "T-FR-17",
+      "gate": "G2/G3",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "FR-18",
+      "test_id": "T-FR-18",
+      "gate": "G1/G2",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "FR-19",
+      "test_id": "T-FR-19",
+      "gate": "G2/G4/G5/G6",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "NFR-01",
+      "test_id": "T-NFR-01",
+      "gate": "G0/G1",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "NFR-02",
+      "test_id": "T-NFR-02",
+      "gate": "G2/G4",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "NFR-03",
+      "test_id": "T-NFR-03",
+      "gate": "G2/G4",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "NFR-04",
+      "test_id": "T-NFR-04",
+      "gate": "G1/G2",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "NFR-05",
+      "test_id": "T-NFR-05",
+      "gate": "G2/G3",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "NFR-06",
+      "test_id": "T-NFR-06",
+      "gate": "G3/G4",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "NFR-07",
+      "test_id": "T-NFR-07",
+      "gate": "G2/G3",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "NFR-08",
+      "test_id": "T-NFR-08",
+      "gate": "G6",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "NFR-09",
+      "test_id": "T-NFR-09",
+      "gate": "G1",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "NFR-10",
+      "test_id": "T-NFR-10",
+      "gate": "همه gateها",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "NFR-11",
+      "test_id": "T-NFR-11",
+      "gate": "G2",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "NFR-12",
+      "test_id": "T-NFR-12",
+      "gate": "G1/G6",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "NFR-13",
+      "test_id": "T-NFR-13",
+      "gate": "G2/G5/G6",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "NFR-14",
+      "test_id": "T-NFR-14",
+      "gate": "G2",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "NFR-15",
+      "test_id": "T-NFR-15",
+      "gate": "G2/G4",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "NFR-16",
+      "test_id": "T-NFR-16",
+      "gate": "G2/G4",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "NFR-17",
+      "test_id": "T-NFR-17",
+      "gate": "G2/G5/G6",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "MF-01",
+      "test_id": "T-MF-01",
+      "gate": "G2",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "MF-02",
+      "test_id": "T-MF-02",
+      "gate": "G2/G5",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "MF-03",
+      "test_id": "T-MF-03",
+      "gate": "G2/G5",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "MF-04",
+      "test_id": "T-MF-04",
+      "gate": "G2",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "MF-05",
+      "test_id": "T-MF-05",
+      "gate": "G2/G6",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "MF-06",
+      "test_id": "T-MF-06",
+      "gate": "G2/G3/G5",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "PW-01",
+      "test_id": "T-PW-01",
+      "gate": "G2",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "PW-02",
+      "test_id": "T-PW-02",
+      "gate": "G2",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "PW-03",
+      "test_id": "T-PW-03",
+      "gate": "G2/G5",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "PW-04",
+      "test_id": "T-PW-04",
+      "gate": "G2/G4",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "PW-05",
+      "test_id": "T-PW-05",
+      "gate": "G2",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "PW-06",
+      "test_id": "T-PW-06",
+      "gate": "G2/G4",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "PW-07",
+      "test_id": "T-PW-07",
+      "gate": "G2/G4",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "PW-08",
+      "test_id": "T-PW-08",
+      "gate": "G2/G4",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "PW-09",
+      "test_id": "T-PW-09",
+      "gate": "G4/G6",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "PW-10",
+      "test_id": "T-PW-10",
+      "gate": "G2/G3/G4",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "PW-11",
+      "test_id": "T-PW-11",
+      "gate": "G2/G5/G6",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "PW-12",
+      "test_id": "T-PW-12",
+      "gate": "G2/G5",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "PW-13",
+      "test_id": "T-PW-13",
+      "gate": "G3/G4/G5",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "PW-14",
+      "test_id": "T-PW-14",
+      "gate": "G2/G4/G5/G6",
+      "execution_status": "NOT_TESTED"
+    }
+  ],
+  "policy_tests": [
+    {
+      "id": "T-POL-01",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "T-POL-02",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "T-POL-03",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "T-POL-04",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "T-POL-05",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "T-POL-06",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "T-POL-07",
+      "execution_status": "NOT_TESTED"
+    },
+    {
+      "id": "T-POL-08",
+      "execution_status": "NOT_TESTED"
+    }
+  ]
+}

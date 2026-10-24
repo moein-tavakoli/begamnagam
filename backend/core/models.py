@@ -1,0 +1,208 @@
+import uuid
+
+from django.conf import settings
+from django.db import models
+
+
+class Account(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="account")
+    phone_hash = models.CharField(max_length=64, unique=True)
+    phone_cipher = models.TextField()
+    phone_masked = models.CharField(max_length=20)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class OTPChallenge(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    phone_hash = models.CharField(max_length=64, db_index=True)
+    phone_cipher = models.TextField()
+    code_digest = models.CharField(max_length=64)
+    session_key = models.CharField(max_length=64)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    expires_at = models.DateTimeField()
+    consumed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class Preview(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.CASCADE)
+    session_key = models.CharField(max_length=64)
+    category = models.CharField(max_length=32)
+    text = models.TextField()
+    moderation_mode = models.CharField(max_length=32)
+    price_toman = models.PositiveIntegerField()
+    expires_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class RecipientState(models.Model):
+    phone_hash = models.CharField(primary_key=True, max_length=64)
+    blocked = models.BooleanField(default=False)
+    last_sent_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+class Order(models.Model):
+    class Status(models.TextChoices):
+        AWAITING_PAYMENT = "awaiting_payment", "منتظر پرداخت آزمایشی"
+        QUEUED = "queued", "در صف شبیه‌سازی"
+        DELIVERED_DEMO = "delivered_demo", "ارسال شبیه‌سازی شد"
+        CANCELLED = "cancelled", "لغوشده"
+        FAILED = "failed", "ناموفق"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="orders")
+    preview = models.OneToOneField(Preview, on_delete=models.PROTECT)
+    idempotency_key = models.UUIDField()
+    recipient_hash = models.CharField(max_length=64, db_index=True)
+    recipient_cipher = models.TextField()
+    recipient_masked = models.CharField(max_length=20)
+    text = models.TextField()
+    category = models.CharField(max_length=32)
+    amount_toman = models.PositiveIntegerField()
+    status = models.CharField(max_length=24, choices=Status, default=Status.AWAITING_PAYMENT)
+    payment_mode = models.CharField(max_length=16, default="demo")
+    paid_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["owner", "idempotency_key"], name="unique_owner_idempotency")]
+        indexes = [models.Index(fields=["owner", "created_at"]), models.Index(fields=["recipient_hash", "status"])]
+
+
+class Outbox(models.Model):
+    order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name="outbox")
+    state = models.CharField(max_length=16, default="pending", db_index=True)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    available_at = models.DateTimeField()
+    processed_at = models.DateTimeField(null=True, blank=True)
+    last_error_code = models.CharField(max_length=40, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class ModerationAudit(models.Model):
+    event_id = models.UUIDField(default=uuid.uuid4, editable=False)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    category = models.CharField(max_length=32, blank=True)
+    outcome = models.CharField(max_length=16)
+    reason_code = models.CharField(max_length=40)
+    content_digest = models.CharField(max_length=64)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+# Phase-one foundation. Existing demo routes keep using Order/Outbox until the
+# phase-two integration is authorized; none of these records calls a provider.
+class PaymentAttempt(models.Model):
+    class Status(models.TextChoices):
+        CREATED = "created", "ایجادشده"
+        PENDING = "pending", "در انتظار"
+        VERIFIED = "verified", "تأییدشده"
+        FAILED = "failed", "ناموفق"
+        UNKNOWN = "unknown", "نیازمند تطبیق"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    order = models.ForeignKey(Order, on_delete=models.PROTECT, related_name="payment_attempts")
+    request_key = models.UUIDField(default=uuid.uuid4, unique=True)
+    provider = models.CharField(max_length=24, default="demo")
+    environment = models.CharField(max_length=8, default="demo")
+    provider_reference = models.CharField(max_length=128, blank=True)
+    amount_toman = models.PositiveIntegerField()
+    currency = models.CharField(max_length=3, default="IRT")
+    status = models.CharField(max_length=12, choices=Status, default=Status.CREATED)
+    applied_to_order = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=models.Q(amount_toman__gt=0), name="payment_positive_amount"),
+            models.CheckConstraint(condition=models.Q(currency="IRT"), name="payment_integer_toman"),
+            models.CheckConstraint(condition=models.Q(environment="demo", provider="demo"), name="payment_demo_only"),
+            models.CheckConstraint(condition=models.Q(status__in=["created", "pending", "verified", "failed", "unknown"]), name="payment_known_status"),
+            models.CheckConstraint(condition=models.Q(applied_to_order=False) | models.Q(status="verified"), name="payment_apply_verified_only"),
+            models.UniqueConstraint(fields=["order"], condition=models.Q(applied_to_order=True), name="one_applied_payment_per_order"),
+            models.UniqueConstraint(fields=["provider", "environment", "provider_reference"], condition=~models.Q(provider_reference=""), name="unique_payment_provider_reference"),
+        ]
+        indexes = [models.Index(fields=["status", "updated_at"])]
+
+
+class Refund(models.Model):
+    class Status(models.TextChoices):
+        REQUESTED = "requested", "درخواست‌شده"
+        PROCESSING = "processing", "در حال بررسی"
+        REFUNDED = "refunded", "مستردشده"
+        FAILED = "failed", "ناموفق"
+        UNKNOWN = "unknown", "نیازمند تطبیق"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    payment = models.ForeignKey(PaymentAttempt, on_delete=models.PROTECT, related_name="refunds")
+    request_key = models.UUIDField(default=uuid.uuid4, unique=True)
+    amount_toman = models.PositiveIntegerField()
+    status = models.CharField(max_length=12, choices=Status, default=Status.REQUESTED)
+    reason_code = models.CharField(max_length=40)
+    provider_reference = models.CharField(max_length=128, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=models.Q(amount_toman__gt=0), name="refund_positive_amount"),
+            models.CheckConstraint(condition=models.Q(status__in=["requested", "processing", "refunded", "failed", "unknown"]), name="refund_known_status"),
+        ]
+        indexes = [models.Index(fields=["status", "updated_at"])]
+
+
+class MessageDelivery(models.Model):
+    class Status(models.TextChoices):
+        NOT_READY = "not_ready", "آماده نشده"
+        QUEUED = "queued", "در صف"
+        SUBMITTING = "submitting", "در حال ارسال"
+        ACCEPTED = "accepted", "پذیرفته‌شده"
+        DELIVERED_DEMO = "delivered_demo", "تحویل آزمایشی"
+        FAILED = "failed", "ناموفق"
+        UNKNOWN = "unknown", "نیازمند تطبیق"
+        SUPPRESSED = "suppressed", "متوقف‌شده"
+        EXPIRED = "expired", "منقضی‌شده"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    order = models.OneToOneField(Order, on_delete=models.PROTECT, related_name="delivery")
+    submission_key = models.UUIDField(default=uuid.uuid4, unique=True)
+    environment = models.CharField(max_length=8, default="demo")
+    provider = models.CharField(max_length=24, default="demo")
+    provider_reference = models.CharField(max_length=128, blank=True)
+    status = models.CharField(max_length=20, choices=Status, default=Status.NOT_READY)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    lease_until = models.DateTimeField(null=True, blank=True)
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    last_error_code = models.CharField(max_length=40, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=models.Q(environment="demo", provider="demo"), name="delivery_demo_only"),
+            models.CheckConstraint(condition=models.Q(status__in=["not_ready", "queued", "submitting", "accepted", "delivered_demo", "failed", "unknown", "suppressed", "expired"]), name="delivery_known_status"),
+            models.UniqueConstraint(fields=["provider", "environment", "provider_reference"], condition=~models.Q(provider_reference=""), name="unique_delivery_provider_reference"),
+        ]
+        indexes = [models.Index(fields=["status", "updated_at"])]
+
+
+class FinancialEvent(models.Model):
+    """Restricted audit schema, not a complete accounting ledger or live adapter."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    payment = models.ForeignKey(PaymentAttempt, on_delete=models.PROTECT, related_name="events")
+    refund = models.OneToOneField(Refund, null=True, blank=True, on_delete=models.PROTECT)
+    event_key = models.UUIDField(default=uuid.uuid4, unique=True)
+    kind = models.CharField(max_length=12, choices=[("payment", "دریافت"), ("refund", "استرداد")])
+    amount_toman = models.PositiveIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=models.Q(amount_toman__gt=0), name="financial_event_positive_amount"),
+            models.CheckConstraint(condition=models.Q(kind="payment", refund__isnull=True) | models.Q(kind="refund", refund__isnull=False), name="financial_event_refund_relation"),
+            models.UniqueConstraint(fields=["payment"], condition=models.Q(kind="payment"), name="one_capture_event_per_payment"),
+        ]

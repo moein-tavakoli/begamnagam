@@ -1,0 +1,235 @@
+{
+  "phase": 1,
+  "date": "2026-10-24",
+  "status": "READY_FOR_REVIEW_WITH_OPEN_G1_BLOCKER",
+  "phase_two_authorized": false,
+  "live_providers_enabled": false,
+  "baseline_changed_files": [
+    ".github/workflows/ci.yml",
+    "Makefile",
+    "README.md",
+    "backend/config/settings.py",
+    "backend/core/admin.py",
+    "backend/core/models.py",
+    "frontend/README.md",
+    "frontend/app/globals.css",
+    "frontend/app/layout.tsx",
+    "frontend/app/page.tsx",
+    "frontend/components/chrome.tsx",
+    "frontend/components/composer.tsx",
+    "frontend/next.config.ts",
+    "frontend/package-lock.json",
+    "frontend/package.json",
+    "frontend/public/icon.svg",
+    "frontend/public/manifest.webmanifest"
+  ],
+  "new_files": [
+    ".nvmrc",
+    ".python-version",
+    "backend/core/adapters.py",
+    "backend/core/test_foundation.py",
+    "backend/core/management/commands/bootstrap_roles.py",
+    "backend/core/management/commands/check_foundation.py",
+    "backend/core/migrations/0002_phase_one_financial_delivery_foundation.py",
+    "frontend/components/letter-flight.tsx",
+    "frontend/components/pwa-foundation.tsx",
+    "frontend/public/offline.html",
+    "frontend/public/sw.js",
+    "frontend/public/icons/icon-192.png",
+    "frontend/public/icons/icon-512.png",
+    "frontend/public/icons/maskable-512.png",
+    "frontend/public/icons/apple-touch-icon.png",
+    "frontend/tests/pwa.test.ts",
+    "scripts/verify-foundation.py",
+    "design-system/begamnagam/MASTER.md"
+  ],
+  "results": {
+    "backend_tests": {
+      "pass": 40,
+      "skip": 0,
+      "database": "PostgreSQL 17",
+      "cryptography": "46.0.7"
+    },
+    "frontend_tests": {
+      "pass": 10,
+      "skip": 0
+    },
+    "typecheck": "PASS",
+    "next_production_build": "PASS",
+    "demo_smoke": "PASS",
+    "migration_consistency": "PASS",
+    "foundation_readiness": "PASS",
+    "full_compose_build": "BLOCKED_BACKEND_DEPENDENCY_RESOLUTION",
+    "rabbitmq_4_4": "NOT_VERIFIED",
+    "real_device_pwa": "NOT_TESTED",
+    "full_wcag": "NOT_TESTED"
+  },
+  "files": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "65090ca767d150580a2377ce5abba3b9791daf5e3ef9507bfa5cabaeda3167a6"
+    },
+    {
+      "path": ".nvmrc",
+      "sha256": "68ca3fba3b7e864770cb61aeb306d4bd4354b68ab4dd38450860c5d823e42a53"
+    },
+    {
+      "path": ".python-version",
+      "sha256": "02e735b3dfe1c32833eb550b7ff8ffa17f5f2bc3fa1e7bae61a8f5a3883ce398"
+    },
+    {
+      "path": "Makefile",
+      "sha256": "cdcf037410d49b0aee8909366de44a1c1da4e9485d8a00e46fa9af11415da555"
+    },
+    {
+      "path": "README.md",
+      "sha256": "cc8c045039788412ea7a82e3099f21a33ed72f052c2e299bc0785c3a7dbfa583"
+    },
+    {
+      "path": "backend/config/settings.py",
+      "sha256": "2e71fae0884a5263f76ae5b45ee1fb6a30bfcf6d4c679883573f81ad179a9975"
+    },
+    {
+      "path": "backend/core/adapters.py",
+      "sha256": "acdff403230bef473bffcfa4721b296420731475f5014a959afabf96a6d0ca29"
+    },
+    {
+      "path": "backend/core/admin.py",
+      "sha256": "25a741a3d177aafaf7b74ca0dde1a9c07c67b1891cb95cc806055889b68e3348"
+    },
+    {
+      "path": "backend/core/management/commands/bootstrap_roles.py",
+      "sha256": "78fbafa5ce2f00c9701478cd9c778233b44091400ad2f8f2557dfa70f378837e"
+    },
+    {
+      "path": "backend/core/management/commands/check_foundation.py",
+      "sha256": "b6b5864bfe6540b9c057954f3f6e6c26923ff82f2c606766d8a2c0d1f1ad085f"
+    },
+    {
+      "path": "backend/core/migrations/0002_phase_one_financial_delivery_foundation.py",
+      "sha256": "f94ccf0cba81d3886033f8b2e45c41d2414ce5be91e1c08b7d64166e3daf1ae9"
+    },
+    {
+      "path": "backend/core/models.py",
+      "sha256": "30c5d6d0f9361f250a197139d4ecd1e5986336347320606bc86ffb7b1ac4d43b"
+    },
+    {
+      "path": "backend/core/test_foundation.py",
+      "sha256": "e038d3c8eb4dc2901c77a36054bd468a8a1fa7894ada334c54f721ac8a8642ff"
+    },
+    {
+      "path": "design-system/begamnagam/MASTER.md",
+      "sha256": "82e42ad90e4e11452d5d53bf4dd8c4ae19718f050b468444b42c8f796b950d8d"
+    },
+    {
+      "path": "frontend/README.md",
+      "sha256": "783f5c415f9ea893dea6ced3237ff4151dc4c21d733a5a222723365e9fcacd8a"
+    },
+    {
+      "path": "frontend/app/globals.css",
+      "sha256": "894de9bddac735b30227ca2107e6cd44448d4e317db2590428a0a8c841c7cbe5"
+    },
+    {
+      "path": "frontend/app/layout.tsx",
+      "sha256": "d70bf93264c96a827896b407350ee74d7e6961b46c1b16491eeaba0755c4c02c"
+    },
+    {
+      "path": "frontend/app/page.tsx",
+      "sha256": "1f5664863662d73a7a494954a7a3057fe44b7f553248f20b7793f89e0e81eebc"
+    },
+    {
+      "path": "frontend/components/chrome.tsx",
+      "sha256": "098ae9e19acef23bf7d646c1bdbab2cb7a9f484975bea461264f0b9404c4585e"
+    },
+    {
+      "path": "frontend/components/composer.tsx",
+      "sha256": "4fd9382ff2fec5e38c28c307fd567f334079c1535de7f82d1e52eacdb347151f"
+    },
+    {
+      "path": "frontend/components/letter-flight.tsx",
+      "sha256": "83f1ed699e29054f897a95ac43d0275730304b48e4f895c20990e694fd4d7e99"
+    },
+    {
+      "path": "frontend/components/pwa-foundation.tsx",
+      "sha256": "435f43badd6881f9135aa3e229815335cbdbc51574397e6f247b5dc116e1c56e"
+    },
+    {
+      "path": "frontend/next.config.ts",
+      "sha256": "7ab924bcd9eae6e1331daa1625257f3bbdd11b0c87b37d33722d0c7495b341bb"
+    },
+    {
+      "path": "frontend/package-lock.json",
+      "sha256": "fa6600c94fac1791ccbdbb1725e560ca419c20c5e0d35b3e2a74329626be8fda"
+    },
+    {
+      "path": "frontend/package.json",
+      "sha256": "d0ac4de37083008a83bd14ff781f6faa90315d10f16e8e3c9891e230790ceceb"
+    },
+    {
+      "path": "frontend/public/icon.svg",
+      "sha256": "4428285edcfd85dda27714b697fff6f42c17de8841ddb630226aeaef0c5c1647"
+    },
+    {
+      "path": "frontend/public/icons/apple-touch-icon.png",
+      "sha256": "b451b42062d545b2445d9a0958f4d8b907acc56a190fc05c71ea461942aa46ce"
+    },
+    {
+      "path": "frontend/public/icons/icon-192.png",
+      "sha256": "d367fe45647eaf21e3924a1f978293d43ccad3b506cbc598f08b65e974d595be"
+    },
+    {
+      "path": "frontend/public/icons/icon-512.png",
+      "sha256": "5d641cb5d3c748057327623cfa2c1931047d01d96ea056e2cd8ef9486169e339"
+    },
+    {
+      "path": "frontend/public/icons/maskable-512.png",
+      "sha256": "4883bbdbcd42f6ecfae3dea7840ec284fc21ef190903ced33f1d30d43d50aa83"
+    },
+    {
+      "path": "frontend/public/manifest.webmanifest",
+      "sha256": "b062a0b7f44afabe6783047a9ed28f48efd06e3eeedab089917061778b3c8f57"
+    },
+    {
+      "path": "frontend/public/offline.html",
+      "sha256": "0aa9cb7ebd0d565e9764855819204890eab4ef73c33ba6aa2b03332aa0bb4cda"
+    },
+    {
+      "path": "frontend/public/sw.js",
+      "sha256": "b24fd4ef3c951949a77b507539e65b4fe54414d69c38e8d223bb61926386aec0"
+    },
+    {
+      "path": "frontend/tests/pwa.test.ts",
+      "sha256": "81b283ff9c4215ba2b3d7a3faf76ccc363c1d583f1c46e710bc7e8e468944950"
+    },
+    {
+      "path": "scripts/verify-foundation.py",
+      "sha256": "bbaa336cf77c1de9e60c6794f86d009d9bb80633bdb26bff5ae0b4cfee5d0f04"
+    }
+  ],
+  "review_files": [
+    {
+      "path": "AUTHORIZATION.json",
+      "sha256": "7fe8be0885ce09259889158a43985ebd591b463cc754d32b7c2cda28eb9dcaf9"
+    },
+    {
+      "path": "README.fa.md",
+      "sha256": "9d5ed575371d4665c13b10841db9e8dd368c6eaa5aee8b7c7b50e6a87872b706"
+    },
+    {
+      "path": "desktop-home.png",
+      "sha256": "ff9a1a104787c613c537d768a3da2e1b4bb7f88b731f52a96c3c9248991137ee"
+    },
+    {
+      "path": "mobile-compose.png",
+      "sha256": "b448ae47f82d90bf39c3f1282b631cf263a9e31068c87571d84ba88ec6d3867b"
+    },
+    {
+      "path": "mobile-home.png",
+      "sha256": "f402bbfbbb29d678e12e751994646c2c1876e2ed0a9ad2d21a2dc40a8aad2318"
+    },
+    {
+      "path": "mobile-offline.png",
+      "sha256": "cba991c535a96012fa64472377cf3e8d1d27e3352b46a4f594c79d048c83a085"
+    }
+  ]
+}

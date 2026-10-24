@@ -1,0 +1,148 @@
+name: begamnagam
+
+x-backend-environment: &backend-environment
+  DEBUG: "1"
+  DEMO_MODE: "1"
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-local-demo-only-change-before-sharing-71684bf2f02d}
+  PHONE_HASH_KEY: ${PHONE_HASH_KEY:-local-demo-phone-hash-change-before-sharing-71684bf2}
+  PHONE_ENCRYPTION_KEY: ${PHONE_ENCRYPTION_KEY:-}
+  DATABASE_URL: postgres://${POSTGRES_USER:-begamnagam}:${POSTGRES_PASSWORD:-local-demo-only}@postgres:5432/${POSTGRES_DB:-begamnagam}
+  REDIS_URL: redis://redis:6379/0
+  CELERY_BROKER_URL: amqp://${RABBITMQ_USER:-begamnagam}:${RABBITMQ_PASSWORD:-local-demo-only}@rabbitmq:5672//
+  CELERY_TASK_ALWAYS_EAGER: "0"
+  ALLOWED_HOSTS: localhost,127.0.0.1,backend
+  CSRF_TRUSTED_ORIGINS: http://localhost:${WEB_PORT:-3000},http://127.0.0.1:${WEB_PORT:-3000},http://localhost:${API_PORT:-8000},http://127.0.0.1:${API_PORT:-8000}
+  APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3000}
+  PRICE_TOMAN: ${PRICE_TOMAN:-2000}
+  SENDER_DAILY_LIMIT: ${SENDER_DAILY_LIMIT:-3}
+  RECIPIENT_COOLDOWN_HOURS: ${RECIPIENT_COOLDOWN_HOURS:-168}
+  AI_MODE: ${AI_MODE:-template}
+  OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
+  OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:7b}
+
+x-backend: &backend
+  build:
+    context: ./backend
+  environment: *backend-environment
+  init: true
+  extra_hosts:
+    - host.docker.internal:host-gateway
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-begamnagam}
+      POSTGRES_USER: ${POSTGRES_USER:-begamnagam}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-demo-only}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4-alpine
+    command: [redis-server, --appendonly, "yes", --maxmemory, 128mb, --maxmemory-policy, noeviction]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:4.4-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-begamnagam}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-local-demo-only}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: [CMD, rabbitmq-diagnostics, -q, ping]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+      start_period: 20s
+    restart: unless-stopped
+
+  migrate:
+    <<: *backend
+    command: [python, manage.py, migrate, --noinput]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
+    <<: *backend
+    ports:
+      - 127.0.0.1:${API_PORT:-8000}:8000
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz', timeout=4)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    restart: unless-stopped
+
+  worker:
+    <<: *backend
+    command: [celery, -A, config, worker, --loglevel=INFO, --concurrency=2]
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  beat:
+    <<: *backend
+    command: [celery, -A, config, beat, --loglevel=INFO, --schedule=/tmp/celerybeat-schedule]
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        INTERNAL_API_URL: http://backend:8000
+    environment:
+      INTERNAL_API_URL: http://backend:8000
+      NODE_ENV: production
+    ports:
+      - 127.0.0.1:${WEB_PORT:-3000}:3000
+    depends_on:
+      backend:
+        condition: service_healthy
+    init: true
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  redis-data:
+  rabbitmq-data:
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: ${DOCKER_SUBNET:-10.253.241.0/24}

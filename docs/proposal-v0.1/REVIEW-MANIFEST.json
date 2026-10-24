@@ -1,0 +1,35 @@
+{
+  "package_id": "BN-REVIEW-001",
+  "version": "0.1",
+  "date": "2026-10-24",
+  "approval_status": "PENDING",
+  "freeze_status": "NOT_FROZEN",
+  "phase_zero_authorized": false,
+  "implementation_authorized": false,
+  "files": [
+    {
+      "path": "FONT-LICENSE.txt",
+      "sha256": "e6f4ce7b6c830d5a25a4f8ac777c267cd7d3c180bc2a7150ca57cbb9b280c4b7"
+    },
+    {
+      "path": "FREEZE-MASTER.fa.md",
+      "sha256": "a50a633bb80f6ab220f41f95fb3c86577e99a946291c6fcb27aedeef48c581a6"
+    },
+    {
+      "path": "PHASE-PLAN.fa.md",
+      "sha256": "e58a6e07e558e3d21615a610f0422dfee8072f3508e79b2185d08efa3b6e3feb"
+    },
+    {
+      "path": "PROPOSAL.fa.md",
+      "sha256": "ca0500b8191136cb6d4bd18ec9fce407913aa09b8d4784483fde6625de5b5f06"
+    },
+    {
+      "path": "README.md",
+      "sha256": "974a971fad6bb3d4e87c36b98f553e223d03a02a796beb796a588e0626b984aa"
+    },
+    {
+      "path": "proposal.html",
+      "sha256": "66d6f37e1bc81341362f839d50241ea790491f63fab1993f451630f6297a2145"
+    }
+  ]
+}

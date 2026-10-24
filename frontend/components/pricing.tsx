@@ -1,0 +1,38 @@
+"use client";
+import { useApp } from "./app-provider";
+import { toman } from "@/lib/format";
+import { Icon } from "./icons";
+import { ServiceState } from "./feedback";
+
+export function Pricing() {
+  const { data } = useApp();
+  return (
+    <div className="pricing-card">
+      <div>
+        <span className="eyebrow">روشن و ساده</span>
+        <h2>هزینه هر پیام</h2>
+        <p>پیش‌نمایش رایگانه. مبلغ نهایی رو پیش از پرداخت می‌بینی.</p>
+      </div>
+      <div className="price-amount">
+        {data ? (
+          <>
+            <strong>
+              {new Intl.NumberFormat("fa-IR").format(data.price_toman)}
+            </strong>
+            <span>تومان / هر درخواست</span>
+          </>
+        ) : (
+          <ServiceState />
+        )}
+      </div>
+      <div className="pricing-footnote">
+        <Icon name="info" size={19} />
+        <p>
+          {data?.demo_mode
+            ? `مبلغ ${toman(data.price_toman)} در این نسخه صرفاً برای تست ثبت سفارش است؛ پرداخت و پیامک واقعی انجام نمی‌شود.`
+            : "پرداخت واقعی و فعال‌سازی ارسال، نیازمند آماده‌بودن درگاه و سرویس پیامکی است. وضعیت فعال سرویس را قبل از ادامه بررسی کن."}
+        </p>
+      </div>
+    </div>
+  );
+}

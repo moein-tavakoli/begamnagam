@@ -1,0 +1,29 @@
+name: Run demo on local runner
+
+# No third-party cloud or automatic production deployment. Register a trusted
+# local Linux runner with the begamnagam-local label to opt into this job.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: begamnagam-local-deploy
+  cancel-in-progress: false
+
+jobs:
+  demo:
+    if: github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, Linux, begamnagam-local]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          clean: false
+      - name: Generate local secrets once
+        run: python3 scripts/init-local.py
+      - name: Build and start the isolated local demo
+        run: docker compose up --build -d --wait --wait-timeout 300
+      - name: Verify the demo without sending real messages
+        run: python3 scripts/smoke.py

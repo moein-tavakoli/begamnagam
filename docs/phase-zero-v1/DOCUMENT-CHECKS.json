@@ -1,0 +1,18 @@
+{
+  "scope": "DOCUMENTATION_ONLY",
+  "source_files_checked": 67,
+  "source_files_changed": [],
+  "proposal_0_2_preserved": true,
+  "baseline_requirement_coverage": 56,
+  "policy_test_groups": 8,
+  "decisions_covered": 11,
+  "local_markdown_links_checked": 19,
+  "html_visual_review": "NOT_PERFORMED_BROWSER_PROFILE_IN_USE",
+  "application_tests_run": false,
+  "new_services_started": false,
+  "live_calls_or_spending": false,
+  "implementation_authorized": false,
+  "phase_one_authorized": false,
+  "freeze_status": "NOT_FROZEN",
+  "g0_acceptance": "PENDING_OWNER_REVIEW"
+}

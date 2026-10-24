@@ -1,0 +1,51 @@
+# Contributor guide
+
+This repository is a Persian RTL local-demo product. Read `README.md` and the
+relevant document in `docs/` before changing behavior. Current architecture is a
+Django monolith with Next.js, PostgreSQL, Redis, RabbitMQ and Celery.
+
+## Documentation
+
+Use Context7 MCP whenever working with a library, framework, SDK, API, CLI or
+cloud service: start with `resolve-library-id`, then `query-docs` with the selected
+ID and the complete relevant question. Prefer official sources. General business
+logic, refactoring and code review do not need Context7. If the service is
+unavailable or quota-limited, report that fact and consult official primary docs;
+do not invent current APIs.
+
+## Product invariants
+
+- Live SMS and payments are not implemented. Keep demo labeling explicit and do
+  not treat `delivered_demo` as an actual provider delivery receipt.
+- Recipients must never see sender identity. Sender-facing errors must not expose
+  whether a target opted out or has an account. Preferences apply to the verified
+  account's own number only.
+- A product session requires a verified phone `Account`; Django admin login alone
+  is insufficient. Mutating requests require CSRF protection.
+- Prices are integer toman values. A preview snapshots the reviewed price and text.
+  Retries preserve the checkout idempotency key. Payment and outbox creation stay
+  transactional; queue payloads contain identifiers rather than private content.
+- Only reviewed templates can reach the demo delivery adapter. Raw input and
+  unrestricted model text must not be dispatched. Preserve moderation before and
+  after model selection and fail closed on invalid model responses.
+- Rate limits must account for the Next.js reverse proxy: do not interpret the
+  frontend container's address as a unique end user or blindly trust forwarded IPs.
+- Keep phones encrypted at rest and use keyed hashes for matching. Do not log full
+  phones, OTPs or private input. Do not commit `.env`, local databases or secrets.
+
+## Validation
+
+Backend: `DJANGO_TESTING=1 python manage.py test` inside `backend/`, with
+`DATABASE_URL` and `REDIS_URL` supplied for PostgreSQL integration tests. Check
+migration consistency after model changes. SQLite skips row-lock concurrency tests.
+
+Frontend: `npm test`, `npm run typecheck`, `npm run build` inside `frontend/`.
+Check the full journey at desktop and 375px mobile widths, including OTP, retry,
+history and recipient preferences. Keep labels, focus, keyboard navigation,
+Persian typography and reduced motion intact.
+
+Full stack: `docker compose config --quiet`, `docker compose up --build -d --wait`,
+then `python3 scripts/smoke.py`. The smoke script is restricted to local demo
+instances. Do not prune unrelated Docker networks or volumes to fix local setup.
+
+Update API and operating docs when behavior or environment variables change.

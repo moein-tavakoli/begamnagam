@@ -1,0 +1,90 @@
+{
+  "package_id": "BN-G0-001",
+  "version": "1.0",
+  "date": "2026-10-24",
+  "input_proposal": "0.2",
+  "phase_zero_authorized": true,
+  "deliverables_status": "READY_FOR_REVIEW",
+  "g0_acceptance": "PENDING_OWNER_REVIEW",
+  "freeze_status": "NOT_FROZEN",
+  "phase_one_authorized": false,
+  "implementation_authorized": false,
+  "files": [
+    {
+      "path": "ACCEPTANCE-INDEX.json",
+      "sha256": "12fa9f4d69e73dcfa5ea13978e6e1b265a89d028da74a0be214cebd4afc4db55"
+    },
+    {
+      "path": "ADR.fa.md",
+      "sha256": "e3fceb9552e79518eaf9d206821726ae6a667b3074d1e6b31ba2389e0ad3f51c"
+    },
+    {
+      "path": "AUTHORIZATION.json",
+      "sha256": "1f7af7ad77bb18727c17599c7784aa2e9e897cfc2b78542b8e7da33a181b4fe8"
+    },
+    {
+      "path": "DATA-API.fa.md",
+      "sha256": "45bca82ad76223ef009dd5c89b89992c3796cdf3eabfbf5ccbd3786e5e1d40d3"
+    },
+    {
+      "path": "DECISIONS-G0.fa.md",
+      "sha256": "13290f59f55d7c99a73b5362ea08ef49cf8fab52d9387d3c23f5c295f5314415"
+    },
+    {
+      "path": "DOCUMENT-CHECKS.json",
+      "sha256": "5a273fc9f4881f32f5201092886f12e1f1f6840632dc2b132d2b42e344a5391f"
+    },
+    {
+      "path": "DOCUMENT-QA.fa.md",
+      "sha256": "8fbe78926ae3be334e40c58d49cba2b043a0f70f40754f05312efdb1ea6d6d1e"
+    },
+    {
+      "path": "ECONOMICS-PLAN.fa.md",
+      "sha256": "9f3e0de5b0fb89e4ac245fc2d29d851509ecfc5fcc481e075693a0a0aa10c973"
+    },
+    {
+      "path": "FONT-LICENSE.txt",
+      "sha256": "e6f4ce7b6c830d5a25a4f8ac777c267cd7d3c180bc2a7150ca57cbb9b280c4b7"
+    },
+    {
+      "path": "FREEZE-MASTER-CANDIDATE.fa.md",
+      "sha256": "dcfad90b21bd1b90b4fe845bd0051b566e1bca1744ab31891451cc087961b6a2"
+    },
+    {
+      "path": "PRD-v1.fa.md",
+      "sha256": "a381e23cadd8925bead26957f24503955d220e6074eddeba9077941d2ff99f4b"
+    },
+    {
+      "path": "PROTOTYPE-AUDIT.fa.md",
+      "sha256": "9b58d9b8ba0a4d44b75ca47c7766b820aa2ccb3860675d1b1981b1318fd97ca7"
+    },
+    {
+      "path": "PROVIDERS.fa.md",
+      "sha256": "906192434d32f8b6e7c86338f79bbcd257b631a8df758a9376d3aecc690cee69"
+    },
+    {
+      "path": "README.md",
+      "sha256": "2818791fb82985ef2f96599635ec7121c56d35c3b15149d313a9d3d1d97e71a9"
+    },
+    {
+      "path": "SOURCE-SNAPSHOT.json",
+      "sha256": "3dfa8aaef4cf332a16be5eef65c5787a4f97052d84c7321ad471aaadfae3adc5"
+    },
+    {
+      "path": "SOURCES.fa.md",
+      "sha256": "ab654368a8a2fad636b662362907610d3ef869d7a98d6fe8b33bccfe2ddf950d"
+    },
+    {
+      "path": "TRACEABILITY.fa.md",
+      "sha256": "3ab9133583bd623d402bd8dab449926e1b9a3055a31de6731a32b75dac429aef"
+    },
+    {
+      "path": "UX-WIREFRAMES.fa.md",
+      "sha256": "4bd2ff7a4f8e8f96c28dba18617c0e76c56cff0fb9f6872d416217a5a3677be5"
+    },
+    {
+      "path": "phase-zero.html",
+      "sha256": "84ed62c4e8901ca79817c641d7440757f7175a8c10422eb04bc9b498d938fb8a"
+    }
+  ]
+}

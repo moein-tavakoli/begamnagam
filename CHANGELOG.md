@@ -1,5 +1,15 @@
 # Versions
 
+## 0.6.0 — Synthetic pilot and final dispatch safeguards
+
+- Twelve app/HTTP-provider rehearsal scenarios pass for all seven topics, independent
+  payment verification, duplicate callbacks, anonymous reports and a stop-before-send refund.
+- Frozen terms consent is recorded on each order; external use requires a reviewed version.
+- Redis loss pauses dispatch, expired unsent paid orders refund, and the final wire-call
+  check respects sender suspension, recipient stop, sending hours and the global halt.
+- Amount/currency mismatches remain unresolved for reconciliation; no false failure/refund claim.
+- 83 backend tests pass; volunteer/device testing is explicitly deferred.
+
 ## 0.5.0 — Recipient safety and operations
 
 - Activated256-bit fragment capabilities for account-free stop/report; GET is inert,

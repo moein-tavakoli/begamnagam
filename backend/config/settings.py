@@ -190,3 +190,11 @@ if PROVIDER_NETWORK_MODE == 'external' and (not SUPPORT_CONTACT or not flag('TER
 CELERY_TASK_DEFAULT_QUEUE = os.getenv('CELERY_TASK_DEFAULT_QUEUE', 'celery')
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 BENCHMARK_RUN_ID = os.getenv('BENCHMARK_RUN_ID', '') if DEMO_MODE else ''
+
+TERMS_VERSION = os.getenv('TERMS_VERSION', 'draft-2026-10')
+if len(TERMS_VERSION) > 40 or (PROVIDER_NETWORK_MODE == 'external' and TERMS_VERSION.startswith('draft')):
+    raise ImproperlyConfigured('External checkout requires a reviewed, published terms version')
+if AI_MODE == 'ollama':
+    model_endpoint = urlparse(OLLAMA_URL)
+    if model_endpoint.hostname not in {'localhost', '127.0.0.1', '::1', 'host.docker.internal', 'ollama'} or model_endpoint.username or model_endpoint.password:
+        raise ImproperlyConfigured('Only the reviewed local model endpoint is allowed')

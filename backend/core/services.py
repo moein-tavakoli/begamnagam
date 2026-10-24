@@ -124,6 +124,9 @@ def create_order(user, session_key, data, idempotency_key):
             raise APIError("not_found", "پیش‌نمایش پیدا نشد.", 404)
         if preview.recipient_hash and preview.recipient_hash != phone_hash:
             raise APIError("quote_recipient_changed", "شماره عوض شده؛ پیش‌نمایش تازه بساز.", 409)
+        consent = data.get("consent") is True and data.get("terms_version") == preview.terms_version
+        if settings.PROVIDER_NETWORK_MODE == "external" and not consent:
+            raise APIError("consent_required", "نسخه شرایط و رضایت ارسال را پیش از خرید تأیید کن.", 422)
         if preview.expires_at <= now or Order.objects.filter(preview=preview).exists():
             raise APIError("preview_expired", "پیش‌نمایش منقضی یا استفاده شده است؛ دوباره متن را آماده کنید.", 409)
         if Order.objects.filter(owner=user, created_at__gte=now - timedelta(hours=24)).count() >= settings.SENDER_DAILY_LIMIT:
@@ -139,6 +142,7 @@ def create_order(user, session_key, data, idempotency_key):
         if state.blocked or busy or (state.last_sent_at and state.last_sent_at > now - timedelta(hours=settings.RECIPIENT_COOLDOWN_HOURS)):
             raise recipient_unavailable()
         return Order.objects.create(owner=user, preview=preview, idempotency_key=key,
+            consent_at=now if consent else None, terms_version=preview.terms_version if consent else "",
             recipient_hash=phone_hash, recipient_cipher=encrypt(phone), recipient_masked=mask(phone),
             text=preview.text, full_sms=preview.full_sms, category=preview.category, amount_toman=preview.price_toman,
             payment_mode="demo" if settings.DEMO_MODE else "disabled")

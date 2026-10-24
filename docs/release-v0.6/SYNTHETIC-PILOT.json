@@ -1,0 +1,75 @@
+{
+  "kind": "synthetic_app_client_and_loopback_vendor_HTTP",
+  "human_volunteers": 0,
+  "external_provider_calls": 0,
+  "live_money_moved": false,
+  "scenarios": [
+    {
+      "name": "reviewed_topic_appreciation",
+      "result": "PASS"
+    },
+    {
+      "name": "reviewed_topic_encouragement",
+      "result": "PASS"
+    },
+    {
+      "name": "reviewed_topic_congratulations",
+      "result": "PASS"
+    },
+    {
+      "name": "reviewed_topic_body",
+      "result": "PASS"
+    },
+    {
+      "name": "reviewed_topic_breath",
+      "result": "PASS"
+    },
+    {
+      "name": "reviewed_topic_noise",
+      "result": "PASS"
+    },
+    {
+      "name": "reviewed_topic_shared_space",
+      "result": "PASS"
+    },
+    {
+      "name": "anonymous_report_deduplicated_and_receipt_stopped",
+      "result": "PASS"
+    },
+    {
+      "name": "stop_between_payment_and_dispatch_refunds_without_sms",
+      "result": "PASS"
+    },
+    {
+      "name": "audited_emergency_stop_resume",
+      "result": "PASS"
+    },
+    {
+      "name": "positive_only_pilot_policy_enforced",
+      "result": "PASS"
+    },
+    {
+      "name": "unsafe_input_rejected_before_persistence",
+      "result": "PASS"
+    }
+  ],
+  "passed": true,
+  "captures": 8,
+  "refunds": 1,
+  "vendor_content_submissions": 7,
+  "gross_provider_budget_reserved_rial": 18500,
+  "observed_simulated_provider_cost_rial": 4400,
+  "open_synthetic_reports": 1,
+  "human_pilot_acceptance": "DEFERRED_BY_OWNER",
+  "metrics": {
+    "sending_halted": false,
+    "outbox_pending": 0,
+    "oldest_queue_seconds": 0,
+    "payment_unknown": 0,
+    "delivery_unknown": 0,
+    "refund_open": 0,
+    "reports_open": 1,
+    "provider_budget_reserved_rial": 18500,
+    "provider_budget_limit_rial": 1000000
+  }
+}

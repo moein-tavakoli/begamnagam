@@ -82,8 +82,27 @@ def reconcile_outbox():
 
 @shared_task(ignore_result=True)
 def expire_unpaid_orders():
+    now = timezone.now()
     Order.objects.filter(status=Order.Status.AWAITING_PAYMENT,
-        created_at__lt=timezone.now() - timedelta(minutes=15)).update(status=Order.Status.CANCELLED)
+        created_at__lt=now - timedelta(minutes=15)).update(status=Order.Status.CANCELLED)
+    # An emergency/broker outage must not hold an unsubmitted paid order forever.
+    # Leased/accepted/unknown submissions are queried, never expired as unsent.
+    due = Order.objects.filter(status=Order.Status.QUEUED, paid_at__lt=now-timedelta(hours=24)).values_list('pk', flat=True)[:100]
+    for order_id in due:
+        with transaction.atomic():
+            order = Order.objects.select_for_update().get(pk=order_id)
+            RecipientState.objects.select_for_update().filter(phone_hash=order.recipient_hash).first()
+            event = Outbox.objects.select_for_update().filter(order=order, state='pending').first()
+            delivery = MessageDelivery.objects.select_for_update().filter(order=order, status='queued').first()
+            if not event or not delivery or order.status != 'queued': continue
+            order.status = 'cancelled'
+            event.state, event.last_error_code, event.processed_at = 'cancelled', 'queue_expired', now
+            delivery.status, delivery.resolved_at = 'expired', now
+            order.save(update_fields=['status','updated_at'])
+            event.save(update_fields=['state','last_error_code','processed_at'])
+            delivery.save(update_fields=['status','resolved_at','updated_at'])
+            from .services import record_demo_refund
+            record_demo_refund(order, 'queue_expired')
 
 
 @shared_task(ignore_result=True)

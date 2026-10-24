@@ -52,9 +52,9 @@ class Zarinpal:
             raise ProviderUnknown('verification_missing_reference')
         # Some environments return amount/currency; reject mismatches if present.
         if 'amount' in data and (type(data['amount']) is not int or data['amount'] != rial(amount_toman)):
-            raise ProviderRejected('amount_mismatch')
+            raise ProviderUnknown('amount_mismatch')
         if data.get('currency', 'IRR') != 'IRR':
-            raise ProviderRejected('currency_mismatch')
+            raise ProviderUnknown('currency_mismatch')
         return VerifiedPayment(str(ref))
 
     def inquire(self, *, authority):

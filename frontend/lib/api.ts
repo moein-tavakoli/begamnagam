@@ -18,6 +18,7 @@ export type Bootstrap = {
 };
 export type Preview = {
   preview_id: string;
+  terms_version?: string;
   rewritten_text: string;
   full_sms?: string;
   sms_segments?: number;

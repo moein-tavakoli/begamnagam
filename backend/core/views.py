@@ -199,13 +199,13 @@ def preview(request):
     expires_at = timezone.now() + timedelta(minutes=15)
     with transaction.atomic():
         item = Preview.objects.create(owner=owner, session_key=session_key(request), category=category,
-            text=rewritten, full_sms=full_sms, recipient_hash=recipient_hash, moderation_mode=mode, expires_at=expires_at, price_toman=settings.PRICE_TOMAN)
+            text=rewritten, full_sms=full_sms, recipient_hash=recipient_hash, terms_version=settings.TERMS_VERSION, moderation_mode=mode, expires_at=expires_at, price_toman=settings.PRICE_TOMAN)
         if token:
             from .models import RecipientGrant
             RecipientGrant.objects.create(preview=item, token_digest=digest("recipient-token:" + token), recipient_hash=recipient_hash)
     ModerationAudit.objects.create(owner=owner, category=category, outcome="accepted", reason_code=mode, content_digest=digest(str(text)))
     return {"preview_id": str(item.id), "rewritten_text": item.text, "price_toman": item.price_toman,
-        "expires_at": expires_at.isoformat(), "moderation_mode": mode, "full_sms": item.full_sms, "sms_segments": 1 if len(full_sms.encode("utf-16-le")) // 2 <= 70 else (len(full_sms.encode("utf-16-le")) // 2 + 66) // 67}
+        "expires_at": expires_at.isoformat(), "moderation_mode": mode, "terms_version": item.terms_version, "full_sms": item.full_sms, "sms_segments": 1 if len(full_sms.encode("utf-16-le")) // 2 <= 70 else (len(full_sms.encode("utf-16-le")) // 2 + 66) // 67}
 
 
 @api(["POST"], authenticated=True)

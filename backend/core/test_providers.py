@@ -74,6 +74,7 @@ class ProviderContracts(TestCase):
         self.fixture.payments[a.authority]['status'] = 'PAID'
         self.fixture.modes['verify'] = 'wrong_amount'
         verify_payment(a.pk)
+        self.assertEqual(PaymentAttempt.objects.get(pk=a.pk).status,'unknown')
         self.assertFalse(FinancialEvent.objects.exists())
         self.assertFalse(Outbox.objects.exists())
 
@@ -198,3 +199,19 @@ class ProviderContracts(TestCase):
         self.assertEqual(Refund.objects.count(),1)
         self.assertEqual(self.client.get('/api/v1/orders/'+self.o['id']).json()['financial_status'],'refund_pending')
         self.assertFalse(Outbox.objects.exists())
+
+    @override_settings(SMS_BACKEND='kavenegar')
+    def test_halt_between_submission_intent_and_wire_call_defers_safely(self):
+        from unittest.mock import patch
+        from .budget import reserve_cost as original
+        from .models import SafetyControl
+        self.pay()
+        def reserve_then_halt(*args,**kwargs):
+            result=original(*args,**kwargs)
+            SafetyControl.objects.update(halted=True)
+            return result
+        with patch('core.provider_delivery.reserve_cost',side_effect=reserve_then_halt):
+            submit_delivery(Outbox.objects.get().pk)
+        self.assertEqual(self.fixture.calls.count('send'),0)
+        self.assertEqual(Outbox.objects.get().state,'pending')
+        self.assertEqual(MessageDelivery.objects.get().status,'queued')

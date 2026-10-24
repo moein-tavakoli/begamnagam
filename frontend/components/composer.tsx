@@ -168,6 +168,7 @@ export function Composer() {
         body: {
           preview_id: preview.preview_id,
           recipient_phone: normalizePhone(recipient),
+          consent, terms_version: preview.terms_version,
         },
         idempotencyKey: idempotencyKey.current,
       });

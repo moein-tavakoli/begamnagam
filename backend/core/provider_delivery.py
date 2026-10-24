@@ -102,7 +102,20 @@ def submit_delivery(event_id):
         state = RecipientState.objects.select_for_update().get(phone_hash=order.recipient_hash)
         event = Outbox.objects.select_for_update().get(pk=event_id)
         delivery = MessageDelivery.objects.select_for_update().get(order=order)
-        if state.blocked:
+        from .models import Account, SafetyControl
+        from .safety import defer_until_open
+        account = Account.objects.select_for_update().get(user_id=order.owner_id)
+        SafetyControl.objects.select_for_update().get(pk=1)
+        if defer_until_open(event):
+            delivery.status = 'queued'
+            delivery.lease_until = None
+            delivery.attempts -= 1
+            event.state = 'pending'
+            event.attempts -= 1
+            delivery.save()
+            event.save(update_fields=['state','attempts'])
+            return
+        if state.blocked or account.suspended or account.deletion_requested_at:
             fail_paid(order, event, delivery, 'recipient_unavailable', True)
             return
         try:

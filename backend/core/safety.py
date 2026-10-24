@@ -18,6 +18,15 @@ def ensure_open():
 
 
 def defer_until_open(event):
+    from django.core.cache import cache
+    try:
+        cache.get("dispatch-availability-probe")
+    except Exception:
+        event.available_at = timezone.now() + timedelta(seconds=30)
+        event.save(update_fields=["available_at"])
+        OperationalAlert.objects.update_or_create(code="recipient_controls_unavailable", defaults={"active": True, "severity": "critical", "count": 1})
+        return True
+    OperationalAlert.objects.filter(code="recipient_controls_unavailable", active=True).update(active=False)
     if halted():
         event.available_at = timezone.now() + timedelta(seconds=30)
         event.save(update_fields=['available_at'])

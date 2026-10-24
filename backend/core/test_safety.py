@@ -213,3 +213,31 @@ class RecipientSafetyTests(TestCase):
         self.assertEqual(FinancialEvent.objects.filter(kind='refund').count(),1)
         self.assertEqual(Refund.objects.get().status,'refunded')
         with self.assertRaises(APIError): operator_action(actor,'suspend',self.user.account.pk,'not content support')
+
+    def test_external_checkout_records_frozen_terms_consent_and_rejects_missing_consent(self):
+        quote = self.post('/messages/preview', {'category':'appreciation','text':'تشکر از تو','recipient_phone':'09901234568'}).json()
+        with override_settings(PROVIDER_NETWORK_MODE='external',TERMS_VERSION='changed-after-quote'):
+            self.assertEqual(self.order(recipient='09901234568',preview=quote).status_code,422)
+            result = self.post('/orders', {'preview_id':quote['preview_id'],'recipient_phone':'09901234568','consent':True,'terms_version':quote['terms_version']}, HTTP_IDEMPOTENCY_KEY=str(uuid.uuid4()))
+        self.assertEqual(result.status_code,200)
+        order=Order.objects.get(pk=result.json()['id'])
+        self.assertTrue(order.consent_at)
+        self.assertEqual(order.terms_version,quote['terms_version'])
+
+    def test_cache_outage_pauses_dispatch_when_recipient_controls_cannot_be_used(self):
+        from unittest.mock import patch
+        with self.captureOnCommitCallbacks(execute=False): self.post('/orders/'+self.o['id']+'/pay-demo')
+        with patch('django.core.cache.cache.get',side_effect=ConnectionError('synthetic outage')):
+            deliver_message(Outbox.objects.get().pk)
+        self.assertEqual(Outbox.objects.get().state,'pending')
+        self.assertEqual(Outbox.objects.get().attempts,0)
+        self.assertFalse(Refund.objects.exists())
+
+    def test_paid_unsubmitted_queue_expiry_compensates_without_dispatch(self):
+        from .tasks import expire_unpaid_orders
+        with self.captureOnCommitCallbacks(execute=False): self.post('/orders/'+self.o['id']+'/pay-demo')
+        Order.objects.update(paid_at=timezone.now()-timedelta(hours=25))
+        expire_unpaid_orders()
+        expire_unpaid_orders()
+        self.assertEqual(Outbox.objects.get().state,'cancelled')
+        self.assertEqual(FinancialEvent.objects.filter(kind='refund').count(),1)

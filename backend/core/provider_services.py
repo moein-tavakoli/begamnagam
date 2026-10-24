@@ -85,7 +85,7 @@ def verify_payment(attempt_id):
     except ProviderRejected as exc:
         # -51 (not paid yet) may be followed by a later successful payment. The
         # reconciler retains the authority until it reaches a terminal outcome.
-        PaymentAttempt.objects.filter(pk=attempt_id).update(status='pending' if str(exc) == 'payment_rejected_51' else 'failed', checked_at=timezone.now(), lease_until=None)
+        PaymentAttempt.objects.filter(pk=attempt_id).update(status='pending' if str(exc) == 'payment_rejected_51' else 'unknown', checked_at=timezone.now(), lease_until=None)
         return
     with transaction.atomic():
         order = Order.objects.select_for_update().get(pk=meta['order_id'])

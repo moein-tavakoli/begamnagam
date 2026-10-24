@@ -32,6 +32,7 @@ class OTPChallenge(models.Model):
 
 class Preview(models.Model):
     recipient_hash = models.CharField(max_length=64, blank=True)
+    terms_version = models.CharField(max_length=40, blank=True)
     full_sms = EncryptedTextField(blank=True)
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.CASCADE)
@@ -52,6 +53,8 @@ class RecipientState(models.Model):
 
 
 class Order(models.Model):
+    consent_at = models.DateTimeField(null=True, blank=True)
+    terms_version = models.CharField(max_length=40, blank=True)
     full_sms = EncryptedTextField(blank=True)
 
     class Status(models.TextChoices):

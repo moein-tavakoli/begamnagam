@@ -57,7 +57,7 @@ def bootstrap(request):
     session_key(request)
     authenticated = is_product_authenticated(request.user)
     data = {"demo_mode": settings.DEMO_MODE, "authenticated": authenticated,
-        "price_toman": settings.PRICE_TOMAN, "categories": CATEGORIES, "rewrite_mode": settings.AI_MODE}
+        "price_toman": settings.PRICE_TOMAN, "categories": CATEGORIES, "rewrite_mode": settings.AI_MODE, "payment_backend": settings.PAYMENT_BACKEND}
     if authenticated:
         data["phone_masked"] = request.user.account.phone_masked
         data["recipient_blocked"] = RecipientState.objects.filter(phone_hash=request.user.account.phone_hash, blocked=True).exists()
@@ -75,14 +75,30 @@ def request_otp(request):
     now = timezone.now()
     if OTPChallenge.objects.filter(phone_hash=phone_hash, created_at__gt=now - timedelta(minutes=10)).count() >= 3:
         raise APIError("rate_limited", "کمی بعد دوباره برای کد تأیید تلاش کنید.", 429)
-    if not settings.DEMO_MODE or settings.SMS_BACKEND != "console":
-        raise APIError("sms_disabled", "ارسال کد واقعی هنوز فعال نشده است.", 503)
+    demo_otp = settings.DEMO_MODE and settings.OTP_BACKEND == "demo" and settings.SMS_BACKEND == "console"
+    if not demo_otp and settings.OTP_BACKEND != "kavenegar":
+        raise APIError("sms_disabled", "ارسال کد فعلاً فعال نیست.", 503)
     code = f"{secrets.randbelow(1000000):06}"
     challenge_id = uuid.uuid4()
     OTPChallenge.objects.create(id=challenge_id, phone_hash=phone_hash, phone_cipher=encrypt(phone),
         code_digest=digest(f"otp:{challenge_id}:{code}"), session_key=session_key(request),
         expires_at=now + timedelta(minutes=5))
-    return {"challenge_id": str(challenge_id), "debug_code": code, "demo_mode": True, "expires_in": 300}
+    if demo_otp:
+        return {"challenge_id": str(challenge_id), "debug_code": code, "demo_mode": True, "expires_in": 300}
+    from .providers import Kavenegar, ProviderDisabled, ProviderUnknown, ProviderRejected
+    from .budget import reserve_cost
+    try:
+        if settings.PROVIDER_NETWORK_MODE == 'external' and phone_hash not in settings.PILOT_RECIPIENT_HASHES:
+            raise ProviderDisabled('outside_pilot_allowlist')
+        reserve_cost('otp:' + str(challenge_id), 'otp', settings.OTP_MAX_COST_RIAL)
+        Kavenegar().otp(phone=phone, code=code)
+    except (ProviderRejected, ProviderDisabled):
+        OTPChallenge.objects.filter(pk=challenge_id).update(consumed_at=timezone.now())
+        raise APIError('otp_unavailable', 'ارسال کد فعلاً ممکن نیست؛ کمی بعد تلاش کن.', 503) from None
+    except ProviderUnknown:
+        # The OTP may arrive; retain this challenge and never expose its code.
+        pass
+    return {"challenge_id": str(challenge_id), "demo_mode": False, "expires_in": 300}
 
 
 @api(["POST"])
@@ -224,3 +240,29 @@ def not_found(request, exception=None):
 
 def server_error(request):
     return services.error_response(APIError("service_unavailable", "سرویس موقتاً در دسترس نیست؛ کمی بعد تلاش کنید.", 500))
+
+
+@api(["POST"], authenticated=True)
+def begin_payment(request, order_id):
+    from .provider_services import begin_payment as begin
+    body(request)
+    return begin(request.user, order_id, request.headers.get('Idempotency-Key', ''))
+
+
+@api(["GET"])
+def payment_return(request):
+    from .models import PaymentAttempt
+    from .tasks import verify_provider_payment
+    from django.http import HttpResponseRedirect
+    authority = request.GET.get('Authority', '')
+    if len(authority) > 128:
+        authority = ''
+    # Status/query parameters never prove payment, and no session is trusted here.
+    attempt = PaymentAttempt.objects.filter(provider='zarinpal', authority=authority).exclude(authority='').first()
+    if attempt:
+        limited('callback', str(attempt.pk), 10, 60)
+        try:
+            verify_provider_payment.delay(str(attempt.pk))
+        except Exception:
+            pass  # Independent reconciler will verify the durable attempt.
+    return HttpResponseRedirect(settings.APP_BASE_URL + '/history?payment_return=1')

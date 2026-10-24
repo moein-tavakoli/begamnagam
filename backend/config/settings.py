@@ -34,8 +34,8 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3:4b")
 SMS_BACKEND = os.getenv("SMS_BACKEND", "console")
 PAYMENT_BACKEND = os.getenv("PAYMENT_BACKEND", "demo")
 
-if SMS_BACKEND not in {"console", "disabled"} or PAYMENT_BACKEND not in {"demo", "disabled"}:
-    raise ImproperlyConfigured("Only local demo or disabled adapters are supported")
+if SMS_BACKEND not in {"console", "disabled", "kavenegar"} or PAYMENT_BACKEND not in {"demo", "disabled", "zarinpal"}:
+    raise ImproperlyConfigured("Unknown provider backend")
 
 if AI_MODE not in {"template", "ollama"} or PRICE_TOMAN < 1:
     raise ImproperlyConfigured("Invalid AI_MODE or PRICE_TOMAN")
@@ -48,8 +48,8 @@ if not DEMO_MODE:
         raise ImproperlyConfigured("Non-demo requires DEBUG=false and a strong DJANGO_SECRET_KEY")
     if not os.getenv("PHONE_ENCRYPTION_KEY") or len(PHONE_HASH_KEY) < 32:
         raise ImproperlyConfigured("Non-demo requires independent phone encryption and hashing keys")
-    if SMS_BACKEND != "disabled" or PAYMENT_BACKEND != "disabled":
-        raise ImproperlyConfigured("Live SMS and payments are not implemented; select disabled adapters")
+    if (SMS_BACKEND != "disabled" or PAYMENT_BACKEND != "disabled") and not flag("LIVE_PROVIDERS_ENABLED"):
+        raise ImproperlyConfigured("Provider activation requires LIVE_PROVIDERS_ENABLED")
     if "*" in ALLOWED_HOSTS or any(x.startswith("http:") for x in CSRF_TRUSTED_ORIGINS):
         raise ImproperlyConfigured("Non-demo requires explicit hosts and HTTPS CSRF origins")
 
@@ -96,6 +96,7 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_BEAT_SCHEDULE = {
+    "reconcile-providers": {"task": "core.tasks.reconcile_providers", "schedule": 30.0},
     "reconcile-outbox": {"task": "core.tasks.reconcile_outbox", "schedule": 30.0},
     "expire-unpaid": {"task": "core.tasks.expire_unpaid_orders", "schedule": 60.0},
     "prune-private-data": {"task": "core.tasks.prune_private_data", "schedule": 86400.0},
@@ -135,3 +136,35 @@ CELERY_CONTROL_QUEUE_EXCLUSIVE = True
 CELERY_TASK_DEFAULT_DELIVERY_MODE = "persistent"
 CELERY_TASK_ACKS_LATE = True
 CELERY_TASK_REJECT_ON_WORKER_LOST = True
+
+# Provider network access is opt-in. Contract tests use loopback only.
+PROVIDER_NETWORK_MODE = os.getenv('PROVIDER_NETWORK_MODE', 'disabled')
+LIVE_PROVIDERS_ENABLED = flag('LIVE_PROVIDERS_ENABLED')
+PROVIDER_TIMEOUT_SECONDS = float(os.getenv('PROVIDER_TIMEOUT_SECONDS', '8'))
+KAVENEGAR_BASE_URL = os.getenv('KAVENEGAR_BASE_URL', 'https://api.kavenegar.com')
+KAVENEGAR_API_KEY = os.getenv('KAVENEGAR_API_KEY', '')
+KAVENEGAR_SENDER = os.getenv('KAVENEGAR_SENDER', '')
+KAVENEGAR_OTP_TEMPLATE = os.getenv('KAVENEGAR_OTP_TEMPLATE', '')
+ZARINPAL_BASE_URL = os.getenv('ZARINPAL_BASE_URL', 'https://sandbox.zarinpal.com')
+ZARINPAL_REDIRECT_BASE = os.getenv('ZARINPAL_REDIRECT_BASE', 'https://sandbox.zarinpal.com')
+ZARINPAL_MERCHANT_ID = os.getenv('ZARINPAL_MERCHANT_ID', '')
+PROVIDER_ENVIRONMENT = os.getenv('PROVIDER_ENVIRONMENT', 'sandbox')
+OTP_BACKEND = os.getenv('OTP_BACKEND', 'demo' if DEMO_MODE else 'disabled')
+PROVIDER_DAILY_BUDGET_RIAL = int(os.getenv('PROVIDER_DAILY_BUDGET_RIAL', '0'))
+SMS_MAX_COST_RIAL = int(os.getenv('SMS_MAX_COST_RIAL', '0'))
+OTP_MAX_COST_RIAL = int(os.getenv('OTP_MAX_COST_RIAL', '0'))
+PILOT_RECIPIENT_HASHES = set(filter(None, os.getenv('PILOT_RECIPIENT_HASHES', '').split(',')))
+OPERATIONS_OWNER = os.getenv('OPERATIONS_OWNER', '')
+PROVIDER_CONTRACT_APPROVED = flag('PROVIDER_CONTRACT_APPROVED')
+REFUND_PROCESS_APPROVED = flag('REFUND_PROCESS_APPROVED')
+if PROVIDER_NETWORK_MODE not in {'disabled', 'local', 'external'} or PROVIDER_ENVIRONMENT not in {'sandbox', 'live'}:
+    raise ImproperlyConfigured('Invalid provider mode or environment')
+if not 0 < PROVIDER_TIMEOUT_SECONDS <= 15:
+    raise ImproperlyConfigured('Provider timeout must be at most15 seconds')
+if PROVIDER_NETWORK_MODE == 'external':
+    if DEMO_MODE or not LIVE_PROVIDERS_ENABLED or not OPERATIONS_OWNER or not PROVIDER_CONTRACT_APPROVED or not REFUND_PROCESS_APPROVED:
+        raise ImproperlyConfigured('External providers require non-demo mode, operations/contract/refund approval')
+    if not all([KAVENEGAR_API_KEY, KAVENEGAR_SENDER, KAVENEGAR_OTP_TEMPLATE, ZARINPAL_MERCHANT_ID, PILOT_RECIPIENT_HASHES]):
+        raise ImproperlyConfigured('External providers require credentials and an explicit pilot recipient allowlist')
+    if min(PROVIDER_DAILY_BUDGET_RIAL, SMS_MAX_COST_RIAL, OTP_MAX_COST_RIAL) <= 0:
+        raise ImproperlyConfigured('External providers require positive bounded cost configuration')

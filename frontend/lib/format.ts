@@ -32,7 +32,9 @@ export const statusLabels: Record<string, string> = {
   sent: "تحویل به پنل پیامک",
   simulated: "ارسال آزمایشی ثبت شد",
   delivered_demo: "ارسال شبیه‌سازی شد",
-  delivered: "تحویل به اپراتور",
+  accepted: "پذیرفته‌شده توسط سرویس‌دهنده",
+  unknown: "در حال بررسی نتیجه؛ دوباره ارسال نکن",
+  delivered: "رسیده به گیرنده",
   failed: "ارسال ناموفق",
   blocked: "ارسال متوقف شد",
   cancelled: "لغو شده",
@@ -44,5 +46,5 @@ export function statusLabel(status: string): string {
 }
 
 export function isPending(status: string): boolean {
-  return ["paid", "queued", "processing", "sending"].includes(status);
+  return ["paid", "queued", "processing", "sending", "accepted", "unknown"].includes(status);
 }

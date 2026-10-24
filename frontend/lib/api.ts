@@ -11,6 +11,7 @@ export type Bootstrap = {
   price_toman: number;
   categories: Category[];
   rewrite_mode: string;
+  payment_backend?: string;
 };
 export type Preview = {
   preview_id: string;
@@ -152,4 +153,12 @@ export function errorMessage(error: unknown): string {
   return error instanceof Error
     ? error.message
     : "خطایی رخ داد. دوباره تلاش کنید.";
+}
+
+
+export function approvedPaymentRedirect(value: string, demo: boolean): string {
+  const url = new URL(value);
+  if (url.protocol === 'https:' && ['www.zarinpal.com', 'sandbox.zarinpal.com'].includes(url.hostname) && url.pathname.startsWith('/pg/StartPay/')) return url.href;
+  if (demo && url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname) && url.pathname.startsWith('/pg/StartPay/')) return url.href;
+  throw new ApiError('نشانی درگاه معتبر نیست؛ از سابقه وضعیت را بررسی کن.', 'invalid_gateway');
 }

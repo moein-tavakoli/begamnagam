@@ -7,6 +7,7 @@ import {
   createIdempotencyKey,
   ApiError,
   errorMessage,
+  approvedPaymentRedirect,
   type Order,
   type Preview,
 } from "@/lib/api";
@@ -183,6 +184,14 @@ export function Composer() {
     setError("");
     setBusy(true);
     try {
+      if (data?.payment_backend === 'zarinpal') {
+        const result = await api<{redirect_url?: string}>(`/orders/${order.id}/payments`, {
+          method: 'POST', body: {}, idempotencyKey: idempotencyKey.current || (idempotencyKey.current = createIdempotencyKey()),
+        });
+        if (result.redirect_url) window.location.assign(approvedPaymentRedirect(result.redirect_url, !!data.demo_mode));
+        else await refreshOrder();
+        return;
+      }
       const result = await api<Pick<Order, "id" | "status">>(
         `/orders/${order.id}/pay-demo`,
         { method: "POST", body: {} },
@@ -550,7 +559,7 @@ export function Composer() {
                   <strong>{toman(order.amount_toman)}</strong>
                 </div>
               </div>
-              {data?.demo_mode ? (
+              {data?.payment_backend !== "zarinpal" && data?.demo_mode ? (
                 <div className="demo-payment-note">
                   <Icon name="info" size={20} />
                   <p>
@@ -560,16 +569,16 @@ export function Composer() {
                 </div>
               ) : (
                 <p className="error-box">
-                  درگاه پرداخت واقعی در این نسخه فعال نیست.
+                  {data?.payment_backend === "zarinpal" ? "برای پرداخت به صفحه امن درگاه منتقل می‌شی؛ بعد از برگشت، وضعیت را در پیام‌های من ببین." : "درگاه پرداخت فعلاً فعال نیست."}
                 </p>
               )}
               <BusyButton
                 className="button primary full-width"
                 busy={busy}
                 onClick={payDemo}
-                disabled={!data?.demo_mode}
+                disabled={!data?.demo_mode && data?.payment_backend !== "zarinpal"}
               >
-                تأیید پرداخت آزمایشی و ثبت ارسال <Icon name="arrow" size={18} />
+                {data?.payment_backend === "zarinpal" ? "ادامه در درگاه پرداخت" : "تأیید پرداخت آزمایشی و ثبت ارسال"} <Icon name="arrow" size={18} />
               </BusyButton>
               <p className="small muted text-center">
                 برای تلاش دوباره، همین پرداخت ادامه پیدا می‌کنه و سفارش تازه
@@ -603,7 +612,7 @@ export function Composer() {
                       ? "آزمایش ارسال ثبت شد."
                       : "وضعیت پیامت ثبت شد."}
               </h3>
-              <p className="small">مالی: {order.financial_status === "refunded" ? "مسترد شد (آزمایشی)" : order.financial_status === "verified" ? "تأیید شد (آزمایشی)" : "در انتظار"}</p>
+              <p className="small">مالی: {order.financial_status === "refunded" ? "مسترد شد" : order.financial_status === "refund_pending" ? "بازپرداخت در حال پیگیری است" : order.financial_status === "verified" ? "تأیید شد" : "در انتظار"}</p>
               <p className="receipt-status" role="status">
                 {statusLabel(order.status)}
               </p>

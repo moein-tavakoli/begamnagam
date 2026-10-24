@@ -9,6 +9,7 @@ class Account(models.Model):
     phone_hash = models.CharField(max_length=64, unique=True)
     phone_cipher = models.TextField()
     phone_masked = models.CharField(max_length=20)
+    suspended = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
 
@@ -52,6 +53,9 @@ class Order(models.Model):
         AWAITING_PAYMENT = "awaiting_payment", "منتظر پرداخت آزمایشی"
         QUEUED = "queued", "در صف شبیه‌سازی"
         DELIVERED_DEMO = "delivered_demo", "ارسال شبیه‌سازی شد"
+        ACCEPTED = "accepted", "پذیرفته‌شده توسط سرویس‌دهنده"
+        DELIVERED = "delivered", "رسیده به گیرنده"
+        UNKNOWN = "unknown", "در حال بررسی نتیجه"
         CANCELLED = "cancelled", "لغوشده"
         FAILED = "failed", "ناموفق"
 
@@ -96,8 +100,7 @@ class ModerationAudit(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
 
-# Phase-one foundation. Existing demo routes keep using Order/Outbox until the
-# phase-two integration is authorized; none of these records calls a provider.
+# Independent financial and delivery records. Network activation is guarded separately.
 class PaymentAttempt(models.Model):
     class Status(models.TextChoices):
         CREATED = "created", "ایجادشده"
@@ -112,6 +115,10 @@ class PaymentAttempt(models.Model):
     provider = models.CharField(max_length=24, default="demo")
     environment = models.CharField(max_length=8, default="demo")
     provider_reference = models.CharField(max_length=128, blank=True)
+    authority = models.CharField(max_length=128, blank=True)
+    redirect_url = models.URLField(max_length=400, blank=True)
+    lease_until = models.DateTimeField(null=True, blank=True)
+    checked_at = models.DateTimeField(null=True, blank=True)
     amount_toman = models.PositiveIntegerField()
     currency = models.CharField(max_length=3, default="IRT")
     status = models.CharField(max_length=12, choices=Status, default=Status.CREATED)
@@ -123,11 +130,12 @@ class PaymentAttempt(models.Model):
         constraints = [
             models.CheckConstraint(condition=models.Q(amount_toman__gt=0), name="payment_positive_amount"),
             models.CheckConstraint(condition=models.Q(currency="IRT"), name="payment_integer_toman"),
-            models.CheckConstraint(condition=models.Q(environment="demo", provider="demo"), name="payment_demo_only"),
+            models.CheckConstraint(condition=models.Q(environment="demo", provider="demo") | models.Q(environment__in=["sandbox", "live"], provider="zarinpal"), name="payment_provider_environment"),
             models.CheckConstraint(condition=models.Q(status__in=["created", "pending", "verified", "failed", "unknown"]), name="payment_known_status"),
             models.CheckConstraint(condition=models.Q(applied_to_order=False) | models.Q(status="verified"), name="payment_apply_verified_only"),
             models.UniqueConstraint(fields=["order"], condition=models.Q(applied_to_order=True), name="one_applied_payment_per_order"),
             models.UniqueConstraint(fields=["provider", "environment", "provider_reference"], condition=~models.Q(provider_reference=""), name="unique_payment_provider_reference"),
+            models.UniqueConstraint(fields=["provider", "environment", "authority"], condition=~models.Q(authority=""), name="unique_payment_authority"),
         ]
         indexes = [models.Index(fields=["status", "updated_at"])]
 
@@ -154,6 +162,7 @@ class Refund(models.Model):
         constraints = [
             models.CheckConstraint(condition=models.Q(amount_toman__gt=0), name="refund_positive_amount"),
             models.CheckConstraint(condition=models.Q(status__in=["requested", "processing", "refunded", "failed", "unknown"]), name="refund_known_status"),
+            models.UniqueConstraint(fields=["payment"], name="one_full_refund_per_payment"),
         ]
         indexes = [models.Index(fields=["status", "updated_at"])]
 
@@ -165,6 +174,7 @@ class MessageDelivery(models.Model):
         SUBMITTING = "submitting", "در حال ارسال"
         ACCEPTED = "accepted", "پذیرفته‌شده"
         DELIVERED_DEMO = "delivered_demo", "تحویل آزمایشی"
+        DELIVERED = "delivered", "رسیده به گیرنده"
         FAILED = "failed", "ناموفق"
         UNKNOWN = "unknown", "نیازمند تطبیق"
         SUPPRESSED = "suppressed", "متوقف‌شده"
@@ -173,6 +183,8 @@ class MessageDelivery(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     order = models.OneToOneField(Order, on_delete=models.PROTECT, related_name="delivery")
     submission_key = models.UUIDField(default=uuid.uuid4, unique=True)
+    local_id = models.PositiveBigIntegerField(null=True, blank=True, unique=True)
+    checked_at = models.DateTimeField(null=True, blank=True)
     environment = models.CharField(max_length=8, default="demo")
     provider = models.CharField(max_length=24, default="demo")
     provider_reference = models.CharField(max_length=128, blank=True)
@@ -187,8 +199,8 @@ class MessageDelivery(models.Model):
 
     class Meta:
         constraints = [
-            models.CheckConstraint(condition=models.Q(environment="demo", provider="demo"), name="delivery_demo_only"),
-            models.CheckConstraint(condition=models.Q(status__in=["not_ready", "queued", "submitting", "accepted", "delivered_demo", "failed", "unknown", "suppressed", "expired"]), name="delivery_known_status"),
+            models.CheckConstraint(condition=models.Q(environment="demo", provider="demo") | models.Q(environment__in=["sandbox", "live"], provider="kavenegar"), name="delivery_provider_environment"),
+            models.CheckConstraint(condition=models.Q(status__in=["not_ready", "queued", "submitting", "accepted", "delivered_demo", "delivered", "failed", "unknown", "suppressed", "expired"]), name="delivery_known_status"),
             models.UniqueConstraint(fields=["provider", "environment", "provider_reference"], condition=~models.Q(provider_reference=""), name="unique_delivery_provider_reference"),
         ]
         indexes = [models.Index(fields=["status", "updated_at"])]
@@ -210,3 +222,18 @@ class FinancialEvent(models.Model):
             models.CheckConstraint(condition=models.Q(kind="payment", refund__isnull=True) | models.Q(kind="refund", refund__isnull=False), name="financial_event_refund_relation"),
             models.UniqueConstraint(fields=["payment"], condition=models.Q(kind="payment"), name="one_capture_event_per_payment"),
         ]
+
+
+class SpendBudget(models.Model):
+    day = models.DateField(primary_key=True)
+    reserved_rial = models.PositiveBigIntegerField(default=0)
+    limit_rial = models.PositiveBigIntegerField()
+
+
+class SpendReservation(models.Model):
+    operation_key = models.CharField(max_length=100, unique=True)
+    budget = models.ForeignKey(SpendBudget, on_delete=models.PROTECT)
+    amount_rial = models.PositiveBigIntegerField()
+    kind = models.CharField(max_length=12)
+    state = models.CharField(max_length=12, default='reserved')
+    created_at = models.DateTimeField(auto_now_add=True)

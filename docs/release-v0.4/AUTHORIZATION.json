@@ -1,0 +1,11 @@
+{
+  "date": "2026-10-24",
+  "instruction": "خوب برو تا اخرین فاز؛ تست های انسانی رو نگهدار؛ اخرش بهم بگو",
+  "authorized_implementation_phases": [3, 4, 5, 6],
+  "human_tests": "deferred by user: physical devices, usability, accessibility manual review and volunteer pilot",
+  "local_version_commits": true,
+  "push": false,
+  "external_deployment": false,
+  "live_spending_or_messages": "not performed: no provider credentials, named test recipients or monetary limit supplied",
+  "provider_contract_tests": "local HTTP simulator only; never represented as vendor sandbox evidence"
+}

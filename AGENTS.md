@@ -15,8 +15,11 @@ do not invent current APIs.
 
 ## Product invariants
 
-- Live SMS and payments are not implemented. Keep demo labeling explicit and do
-  not treat `delivered_demo` as an actual provider delivery receipt.
+- Demo remains the default. Provider protocol clients are present but network access
+  defaults to disabled. External activation requires credentials, contract/refund
+  approval, bounded budget and a pilot allowlist; never infer permission to spend
+  from implementation work. Local contract simulations are not vendor sandbox tests.
+  Keep demo labeling explicit; `delivered_demo` is not a real delivery receipt.
 - Recipients must never see sender identity. Sender-facing errors must not expose
   whether a target opted out or has an account. Preferences apply to the verified
   account's own number only.

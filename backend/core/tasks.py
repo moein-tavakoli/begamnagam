@@ -14,6 +14,9 @@ logger = logging.getLogger(__name__)
 
 @shared_task(ignore_result=True)
 def deliver_message(event_id):
+    if MessageDelivery.objects.filter(order__outbox__pk=event_id, provider="kavenegar").exists():
+        from .provider_delivery import submit_delivery
+        return submit_delivery(event_id)
     # A committed outbox and row locks make repeated broker deliveries harmless.
     # Live adapters are deliberately unavailable until a provider-specific
     # idempotency and delivery-receipt implementation exists.
@@ -85,3 +88,21 @@ def prune_private_data():
     from django.core.management import call_command
     call_command("prune_private_data", stdout=StringIO())
     call_command("clearsessions", stdout=StringIO())
+
+
+@shared_task(ignore_result=True)
+def reconcile_providers():
+    from .provider_services import reconcile_payments, process_refund
+    from .provider_delivery import reconcile_delivery
+    from .models import Refund
+    reconcile_payments()
+    for delivery_id in MessageDelivery.objects.filter(provider='kavenegar', status__in=['submitting', 'unknown', 'accepted']).values_list('pk', flat=True)[:100]:
+        reconcile_delivery(delivery_id)
+    for refund_id in Refund.objects.exclude(status='refunded').values_list('pk', flat=True)[:100]:
+        process_refund(refund_id)
+
+
+@shared_task(ignore_result=True)
+def verify_provider_payment(attempt_id):
+    from .provider_services import verify_payment
+    verify_payment(attempt_id)

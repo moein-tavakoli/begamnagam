@@ -1,5 +1,15 @@
 # Versions
 
+## 0.4.0 — Provider protocols and reconciliation
+
+- Bounded Kavenegar OTP/SMS/status and Zarinpal request/verify/inquiry/reverse clients,
+  with redirect/host checks, integer toman-to-rial conversion and disabled network by default.
+- Durable payment/submission intents, independent verification, late/extra-receipt
+  refunds and query-only recovery after ambiguous requests or worker loss.
+- Gross daily provider budget reservations and pilot recipient allowlist gates.
+- Real HTTP loopback contract simulator and15 integration tests; no vendor calls.
+- Post-settlement refunds stay tracked as manual obligations; no false refund result.
+
 ## 0.3.2 — UI hot reload workflow
 
 - `make dev-ui` runs the native Next.js development server with Fast Refresh on

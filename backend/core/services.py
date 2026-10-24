@@ -83,7 +83,7 @@ def get_owned_order(user, order_id):
 def serialize_order(order):
     payment = order.payment_attempts.filter(applied_to_order=True).first()
     delivery = MessageDelivery.objects.filter(order=order).first()
-    return {"financial_status": "refunded" if payment and payment.refunds.filter(status="refunded").exists() else payment.status if payment else "legacy_demo_paid" if order.paid_at else "unpaid",
+    return {"financial_status": "refunded" if payment and payment.refunds.filter(status="refunded").exists() else "refund_pending" if payment and payment.refunds.exists() else payment.status if payment else "legacy_demo_paid" if order.paid_at else "unpaid",
         "delivery_status": delivery.status if delivery else "not_ready","id": str(order.id), "status": order.status, "amount_toman": order.amount_toman,
         "payment_mode": order.payment_mode, "recipient_masked": order.recipient_masked,
         "text": order.full_sms or order.text, "category": order.category, "paid_at": order.paid_at.isoformat() if order.paid_at else None,
@@ -107,6 +107,8 @@ def create_order(user, session_key, data, idempotency_key):
             if previous.preview_id != preview_id or previous.recipient_hash != phone_hash:
                 raise APIError("idempotency_conflict", "این کلید برای درخواست دیگری استفاده شده است.", 409)
             return previous
+        if user.account.suspended:
+            raise APIError("account_unavailable", "این حساب فعلاً اجازه ارسال ندارد.", 403)
         limited("orders", str(user.pk), 10, 60)
         if user.account.phone_hash == phone_hash:
             raise recipient_unavailable()
@@ -127,7 +129,7 @@ def create_order(user, session_key, data, idempotency_key):
         busy = Order.objects.filter(recipient_hash=phone_hash).filter(
             models_busy_query(now)
         ).exists()
-        if Order.objects.filter(owner=user, recipient_hash=phone_hash, status=Order.Status.DELIVERED_DEMO,
+        if Order.objects.filter(owner=user, recipient_hash=phone_hash, status__in=[Order.Status.DELIVERED_DEMO, Order.Status.ACCEPTED, Order.Status.DELIVERED, Order.Status.UNKNOWN],
                 updated_at__gte=now - timedelta(days=30)).exists():
             raise recipient_unavailable()
         if state.blocked or busy or (state.last_sent_at and state.last_sent_at > now - timedelta(hours=settings.RECIPIENT_COOLDOWN_HOURS)):
@@ -140,7 +142,7 @@ def create_order(user, session_key, data, idempotency_key):
 
 def models_busy_query(now):
     from django.db.models import Q
-    return Q(status=Order.Status.QUEUED) | Q(status=Order.Status.AWAITING_PAYMENT, created_at__gt=now - PAYMENT_WINDOW)
+    return Q(status__in=[Order.Status.QUEUED, Order.Status.ACCEPTED, Order.Status.UNKNOWN]) | Q(status=Order.Status.AWAITING_PAYMENT, created_at__gt=now - PAYMENT_WINDOW)
 
 
 def pay_order(user, order_id):

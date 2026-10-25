@@ -84,6 +84,10 @@ textarea { border-radius: 20px; min-height: 135px; resize: vertical; } input[dir
 input::placeholder,textarea::placeholder { color: #77707e; opacity: 1; }
 input[aria-invalid="true"],textarea[aria-invalid="true"] { border-color: var(--error); }
 .textarea-meta { display: flex; justify-content: space-between; gap: 8px; font-size: 10px; color: var(--muted); margin-top: 9px; } .textarea-meta>:last-child { white-space: nowrap; }
+.draft-form .textarea-meta { justify-content: flex-end; }
+.message-guidance { display: flex; align-items: flex-start; gap: 8px; margin-block: 10px; padding: 10px 12px; border: 1px solid #eddea9; border-radius: 16px; color: #66552c; background: #fff5d7; }
+.message-guidance p { margin: 0; font-size: 12px; line-height: 1.9; }
+.message-guidance svg { margin-top: 2px; }
 .rewrite-note,.demo-payment-note { display: flex; align-items: flex-start; gap: 9px; padding: 13px; background: #f3edfc; color: #605074; border-radius: 17px; margin-block: 19px; } .rewrite-note svg,.demo-payment-note svg { margin-top: 3px; }
 .rewrite-note p,.demo-payment-note p { font-size: 11px; margin-bottom: 0; }
 .form-actions { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-top: 24px; } .form-actions .button { flex: 1; } .form-actions>.small { flex-basis: 100%; text-align: center; font-size: 11px; }
@@ -190,10 +194,9 @@ body:has(input:focus,textarea:focus) .mobile-nav { display: none; }
 .home-flow .final-message { margin-block: 12px; padding: 16px; }
 .home-flow .final-message>p { margin-block: 12px; font-size: 14px; line-height: 1.9; }
 .home-flow .preview-info { padding-block: 10px; }
-.review-recipient { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-.review-recipient>div { display: flex; flex-direction: column; gap: 4px; }
-.review-recipient bdi { font-size: 16px; }
-.review-recipient .text-button { min-height: 44px; }
+.review-phone-hint { margin-block: 4px 8px; }
+.review-placeholder { display: flex; align-items: center; gap: 10px; padding: 20px 16px; margin-top: 14px; border-radius: 20px; color: var(--muted); background: var(--pale); }
+.review-placeholder p { margin: 0; font-size: 13px; }
 .review-demo-note { padding: 8px 12px; border-radius: 14px; background: var(--pale); margin-block: 10px; }
 .review-form .checkbox-label { margin-block: 10px; align-items: flex-start; }
 .review-form .checkbox-label input { flex-shrink: 0; }

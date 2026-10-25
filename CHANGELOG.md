@@ -1,5 +1,17 @@
 # Versions
 
+## 0.8.6 — Recipient within final review and inline writing guidance
+
+- Removed the draft rewrite-mode strip and the redundant recipient-stage teaser.
+- Moved privacy/respect tips into an inline warning beneath the textarea while
+  keeping the character counter at its existing edge and accessible descriptions.
+- Combined recipient entry with final review on one screen. Preparing a preview
+  stays on that screen; changing the number clears the old preview and consent.
+- Keep authentication, reviewed recipient/text/price, consent and same-order payment
+  retry protections. UI changes use the existing Fast Refresh server only.
+-14 frontend tests/typecheck pass. Mobile/desktop browser checks cover same-screen
+  preview, invalid/changed recipients, renewed consent, order locking and a mocked receipt.
+
 ## 0.8.5 — Combined final review and numeric inputs
 
 - Removed the sender verification badge from the recipient form; authentication stays required.

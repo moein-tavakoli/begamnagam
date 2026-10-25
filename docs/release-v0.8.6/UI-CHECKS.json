@@ -1,0 +1,37 @@
+{
+  "version": "0.8.6",
+  "date": "2026-10-25",
+  "viewports": [
+    {
+      "consentReset": true,
+      "documentOverflow": false,
+      "height": 812,
+      "panelOverflow": false,
+      "recipientWithPreview": true,
+      "width": 375
+    },
+    {
+      "height": 900,
+      "recipientWithPreview": true,
+      "steps": 2,
+      "width": 1440
+    }
+  ],
+  "draft": {
+    "rewriteNoteAbsent": true,
+    "separateGuidanceNote": true,
+    "characterCounterPreserved": true,
+    "steps": 2
+  },
+  "flow": {
+    "recipientAndPreviewSameScreen": true,
+    "invalidRecipientBlocked": true,
+    "changedRecipientClearsPreviewAndConsent": true,
+    "newPreviewUsedForOrder": true,
+    "consentRecorded": true,
+    "phoneReadOnlyAfterOrder": true,
+    "receipt": "delivered_demo"
+  },
+  "network": "Preview/order/payment responses mocked; no vendor calls or backend order mutations in this check",
+  "hotReload": true
+}

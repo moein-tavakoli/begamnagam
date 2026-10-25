@@ -33,11 +33,12 @@ const categoryIcons: Record<string, IconName> = {
   encouragement: "leaf",
   congratulations: "sparkle",
 };
-const stepLabels = ["حرفت رو بنویس", "شماره گیرنده", "متن نهایی و ارسال"];
+const stepLabels = ["حرفت رو بنویس", "متن نهایی و ارسال"];
 
 export function Composer({ onExit }: { onExit?: () => void }) {
   const { data, reload } = useApp();
   const [step, setStep] = useState(0);
+  const activeStep = Math.min(step, stepLabels.length - 1);
   const [category, setCategory] = useState("appreciation");
   const [text, setText] = useState("");
   const [preview, setPreview] = useState<Preview | null>(null);
@@ -118,6 +119,9 @@ export function Composer({ onExit }: { onExit?: () => void }) {
       return;
     }
     setStep(1);
+    setPreview(null);
+    setConsent(false);
+    idempotencyKey.current = "";
   }
 
   async function makePreview(event: React.FormEvent) {
@@ -145,7 +149,6 @@ export function Composer({ onExit }: { onExit?: () => void }) {
       });
       setPreview(result);
       setConsent(false);
-      setStep(2);
       idempotencyKey.current = "";
     } catch (error) {
       handleError(error);
@@ -235,7 +238,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
   }
 
   function goBack() {
-    setStep((value) => Math.max(0, value - 1));
+    setStep(0);
     setError("");
     setFields({});
   }
@@ -264,7 +267,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
           <Icon name="arrow" size={20} /><span>قبلی</span>
         </button>
         <h1 id="compose-title" tabIndex={-1} ref={heading}>
-          {finished ? "رسید پیامت" : !data?.authenticated ? "اول شماره خودت رو تأیید کن" : stepLabels[step]}
+          {finished ? "رسید پیامت" : !data?.authenticated ? "اول شماره خودت رو تأیید کن" : stepLabels[activeStep]}
         </h1>
         <span className="flow-page-count">۲ از ۲</span>
       </div>
@@ -273,12 +276,12 @@ export function Composer({ onExit }: { onExit?: () => void }) {
           <div className="step-list" aria-label="مراحل ارسال">
             {stepLabels.map((label, index) => (
               <div
-                className={`step-item ${step === index ? "active" : ""} ${step > index ? "complete" : ""}`}
-                aria-current={step === index ? "step" : undefined}
+                className={`step-item ${activeStep === index ? "active" : ""} ${activeStep > index ? "complete" : ""}`}
+                aria-current={activeStep === index ? "step" : undefined}
                 key={label}
               >
                 <span className="step-number">
-                  {step > index ? (
+                  {activeStep > index ? (
                     <Icon name="check" size={18} />
                   ) : (
                     new Intl.NumberFormat("fa-IR").format(index + 1)
@@ -290,8 +293,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                     {
                       [
                         "موضوع و منظور اصلی",
-                        "یک گیرنده آشنا",
-                        "بررسی متن، هزینه و تأیید ارسال",
+                        "گیرنده، متن، هزینه و تأیید ارسال",
                       ][index]
                     }
                   </small>
@@ -315,7 +317,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
           <div className="panel-top">
             <span>یک پیام، یک فرصت برای حال بهتر</span>
             <span className="step-count">
-              {new Intl.NumberFormat("fa-IR").format(step + 1)} از ۳
+              {new Intl.NumberFormat("fa-IR").format(activeStep + 1)} از ۲
             </span>
           </div>
           <ServiceState />
@@ -373,15 +375,12 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                 maxLength={280}
                 rows={4}
                 placeholder="مثلاً: می‌خوام از دوستم بابت مهربونی و کمکش تشکر کنم…"
-                aria-describedby={`message-hint${fields.text ? " message-error" : ""}`}
+                aria-describedby={`message-hint message-count${fields.text ? " message-error" : ""}`}
                 aria-invalid={!!fields.text}
                 disabled={!data || busy}
               />
               <div className="textarea-meta">
-                <span id="message-hint">
-                  اسم، نشانی یا اطلاعات خصوصی کسی رو ننویس.
-                </span>
-                <span>
+                <span id="message-count">
                   {new Intl.NumberFormat("fa-IR").format(text.length)} / ۲۸۰
                 </span>
               </div>
@@ -390,12 +389,10 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                   {fields.text}
                 </p>
               )}
-              <div className="rewrite-note">
-                <Icon name="sparkle" size={19} />
+              <div className="message-guidance" id="message-hint" role="note">
+                <Icon name="info" size={19} />
                 <p>
-                  {data?.rewrite_mode === "ollama"
-                    ? "انتخاب متن بررسی‌شده با کمک هوش مصنوعی."
-                    : "انتخاب از متن‌های آمادهٔ بررسی‌شده."}
+                  اسم، نشانی یا اطلاعات خصوصی کسی رو ننویس. دربارهٔ یک رفتار مشخص حرف بزن، نه شخصیت آدم‌ها.
                 </p>
               </div>
               <div className="form-actions">
@@ -405,51 +402,36 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                   className="button primary"
                   disabled={!data?.authenticated || !data.categories.length}
                 >
-                  بعدی؛ شماره گیرنده <Icon name="arrow" size={19} />
+                  بعدی؛ متن نهایی و ارسال <Icon name="arrow" size={19} />
                 </BusyButton>
               </div>
             </form>
           )}
 
-          {step === 1 && (
-            <form className="recipient-form" onSubmit={makePreview} noValidate>
-              <h2 className="form-heading">به دست چه کسی برسه؟</h2>
-              <p className="muted form-intro">شماره کسی رو وارد کن که می‌شناسی. شماره تو به او نمایش داده نمی‌شه.</p>
+          {step > 0 && !finished && (
+            <form className="review-form" aria-labelledby="compose-title" onSubmit={preview ? createOrder : makePreview} noValidate>
               {!data?.authenticated && <AuthGate />}
               <label htmlFor="quote-recipient">شماره موبایل گیرنده</label>
               <input id="quote-recipient" type="tel" inputMode="tel" dir="ltr"
-                value={recipient} onChange={e => setRecipient(latinDigits(e.target.value))}
+                value={recipient}
+                onChange={event => {
+                  const value = latinDigits(event.target.value);
+                  if (normalizePhone(value) !== normalizePhone(recipient)) {
+                    setPreview(null);
+                    setConsent(false);
+                    idempotencyKey.current = "";
+                  }
+                  setRecipient(value);
+                  setFields({});
+                  setError("");
+                }}
                 autoComplete="off" placeholder="0912 345 6789" disabled={busy}
+                readOnly={!!order}
                 aria-invalid={!!fields.recipient_phone}
                 aria-describedby={`quote-recipient-hint${fields.recipient_phone ? " quote-recipient-error" : ""}`} />
-              <p id="quote-recipient-hint" className="small muted">فقط یک شماره موبایل ایران؛ ارسال به خودت مجاز نیست.</p>
+              <p id="quote-recipient-hint" className="small muted review-phone-hint">فقط یک شماره موبایل ایران؛ ارسال به خودت مجاز نیست.</p>
               {fields.recipient_phone && <p className="field-error" id="quote-recipient-error">{fields.recipient_phone}</p>}
-              <div className="form-actions">
-                <span className="small muted">قبل از ارسال، متن نهایی و هزینه رو می‌بینی.</span>
-                <BusyButton busy={busy} className="button primary full-width" disabled={!data?.authenticated}>
-                  بعدی؛ دیدن متن نهایی <Icon name="arrow" size={19} />
-                </BusyButton>
-              </div>
-            </form>
-          )}
-
-          {step === 2 && preview && !finished && (
-            <form className="review-form" onSubmit={createOrder} noValidate>
-              <h2 className="form-heading">این‌طوری مهربون‌تره.</h2>
-              <p className="muted form-intro">
-                متن، شماره و هزینه رو بررسی و ارسال رو تأیید کن.
-              </p>
-              <div className="review-recipient">
-                <div>
-                  <span className="small muted">شماره گیرنده</span>
-                  <bdi>{normalizePhone(recipient)}</bdi>
-                </div>
-                <button className="text-button" type="button" disabled={busy || !!order}
-                  onClick={() => { setStep(1); setConsent(false); setError(""); setFields({}); }}>
-                  ویرایش شماره
-                </button>
-              </div>
-              {fields.recipient_phone && <p className="field-error">{fields.recipient_phone}</p>}
+              {preview ? <>
               <div className="final-message">
                 <div className="final-message-header">
                   <Icon name="leaf" size={19} />
@@ -504,6 +486,18 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                   <Icon name="arrow" size={18} />
                 </BusyButton>
               </div>
+              </> : <>
+                <div className="review-placeholder" role="note">
+                  <Icon name="chat" size={24} />
+                  <p>شماره رو وارد کن تا متن نهایی و هزینهٔ همین پیام آماده بشه.</p>
+                </div>
+                <div className="form-actions review-actions">
+                  <button className="button ghost" type="button" disabled={busy} onClick={goBack}>اصلاح حرفم</button>
+                  <BusyButton type="submit" className="button primary" busy={busy} disabled={!data?.authenticated}>
+                    آماده‌سازی متن <Icon name="arrow" size={18} />
+                  </BusyButton>
+                </div>
+              </>}
             </form>
           )}
 

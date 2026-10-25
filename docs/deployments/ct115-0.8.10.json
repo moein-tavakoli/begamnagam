@@ -1,0 +1,167 @@
+{
+  "version": "0.8.10",
+  "verified_at": "2026-10-25T15:25:35.943435+03:30",
+  "target": "192.168.1.123",
+  "hostname": "begamnagam",
+  "lxc_id": 115,
+  "origin": "https://192.168.1.123",
+  "root": "/opt/begamnagam/current",
+  "runtime": "Docker29.9.2 / Compose5.6.1",
+  "platform": "linux/amd64",
+  "services": [
+    {
+      "service": "backend",
+      "image": "begamnagam-internal/backend:0.8.10",
+      "state": "running",
+      "health": "healthy"
+    },
+    {
+      "service": "beat",
+      "image": "begamnagam-internal/backend:0.8.10",
+      "state": "running",
+      "health": ""
+    },
+    {
+      "service": "frontend",
+      "image": "begamnagam-internal/frontend:0.8.10",
+      "state": "running",
+      "health": "healthy"
+    },
+    {
+      "service": "postgres",
+      "image": "postgres:17-alpine",
+      "state": "running",
+      "health": "healthy"
+    },
+    {
+      "service": "proxy",
+      "image": "caddy:2-alpine",
+      "state": "running",
+      "health": ""
+    },
+    {
+      "service": "rabbitmq",
+      "image": "rabbitmq:4.4-alpine",
+      "state": "running",
+      "health": "healthy"
+    },
+    {
+      "service": "redis",
+      "image": "redis:7.4-alpine",
+      "state": "running",
+      "health": "healthy"
+    },
+    {
+      "service": "worker",
+      "image": "begamnagam-internal/backend:0.8.10",
+      "state": "running",
+      "health": ""
+    }
+  ],
+  "images": [
+    {
+      "image": "begamnagam-internal/backend:0.8.10",
+      "id": "sha256:e0ff939c10ae367d38652e302194b374a4baf7cc507e72631be0f254d9a10b34",
+      "architecture": "amd64",
+      "digests": [
+        "begamnagam-internal/backend@sha256:15de8d3a836da73a23ebb436f8cf499a59804e72d37bc974d52ca4ff73520877"
+      ]
+    },
+    {
+      "image": "begamnagam-internal/frontend:0.8.10",
+      "id": "sha256:f37cef6995cdd19b916270df3301a35a4c4df2cc2db478a703168f07f1b190ef",
+      "architecture": "amd64",
+      "digests": [
+        "begamnagam-internal/frontend@sha256:585be15799a8c90e7aeacc9e93eea6cdb117f3f0bf65d89c0ac9c992f83dd89b"
+      ]
+    },
+    {
+      "image": "postgres:17-alpine",
+      "id": "sha256:e4cb93687b062cd25a0e8f672d85a7708235009d70d31f8a7698d9370092a9c4",
+      "architecture": "amd64",
+      "digests": [
+        "postgres@sha256:eee6c6e1b0894fa4fe0075eb054af9fd1cf39a35321c2d4110626cfe506411fb"
+      ]
+    },
+    {
+      "image": "redis:7.4-alpine",
+      "id": "sha256:1db42ccef14898aa29bae778452d567534b59c107129cbc1163fb552de184d3c",
+      "architecture": "amd64",
+      "digests": [
+        "redis@sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf"
+      ]
+    },
+    {
+      "image": "rabbitmq:4.4-alpine",
+      "id": "sha256:2225c65600dbdd89d7d0a8e2ed386b1d0b32817a3c97ab6ef621ac33056bec27",
+      "architecture": "amd64",
+      "digests": [
+        "rabbitmq@sha256:5b70d54d53d0ce9558b84ad93cb237d06fa2e8c57115fa0ff7223b9eaffa44ed"
+      ]
+    },
+    {
+      "image": "caddy:2-alpine",
+      "id": "sha256:86d4376ad067063d998533bf06e0c78b97cc8d99cd7cc66f84393165a95a65ed",
+      "architecture": "amd64",
+      "digests": [
+        "caddy@sha256:881bbc60f9986d5ab8e7cfd6cf7e4ef3c9c0439fef2429d035d065577882f028"
+      ]
+    }
+  ],
+  "https": {
+    "root_200": true,
+    "version_0_8_10": true,
+    "demo_mode": true,
+    "real_otp_kept": true,
+    "payment_demo": true,
+    "api_no_store": true,
+    "secure_csrf_cookie": true,
+    "secure_session_cookie": true,
+    "csrf_rejects_unsigned_post": true,
+    "pwa_manifest": true,
+    "pwa_worker": true,
+    "offline_page": true,
+    "admin_login": true,
+    "admin_test_tool": true
+  },
+  "synthetic_smoke": {
+    "result": "PASS",
+    "checks": [
+      "CSRF",
+      "synthetic OTP",
+      "3 free sends",
+      "idempotency",
+      "RabbitMQ/Celery delivery",
+      "history",
+      "opt-out",
+      "ownership"
+    ],
+    "delivery": "delivered_demo",
+    "real_sms_requests": 0,
+    "payment_attempts_created": 0
+  },
+  "validation": {
+    "postgresql_backend_tests": 130,
+    "frontend_tests": 14,
+    "typecheck": "PASS",
+    "native_dev_frontend_pid_unchanged": 2512,
+    "container_restarts": 0,
+    "oom_kills": 0,
+    "kavenegar_tls": "TLSv1.3 verified; no OTP submitted"
+  },
+  "modes": {
+    "demo": true,
+    "order_sms": "console",
+    "payment": "demo",
+    "real_otp": "existing allowlist and budgets only",
+    "general_provider_network": "disabled"
+  },
+  "public_web_ports": [
+    80,
+    443
+  ],
+  "private_services": "loopback only on dedicated CT",
+  "client_ca_trust": "manual; no OS trust store changed",
+  "human_device_pwa_acceptance": "pending",
+  "pushed": false
+}

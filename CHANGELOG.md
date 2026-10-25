@@ -1,5 +1,21 @@
 # Versions
 
+## 0.8.10 — Internal CT deployment
+
+- Deployed the private demo on192.168.1.123 with Caddy internal HTTPS, secure
+  cookies, explicit CSRF origin, production Next.js and persistent data volumes.
+- Kept real OTP limited to the previously authorized allowlist/budget; only an
+  explicit RFC1918 HTTPS origin extends loopback testing. Payment/order SMS stay demo.
+- Added a separate internal settings/Compose profile. The CT's nested network
+  restriction uses host networking with every data/API/metrics listener bound to
+  loopback; only Caddy serves LAN ports80/443. No privileged container or old runtime.
+- Verified signed Docker packages, built/transferred Linux/amd64 images, and enabled
+  restart policies. Build caches support unreliable package downloads without pin changes.
+-130 PostgreSQL backend tests and14 frontend tests/typecheck pass. Live CT checks
+  cover TLS, secure cookies, CSRF, admin login/test tools, manifest/worker/offline
+  assets and synthetic free delivery through RabbitMQ/Celery. No real SMS or payment
+  was submitted. Client CA trust and physical-device PWA acceptance remain manual.
+
 ## 0.8.9 — Three free sends per verified account
 
 - Grant each existing/new verified phone account3 one-time free sends. Reserve a

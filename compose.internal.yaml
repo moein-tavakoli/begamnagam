@@ -1,0 +1,158 @@
+# Standalone LAN-only CT topology. Never merge with the development Compose file.
+name: begamnagam-internal
+
+x-app: &app
+  image: ${BACKEND_IMAGE:?Set the built backend image}
+  env_file: .env.internal
+  environment:
+    DJANGO_SETTINGS_MODULE: config.internal_settings
+    DEBUG: "0"
+    DEMO_MODE: "1"
+    TRUST_INTERNAL_PROXY: "1"
+    CELERY_TASK_ALWAYS_EAGER: "0"
+  init: true
+  restart: unless-stopped
+  security_opt: [no-new-privileges:true]
+  cap_drop: [ALL]
+  read_only: true
+  tmpfs: [/tmp]
+  network_mode: host
+  extra_hosts: &local-hosts
+    - postgres:127.0.0.1
+    - redis:127.0.0.1
+    - rabbitmq:127.0.0.1
+    - backend:127.0.0.1
+    - frontend:127.0.0.1
+  logging: &logging
+    driver: json-file
+    options: {max-size: 2m, max-file: "3"}
+
+services:
+  proxy:
+    image: ${PROXY_IMAGE:-caddy:2-alpine}
+    environment:
+      INTERNAL_DEMO_HOST: ${INTERNAL_DEMO_HOST:?Set the private CT address}
+    network_mode: host
+    extra_hosts: *local-hosts
+    volumes:
+      - ./deploy/Caddyfile.internal:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    restart: unless-stopped
+    mem_limit: 64m
+    logging: *logging
+    depends_on:
+      frontend: {condition: service_healthy}
+      backend: {condition: service_healthy}
+  postgres:
+    image: ${POSTGRES_IMAGE:-postgres:17-alpine}
+    command: [postgres, -c, listen_addresses=127.0.0.1, -c, shared_buffers=16MB, -c, max_connections=20, -c, work_mem=1MB, -c, maintenance_work_mem=16MB, -c, max_wal_size=128MB, -c, min_wal_size=32MB]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Required}
+      POSTGRES_DB: ${POSTGRES_DB:?Required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Required}
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    network_mode: host
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      retries: 20
+    restart: unless-stopped
+    mem_limit: 128m
+    logging: *logging
+  redis:
+    image: ${REDIS_IMAGE:-redis:7.4-alpine}
+    command: [redis-server, --bind, 127.0.0.1, --appendonly, "yes", --maxmemory, 16mb, --maxmemory-policy, noeviction]
+    volumes: [redis-data:/data]
+    network_mode: host
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 10s
+      retries: 20
+    restart: unless-stopped
+    mem_limit: 32m
+    logging: *logging
+  rabbitmq:
+    image: ${RABBITMQ_IMAGE:-rabbitmq:4.4-alpine}
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?Required}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Required}
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "+S 1:1 +A 2 +SDcpu 1 +SDio 1"
+      ERL_EPMD_ADDRESS: 127.0.0.1
+      RABBITMQ_NODENAME: rabbit@localhost
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+      - ./deploy/rabbitmq.internal.conf:/etc/rabbitmq/conf.d/30-internal.conf:ro
+    network_mode: host
+    healthcheck:
+      test: [CMD, rabbitmq-diagnostics, -q, ping]
+      interval: 20s
+      timeout: 15s
+      retries: 15
+      start_period: 30s
+    restart: unless-stopped
+    mem_limit: 256m
+    logging: *logging
+  migrate:
+    <<: *app
+    command: [python, manage.py, migrate, --noinput]
+    restart: "no"
+    mem_limit: 128m
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      rabbitmq: {condition: service_healthy}
+  backend:
+    <<: *app
+    command: [gunicorn, config.wsgi:application, --bind, "127.0.0.1:8000", --workers, "1", --threads, "2", --preload, --timeout, "45", --access-logfile, "-", --access-logformat, "%(m)s %(U)s %(s)s %(L)s"]
+    mem_limit: 192m
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, python, -c, "import os,urllib.request; r=urllib.request.Request('http://127.0.0.1:8000/healthz',headers={'Host':os.environ['INTERNAL_DEMO_HOST'],'X-Forwarded-Proto':'https'}); urllib.request.urlopen(r,timeout=5)"]
+      interval: 20s
+      timeout: 8s
+      retries: 12
+  worker:
+    <<: *app
+    command: [celery, -A, config, worker, --pool=solo, --concurrency=1, --loglevel=WARNING, --without-gossip, --without-mingle]
+    mem_limit: 128m
+    depends_on:
+      backend: {condition: service_healthy}
+  beat:
+    <<: *app
+    command: [celery, -A, config, beat, --loglevel=WARNING, --schedule=/tmp/celerybeat-schedule]
+    mem_limit: 96m
+    depends_on:
+      backend: {condition: service_healthy}
+  frontend:
+    image: ${FRONTEND_IMAGE:?Set the built frontend image}
+    environment:
+      INTERNAL_API_URL: http://backend:8000
+      NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=160
+      HOSTNAME: 127.0.0.1
+    init: true
+    read_only: true
+    tmpfs: [/tmp, /app/.next/cache]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    network_mode: host
+    extra_hosts: *local-hosts
+    restart: unless-stopped
+    mem_limit: 256m
+    logging: *logging
+    depends_on:
+      backend: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 20s
+      timeout: 10s
+      retries: 12
+
+volumes:
+  postgres-data:
+  redis-data:
+  rabbitmq-data:
+  caddy-data:
+  caddy-config:

@@ -5,6 +5,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 from cryptography.fernet import Fernet
+from config.origins import local_otp_origin_allowed
 from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -23,6 +24,9 @@ PHONE_ENCRYPTION_KEY = os.getenv("PHONE_ENCRYPTION_KEY") or base64.urlsafe_b64en
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,backend,testserver").split(",")
 CSRF_TRUSTED_ORIGINS = [x for x in os.getenv("CSRF_TRUSTED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",") if x]
 APP_BASE_URL = os.getenv("APP_BASE_URL", "http://localhost:3000").rstrip("/")
+INTERNAL_DEMO_HOST = os.getenv("INTERNAL_DEMO_HOST", "")
+
+
 PRICE_TOMAN = int(os.getenv("PRICE_TOMAN", "2000"))
 SENDER_DAILY_LIMIT = int(os.getenv("SENDER_DAILY_LIMIT", "5"))
 RECIPIENT_COOLDOWN_HOURS = int(os.getenv("RECIPIENT_COOLDOWN_HOURS", "24"))
@@ -175,8 +179,8 @@ if LOCAL_REAL_OTP_ENABLED:
     if (not DEMO_MODE or PROVIDER_NETWORK_MODE != 'disabled' or LIVE_PROVIDERS_ENABLED
             or OTP_BACKEND != 'kavenegar' or SMS_BACKEND != 'console' or PAYMENT_BACKEND != 'demo'):
         raise ImproperlyConfigured('Local real OTP requires demo payments/messages and disabled general provider network')
-    if urlparse(APP_BASE_URL).hostname not in {'localhost', '127.0.0.1', '::1'}:
-        raise ImproperlyConfigured('Local real OTP requires a loopback application origin')
+    if not local_otp_origin_allowed(APP_BASE_URL, INTERNAL_DEMO_HOST):
+        raise ImproperlyConfigured('Local real OTP requires loopback or an explicit private HTTPS application origin')
     if KAVENEGAR_BASE_URL != 'https://api.kavenegar.com':
         raise ImproperlyConfigured('Local real OTP requires the official HTTPS Kavenegar endpoint')
     if not KAVENEGAR_API_KEY or not KAVENEGAR_SENDER or not OTP_TEST_RECIPIENT_HASHES:

@@ -78,6 +78,7 @@ npm run dev
 | `KAVENEGAR_OTP_MODE` | پیش‌فرض `sms`: ارسال عادی کد؛ `lookup`: استفاده از الگوی تأییدشده |
 | `KAVENEGAR_OTP_TEMPLATE` | فقط در حالت `lookup` لازم است؛ در حالت فعلی `sms` خالی می‌ماند |
 | `LOCAL_REAL_OTP_ENABLED` | پیش‌فرض۰؛ استثنای مستقل برای OTP واقعی در محیط محلی demo |
+| `INTERNAL_DEMO_HOST` | فقط پروفایل CT: IP خصوصی صریح روی HTTPS؛ همان فهرست مجاز و بودجهٔ OTP حفظ می‌شوند |
 | `OTP_TEST_RECIPIENT_HASHES` | هش HMAC شماره‌های مجاز تست OTP؛ با کلید `PHONE_HASH_KEY`، بدون شماره خام |
 | `PROVIDER_DAILY_BUDGET_RIAL` | سقف رزرو ناخالص روزانه به ریال؛ موفقیت یا پاسخ نامعلوم رزرو را آزاد نمی‌کند |
 | `OTP_MAX_COST_RIAL` | سقف رزرو هر درخواست OTP به ریال؛ باید مثبت و در بودجه روزانه باشد |

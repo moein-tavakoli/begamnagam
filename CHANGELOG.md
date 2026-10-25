@@ -1,5 +1,10 @@
 # Versions
 
+## 0.8.7 — Simplified final review
+
+- Removed the separate demo payment/delivery explanation box from final review.
+- Kept the demo send-button label and receipt disclosure; provider modes are unchanged.
+
 ## 0.8.6 — Recipient within final review and inline writing guidance
 
 - Removed the draft rewrite-mode strip and the redundant recipient-stage teaser.

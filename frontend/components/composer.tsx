@@ -463,11 +463,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                 </span>
               </label>
               {fields.consent && <p className="field-error" id="consent-error">{fields.consent}</p>}
-              {data?.payment_backend !== "zarinpal" && data?.demo_mode ? (
-                <p className="review-demo-note small">
-                  پرداخت و ارسال به گیرنده آزمایشی‌اند؛ پولی کم نمی‌شه.
-                </p>
-              ) : (
+              {data && (!data.demo_mode || data.payment_backend === "zarinpal") && (
                 <p className="small muted">
                   {data?.payment_backend === "zarinpal" ? "برای پرداخت به درگاه امن منتقل می‌شی." : "درگاه پرداخت فعلاً فعال نیست."}
                 </p>

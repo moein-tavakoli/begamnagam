@@ -197,7 +197,6 @@ body:has(input:focus,textarea:focus) .mobile-nav { display: none; }
 .review-phone-hint { margin-block: 4px 8px; }
 .review-placeholder { display: flex; align-items: center; gap: 10px; padding: 20px 16px; margin-top: 14px; border-radius: 20px; color: var(--muted); background: var(--pale); }
 .review-placeholder p { margin: 0; font-size: 13px; }
-.review-demo-note { padding: 8px 12px; border-radius: 14px; background: var(--pale); margin-block: 10px; }
 .review-form .checkbox-label { margin-block: 10px; align-items: flex-start; }
 .review-form .checkbox-label input { flex-shrink: 0; }
 .home-flow .review-form { display: flex; flex-direction: column; min-height: 100%; }

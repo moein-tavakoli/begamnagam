@@ -1,4 +1,4 @@
-# Home override — version0.8.6
+# Home override — version0.8.7
 
 The user requested a full-screen mobile flow through seven browser annotations.
 Keep MASTER colors, illustration, local font and pill actions.
@@ -24,7 +24,7 @@ Keep MASTER colors, illustration, local font and pill actions.
   and respectful-writing tips in a separate inline warning below it, associated with
   the textarea. Use note semantics for persistent guidance, not an interrupting alert.
 - Remove the draft rewrite-mode strip and the old recipient-stage teaser sentence.
-- Keep explicit demo disclosure in OTP, checkout and receipt.
+- Identify demo checkout in the send button and receipt; omit the separate demo explanation box on final review as requested. Keep the OTP disclosure.
 - Preserve browser Back/hash deep links, focus, reduced motion and pinch zoom.
 - No automatic slide advance or new carousel dependency. Touch gestures are supplemental
   to the visible buttons; physical-device gesture testing remains pending.

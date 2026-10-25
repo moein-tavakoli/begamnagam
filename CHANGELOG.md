@@ -1,5 +1,17 @@
 # Versions
 
+## 0.8.11 — Traefik and explicit domain routing
+
+- Replace the CT proxy with Traefik3.7.13; keep public TLS on central Nginx,
+  explicit domain/IP routes, secure cookies, CSRF and narrow proxy trust.
+- Preserve the private CA; rotate a30-day IP leaf with a daily renewal timer,
+  without exposing the CA key to Traefik. Data/frontend containers stay unchanged.
+-134 PostgreSQL tests pass. Both HTTPS paths pass33 route/auth/asset checks;
+  synthetic queue/free-credit/opt-out journey passes with no real SMS/payment.
+- Ordinary public-domain access is refused from this network; browser acceptance
+  and www certificate coverage remain open. See the Persian deployment report.
+- Local commit only; this task performs no Git push.
+
 ## 0.8.10 — Internal CT deployment
 
 - Deployed the private demo on192.168.1.123 with Caddy internal HTTPS, secure

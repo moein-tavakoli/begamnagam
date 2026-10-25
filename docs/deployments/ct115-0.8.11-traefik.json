@@ -1,0 +1,646 @@
+{
+  "release": "0.8.11-traefik",
+  "recorded_at": "2026-10-25T20:05:50.522460+00:00",
+  "deployment": "APPLIED_AND_VERIFIED_VIA_INTERNAL_EDGE",
+  "current": "/opt/begamnagam/releases/0.8.11-traefik",
+  "scope": "Traefik on CT115; public TLS remains on central Nginx; frontend image 0.8.10 retained",
+  "backup_before_task": "/opt/begamnagam/backups/domain-routing-20261025T172035Z",
+  "backup_before_traefik": "/opt/begamnagam/backups/traefik-20261025T182917Z",
+  "backend_postgresql_tests": {
+    "count": 134,
+    "result": "PASS"
+  },
+  "canary": {
+    "result": "PASS",
+    "tls_verification": true,
+    "checks": [
+      {
+        "url": "http://192.168.1.123:18080/",
+        "host": "begamnagam.ir",
+        "status": 200,
+        "bytes": 17617
+      },
+      {
+        "url": "http://192.168.1.123:18080/api/v1/bootstrap",
+        "host": "begamnagam.ir",
+        "status": 200,
+        "bytes": 1744
+      },
+      {
+        "url": "http://192.168.1.123:18080/healthz",
+        "host": "begamnagam.ir",
+        "status": 200,
+        "bytes": 56
+      },
+      {
+        "url": "http://192.168.1.123:18080/admin/login/",
+        "host": "begamnagam.ir",
+        "status": 200,
+        "bytes": 4409
+      },
+      {
+        "url": "http://192.168.1.123:18080/static/admin/css/base.css",
+        "host": "begamnagam.ir",
+        "status": 200,
+        "bytes": 22120
+      },
+      {
+        "url": "https://192.168.1.123:18443/",
+        "host": "192.168.1.123",
+        "status": 200,
+        "bytes": 17617
+      },
+      {
+        "url": "https://192.168.1.123:18443/api/v1/bootstrap",
+        "host": "192.168.1.123",
+        "status": 200,
+        "bytes": 1744
+      },
+      {
+        "url": "http://192.168.1.123:18080/",
+        "host": "192.168.1.123",
+        "status": 301,
+        "bytes": 17
+      },
+      {
+        "url": "http://192.168.1.123:18080/",
+        "host": "unknown.invalid",
+        "status": 404,
+        "bytes": 19
+      }
+    ]
+  },
+  "domain": {
+    "origin": "https://begamnagam.ir",
+    "connect_ip": "192.168.1.6",
+    "tls_verification": true,
+    "routes": [
+      {
+        "path": "/",
+        "method": "GET",
+        "status": 200,
+        "bytes": 17617
+      },
+      {
+        "path": "/_next/static/chunks/0cz1d0mv5g_q7.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 112594
+      },
+      {
+        "path": "/_next/static/chunks/1x6obpmlu1_c2.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 5361
+      },
+      {
+        "path": "/_next/static/chunks/2r4s4h5xul1n-.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 28739
+      },
+      {
+        "path": "/_next/static/chunks/3cycjidqchg_b.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 29271
+      },
+      {
+        "path": "/_next/static/chunks/3pi8pczmx9he1.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 34774
+      },
+      {
+        "path": "/_next/static/chunks/3re08s0g8bvb9.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 168238
+      },
+      {
+        "path": "/_next/static/chunks/3wbm-994r45kr.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 229820
+      },
+      {
+        "path": "/_next/static/chunks/44aeho67r3qb8.css",
+        "method": "GET",
+        "status": 200,
+        "bytes": 35331
+      },
+      {
+        "path": "/_next/static/chunks/turbopack-3-ry682tkyiqk.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 10030
+      },
+      {
+        "path": "/history",
+        "method": "GET",
+        "status": 200,
+        "bytes": 14102
+      },
+      {
+        "path": "/preferences",
+        "method": "GET",
+        "status": 200,
+        "bytes": 14642
+      },
+      {
+        "path": "/help",
+        "method": "GET",
+        "status": 200,
+        "bytes": 24525
+      },
+      {
+        "path": "/api/v1/bootstrap",
+        "method": "GET",
+        "status": 200,
+        "bytes": 1744
+      },
+      {
+        "path": "/healthz",
+        "method": "GET",
+        "status": 200,
+        "bytes": 56
+      },
+      {
+        "path": "/api/v1/messages",
+        "method": "GET",
+        "status": 401,
+        "bytes": 115
+      },
+      {
+        "path": "/api/v1/preferences",
+        "method": "GET",
+        "status": 401,
+        "bytes": 115
+      },
+      {
+        "path": "/api/v1/does-not-exist",
+        "method": "GET",
+        "status": 404,
+        "bytes": 78
+      },
+      {
+        "path": "/admin",
+        "method": "GET",
+        "status": 301,
+        "bytes": 0
+      },
+      {
+        "path": "/admin/",
+        "method": "GET",
+        "status": 302,
+        "bytes": 0
+      },
+      {
+        "path": "/admin/login/?next=/admin/",
+        "method": "GET",
+        "status": 200,
+        "bytes": 4422
+      },
+      {
+        "path": "/static/admin/css/base.css",
+        "method": "GET",
+        "status": 200,
+        "bytes": 22120
+      },
+      {
+        "path": "/sw.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 2683
+      },
+      {
+        "path": "/manifest.webmanifest",
+        "method": "GET",
+        "status": 200,
+        "bytes": 702
+      },
+      {
+        "path": "/offline.html",
+        "method": "GET",
+        "status": 200,
+        "bytes": 1556
+      },
+      {
+        "path": "/api/v1/auth/request-otp",
+        "method": "POST",
+        "status": 403,
+        "bytes": 146
+      },
+      {
+        "path": "/api/v1/auth/request-otp",
+        "method": "POST",
+        "status": 400,
+        "bytes": 120
+      },
+      {
+        "path": "/api/v1/auth/request-otp",
+        "method": "POST",
+        "status": 403,
+        "bytes": 146
+      },
+      {
+        "path": "/admin/login/?next=/admin/",
+        "method": "POST",
+        "status": 302,
+        "bytes": 0
+      },
+      {
+        "path": "/admin/",
+        "method": "GET",
+        "status": 200,
+        "bytes": 14993
+      },
+      {
+        "path": "/admin/core/account/test-limits/",
+        "method": "GET",
+        "status": 200,
+        "bytes": 15127
+      },
+      {
+        "path": "/api/v1/bootstrap",
+        "method": "GET",
+        "status": 200,
+        "bytes": 1971
+      },
+      {
+        "path": "/api/v1/messages",
+        "method": "GET",
+        "status": 200,
+        "bytes": 15
+      }
+    ],
+    "checks": {
+      "html_and_assets": true,
+      "routes_and_pwa_files": true,
+      "secure_host_only_cookies": true,
+      "csrf_and_https_origin": true,
+      "admin_login": true,
+      "product_session": true
+    },
+    "result": "PASS",
+    "real_sms_sent": 0,
+    "payments_created": 0
+  },
+  "internal": {
+    "origin": "https://192.168.1.123",
+    "connect_ip": null,
+    "tls_verification": true,
+    "routes": [
+      {
+        "path": "/",
+        "method": "GET",
+        "status": 200,
+        "bytes": 17617
+      },
+      {
+        "path": "/_next/static/chunks/0cz1d0mv5g_q7.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 112594
+      },
+      {
+        "path": "/_next/static/chunks/1x6obpmlu1_c2.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 5361
+      },
+      {
+        "path": "/_next/static/chunks/2r4s4h5xul1n-.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 28739
+      },
+      {
+        "path": "/_next/static/chunks/3cycjidqchg_b.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 29271
+      },
+      {
+        "path": "/_next/static/chunks/3pi8pczmx9he1.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 34774
+      },
+      {
+        "path": "/_next/static/chunks/3re08s0g8bvb9.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 168238
+      },
+      {
+        "path": "/_next/static/chunks/3wbm-994r45kr.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 229820
+      },
+      {
+        "path": "/_next/static/chunks/44aeho67r3qb8.css",
+        "method": "GET",
+        "status": 200,
+        "bytes": 35331
+      },
+      {
+        "path": "/_next/static/chunks/turbopack-3-ry682tkyiqk.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 10030
+      },
+      {
+        "path": "/history",
+        "method": "GET",
+        "status": 200,
+        "bytes": 14102
+      },
+      {
+        "path": "/preferences",
+        "method": "GET",
+        "status": 200,
+        "bytes": 14642
+      },
+      {
+        "path": "/help",
+        "method": "GET",
+        "status": 200,
+        "bytes": 24525
+      },
+      {
+        "path": "/api/v1/bootstrap",
+        "method": "GET",
+        "status": 200,
+        "bytes": 1744
+      },
+      {
+        "path": "/healthz",
+        "method": "GET",
+        "status": 200,
+        "bytes": 56
+      },
+      {
+        "path": "/api/v1/messages",
+        "method": "GET",
+        "status": 401,
+        "bytes": 115
+      },
+      {
+        "path": "/api/v1/preferences",
+        "method": "GET",
+        "status": 401,
+        "bytes": 115
+      },
+      {
+        "path": "/api/v1/does-not-exist",
+        "method": "GET",
+        "status": 404,
+        "bytes": 78
+      },
+      {
+        "path": "/admin",
+        "method": "GET",
+        "status": 301,
+        "bytes": 0
+      },
+      {
+        "path": "/admin/",
+        "method": "GET",
+        "status": 302,
+        "bytes": 0
+      },
+      {
+        "path": "/admin/login/?next=/admin/",
+        "method": "GET",
+        "status": 200,
+        "bytes": 4422
+      },
+      {
+        "path": "/static/admin/css/base.css",
+        "method": "GET",
+        "status": 200,
+        "bytes": 22120
+      },
+      {
+        "path": "/sw.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 2683
+      },
+      {
+        "path": "/manifest.webmanifest",
+        "method": "GET",
+        "status": 200,
+        "bytes": 702
+      },
+      {
+        "path": "/offline.html",
+        "method": "GET",
+        "status": 200,
+        "bytes": 1556
+      },
+      {
+        "path": "/api/v1/auth/request-otp",
+        "method": "POST",
+        "status": 403,
+        "bytes": 146
+      },
+      {
+        "path": "/api/v1/auth/request-otp",
+        "method": "POST",
+        "status": 400,
+        "bytes": 120
+      },
+      {
+        "path": "/api/v1/auth/request-otp",
+        "method": "POST",
+        "status": 403,
+        "bytes": 146
+      },
+      {
+        "path": "/admin/login/?next=/admin/",
+        "method": "POST",
+        "status": 302,
+        "bytes": 0
+      },
+      {
+        "path": "/admin/",
+        "method": "GET",
+        "status": 200,
+        "bytes": 14993
+      },
+      {
+        "path": "/admin/core/account/test-limits/",
+        "method": "GET",
+        "status": 200,
+        "bytes": 15127
+      },
+      {
+        "path": "/api/v1/bootstrap",
+        "method": "GET",
+        "status": 200,
+        "bytes": 1971
+      },
+      {
+        "path": "/api/v1/messages",
+        "method": "GET",
+        "status": 200,
+        "bytes": 15
+      }
+    ],
+    "checks": {
+      "html_and_assets": true,
+      "routes_and_pwa_files": true,
+      "secure_host_only_cookies": true,
+      "csrf_and_https_origin": true,
+      "admin_login": true,
+      "product_session": true
+    },
+    "result": "PASS",
+    "real_sms_sent": 0,
+    "payments_created": 0
+  },
+  "synthetic_journey": {
+    "result": "PASS",
+    "checks": [
+      "synthetic OTP",
+      "CSRF",
+      "three free sends",
+      "idempotency",
+      "RabbitMQ/Celery delivery",
+      "history",
+      "opt-out",
+      "ownership"
+    ],
+    "delivery": "delivered_demo",
+    "real_sms_requests": 0,
+    "payment_attempts_created": 0
+  },
+  "security_negatives": {
+    "untrusted_domain_http_with_forged_xff": 403,
+    "encoded_slash_path": 400,
+    "aliased_scheme_header_on_internal_health": 200,
+    "unknown_host_canary": 404,
+    "http_edge_redirect": 301
+  },
+  "runtime": {
+    "current": "/opt/begamnagam/releases/0.8.11-traefik",
+    "containers": [
+      {
+        "name": "begamnagam-internal-proxy-1",
+        "id": "7d3ecf9bdaed7b81b35f81a0d5a32b0ffd992cd47d3cdebd56dd299ec0853b00",
+        "image": "traefik:v3.7.13",
+        "image_id": "sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0",
+        "started": "2026-10-25T19:14:05.215650024Z",
+        "restart_count": 0,
+        "oom": false,
+        "health": "healthy",
+        "network": "host"
+      },
+      {
+        "name": "begamnagam-internal-worker-1",
+        "id": "110f7503f5e66e9af4eed47b18c029d8b51d28c50e30dc8eaeac404f8d2b4638",
+        "image": "begamnagam-internal/backend:0.8.11-traefik",
+        "image_id": "sha256:45c4e3d0fb54a9382d7f5b83245678ec5fd111aa75ac03b251a2b4167704bdce",
+        "started": "2026-10-25T19:14:03.891845149Z",
+        "restart_count": 0,
+        "oom": false,
+        "health": null,
+        "network": "host"
+      },
+      {
+        "name": "begamnagam-internal-beat-1",
+        "id": "9b00fb5c0bfc9e1d9ba0bf9abf704d074ba0d6df82f342de6fb5caef534588d6",
+        "image": "begamnagam-internal/backend:0.8.11-traefik",
+        "image_id": "sha256:45c4e3d0fb54a9382d7f5b83245678ec5fd111aa75ac03b251a2b4167704bdce",
+        "started": "2026-10-25T19:14:03.750772347Z",
+        "restart_count": 0,
+        "oom": false,
+        "health": null,
+        "network": "host"
+      },
+      {
+        "name": "begamnagam-internal-backend-1",
+        "id": "9dda4e0566cd3d55120c9557f4e2b422b7b042545bf1f0a1685507c50ed91ca3",
+        "image": "begamnagam-internal/backend:0.8.11-traefik",
+        "image_id": "sha256:45c4e3d0fb54a9382d7f5b83245678ec5fd111aa75ac03b251a2b4167704bdce",
+        "started": "2026-10-25T19:13:40.887584622Z",
+        "restart_count": 0,
+        "oom": false,
+        "health": "healthy",
+        "network": "host"
+      },
+      {
+        "name": "begamnagam-internal-frontend-1",
+        "id": "e35ba5b34537e140f76d3769f3439349d6b0a3b86bea8c47cde394cdb5ae0083",
+        "image": "begamnagam-internal/frontend:0.8.10",
+        "image_id": "sha256:f37cef6995cdd19b916270df3301a35a4c4df2cc2db478a703168f07f1b190ef",
+        "started": "2026-10-25T11:33:19.731450507Z",
+        "restart_count": 0,
+        "oom": false,
+        "health": "healthy",
+        "network": "host"
+      },
+      {
+        "name": "begamnagam-internal-postgres-1",
+        "id": "86757705be67d50fc7bb1cf3240cb6687d902ee00747ec50ce434cb4a64c5ada",
+        "image": "postgres:17-alpine",
+        "image_id": "sha256:e4cb93687b062cd25a0e8f672d85a7708235009d70d31f8a7698d9370092a9c4",
+        "started": "2026-10-25T11:09:52.732926409Z",
+        "restart_count": 0,
+        "oom": false,
+        "health": "healthy",
+        "network": "host"
+      },
+      {
+        "name": "begamnagam-internal-redis-1",
+        "id": "c29a7b9d11346a7723351bc5aa2cd1018c34399f87e703c2905a4213dd06b18f",
+        "image": "redis:7.4-alpine",
+        "image_id": "sha256:1db42ccef14898aa29bae778452d567534b59c107129cbc1163fb552de184d3c",
+        "started": "2026-10-25T11:09:53.089520954Z",
+        "restart_count": 0,
+        "oom": false,
+        "health": "healthy",
+        "network": "host"
+      },
+      {
+        "name": "begamnagam-internal-rabbitmq-1",
+        "id": "ce5ccc99c6287034e4ed113aff268ef62a2bcd2cda33b2a82bdaf097301f8c59",
+        "image": "rabbitmq:4.4-alpine",
+        "image_id": "sha256:2225c65600dbdd89d7d0a8e2ed386b1d0b32817a3c97ab6ef621ac33056bec27",
+        "started": "2026-10-25T11:20:33.306591881Z",
+        "restart_count": 0,
+        "oom": false,
+        "health": "healthy",
+        "network": "host"
+      }
+    ],
+    "renewal_timer": "active",
+    "certificate": "notBefore=Oct 25 19:36:44 2026 GMT\nnotAfter=Nov 24 19:41:44 2026 GMT\nX509v3 Subject Alternative Name: \n    IP Address:192.168.1.123\n",
+    "tls_verify": "/opt/begamnagam/shared/traefik-tls/tls.crt: OK",
+    "listeners": "State  Recv-Q Send-Q Local Address:Port  Peer Address:PortProcess\nLISTEN 0      100        127.0.0.1:25         0.0.0.0:*          \nLISTEN 0      511        127.0.0.1:3000       0.0.0.0:*          \nLISTEN 0      128        127.0.0.1:4369       0.0.0.0:*          \nLISTEN 0      40         127.0.0.1:5432       0.0.0.0:*          \nLISTEN 0      128        127.0.0.1:5672       0.0.0.0:*          \nLISTEN 0      511        127.0.0.1:6379       0.0.0.0:*          \nLISTEN 0      4096       127.0.0.1:8082       0.0.0.0:*          \nLISTEN 0      2048       127.0.0.1:8000       0.0.0.0:*          \nLISTEN 0      4096   192.168.1.123:443        0.0.0.0:*          \nLISTEN 0      4096   192.168.1.123:80         0.0.0.0:*          \nLISTEN 0      1024       127.0.0.1:15692      0.0.0.0:*          \nLISTEN 0      128        127.0.0.1:25672      0.0.0.0:*          \nLISTEN 0      4096               *:22               *:*          \nLISTEN 0      100            [::1]:25            [::]:*          \nLISTEN 0      128            [::1]:4369          [::]:*          \n"
+  },
+  "unchanged_container_ids": {
+    "begamnagam-internal-frontend-1": true,
+    "begamnagam-internal-postgres-1": true,
+    "begamnagam-internal-redis-1": true,
+    "begamnagam-internal-rabbitmq-1": true
+  },
+  "public_browser": {
+    "result": "BLOCKED",
+    "error": "ERR_CONNECTION_REFUSED",
+    "dns_a": "37.114.253.18",
+    "external_tool_check": "unavailable",
+    "nat_loopback": "not proven"
+  },
+  "remaining": [
+    "Public-IP/NAT/firewall path not verified; ordinary browser connection refused",
+    "www certificate hostname mismatch on central Nginx",
+    "Physical-device PWA acceptance remains human"
+  ],
+  "git_push_performed_by_this_task": false,
+  "real_sms_requested_by_verification": 0,
+  "payments_created_by_verification": 0
+}

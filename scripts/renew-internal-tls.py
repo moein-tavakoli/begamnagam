@@ -11,6 +11,7 @@ import subprocess
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--in-docker", action="store_true", help="Run the signer in the project's locked backend image")
+    parser.add_argument("--force", action="store_true", help="Replace an otherwise valid leaf after a certificate policy change")
     parser.add_argument("--host")
     parser.add_argument("--ca-dir", type=Path, default=Path("/ca/caddy/pki/authorities/local"))
     parser.add_argument("--cert-dir", type=Path, default=Path("/tls"))
@@ -32,6 +33,8 @@ def main():
             "-v", str(root / "deploy/traefik") + ":/config",
             "-v", str(Path(__file__).resolve()) + ":/renew.py:ro", values["BACKEND_IMAGE"],
             "/renew.py", "--host", values["INTERNAL_DEMO_HOST"], "--notify-config", "/config/routes.yml"]
+        if args.force:
+            command.append("--force")
         subprocess.run(command, check=True)
         return
     address = ipaddress.ip_address(args.host)
@@ -49,7 +52,7 @@ def main():
     assert root.not_valid_before_utc <= now and root.not_valid_after_utc > now + datetime.timedelta(days=31)
     target = args.cert_dir / "tls.crt"
     key_path = args.cert_dir / "tls.key"
-    if target.exists() and key_path.exists():
+    if target.exists() and key_path.exists() and not args.force:
         old = x509.load_pem_x509_certificate(target.read_bytes())
         if old.not_valid_after_utc > now + datetime.timedelta(days=14):
             old.verify_directly_issued_by(root)
@@ -64,6 +67,8 @@ def main():
         .issuer_name(root.subject).public_key(key.public_key()).serial_number(x509.random_serial_number())
         .not_valid_before(now - datetime.timedelta(minutes=5)).not_valid_after(now + datetime.timedelta(days=30))
         .add_extension(x509.SubjectAlternativeName([x509.IPAddress(address)]), critical=False)
+        .add_extension(x509.SubjectKeyIdentifier.from_public_key(key.public_key()), critical=False)
+        .add_extension(x509.AuthorityKeyIdentifier.from_issuer_public_key(root_key.public_key()), critical=False)
         .add_extension(x509.BasicConstraints(ca=False, path_length=None), critical=True)
         .add_extension(x509.ExtendedKeyUsage([ExtendedKeyUsageOID.SERVER_AUTH]), critical=False)
         .add_extension(x509.KeyUsage(digital_signature=True, content_commitment=False, key_encipherment=False,

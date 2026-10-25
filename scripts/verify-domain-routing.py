@@ -56,7 +56,7 @@ def main():
     cookies = http.cookiejar.CookieJar()
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect(),
         urllib.request.HTTPSHandler(context=context), urllib.request.HTTPCookieProcessor(cookies))
-    results = {"origin": origin, "connect_ip": args.connect_ip, "tls_verification": True, "routes": {}, "checks": {}}
+    results = {"origin": origin, "connect_ip": args.connect_ip, "tls_verification": True, "routes": [], "checks": {}}
 
     def request(path, expected=200, data=None, headers=None):
         req = urllib.request.Request(origin + path, data=data, headers=headers or {})
@@ -66,7 +66,7 @@ def main():
             response = exc
         with response:
             body = response.read()
-            results["routes"][path] = {"status": response.code, "bytes": len(body)}
+            results["routes"].append({"path": path, "method": req.get_method(), "status": response.code, "bytes": len(body)})
             assert response.code == expected, (path, response.code, expected)
             assert not response.headers.get("Location", "").startswith("http://"), path
             return body, response.headers

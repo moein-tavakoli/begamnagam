@@ -3,7 +3,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 from .models import Order, Outbox, RecipientState, MessageDelivery
-from .moderation import TEMPLATES, moderate, ModerationRejected
+from .moderation import is_reviewed_template, moderate, ModerationRejected
 from .privacy import decrypt
 from .budget import reserve_cost
 from .providers import Kavenegar, ProviderDisabled, ProviderRejected, ProviderUnknown
@@ -83,7 +83,7 @@ def submit_delivery(event_id):
             return
         try:
             moderate(order.text)
-            if order.text not in TEMPLATES.get(order.category, []) or order.full_sms != order.preview.full_sms:
+            if not is_reviewed_template(order.category, order.text) or order.full_sms != order.preview.full_sms:
                 raise ModerationRejected('unreviewed_snapshot')
             if settings.PROVIDER_NETWORK_MODE == 'external' and order.recipient_hash not in settings.PILOT_RECIPIENT_HASHES:
                 raise ProviderDisabled('outside_pilot_allowlist')

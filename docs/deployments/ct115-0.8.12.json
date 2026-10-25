@@ -1,0 +1,344 @@
+{
+  "version": "0.8.12",
+  "result": "PASS",
+  "backup": "/opt/begamnagam/backups/account-options-20261025T210019Z",
+  "previous_release": "/opt/begamnagam/releases/0.8.11-traefik",
+  "runtime": {
+    "current": "/opt/begamnagam/releases/0.8.12",
+    "containers": [
+      {
+        "name": "begamnagam-internal-proxy-1",
+        "id": "f6605a44f02c936032f3c0fa43e105c93b8c9a9b98abd774865d6d1e53096df5",
+        "image": "traefik:v3.7.13",
+        "image_id": "sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0",
+        "health": "healthy",
+        "restart_count": 0,
+        "oom": false
+      },
+      {
+        "name": "begamnagam-internal-beat-1",
+        "id": "6b7da0284c0390c43351f7bfd6a5bd25280e5ac9a5cea4e17c5ef3442f1782ae",
+        "image": "begamnagam-internal/backend:0.8.12",
+        "image_id": "sha256:32286c26c7887f615d43d11ce65b9e964574df503dd7957e745cef336d6513d8",
+        "health": null,
+        "restart_count": 0,
+        "oom": false
+      },
+      {
+        "name": "begamnagam-internal-worker-1",
+        "id": "4ba57441e3352f72940768ef6c31a2d036fa146f82c3664dd78a54e14d0c538d",
+        "image": "begamnagam-internal/backend:0.8.12",
+        "image_id": "sha256:32286c26c7887f615d43d11ce65b9e964574df503dd7957e745cef336d6513d8",
+        "health": null,
+        "restart_count": 0,
+        "oom": false
+      },
+      {
+        "name": "begamnagam-internal-backend-1",
+        "id": "0d48997028497715a095a8466d4ef9c7d18abb126e6611a31a1315e3adb919e1",
+        "image": "begamnagam-internal/backend:0.8.12",
+        "image_id": "sha256:32286c26c7887f615d43d11ce65b9e964574df503dd7957e745cef336d6513d8",
+        "health": "healthy",
+        "restart_count": 0,
+        "oom": false
+      },
+      {
+        "name": "begamnagam-internal-frontend-1",
+        "id": "e35ba5b34537e140f76d3769f3439349d6b0a3b86bea8c47cde394cdb5ae0083",
+        "image": "begamnagam-internal/frontend:0.8.10",
+        "image_id": "sha256:f37cef6995cdd19b916270df3301a35a4c4df2cc2db478a703168f07f1b190ef",
+        "health": "healthy",
+        "restart_count": 0,
+        "oom": false
+      },
+      {
+        "name": "begamnagam-internal-postgres-1",
+        "id": "86757705be67d50fc7bb1cf3240cb6687d902ee00747ec50ce434cb4a64c5ada",
+        "image": "postgres:17-alpine",
+        "image_id": "sha256:e4cb93687b062cd25a0e8f672d85a7708235009d70d31f8a7698d9370092a9c4",
+        "health": "healthy",
+        "restart_count": 0,
+        "oom": false
+      },
+      {
+        "name": "begamnagam-internal-redis-1",
+        "id": "c29a7b9d11346a7723351bc5aa2cd1018c34399f87e703c2905a4213dd06b18f",
+        "image": "redis:7.4-alpine",
+        "image_id": "sha256:1db42ccef14898aa29bae778452d567534b59c107129cbc1163fb552de184d3c",
+        "health": "healthy",
+        "restart_count": 0,
+        "oom": false
+      },
+      {
+        "name": "begamnagam-internal-rabbitmq-1",
+        "id": "ce5ccc99c6287034e4ed113aff268ef62a2bcd2cda33b2a82bdaf097301f8c59",
+        "image": "rabbitmq:4.4-alpine",
+        "image_id": "sha256:2225c65600dbdd89d7d0a8e2ed386b1d0b32817a3c97ab6ef621ac33056bec27",
+        "health": "healthy",
+        "restart_count": 0,
+        "oom": false
+      }
+    ],
+    "certificate_renewal_check": "PASS"
+  },
+  "unchanged_container_ids": {
+    "begamnagam-internal-frontend-1": true,
+    "begamnagam-internal-postgres-1": true,
+    "begamnagam-internal-redis-1": true,
+    "begamnagam-internal-rabbitmq-1": true
+  },
+  "backend_postgresql_tests": 145,
+  "moderation_corpus_cases": 120,
+  "moderation_tones_tested": [
+    "gentle",
+    "direct"
+  ],
+  "account_options": {
+    "result": "PASS",
+    "checks": [
+      "admin checkboxes and required reason over verified HTTPS",
+      "scoped account options saved through actual admin form",
+      "six consecutive deliveries to same recipient through RabbitMQ/Celery",
+      "three free credits preserved; remaining checkouts are simulated payments",
+      "turning off options restores normal tone and daily limit immediately"
+    ],
+    "orders": [
+      {
+        "is_free": true,
+        "delivery": "delivered_demo"
+      },
+      {
+        "is_free": true,
+        "delivery": "delivered_demo"
+      },
+      {
+        "is_free": true,
+        "delivery": "delivered_demo"
+      },
+      {
+        "is_free": false,
+        "delivery": "delivered_demo"
+      },
+      {
+        "is_free": false,
+        "delivery": "delivered_demo"
+      },
+      {
+        "is_free": false,
+        "delivery": "delivered_demo"
+      }
+    ],
+    "audit_entries": 2,
+    "real_otp_requested": 0,
+    "live_payments": 0,
+    "tls_verification": true,
+    "test_account_flags_after": false
+  },
+  "routing": {
+    "origin": "https://begamnagam.ir",
+    "connect_ip": "192.168.1.6",
+    "tls_verification": true,
+    "routes": [
+      {
+        "path": "/",
+        "method": "GET",
+        "status": 200,
+        "bytes": 17617
+      },
+      {
+        "path": "/_next/static/chunks/0cz1d0mv5g_q7.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 112594
+      },
+      {
+        "path": "/_next/static/chunks/1x6obpmlu1_c2.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 5361
+      },
+      {
+        "path": "/_next/static/chunks/2r4s4h5xul1n-.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 28739
+      },
+      {
+        "path": "/_next/static/chunks/3cycjidqchg_b.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 29271
+      },
+      {
+        "path": "/_next/static/chunks/3pi8pczmx9he1.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 34774
+      },
+      {
+        "path": "/_next/static/chunks/3re08s0g8bvb9.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 168238
+      },
+      {
+        "path": "/_next/static/chunks/3wbm-994r45kr.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 229820
+      },
+      {
+        "path": "/_next/static/chunks/44aeho67r3qb8.css",
+        "method": "GET",
+        "status": 200,
+        "bytes": 35331
+      },
+      {
+        "path": "/_next/static/chunks/turbopack-3-ry682tkyiqk.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 10030
+      },
+      {
+        "path": "/history",
+        "method": "GET",
+        "status": 200,
+        "bytes": 14102
+      },
+      {
+        "path": "/preferences",
+        "method": "GET",
+        "status": 200,
+        "bytes": 14642
+      },
+      {
+        "path": "/help",
+        "method": "GET",
+        "status": 200,
+        "bytes": 24525
+      },
+      {
+        "path": "/api/v1/bootstrap",
+        "method": "GET",
+        "status": 200,
+        "bytes": 1744
+      },
+      {
+        "path": "/healthz",
+        "method": "GET",
+        "status": 200,
+        "bytes": 56
+      },
+      {
+        "path": "/api/v1/messages",
+        "method": "GET",
+        "status": 401,
+        "bytes": 115
+      },
+      {
+        "path": "/api/v1/preferences",
+        "method": "GET",
+        "status": 401,
+        "bytes": 115
+      },
+      {
+        "path": "/api/v1/does-not-exist",
+        "method": "GET",
+        "status": 404,
+        "bytes": 78
+      },
+      {
+        "path": "/admin",
+        "method": "GET",
+        "status": 301,
+        "bytes": 0
+      },
+      {
+        "path": "/admin/",
+        "method": "GET",
+        "status": 302,
+        "bytes": 0
+      },
+      {
+        "path": "/admin/login/?next=/admin/",
+        "method": "GET",
+        "status": 200,
+        "bytes": 4422
+      },
+      {
+        "path": "/static/admin/css/base.css",
+        "method": "GET",
+        "status": 200,
+        "bytes": 22120
+      },
+      {
+        "path": "/sw.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 2683
+      },
+      {
+        "path": "/manifest.webmanifest",
+        "method": "GET",
+        "status": 200,
+        "bytes": 702
+      },
+      {
+        "path": "/offline.html",
+        "method": "GET",
+        "status": 200,
+        "bytes": 1556
+      },
+      {
+        "path": "/api/v1/auth/request-otp",
+        "method": "POST",
+        "status": 403,
+        "bytes": 146
+      },
+      {
+        "path": "/api/v1/auth/request-otp",
+        "method": "POST",
+        "status": 400,
+        "bytes": 120
+      },
+      {
+        "path": "/api/v1/auth/request-otp",
+        "method": "POST",
+        "status": 403,
+        "bytes": 146
+      },
+      {
+        "path": "/admin/login/?next=/admin/",
+        "method": "POST",
+        "status": 302,
+        "bytes": 0
+      },
+      {
+        "path": "/admin/",
+        "method": "GET",
+        "status": 200,
+        "bytes": 14993
+      },
+      {
+        "path": "/admin/core/account/test-limits/",
+        "method": "GET",
+        "status": 200,
+        "bytes": 15127
+      }
+    ],
+    "checks": {
+      "html_and_assets": true,
+      "routes_and_pwa_files": true,
+      "secure_host_only_cookies": true,
+      "csrf_and_https_origin": true,
+      "admin_login": true
+    },
+    "result": "PASS",
+    "real_sms_sent": 0,
+    "payments_created": 0
+  },
+  "frontend_rebuilt": false,
+  "git_push": false,
+  "browser_visual_review": "not performed this release; generated Django admin form verified over HTTPS",
+  "human_phone_pwa_acceptance": "deferred"
+}

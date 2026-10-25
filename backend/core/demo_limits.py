@@ -16,6 +16,12 @@ def test_tools_enabled():
             and settings.PROVIDER_NETWORK_MODE == "disabled" and not settings.LIVE_PROVIDERS_ENABLED)
 
 
+def unlimited_demo_sends(user):
+    # Query current authorization rather than a potentially cached user.account.
+    return bool(test_tools_enabled() and user and user.is_authenticated and Account.objects.filter(
+        user_id=user.pk, unlimited_demo_sends=True, suspended=False, deletion_requested_at__isnull=True).exists())
+
+
 def quota_start(now, *, hours, sender=None, recipient_hash=None):
     start = now - timedelta(hours=hours)
     if not test_tools_enabled():
@@ -28,7 +34,9 @@ def quota_start(now, *, hours, sender=None, recipient_hash=None):
     return resets.order_by("-created_at").values_list("created_at", flat=True).first() or start
 
 
-def recipient_in_cooldown(state, now):
+def recipient_in_cooldown(state, now, *, sender=None):
+    if unlimited_demo_sends(sender):
+        return False
     return bool(state.last_sent_at and state.last_sent_at > quota_start(
         now, hours=settings.RECIPIENT_COOLDOWN_HOURS, recipient_hash=state.phone_hash))
 

@@ -204,7 +204,11 @@ def logout_view(request):
 @api(["POST"])
 def preview(request):
     data = body(request)
-    limited("preview-session", session_key(request), 20, 600)
+    owner = request.user if is_product_authenticated(request.user) else None
+    from .demo_limits import unlimited_demo_sends
+    unlimited = unlimited_demo_sends(owner)
+    if not unlimited:
+        limited("preview-session", session_key(request), 20, 600)
     limited("preview-ip-flood", request.META.get("REMOTE_ADDR", "unknown"), 10000, 600)
     category = data.get("category")
     text = data.get("text", "")
@@ -212,11 +216,11 @@ def preview(request):
         raise APIError("invalid_input", "دسته‌بندی معتبر را انتخاب کنید.")
     if settings.PILOT_POSITIVE_ONLY and category not in {"appreciation", "encouragement", "congratulations"}:
         raise APIError("category_unavailable", "این موضوع فعلاً فعال نیست.", 422)
-    owner = request.user if is_product_authenticated(request.user) else None
-    if owner:
+    if owner and not unlimited:
         limited("preview-user", str(owner.pk), 20, 600)
+    direct = bool(owner and owner.account.direct_message_tone)
     try:
-        rewritten, mode = rewrite(category, text)
+        rewritten, mode = rewrite(category, text, direct=direct)
     except ModerationRejected as exc:
         ModerationAudit.objects.create(owner=owner, category=category[:32], outcome="rejected", reason_code=str(exc), content_digest=digest(str(text)))
         raise APIError("moderation_rejected", "این متن قابل ارسال نیست. لطفاً موضوعی محترمانه و بدون توهین، تهدید یا اطلاعات شخصی انتخاب کنید.", 422)
@@ -241,8 +245,9 @@ def preview(request):
         if token:
             from .models import RecipientGrant
             RecipientGrant.objects.create(preview=item, token_digest=digest("recipient-token:" + token), recipient_hash=recipient_hash)
-    ModerationAudit.objects.create(owner=owner, category=category, outcome="accepted", reason_code=mode, content_digest=digest(str(text)))
+    ModerationAudit.objects.create(owner=owner, category=category, outcome="accepted", reason_code=mode + ("_direct" if direct else ""), content_digest=digest(str(text)))
     return {"preview_id": str(item.id), "rewritten_text": item.text, "price_toman": item.price_toman, "is_free": item.is_free,
+        "message_tone": "direct" if direct else "gentle",
         "expires_at": expires_at.isoformat(), "moderation_mode": mode, "terms_version": item.terms_version, "full_sms": item.full_sms, "sms_segments": 1 if len(full_sms.encode("utf-16-le")) // 2 <= 70 else (len(full_sms.encode("utf-16-le")) // 2 + 66) // 67}
 
 

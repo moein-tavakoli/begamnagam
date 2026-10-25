@@ -1,3 +1,4 @@
+from django import forms
 from django.contrib import admin
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseNotAllowed, HttpResponseRedirect
@@ -5,6 +6,27 @@ from django.template.response import TemplateResponse
 from django.urls import path, reverse
 
 from .models import Account, ModerationAudit, Order, Outbox, RecipientState
+from .account_options import OPTION_PERMISSIONS, update_account_options
+
+
+class AccountOptionsForm(forms.ModelForm):
+    settings_reason = forms.CharField(label="دلیل تغییر تنظیمات", required=False, max_length=200,
+        help_text="برای تغییر تیک‌ها دلیل کوتاه بنویس؛ شماره، کد ورود یا اطلاعات خصوصی ننویس.")
+
+    class Meta:
+        model = Account
+        fields = ("unlimited_demo_sends", "direct_message_tone")
+
+    def clean(self):
+        cleaned = super().clean()
+        if any(key in self.changed_data for key in OPTION_PERMISSIONS):
+            if len(cleaned.get("settings_reason", "").strip()) < 3:
+                self.add_error("settings_reason", "دلیل تغییر را در حداقل ۳ نویسه بنویس.")
+            from .demo_limits import test_tools_enabled
+            if ("unlimited_demo_sends" in self.changed_data and cleaned.get("unlimited_demo_sends")
+                    and not test_tools_enabled()):
+                self.add_error("unlimited_demo_sends", "این گزینه فقط در محیط ارسال و پرداخت آزمایشی فعال می‌شود.")
+        return cleaned
 
 
 class ReadOnlyAdmin(admin.ModelAdmin):
@@ -28,10 +50,29 @@ class OrderAdmin(ReadOnlyAdmin):
 
 @admin.register(Account)
 class AccountAdmin(ReadOnlyAdmin):
+    form = AccountOptionsForm
     change_list_template = "admin/core/account/change_list.html"
-    list_display = ("id", "phone_masked", "free_sends_remaining", "created_at")
+    list_display = ("id", "phone_masked", "free_sends_remaining", "unlimited_demo_sends", "direct_message_tone", "created_at")
+    list_filter = ("unlimited_demo_sends", "direct_message_tone")
+    search_fields = ("phone_masked",)
     fields = ("id", "phone_masked", "free_sends_remaining", "created_at")
     readonly_fields = fields
+
+    def has_change_permission(self, request, obj=None):
+        return any(request.user.has_perm(permission) for permission in OPTION_PERMISSIONS.values())
+
+    def get_fields(self, request, obj=None):
+        return (*self.fields, *OPTION_PERMISSIONS,
+                *(("settings_reason",) if self.has_change_permission(request, obj) else ()))
+
+    def get_readonly_fields(self, request, obj=None):
+        return (*self.readonly_fields, *(key for key, permission in OPTION_PERMISSIONS.items()
+                                        if not request.user.has_perm(permission)))
+
+    def save_model(self, request, obj, form, change):
+        changes = {key: form.cleaned_data[key] for key in OPTION_PERMISSIONS if key in form.changed_data}
+        if changes:
+            update_account_options(request.user, obj.pk, changes, form.cleaned_data["settings_reason"])
 
     def get_urls(self):
         return [path("test-limits/", self.admin_site.admin_view(self.test_limits_view),
@@ -135,9 +176,8 @@ class FinancialEventAdmin(ReadOnlyAdmin):
     fields = ("id", "payment", "refund", "kind", "amount_toman", "created_at")
     readonly_fields = fields
 
-# Every state-changing action below calls an audited service; default model editing
-# stays disabled, including for superusers.
-from django import forms
+# State changes use audited services. Account option fields above are the only
+# scoped editable fields; private identity, balances and foundation records stay read-only.
 from django.contrib.admin.helpers import ActionForm
 from .models import AbuseReport, OperatorAudit, SafetyControl, OperationalAlert, SpendBudget
 from .safety import operator_action

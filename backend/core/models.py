@@ -12,11 +12,17 @@ class Account(models.Model):
     phone_masked = models.CharField(max_length=20)
     suspended = models.BooleanField(default=False)
     free_sends_remaining = models.PositiveSmallIntegerField(default=3)
+    unlimited_demo_sends = models.BooleanField("ارسال نامحدود برای تست", default=False, db_default=False,
+        help_text="فقط در محیط آزمایشی: حذف سقف روزانه و فاصلهٔ ارسال برای همین فرستنده؛ قطع دریافت، سفارش باز و OTP حفظ می‌شوند.")
+    direct_message_tone = models.BooleanField("لحن صریح‌تر و محترمانه", default=False, db_default=False,
+        help_text="پیام‌های این فرستنده واضح‌تر و کم‌تعارف‌تر آماده می‌شوند؛ توهین، تحقیر و تهدید همچنان ممنوع‌اند.")
     deletion_requested_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        permissions = [('suspend_account', 'Suspend or resume product senders')]
+        permissions = [('suspend_account', 'Suspend or resume product senders'),
+                       ('manage_test_sending', 'Manage unlimited simulated sending for individual accounts'),
+                       ('manage_message_tone', 'Manage respectful direct message tone for individual accounts')]
         constraints = [models.CheckConstraint(condition=models.Q(free_sends_remaining__lte=3), name="free_sends_max_three")]
 
 

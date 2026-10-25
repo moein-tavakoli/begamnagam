@@ -113,7 +113,10 @@ def create_order(user, session_key, data, idempotency_key):
         ensure_open()
         if user.account.suspended or user.account.deletion_requested_at:
             raise APIError("account_unavailable", "این حساب فعلاً اجازه ارسال ندارد.", 403)
-        limited("orders", str(user.pk), 10, 60)
+        from .demo_limits import unlimited_demo_sends
+        unlimited = unlimited_demo_sends(user)
+        if not unlimited:
+            limited("orders", str(user.pk), 10, 60)
         if user.account.phone_hash == phone_hash:
             raise recipient_unavailable()
         try:
@@ -131,7 +134,7 @@ def create_order(user, session_key, data, idempotency_key):
             raise APIError("preview_expired", "پیش‌نمایش منقضی یا استفاده شده است؛ دوباره متن را آماده کنید.", 409)
         from .demo_limits import quota_start, recipient_in_cooldown
         sender_start = quota_start(now, hours=24, sender=user)
-        if Order.objects.filter(owner=user, created_at__gte=sender_start).count() >= settings.SENDER_DAILY_LIMIT:
+        if not unlimited and Order.objects.filter(owner=user, created_at__gte=sender_start).count() >= settings.SENDER_DAILY_LIMIT:
             raise APIError("daily_limit", "سقف درخواست‌های روزانه شما تکمیل شده است.", 429)
         RecipientState.objects.get_or_create(phone_hash=phone_hash)
         state = RecipientState.objects.select_for_update().get(phone_hash=phone_hash)
@@ -139,10 +142,10 @@ def create_order(user, session_key, data, idempotency_key):
             models_busy_query(now)
         ).exists()
         pair_start = quota_start(now, hours=settings.SENDER_RECIPIENT_COOLDOWN_HOURS, sender=user, recipient_hash=phone_hash)
-        if Order.objects.filter(owner=user, recipient_hash=phone_hash, status__in=[Order.Status.DELIVERED_DEMO, Order.Status.ACCEPTED, Order.Status.DELIVERED, Order.Status.UNKNOWN],
+        if not unlimited and Order.objects.filter(owner=user, recipient_hash=phone_hash, status__in=[Order.Status.DELIVERED_DEMO, Order.Status.ACCEPTED, Order.Status.DELIVERED, Order.Status.UNKNOWN],
                 updated_at__gte=pair_start).exists():
             raise recipient_unavailable()
-        if state.blocked or busy or recipient_in_cooldown(state, now):
+        if state.blocked or busy or recipient_in_cooldown(state, now, sender=user):
             raise recipient_unavailable()
         if preview.is_free:
             from django.db.models import F
@@ -179,7 +182,7 @@ def pay_order(user, order_id):
             raise APIError("payment_expired", "زمان پرداخت آزمایشی تمام شده است؛ دوباره درخواست بسازید.", 409)
         state = RecipientState.objects.select_for_update().get(phone_hash=order.recipient_hash)
         from .demo_limits import recipient_in_cooldown
-        if state.blocked or recipient_in_cooldown(state, now):
+        if state.blocked or recipient_in_cooldown(state, now, sender=user):
             raise recipient_unavailable()
         order.status = Order.Status.QUEUED
         order.paid_at = now
@@ -251,7 +254,7 @@ def confirm_free_order(user, order_id):
         if user.account.suspended or user.account.deletion_requested_at:
             raise APIError("account_unavailable", "این حساب فعلاً اجازه ارسال ندارد.", 403)
         state = RecipientState.objects.select_for_update().get(phone_hash=order.recipient_hash)
-        if state.blocked or recipient_in_cooldown(state, timezone.now()):
+        if state.blocked or recipient_in_cooldown(state, timezone.now(), sender=user):
             raise recipient_unavailable()
         demo = settings.DEMO_MODE and settings.SMS_BACKEND == "console"
         live = (not settings.DEMO_MODE and settings.SMS_BACKEND == "kavenegar"

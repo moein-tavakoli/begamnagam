@@ -7,7 +7,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from .models import Order, Outbox, RecipientState, MessageDelivery
-from .moderation import TEMPLATES, ModerationRejected, moderate
+from .moderation import is_reviewed_template, ModerationRejected, moderate
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ def deliver_message(event_id):
         else:
             try:
                 moderate(order.text)
-                if order.text not in TEMPLATES.get(order.category, []):
+                if not is_reviewed_template(order.category, order.text):
                     raise ModerationRejected("unreviewed_template")
             except ModerationRejected:
                 order.status = Order.Status.FAILED

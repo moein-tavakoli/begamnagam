@@ -1,5 +1,17 @@
 # Versions
 
+## 0.8.12 — Per-account test sending and respectful direct tone
+
+- Add independently permissioned, audited account checkboxes for unlimited demo
+  sends and a clearer respectful outgoing tone; both default off.
+- Demo exemption skips sender quotas and cooldowns without changing history,
+  opt-outs, active reservations, OTP, free credits, spend or live-provider gates.
+- Select direct reviewed templates per sender; model selection stays constrained,
+  moderation runs before/after and workers validate either reviewed pool.
+- Existing previews keep their approved text when account options change.
+-145 PostgreSQL tests and a live CT admin/queue acceptance check pass; six
+  synthetic deliveries preserve three free credits and use no real SMS/payment.
+
 ## 0.8.11 — Traefik and explicit domain routing
 
 - Replace the CT proxy with Traefik3.7.13; keep public TLS on central Nginx,

@@ -1,5 +1,17 @@
 # Versions
 
+## 0.8.8 — Daily sending limits and admin test reset
+
+- Both sender/recipient and global recipient cooldowns now default to24 hours;
+  senders may create up to5 orders in a rolling24-hour window.
+- Added an admin-only, permission-checked, CSRF-protected test reset with audit
+  records. It restarts simulated quota windows without modifying order history.
+- Test resets are opt-in and ignored outside isolated demo delivery/payment.
+  Opt-outs, suspension, self-send checks, open reservations, OTP and spend stay intact.
+-113 PostgreSQL backend tests and14 frontend tests pass; typecheck, migration
+  consistency and Compose configuration pass. Native backend processes reloaded;
+  Fast Refresh frontend stayed running. No external send/payment or image build.
+
 ## 0.8.7 — Simplified final review
 
 - Removed the separate demo payment/delivery explanation box from final review.

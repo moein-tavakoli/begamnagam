@@ -1,0 +1,7 @@
+{% extends "admin/change_list.html" %}
+{% block object-tools-items %}
+  {% if can_reset_demo_limits %}
+    <li><a href="{% url 'admin:core_account_test_limits' %}">ریست محدودیت آزمایشی</a></li>
+  {% endif %}
+  {{ block.super }}
+{% endblock %}

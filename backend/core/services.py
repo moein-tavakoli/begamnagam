@@ -129,17 +129,20 @@ def create_order(user, session_key, data, idempotency_key):
             raise APIError("consent_required", "نسخه شرایط و رضایت ارسال را پیش از خرید تأیید کن.", 422)
         if preview.expires_at <= now or Order.objects.filter(preview=preview).exists():
             raise APIError("preview_expired", "پیش‌نمایش منقضی یا استفاده شده است؛ دوباره متن را آماده کنید.", 409)
-        if Order.objects.filter(owner=user, created_at__gte=now - timedelta(hours=24)).count() >= settings.SENDER_DAILY_LIMIT:
+        from .demo_limits import quota_start, recipient_in_cooldown
+        sender_start = quota_start(now, hours=24, sender=user)
+        if Order.objects.filter(owner=user, created_at__gte=sender_start).count() >= settings.SENDER_DAILY_LIMIT:
             raise APIError("daily_limit", "سقف درخواست‌های روزانه شما تکمیل شده است.", 429)
         RecipientState.objects.get_or_create(phone_hash=phone_hash)
         state = RecipientState.objects.select_for_update().get(phone_hash=phone_hash)
         busy = Order.objects.filter(recipient_hash=phone_hash).filter(
             models_busy_query(now)
         ).exists()
+        pair_start = quota_start(now, hours=settings.SENDER_RECIPIENT_COOLDOWN_HOURS, sender=user, recipient_hash=phone_hash)
         if Order.objects.filter(owner=user, recipient_hash=phone_hash, status__in=[Order.Status.DELIVERED_DEMO, Order.Status.ACCEPTED, Order.Status.DELIVERED, Order.Status.UNKNOWN],
-                updated_at__gte=now - timedelta(days=30)).exists():
+                updated_at__gte=pair_start).exists():
             raise recipient_unavailable()
-        if state.blocked or busy or (state.last_sent_at and state.last_sent_at > now - timedelta(hours=settings.RECIPIENT_COOLDOWN_HOURS)):
+        if state.blocked or busy or recipient_in_cooldown(state, now):
             raise recipient_unavailable()
         return Order.objects.create(owner=user, preview=preview, idempotency_key=key,
             consent_at=now if consent else None, terms_version=preview.terms_version if consent else "",
@@ -169,7 +172,8 @@ def pay_order(user, order_id):
         if order.status != Order.Status.AWAITING_PAYMENT or order.created_at + PAYMENT_WINDOW <= now:
             raise APIError("payment_expired", "زمان پرداخت آزمایشی تمام شده است؛ دوباره درخواست بسازید.", 409)
         state = RecipientState.objects.select_for_update().get(phone_hash=order.recipient_hash)
-        if state.blocked or (state.last_sent_at and state.last_sent_at > now - timedelta(hours=settings.RECIPIENT_COOLDOWN_HOURS)):
+        from .demo_limits import recipient_in_cooldown
+        if state.blocked or recipient_in_cooldown(state, now):
             raise recipient_unavailable()
         order.status = Order.Status.QUEUED
         order.paid_at = now

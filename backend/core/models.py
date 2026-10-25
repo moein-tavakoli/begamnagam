@@ -52,6 +52,19 @@ class RecipientState(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
 
+class DemoLimitReset(models.Model):
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="demo_limit_resets")
+    recipient_hash = models.CharField(max_length=64, db_index=True)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="performed_demo_limit_resets")
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        verbose_name = "ریست محدودیت آزمایشی"
+        verbose_name_plural = "ریست‌های محدودیت آزمایشی"
+        permissions = [("reset_demo_limits", "Reset simulated sender/recipient quotas")]
+        indexes = [models.Index(fields=["sender", "created_at"])]
+
+
 class Order(models.Model):
     consent_at = models.DateTimeField(null=True, blank=True)
     terms_version = models.CharField(max_length=40, blank=True)

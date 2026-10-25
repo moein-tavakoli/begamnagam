@@ -44,9 +44,9 @@ class PhaseTwoTests(TestCase):
     def test_pair_limit_survives_global_cooldown_and_cache_loss(self):
         user=self.authenticate()
         old=self.order().json()
-        Order.objects.filter(id=old['id']).update(status='delivered_demo', paid_at=timezone.now()-timedelta(days=8),updated_at=timezone.now()-timedelta(days=8))
-        RecipientState.objects.update(last_sent_at=timezone.now()-timedelta(days=8))
+        Order.objects.filter(id=old['id']).update(status='delivered_demo', paid_at=timezone.now()-timedelta(hours=23),updated_at=timezone.now()-timedelta(hours=23))
+        RecipientState.objects.update(last_sent_at=timezone.now()-timedelta(hours=25))
         cache.clear()
         self.assertEqual(self.order().status_code,409)
-        Order.objects.filter(id=old['id']).update(updated_at=timezone.now()-timedelta(days=31))
+        Order.objects.filter(id=old['id']).update(updated_at=timezone.now()-timedelta(hours=25))
         self.assertEqual(self.order().status_code,200)

@@ -24,8 +24,12 @@ ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,backend,testserv
 CSRF_TRUSTED_ORIGINS = [x for x in os.getenv("CSRF_TRUSTED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",") if x]
 APP_BASE_URL = os.getenv("APP_BASE_URL", "http://localhost:3000").rstrip("/")
 PRICE_TOMAN = int(os.getenv("PRICE_TOMAN", "2000"))
-SENDER_DAILY_LIMIT = int(os.getenv("SENDER_DAILY_LIMIT", "3"))
-RECIPIENT_COOLDOWN_HOURS = int(os.getenv("RECIPIENT_COOLDOWN_HOURS", "168"))
+SENDER_DAILY_LIMIT = int(os.getenv("SENDER_DAILY_LIMIT", "5"))
+RECIPIENT_COOLDOWN_HOURS = int(os.getenv("RECIPIENT_COOLDOWN_HOURS", "24"))
+SENDER_RECIPIENT_COOLDOWN_HOURS = int(os.getenv("SENDER_RECIPIENT_COOLDOWN_HOURS", "24"))
+DEMO_TEST_TOOLS_ENABLED = flag("DEMO_TEST_TOOLS_ENABLED")
+if min(SENDER_DAILY_LIMIT, RECIPIENT_COOLDOWN_HOURS, SENDER_RECIPIENT_COOLDOWN_HOURS) < 1:
+    raise ImproperlyConfigured("Sending limits must be positive")
 AI_MODE = os.getenv("AI_MODE", "template")
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11434").rstrip("/")
 if not OLLAMA_URL.endswith("/api/generate"):

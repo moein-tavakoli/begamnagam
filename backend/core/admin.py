@@ -1,4 +1,8 @@
 from django.contrib import admin
+from django.core.exceptions import PermissionDenied
+from django.http import HttpResponseNotAllowed, HttpResponseRedirect
+from django.template.response import TemplateResponse
+from django.urls import path, reverse
 
 from .models import Account, ModerationAudit, Order, Outbox, RecipientState
 
@@ -24,9 +28,40 @@ class OrderAdmin(ReadOnlyAdmin):
 
 @admin.register(Account)
 class AccountAdmin(ReadOnlyAdmin):
+    change_list_template = "admin/core/account/change_list.html"
     list_display = ("id", "phone_masked", "created_at")
     fields = ("id", "phone_masked", "created_at")
     readonly_fields = fields
+
+    def get_urls(self):
+        return [path("test-limits/", self.admin_site.admin_view(self.test_limits_view),
+                     name="core_account_test_limits")] + super().get_urls()
+
+    def changelist_view(self, request, extra_context=None):
+        from .demo_limits import test_tools_enabled
+        context = {"can_reset_demo_limits": test_tools_enabled() and request.user.has_perm("core.reset_demo_limits")}
+        context.update(extra_context or {})
+        return super().changelist_view(request, extra_context=context)
+
+    def test_limits_view(self, request):
+        from .demo_limits import reset_demo_limits, test_tools_enabled
+        if not request.user.has_perm("core.reset_demo_limits") or not test_tools_enabled():
+            raise PermissionDenied
+        if request.method not in {"GET", "POST"}:
+            return HttpResponseNotAllowed(["GET", "POST"])
+        form = DemoLimitResetForm(request.POST if request.method == "POST" else None)
+        if request.method == "POST" and form.is_valid():
+            try:
+                reset = reset_demo_limits(request.user, **form.cleaned_data)
+            except (APIError, ValueError) as exc:
+                form.add_error(None, exc.message if isinstance(exc, APIError) else str(exc))
+            else:
+                self.message_user(request, f"محدودیت آزمایشی ریست شد؛ سابقهٔ اقدام {reset.pk} ثبت شد.")
+                return HttpResponseRedirect(reverse("admin:core_account_test_limits"))
+        return TemplateResponse(request, "admin/core/account/test_limits.html", {
+            **self.admin_site.each_context(request), "opts": self.model._meta,
+            "title": "ریست محدودیت آزمایشی", "form": form,
+        })
 
 
 @admin.register(RecipientState)
@@ -107,6 +142,44 @@ from django.contrib.admin.helpers import ActionForm
 from .models import AbuseReport, OperatorAudit, SafetyControl, OperationalAlert, SpendBudget
 from .safety import operator_action
 from .services import APIError
+
+
+class DemoLimitResetForm(forms.Form):
+    sender_phone = forms.CharField(label="شمارهٔ فرستندهٔ تست", max_length=32,
+        help_text="شماره‌ای که قبلاً با آن وارد محصول شده‌ای.",
+        widget=forms.TextInput(attrs={"type": "tel", "inputmode": "tel", "dir": "ltr", "autocomplete": "off", "data-normalize-digits": ""}))
+    recipient_phone = forms.CharField(label="شمارهٔ گیرندهٔ تست", max_length=32,
+        widget=forms.TextInput(attrs={"type": "tel", "inputmode": "tel", "dir": "ltr", "autocomplete": "off", "data-normalize-digits": ""}))
+    reason = forms.CharField(label="دلیل تست", min_length=3, max_length=200,
+        help_text="فقط دلیل کوتاه بنویس؛ شماره، کد ورود یا اطلاعات خصوصی ننویس.")
+
+    def clean_sender_phone(self):
+        from .privacy import normalize_phone
+        try:
+            return normalize_phone(self.cleaned_data["sender_phone"])
+        except ValueError as exc:
+            raise forms.ValidationError(str(exc)) from None
+
+    def clean_recipient_phone(self):
+        from .privacy import normalize_phone
+        try:
+            return normalize_phone(self.cleaned_data["recipient_phone"])
+        except ValueError as exc:
+            raise forms.ValidationError(str(exc)) from None
+
+
+from .models import DemoLimitReset
+
+
+@admin.register(DemoLimitReset)
+class DemoLimitResetAdmin(ReadOnlyAdmin):
+    list_display = ("id", "sender_id", "recipient_identifier", "actor_id", "created_at")
+    fields = ("id", "sender", "recipient_identifier", "actor", "created_at")
+    readonly_fields = fields
+
+    @admin.display(description="شناسهٔ گیرندهٔ تست")
+    def recipient_identifier(self, obj):
+        return obj.recipient_hash[:12] + "…"
 
 
 class AuditedActionForm(ActionForm):

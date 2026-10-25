@@ -17,7 +17,7 @@ from django.utils import timezone
 from .models import Account, ModerationAudit, OTPChallenge, Order, Outbox, Preview, RecipientState
 from .moderation import ModerationRejected, RewriteUnavailable, TEMPLATES, moderate, normalized, rewrite
 from .privacy import decrypt, digest, encrypt, mask, normalize_phone
-from .services import create_order, pay_order
+from .services import APIError, create_order, pay_order
 from .tasks import deliver_message, reconcile_outbox
 
 
@@ -394,6 +394,25 @@ class PostgreSQLConcurrencyTests(TransactionTestCase):
         results = self.parallel(lambda user: str(create_order(user, "session", {"preview_id": str(self.preview.pk), "recipient_phone": "09901234567"}, key).pk))
         self.assertEqual(len(set(results)), 1)
         self.assertEqual(Order.objects.count(), 1)
+
+    def test_concurrent_new_orders_cannot_exceed_five_sender_slots(self):
+        def quote():
+            return Preview.objects.create(owner=self.user, session_key="session", category="body",
+                text=TEMPLATES["body"][0], moderation_mode="template", price_toman=settings.PRICE_TOMAN,
+                expires_at=timezone.now()+timedelta(minutes=15))
+        for index in range(4):
+            create_order(self.user, "session", {"preview_id": str(quote().pk),
+                "recipient_phone": f"0990123456{index}"}, str(uuid.uuid4()))
+        recipients = iter(["09901234567", "09901234568"])
+        def submit(user):
+            try:
+                create_order(user, "session", {"preview_id": str(quote().pk),
+                    "recipient_phone": next(recipients)}, str(uuid.uuid4()))
+                return "created"
+            except APIError as exc:
+                return exc.code
+        self.assertCountEqual(self.parallel(submit), ["created", "daily_limit"])
+        self.assertEqual(Order.objects.count(), 5)
 
     def test_concurrent_payment_retries_create_one_event(self):
         order = create_order(self.user, "session", {"preview_id": str(self.preview.pk), "recipient_phone": "09901234567"}, str(uuid.uuid4()))

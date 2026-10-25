@@ -70,13 +70,16 @@ def main():
     sender_phone = "0991" + suffix
     recipient_phone = "0992" + suffix
     sender.login(sender_phone)
+    assert sender.call("/bootstrap")["free_sends_remaining"] == 3
     preview = sender.call("/messages/preview", {"category": "encouragement", "text": "تلاش و همراهی شما ارزشمند است."})
     assert preview["rewritten_text"]
     key = str(uuid.uuid4())
     order = sender.call("/orders", {"preview_id": preview["preview_id"], "recipient_phone": recipient_phone}, key=key)
     repeated = sender.call("/orders", {"preview_id": preview["preview_id"], "recipient_phone": recipient_phone}, key=key)
     assert repeated["id"] == order["id"], "Duplicate checkout created a new order."
-    sender.call(f"/orders/{order['id']}/pay-demo", {})
+    assert order["is_free"] is True and order["amount_toman"] == 0
+    sender.call(f"/orders/{order['id']}/confirm-free", {})
+    assert sender.call("/bootstrap")["free_sends_remaining"] == 2
     for _ in range(25):
         result = sender.call(f"/orders/{order['id']}")
         if result["status"] in {"sent_demo", "delivered_demo", "simulated"}:
@@ -94,7 +97,7 @@ def main():
     assert receiver.call("/preferences")["blocked"] is True
     # A second session cannot inspect the sender's order.
     receiver.call(f"/orders/{order['id']}", expected=404)
-    print(f"PASS at {BASE}: CSRF, OTP, preview, idempotent checkout, demo payment, message processing, history, opt-out, ownership.")
+    print(f"PASS at {BASE}: CSRF, OTP, preview, idempotent free checkout, credit balance, demo delivery, history, opt-out, ownership.")
 
 
 if __name__ == "__main__":

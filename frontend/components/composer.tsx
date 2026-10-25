@@ -23,6 +23,7 @@ import { useApp } from "./app-provider";
 import { AuthGate } from "./auth-gate";
 import { BusyButton, ErrorBox, ServiceState } from "./feedback";
 import { Icon, type IconName } from "./icons";
+import { FreeSendsBalance } from "./free-sends";
 
 const categoryIcons: Record<string, IconName> = {
   body: "drop",
@@ -53,6 +54,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
     !!order &&
     ["awaiting_payment", "pending_payment", "created"].includes(order.status);
   const finished = !!order && !awaitingPayment;
+  const isFree = order?.is_free ?? preview?.is_free ?? false;
   const unsuccessful =
     !!order && ["failed", "cancelled", "blocked"].includes(order.status);
   const idempotencyKey = useRef("");
@@ -79,6 +81,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
         if (!cancelled) {
           setOrder(result);
           setPollingError("");
+          if (result.financial_status === "free_credit_returned") void reload();
         }
         if (!cancelled && isPending(result.status) && attempts < 20)
           timer = setTimeout(poll, 2000);
@@ -95,6 +98,12 @@ export function Composer({ onExit }: { onExit?: () => void }) {
 
   function handleError(error: unknown) {
     setError(errorMessage(error));
+    if (error instanceof ApiError && error.code === "free_quota_changed") {
+      setPreview(null);
+      setConsent(false);
+      idempotencyKey.current = "";
+      void reload();
+    }
     if (error instanceof ApiError && error.code === "authentication_required")
       void reload();
     if (error instanceof ApiError && error.fields) {
@@ -208,6 +217,11 @@ export function Composer({ onExit }: { onExit?: () => void }) {
   }
 
   async function payOrder(currentOrder: Order) {
+    if (currentOrder.is_free) {
+      setOrder(await api<Order>(`/orders/${currentOrder.id}/confirm-free`, { method: "POST", body: {} }));
+      await reload();
+      return;
+    }
     if (data?.payment_backend === 'zarinpal') {
       const result = await api<{redirect_url?: string}>(`/orders/${currentOrder.id}/payments`, {
         method: 'POST', body: {}, idempotencyKey: idempotencyKey.current || (idempotencyKey.current = createIdempotencyKey()),
@@ -230,6 +244,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
     setPollingError("");
     try {
       setOrder(await api<Order>(`/orders/${order.id}`));
+      if (order.is_free) await reload();
     } catch (error) {
       setPollingError(errorMessage(error));
     } finally {
@@ -328,6 +343,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
               <h2 className="form-heading" tabIndex={-1}>
                 چه حرفی توی دلت مونده؟
               </h2>
+              <FreeSendsBalance />
               <p className="muted form-intro">
                 اول موضوع رو انتخاب کن؛ بعد خیلی ساده منظورت رو بنویس.
               </p>
@@ -448,7 +464,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                   {preview.moderation_mode === "ollama_curated" ? "انتخاب با کمک هوش مصنوعی" : "متن آمادهٔ بررسی‌شده"}
                 </span>
                 <span>
-                  هزینه: <b>{toman(order?.amount_toman ?? preview.price_toman)}</b> · {preview.sms_segments || "—"} بخش پیامک
+                  هزینه: <b>{isFree ? "رایگان؛ از سهمیهٔ هدیه" : toman(order?.amount_toman ?? preview.price_toman)}</b> · {preview.sms_segments || "—"} بخش پیامک
                 </span>
               </div>
               <label className="checkbox-label" htmlFor="respect-consent">
@@ -463,13 +479,13 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                 </span>
               </label>
               {fields.consent && <p className="field-error" id="consent-error">{fields.consent}</p>}
-              {data && (!data.demo_mode || data.payment_backend === "zarinpal") && (
+              {!isFree && data && (!data.demo_mode || data.payment_backend === "zarinpal") && (
                 <p className="small muted">
                   {data?.payment_backend === "zarinpal" ? "برای پرداخت به درگاه امن منتقل می‌شی." : "درگاه پرداخت فعلاً فعال نیست."}
                 </p>
               )}
               {awaitingPayment && (
-                <p className="small muted" role="status">سفارش ثبت شده؛ تلاش دوباره همین پرداخت رو ادامه می‌ده.</p>
+                <p className="small muted" role="status">سفارش ثبت شده؛ تلاش دوباره همین سفارش رو ادامه می‌ده.</p>
               )}
               <div className="form-actions review-actions">
                 <button className="button ghost" type="button" disabled={busy || !!order}
@@ -477,8 +493,8 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                   اصلاح حرفم
                 </button>
                 <BusyButton type="submit" className="button primary" busy={busy}
-                  disabled={!data?.authenticated || (!data.demo_mode && data.payment_backend !== "zarinpal")}>
-                  {awaitingPayment ? "تلاش دوباره برای پرداخت" : data?.payment_backend === "zarinpal" ? "تأیید و پرداخت" : "تأیید و ارسال آزمایشی"}
+                  disabled={!data?.authenticated || (!isFree && !data.demo_mode && data.payment_backend !== "zarinpal")}>
+                  {isFree ? (awaitingPayment ? "تلاش دوباره برای ارسال رایگان" : data?.demo_mode ? "ارسال رایگان آزمایشی" : "تأیید و ارسال رایگان") : awaitingPayment ? "تلاش دوباره برای پرداخت" : data?.payment_backend === "zarinpal" ? "تأیید و پرداخت" : "تأیید و ارسال آزمایشی"}
                   <Icon name="arrow" size={18} />
                 </BusyButton>
               </div>
@@ -522,7 +538,8 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                       ? "آزمایش ارسال ثبت شد."
                       : "وضعیت پیامت ثبت شد."}
               </h2>
-              <p className="small">مالی: {order.financial_status === "refunded" ? "مسترد شد" : order.financial_status === "refund_pending" ? "بازپرداخت در حال پیگیری است" : order.financial_status === "verified" ? "تأیید شد" : "در انتظار"}</p>
+              <p className="small">مالی: {order.financial_status === "free_credit_returned" ? "رایگان؛ سهمیه برگشت داده شد" : order.is_free ? "رایگان؛ بدون پرداخت" : order.financial_status === "refunded" ? "مسترد شد" : order.financial_status === "refund_pending" ? "بازپرداخت در حال پیگیری است" : order.financial_status === "verified" ? "تأیید شد" : "در انتظار"}</p>
+              <FreeSendsBalance />
               <p className="receipt-status" role="status">
                 {statusLabel(order.status)}
               </p>

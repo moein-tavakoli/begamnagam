@@ -22,6 +22,9 @@ def fail_paid(order, event, delivery, code, suppressed=False):
     payment = order.payment_attempts.filter(applied_to_order=True).first()
     if payment:
         request_refund(payment, 'delivery_unavailable')
+    elif order.is_free:
+        from .services import release_free_credit
+        release_free_credit(order)
     order.save(update_fields=['status', 'updated_at'])
     event.save(update_fields=['state', 'last_error_code', 'processed_at'])
     delivery.save()

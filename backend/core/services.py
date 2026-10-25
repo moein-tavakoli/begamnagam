@@ -10,7 +10,7 @@ from django.db import transaction
 from django.http import JsonResponse
 from django.utils import timezone
 
-from .models import Order, Outbox, Preview, RecipientState, PaymentAttempt, MessageDelivery, FinancialEvent
+from .models import Account, Order, Outbox, Preview, RecipientState, PaymentAttempt, MessageDelivery, FinancialEvent
 from .privacy import digest, encrypt, mask, normalize_phone
 
 logger = logging.getLogger(__name__)
@@ -85,9 +85,9 @@ def serialize_order(order):
     delivery = MessageDelivery.objects.filter(order=order).first()
     from .models import Refund
     open_refund = Refund.objects.filter(payment__order=order).exclude(status="refunded").exists()
-    return {"financial_status": "refunded" if payment and payment.refunds.filter(status="refunded").exists() else "refund_pending" if open_refund else payment.status if payment else "legacy_demo_paid" if order.paid_at else "unpaid",
+    return {"financial_status": ("free_credit_returned" if order.free_credit_released_at else "free") if order.is_free else "refunded" if payment and payment.refunds.filter(status="refunded").exists() else "refund_pending" if open_refund else payment.status if payment else "legacy_demo_paid" if order.paid_at else "unpaid",
         "delivery_status": delivery.status if delivery else "not_ready","id": str(order.id), "status": order.status, "amount_toman": order.amount_toman,
-        "payment_mode": order.payment_mode, "recipient_masked": order.recipient_masked,
+        "payment_mode": order.payment_mode, "recipient_masked": order.recipient_masked, "is_free": order.is_free,
         "text": order.full_sms or order.text, "category": order.category, "paid_at": order.paid_at.isoformat() if order.paid_at else None,
         "created_at": order.created_at.isoformat(), "payment_expires_at": (order.created_at + PAYMENT_WINDOW).isoformat()}
 
@@ -144,11 +144,15 @@ def create_order(user, session_key, data, idempotency_key):
             raise recipient_unavailable()
         if state.blocked or busy or recipient_in_cooldown(state, now):
             raise recipient_unavailable()
+        if preview.is_free:
+            from django.db.models import F
+            if not Account.objects.filter(user=user, free_sends_remaining__gt=0).update(free_sends_remaining=F("free_sends_remaining")-1):
+                raise APIError("free_quota_changed", "سهمیهٔ رایگان تغییر کرده؛ متن نهایی و هزینه را دوباره آماده کن.", 409)
         return Order.objects.create(owner=user, preview=preview, idempotency_key=key,
             consent_at=now if consent else None, terms_version=preview.terms_version if consent else "",
             recipient_hash=phone_hash, recipient_cipher=encrypt(phone), recipient_masked=mask(phone),
             text=preview.text, full_sms=preview.full_sms, category=preview.category, amount_toman=preview.price_toman,
-            payment_mode="demo" if settings.DEMO_MODE else "disabled")
+            is_free=preview.is_free, payment_mode="free" if preview.is_free else "demo" if settings.DEMO_MODE else "disabled")
 
 
 def models_busy_query(now):
@@ -167,6 +171,8 @@ def pay_order(user, order_id):
             order = Order.objects.select_for_update().get(id=order_id, owner=user)
         except Order.DoesNotExist:
             raise APIError("not_found", "درخواست پیدا نشد.", 404)
+        if order.is_free:
+            return confirm_free_order(user, order_id)
         if order.paid_at:
             return order
         if order.status != Order.Status.AWAITING_PAYMENT or order.created_at + PAYMENT_WINDOW <= now:
@@ -201,6 +207,9 @@ def dispatch(event_id):
 def record_demo_refund(order, reason):
     """Called inside the worker transaction; repeated tasks never refund twice."""
     from .models import PaymentAttempt, Refund, FinancialEvent
+    if order.is_free:
+        release_free_credit(order)
+        return
     payment = PaymentAttempt.objects.filter(order=order, applied_to_order=True).first()
     if payment:
         if payment.provider != "demo":
@@ -214,3 +223,49 @@ def record_demo_refund(order, reason):
             refund.save(update_fields=["status", "updated_at"])
         FinancialEvent.objects.get_or_create(refund=refund,
             defaults={"payment": payment, "kind": "refund", "amount_toman": refund.amount_toman})
+
+
+def release_free_credit(order):
+    """Caller holds the order lock in a transaction; a definitive failure returns once."""
+    from django.db.models import F
+    if order.is_free and not order.free_credit_released_at:
+        order.free_credit_released_at = timezone.now()
+        order.save(update_fields=["free_credit_released_at"])
+        Account.objects.filter(user_id=order.owner_id).update(free_sends_remaining=F("free_sends_remaining")+1)
+
+
+def confirm_free_order(user, order_id):
+    from .safety import ensure_open
+    from .demo_limits import recipient_in_cooldown
+    ensure_open()
+    with transaction.atomic():
+        order = Order.objects.select_for_update().filter(id=order_id, owner=user).first()
+        if not order:
+            raise APIError("not_found", "درخواست پیدا نشد.", 404)
+        if not order.is_free or order.amount_toman != 0:
+            raise APIError("free_order_required", "این سفارش از سهمیهٔ رایگان نیست.", 409)
+        if order.paid_at:
+            return order
+        if order.status != Order.Status.AWAITING_PAYMENT or order.created_at + PAYMENT_WINDOW <= timezone.now():
+            raise APIError("order_expired", "مهلت سفارش تمام شده؛ متن نهایی را دوباره آماده کن.", 409)
+        if user.account.suspended or user.account.deletion_requested_at:
+            raise APIError("account_unavailable", "این حساب فعلاً اجازه ارسال ندارد.", 403)
+        state = RecipientState.objects.select_for_update().get(phone_hash=order.recipient_hash)
+        if state.blocked or recipient_in_cooldown(state, timezone.now()):
+            raise recipient_unavailable()
+        demo = settings.DEMO_MODE and settings.SMS_BACKEND == "console"
+        live = (not settings.DEMO_MODE and settings.SMS_BACKEND == "kavenegar"
+                and settings.PROVIDER_NETWORK_MODE == "external" and settings.LIVE_PROVIDERS_ENABLED)
+        if not demo and not live:
+            raise APIError("sms_disabled", "ارسال پیام فعلاً فعال نیست.", 503)
+        # paid_at is the existing dispatch authorization timestamp; there is no payment.
+        order.paid_at, order.status = timezone.now(), Order.Status.QUEUED
+        order.save(update_fields=["paid_at", "status", "updated_at"])
+        defaults = {"status": "queued"}
+        if live:
+            defaults.update(provider="kavenegar", environment=settings.PROVIDER_ENVIRONMENT,
+                            local_id=(uuid.uuid4().int % (2**63-1)) or 1)
+        MessageDelivery.objects.get_or_create(order=order, defaults=defaults)
+        event, _ = Outbox.objects.get_or_create(order=order, defaults={"available_at": timezone.now()})
+        transaction.on_commit(lambda: dispatch(event.pk))
+    return order

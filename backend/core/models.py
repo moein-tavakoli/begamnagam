@@ -11,11 +11,13 @@ class Account(models.Model):
     phone_cipher = models.TextField()
     phone_masked = models.CharField(max_length=20)
     suspended = models.BooleanField(default=False)
+    free_sends_remaining = models.PositiveSmallIntegerField(default=3)
     deletion_requested_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         permissions = [('suspend_account', 'Suspend or resume product senders')]
+        constraints = [models.CheckConstraint(condition=models.Q(free_sends_remaining__lte=3), name="free_sends_max_three")]
 
 
 class OTPChallenge(models.Model):
@@ -31,6 +33,7 @@ class OTPChallenge(models.Model):
 
 
 class Preview(models.Model):
+    is_free = models.BooleanField(default=False)
     recipient_hash = models.CharField(max_length=64, blank=True)
     terms_version = models.CharField(max_length=40, blank=True)
     full_sms = EncryptedTextField(blank=True)
@@ -66,6 +69,8 @@ class DemoLimitReset(models.Model):
 
 
 class Order(models.Model):
+    is_free = models.BooleanField(default=False)
+    free_credit_released_at = models.DateTimeField(null=True, blank=True)
     consent_at = models.DateTimeField(null=True, blank=True)
     terms_version = models.CharField(max_length=40, blank=True)
     full_sms = EncryptedTextField(blank=True)
@@ -97,7 +102,8 @@ class Order(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        constraints = [models.UniqueConstraint(fields=["owner", "idempotency_key"], name="unique_owner_idempotency")]
+        constraints = [models.UniqueConstraint(fields=["owner", "idempotency_key"], name="unique_owner_idempotency"),
+            models.CheckConstraint(condition=models.Q(is_free=True, amount_toman=0) | models.Q(is_free=False, amount_toman__gt=0), name="order_free_or_positive_price")]
         indexes = [models.Index(fields=["owner", "created_at"]), models.Index(fields=["recipient_hash", "status"])]
 
 

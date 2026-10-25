@@ -333,7 +333,8 @@ class LocalRealOTPTests(TestCase):
             response = self.submit('/orders/'+order['id']+'/pay-demo')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(Order.objects.get(pk=order['id']).status, 'delivered_demo')
-        self.assertEqual(FinancialEvent.objects.get(kind='payment').payment.provider, 'demo')
+        self.assertTrue(Order.objects.get(pk=order['id']).is_free)
+        self.assertFalse(FinancialEvent.objects.exists())
         self.assertEqual(self.wire.return_value.open.call_count, 1)
         self.assertEqual(SpendBudget.objects.get().reserved_rial, 500)
 

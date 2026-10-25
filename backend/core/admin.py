@@ -29,8 +29,8 @@ class OrderAdmin(ReadOnlyAdmin):
 @admin.register(Account)
 class AccountAdmin(ReadOnlyAdmin):
     change_list_template = "admin/core/account/change_list.html"
-    list_display = ("id", "phone_masked", "created_at")
-    fields = ("id", "phone_masked", "created_at")
+    list_display = ("id", "phone_masked", "free_sends_remaining", "created_at")
+    fields = ("id", "phone_masked", "free_sends_remaining", "created_at")
     readonly_fields = fields
 
     def get_urls(self):

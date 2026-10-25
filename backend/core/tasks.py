@@ -83,8 +83,17 @@ def reconcile_outbox():
 @shared_task(ignore_result=True)
 def expire_unpaid_orders():
     now = timezone.now()
-    Order.objects.filter(status=Order.Status.AWAITING_PAYMENT,
-        created_at__lt=now - timedelta(minutes=15)).update(status=Order.Status.CANCELLED)
+    from .services import release_free_credit
+    expired = Order.objects.filter(status=Order.Status.AWAITING_PAYMENT,
+        created_at__lt=now-timedelta(minutes=15)).values_list("pk", flat=True)[:100]
+    for order_id in expired:
+        with transaction.atomic():
+            order = Order.objects.select_for_update().get(pk=order_id)
+            if order.status != Order.Status.AWAITING_PAYMENT or order.created_at >= now-timedelta(minutes=15):
+                continue
+            order.status = Order.Status.CANCELLED
+            order.save(update_fields=["status", "updated_at"])
+            release_free_credit(order)
     # An emergency/broker outage must not hold an unsubmitted paid order forever.
     # Leased/accepted/unknown submissions are queried, never expired as unsent.
     due = Order.objects.filter(status=Order.Status.QUEUED, paid_at__lt=now-timedelta(hours=24)).values_list('pk', flat=True)[:100]

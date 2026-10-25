@@ -1,4 +1,4 @@
-# Home override — version0.8.7
+# Home override — version0.8.9
 
 The user requested a full-screen mobile flow through seven browser annotations.
 Keep MASTER colors, illustration, local font and pill actions.
@@ -13,6 +13,10 @@ Keep MASTER colors, illustration, local font and pill actions.
   changing the normalized number invalidates that preview and consent before sending.
 - The final review contains the recipient, full reviewed text, price/segments,
   required consent and send action together. Do not add another confirmation screen.
+- Show remaining one-time free credits in the draft and account history. Label a
+  free quote and its confirmation as free; demo free actions retain the demo label.
+- Free checkout has no gateway step. A stale free quote must be reviewed afresh;
+  never turn it into a paid action automatically. Preserve the mobile panel fallback.
 - If payment fails, retry the same created order; disable edits once that order exists.
 - Hide the authenticated sender badge in the recipient form, retaining authentication.
 - Convert Persian/Arabic digits on input in all phone/OTP fields; keep leading zeroes

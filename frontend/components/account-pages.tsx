@@ -1,4 +1,5 @@
 "use client";
+import { FreeSendsBalance } from "./free-sends";
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -186,6 +187,7 @@ export function History() {
       <div className="account-heading">
         <span className="eyebrow">پیگیری بدون ابهام</span>
         <h1>پیام‌های من.</h1>
+        <FreeSendsBalance />
         <p>
           درخواست‌های ثبت‌شده و وضعیت پردازش اون‌ها رو اینجا ببین. این وضعیت‌ها
           نشون نمی‌دن که گیرنده پیام رو خونده یا نه.
@@ -228,7 +230,7 @@ export function History() {
                       </span>
                     </div>
                     <p>{message.text || "متن این پیام طبق سیاست نگهداری حذف شده است."}</p>
-                    <p className="small muted">مالی: {message.financial_status === "refund_pending" ? "بازپرداخت در حال پیگیری است" : message.financial_status === "refunded" ? "مسترد شد" : message.financial_status === "verified" ? "تأیید شد" : message.financial_status === "unknown" ? "نیازمند بررسی؛ دوباره پرداخت نکن" : "در انتظار"}</p>
+                    <p className="small muted">مالی: {message.financial_status === "free_credit_returned" ? "رایگان؛ سهمیه برگشت داده شد" : message.is_free ? "رایگان؛ بدون پرداخت" : message.financial_status === "refund_pending" ? "بازپرداخت در حال پیگیری است" : message.financial_status === "refunded" ? "مسترد شد" : message.financial_status === "verified" ? "تأیید شد" : message.financial_status === "unknown" ? "نیازمند بررسی؛ دوباره پرداخت نکن" : "در انتظار"}</p>
                     <div className="history-message-bottom">
                       <time dateTime={message.created_at}>
                         {new Intl.DateTimeFormat("fa-IR", {
@@ -237,7 +239,7 @@ export function History() {
                           timeZone: "Asia/Tehran",
                         }).format(new Date(message.created_at))}
                       </time>
-                      <span>{toman(message.amount_toman)}</span>
+                      <span>{message.is_free ? "رایگان" : toman(message.amount_toman)}</span>
                     </div>
                     <details className="order-details">
                       <summary>شناسه پیگیری</summary>

@@ -30,14 +30,18 @@ class APITestCase(TestCase):
     def post(self, path, data=None, client=None, **headers):
         return (client or self.client).post("/api/v1" + path, data=json.dumps(data or {}), content_type="application/json", **headers)
 
-    def authenticate(self, phone="09123456789", client=None):
+    def authenticate(self, phone="09123456789", client=None, free_sends=0):
         client = client or self.client
         client.get("/api/v1/bootstrap")
         response = self.post("/auth/request-otp", {"phone": phone}, client)
         self.assertEqual(response.status_code, 200, response.content)
         response = self.post("/auth/verify-otp", {"challenge_id": response.json()["challenge_id"], "code": response.json()["debug_code"]}, client)
         self.assertEqual(response.status_code, 200, response.content)
-        return Account.objects.get(phone_hash=digest(normalize_phone(phone))).user
+        account = Account.objects.get(phone_hash=digest(normalize_phone(phone)))
+        # Legacy fixtures exercise paid checkout; free-credit tests preserve the grant.
+        if free_sends is not None:
+            Account.objects.filter(pk=account.pk).update(free_sends_remaining=free_sends)
+        return account.user
 
     def preview(self, category="body", text="تنت بو میده", client=None):
         response = self.post("/messages/preview", {"category": category, "text": text}, client)

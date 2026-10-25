@@ -9,7 +9,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import connection, transaction
 from django.test import Client, override_settings
 from django.utils import timezone
-from core.models import Order, Outbox, PaymentAttempt, MessageDelivery, FinancialEvent, Refund, RecipientState, AbuseReport, OperatorAudit, SpendBudget, SpendReservation
+from core.models import Account, Order, Outbox, PaymentAttempt, MessageDelivery, FinancialEvent, Refund, RecipientState, AbuseReport, OperatorAudit, SpendBudget, SpendReservation
 from core.provider_fixture import LocalProviders
 from core.provider_delivery import reconcile_delivery
 from core.provider_services import process_refund
@@ -48,6 +48,8 @@ class Command(BaseCommand):
                 challenge=call(client,'/auth/request-otp',{'phone':phone})
                 assert 'debug_code' not in challenge
                 call(client,'/auth/verify-otp',{'challenge_id':challenge['challenge_id'],'code':fixture.codes[phone]})
+                # This isolated fixture specifically exercises paid provider contracts.
+                Account.objects.filter(user_id=client.session.get('_auth_user_id')).update(free_sends_remaining=0)
                 return client
 
             def make_order(client,category,phone):

@@ -1,5 +1,22 @@
 # Versions
 
+## 0.8.9 — Three free sends per verified account
+
+- Grant each existing/new verified phone account3 one-time free sends. Reserve a
+  credit transactionally when creating a free order; previews do not spend credits.
+- Free checkout queues delivery without a payment intent, capture, financial event
+  or gateway redirect. Positive-money constraints remain unchanged.
+- Stale free quotes require a fresh review rather than silently charging. Retry
+  and concurrent requests cannot double-spend. Expiry/definite failure returns a
+  credit once; uncertain delivery retains its reservation.
+- Show remaining credits, free price, confirmation and receipt/history labels.
+  Daily quotas, moderation, OTP, provider budgets and demo boundaries still apply.
+-124 backend tests pass on PostgreSQL, followed by14 focused free-credit tests
+  including3 additional failure/constraint cases.14 frontend tests/typecheck pass.
+  Isolated HTTP smoke covers free confirmation and balance without live providers.
+  Mobile375px and desktop1440px UI checks used mocked checkout responses, preserving
+  the user's3 credits. Migration0010 applied locally; Fast Refresh stayed running.
+
 ## 0.8.8 — Daily sending limits and admin test reset
 
 - Both sender/recipient and global recipient cooldowns now default to24 hours;

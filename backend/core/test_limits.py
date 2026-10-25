@@ -135,10 +135,10 @@ class DemoLimitToolTests(TestCase):
         self.assertEqual(DemoLimitReset.objects.count(), 0)
 
     def test_reset_does_not_change_otp_budget_or_requirements(self):
-        from .models import OTPChallenge, SpendBudget, SpendReservation
-        before = (list(OTPChallenge.objects.values()), list(SpendBudget.objects.values()), list(SpendReservation.objects.values()))
+        from .models import Account, OTPChallenge, SpendBudget, SpendReservation
+        before = (list(OTPChallenge.objects.values()), list(SpendBudget.objects.values()), list(SpendReservation.objects.values()), list(Account.objects.values("free_sends_remaining")))
         self.reset()
-        after = (list(OTPChallenge.objects.values()), list(SpendBudget.objects.values()), list(SpendReservation.objects.values()))
+        after = (list(OTPChallenge.objects.values()), list(SpendBudget.objects.values()), list(SpendReservation.objects.values()), list(Account.objects.values("free_sends_remaining")))
         self.assertEqual(before, after)
         anonymous = Client()
         anonymous.get("/api/v1/bootstrap")

@@ -194,6 +194,8 @@ body:has(input:focus,textarea:focus) .mobile-nav { display: none; }
 .home-flow .final-message { margin-block: 12px; padding: 16px; }
 .home-flow .final-message>p { margin-block: 12px; font-size: 14px; line-height: 1.9; }
 .home-flow .preview-info { padding-block: 10px; }
+.free-sends-balance { display: flex; align-items: center; gap: 7px; color: var(--ink); background: var(--pale); border-radius: 14px; padding: 8px 12px; margin-block: 10px; }
+.free-sends-balance svg { flex-shrink: 0; }
 .review-phone-hint { margin-block: 4px 8px; }
 .review-placeholder { display: flex; align-items: center; gap: 10px; padding: 20px 16px; margin-top: 14px; border-radius: 20px; color: var(--muted); background: var(--pale); }
 .review-placeholder p { margin: 0; font-size: 13px; }

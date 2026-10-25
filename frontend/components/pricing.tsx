@@ -3,6 +3,7 @@ import { useApp } from "./app-provider";
 import { toman } from "@/lib/format";
 import { Icon } from "./icons";
 import { ServiceState } from "./feedback";
+import { FreeSendsBalance } from "./free-sends";
 
 export function Pricing() {
   const { data } = useApp();
@@ -11,7 +12,8 @@ export function Pricing() {
       <div>
         <span className="eyebrow">روشن و ساده</span>
         <h2>هزینه هر پیام</h2>
-        <p>پیش‌نمایش رایگانه. مبلغ نهایی رو پیش از پرداخت می‌بینی.</p>
+        <p>۳ ارسال اول هدیهٔ ماست؛ یک‌بار برای هر شمارهٔ تأییدشده. بعدش هر پیام با هزینهٔ زیره.</p>
+        <FreeSendsBalance />
       </div>
       <div className="price-amount">
         {data ? (

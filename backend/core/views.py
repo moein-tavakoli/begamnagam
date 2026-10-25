@@ -78,6 +78,8 @@ def bootstrap(request):
         "price_toman": settings.PRICE_TOMAN, "categories": [c for c in CATEGORIES if not settings.PILOT_POSITIVE_ONLY or c["id"] in {"appreciation", "encouragement", "congratulations"}], "rewrite_mode": settings.AI_MODE, "payment_backend": settings.PAYMENT_BACKEND, "support_contact": settings.SUPPORT_CONTACT,
         "otp_is_real": otp_is_real()}
     if authenticated:
+        data["free_sends_remaining"] = request.user.account.free_sends_remaining
+        data["free_sends_total"] = 3
         data["recent_auth"] = timezone.now().timestamp() - request.session.get("phone_verified_at", 0) <= 300
         data["session_identity"] = digest("session-identity:" + request.session.session_key)
         data["phone_masked"] = request.user.account.phone_masked
@@ -232,14 +234,15 @@ def preview(request):
     if len(full_sms.encode("utf-16-le")) // 2 > 201:
         raise APIError("message_too_long", "متن نهایی بیش از سه بخش پیامک است؛ موضوع دیگری انتخاب کن.", 422)
     expires_at = timezone.now() + timedelta(minutes=15)
+    is_free = bool(owner and owner.account.free_sends_remaining > 0)
     with transaction.atomic():
         item = Preview.objects.create(owner=owner, session_key=session_key(request), category=category,
-            text=rewritten, full_sms=full_sms, recipient_hash=recipient_hash, terms_version=settings.TERMS_VERSION, moderation_mode=mode, expires_at=expires_at, price_toman=settings.PRICE_TOMAN)
+            text=rewritten, full_sms=full_sms, recipient_hash=recipient_hash, terms_version=settings.TERMS_VERSION, moderation_mode=mode, expires_at=expires_at, is_free=is_free, price_toman=0 if is_free else settings.PRICE_TOMAN)
         if token:
             from .models import RecipientGrant
             RecipientGrant.objects.create(preview=item, token_digest=digest("recipient-token:" + token), recipient_hash=recipient_hash)
     ModerationAudit.objects.create(owner=owner, category=category, outcome="accepted", reason_code=mode, content_digest=digest(str(text)))
-    return {"preview_id": str(item.id), "rewritten_text": item.text, "price_toman": item.price_toman,
+    return {"preview_id": str(item.id), "rewritten_text": item.text, "price_toman": item.price_toman, "is_free": item.is_free,
         "expires_at": expires_at.isoformat(), "moderation_mode": mode, "terms_version": item.terms_version, "full_sms": item.full_sms, "sms_segments": 1 if len(full_sms.encode("utf-16-le")) // 2 <= 70 else (len(full_sms.encode("utf-16-le")) // 2 + 66) // 67}
 
 
@@ -252,6 +255,11 @@ def create_order(request):
 @api(["POST"], authenticated=True)
 def pay_demo(request, order_id):
     return services.serialize_order(services.pay_order(request.user, order_id))
+
+
+@api(["POST"], authenticated=True)
+def confirm_free(request, order_id):
+    return services.serialize_order(services.confirm_free_order(request.user, order_id))
 
 
 @api(["GET"], authenticated=True)

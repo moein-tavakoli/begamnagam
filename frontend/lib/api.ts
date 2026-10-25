@@ -9,6 +9,8 @@ export type Bootstrap = {
   otp_is_real?: boolean;
   authenticated: boolean;
   phone_masked?: string;
+  free_sends_remaining?: number;
+  free_sends_total?: number;
   price_toman: number;
   categories: Category[];
   rewrite_mode: string;
@@ -18,6 +20,7 @@ export type Bootstrap = {
   session_identity?: string;
 };
 export type Preview = {
+  is_free?: boolean;
   preview_id: string;
   terms_version?: string;
   rewritten_text: string;
@@ -28,6 +31,7 @@ export type Preview = {
   moderation_mode: string;
 };
 export type Order = {
+  is_free?: boolean;
   id: string;
   status: string;
   amount_toman: number;

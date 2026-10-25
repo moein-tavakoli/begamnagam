@@ -29,6 +29,8 @@ def begin_payment(user, order_id, key):
         order = Order.objects.select_for_update().filter(id=order_id, owner=user).first()
         if not order:
             raise APIError('not_found', 'درخواست پیدا نشد.', 404)
+        if order.is_free:
+            raise APIError('free_order_requires_no_payment', 'سفارش رایگان به درگاه پرداخت نیاز ندارد.', 409)
         if order.paid_at:
             return {'order_id': str(order.id), 'paid': True}
         attempt = order.payment_attempts.order_by('-created_at').first()

@@ -1,11 +1,13 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { Icon } from "@/components/icons";
-export const metadata: Metadata = { title: "حریم خصوصی و قوانین" };
+import { StructuredData } from "@/components/structured-data";
+import { pageJsonLd, publicMetadata } from "@/lib/seo";
+export const metadata = publicMetadata("/privacy");
 
 export default function PrivacyPage() {
   return (
     <div className="document-page policy-page wrap">
+      <StructuredData data={pageJsonLd("/privacy")} />
       <Link className="back-link" href="/">
         بازگشت به خانه <Icon name="arrow" size={16} />
       </Link>
@@ -58,7 +60,7 @@ export default function PrivacyPage() {
           <h2>کنترل در دست گیرنده است</h2>
           <p>
             گیرنده با لینک داخل پیامک، بدون ساخت حساب می‌تونه دریافت را متوقف یا پیام را گزارش کنه. دارنده لینک این اختیار را دارد؛ لینک را برای دیگران نفرست. برای مدیریت شماره خودش هم در{" "}
-            <Link href="/preferences">صفحه قطع دریافت</Link> می‌تونه پیام‌های
+            <Link href="/preferences" prefetch={false}>صفحه قطع دریافت</Link> می‌تونه پیام‌های
             بعدی سرویس رو برای همه فرستنده‌ها متوقف کنه؛ فعال‌سازی دوباره به تأیید تازه شماره نیاز داره. تلاش برای دورزدن این
             انتخاب مجاز نیست. سرویس هیچ امکان چت، پاسخ مستقیم، دیدن هویت طرف
             مقابل یا نمایش خوانده‌شدن پیام نداره.
@@ -69,7 +71,7 @@ export default function PrivacyPage() {
           <p>
             مبلغ پیش از تأیید سفارش نمایش داده می‌شه. پرداخت آزمایشی وجهی دریافت
             نمی‌کنه. ثبت در صف به معنی تحویل قطعی به دستگاه یا خواندن پیام نیست.
-            وضعیت درخواست در بخش <Link href="/history">پیام‌های من</Link> قابل
+            وضعیت درخواست در بخش <Link href="/history" prefetch={false}>پیام‌های من</Link> قابل
             بررسیه.
           </p>
         </section>
@@ -91,7 +93,7 @@ export default function PrivacyPage() {
       <div className="document-cta">
         <Icon name="shield" size={28} />
         <p>حق دریافت‌نکردن، بخشی از احترامه.</p>
-        <Link href="/preferences" className="button secondary">
+        <Link href="/preferences" prefetch={false} className="button secondary">
           مدیریت دریافت پیام
         </Link>
       </div>

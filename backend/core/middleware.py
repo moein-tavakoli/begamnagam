@@ -1,7 +1,27 @@
 import logging
+import ipaddress
 import uuid
+from django.conf import settings
 from django.http import JsonResponse
 from django.utils.deprecation import MiddlewareMixin
+
+
+class TrustedProxyClientIP(MiddlewareMixin):
+    def process_request(self, request):
+        peer = request.META.get("REMOTE_ADDR", "")
+        trusted = getattr(settings, "TRUSTED_CLIENT_PROXY_IPS", set())
+        request.META.pop("HTTP_X_VERIFIED_CLIENT_IP", None)
+        chain = request.META.get("HTTP_X_FORWARDED_FOR", "")
+        if peer not in trusted or not chain or len(chain) > 2048:
+            return
+        try:
+            addresses = [str(ipaddress.ip_address(part.strip())) for part in chain.split(",")]
+        except ValueError:
+            return
+        for address in reversed(addresses):
+            if address not in trusted:
+                request.META["REMOTE_ADDR"] = address
+                break
 
 
 class PrivateResponses(MiddlewareMixin):

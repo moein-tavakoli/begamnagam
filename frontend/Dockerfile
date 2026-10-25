@@ -7,7 +7,10 @@ FROM node:24-alpine AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1 BUILD_STANDALONE=1
 ARG INTERNAL_API_URL=http://backend:8000
-ENV INTERNAL_API_URL=$INTERNAL_API_URL
+ARG APP_BASE_URL=http://localhost:3000
+ARG SEO_INDEXABLE=0
+# Public metadata, robots and sitemap are generated for this origin at build time.
+ENV INTERNAL_API_URL=$INTERNAL_API_URL APP_BASE_URL=$APP_BASE_URL SEO_INDEXABLE=$SEO_INDEXABLE
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build

@@ -37,7 +37,8 @@ def endpoint(base, path, allowed_hosts, *, otp=False):
         if (not settings.DEMO_MODE or mode != 'disabled' or settings.LIVE_PROVIDERS_ENABLED
                 or settings.OTP_BACKEND != 'kavenegar' or settings.SMS_BACKEND != 'console'
                 or settings.PAYMENT_BACKEND != 'demo'
-                or not local_otp_origin_allowed(settings.APP_BASE_URL, settings.INTERNAL_DEMO_HOST)
+                or not local_otp_origin_allowed(settings.APP_BASE_URL, settings.INTERNAL_DEMO_HOST,
+                    settings.PUBLIC_DEMO_HOST if settings.TRUST_DOMAIN_PROXY else "")
                 or base != 'https://api.kavenegar.com'
                 or not re.fullmatch(r'/v1/[A-Za-z0-9_-]{1,256}/(?:sms/send|verify/lookup)\.json', path)):
             raise ProviderDisabled('local_real_otp_scope_violation')

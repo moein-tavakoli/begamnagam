@@ -29,15 +29,40 @@ x-app: &app
 
 services:
   proxy:
-    image: ${PROXY_IMAGE:-caddy:2-alpine}
+    image: ${TRAEFIK_IMAGE:-traefik:v3.7.13}
+    command:
+      - --global.checknewversion=false
+      - --global.sendanonymoususage=false
+      - --entrypoints.web.address=${INTERNAL_DEMO_HOST}:80
+      - --entrypoints.web.forwardedheaders.trustedips=${CENTRAL_NGINX_IP:-127.0.0.1}/32
+      - --entrypoints.websecure.address=${INTERNAL_DEMO_HOST}:443
+      - --entrypoints.websecure.forwardedheaders.trustedips=${CENTRAL_NGINX_IP:-127.0.0.1}/32
+      - --entrypoints.health.address=127.0.0.1:8082
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.watch=true
+      - --api.dashboard=false
+      - --ping=true
+      - --ping.entrypoint=health
+      - --log.level=WARN
+      - --accesslog=false
     environment:
       INTERNAL_DEMO_HOST: ${INTERNAL_DEMO_HOST:?Set the private CT address}
+      PUBLIC_DEMO_HOST: ${PUBLIC_DEMO_HOST:-}
+      CENTRAL_NGINX_IP: ${CENTRAL_NGINX_IP:-127.0.0.1}
     network_mode: host
     extra_hosts: *local-hosts
     volumes:
-      - ./deploy/Caddyfile.internal:/etc/caddy/Caddyfile:ro
-      - caddy-data:/data
-      - caddy-config:/config
+      - ./deploy/traefik:/etc/traefik/dynamic:ro
+      - ${INTERNAL_TLS_DIR:?Set the private directory containing tls.crt and tls.key}:/tls:ro
+    read_only: true
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    healthcheck:
+      test: [CMD, wget, -q, --spider, "http://127.0.0.1:8082/ping"]
+      interval: 20s
+      timeout: 5s
+      retries: 6
     restart: unless-stopped
     mem_limit: 64m
     logging: *logging
@@ -154,5 +179,3 @@ volumes:
   postgres-data:
   redis-data:
   rabbitmq-data:
-  caddy-data:
-  caddy-config:

@@ -1,0 +1,88 @@
+# Dynamic file provider only; Go templates are expanded by Traefik.
+{{ $ct := env "INTERNAL_DEMO_HOST" }}
+{{ $public := env "PUBLIC_DEMO_HOST" }}
+{{ $edge := env "CENTRAL_NGINX_IP" }}
+http:
+  routers:
+    internal-redirect:
+      entryPoints: [web]
+      rule: 'Host(`{{ $ct }}`)'
+      middlewares: [internal-https]
+      service: noop@internal
+    internal-api:
+      entryPoints: [websecure]
+      rule: 'Host(`{{ $ct }}`) && (PathPrefix(`/api/`) || Path(`/admin`) || PathPrefix(`/admin/`) || PathPrefix(`/static/admin/`) || Path(`/healthz`))'
+      priority: 100
+      middlewares: [internal-headers]
+      service: backend
+      tls: {}
+    internal-web:
+      entryPoints: [websecure]
+      rule: 'Host(`{{ $ct }}`)'
+      priority: 10
+      middlewares: [internal-headers]
+      service: frontend
+      tls: {}
+{{ if $public }}
+    domain-api:
+      entryPoints: [web]
+      rule: 'Host(`{{ $public }}`) && (PathPrefix(`/api/`) || Path(`/admin`) || PathPrefix(`/admin/`) || PathPrefix(`/static/admin/`) || Path(`/healthz`))'
+      priority: 100
+      middlewares: [edge-only, domain-headers]
+      service: backend
+    domain-web:
+      entryPoints: [web]
+      rule: 'Host(`{{ $public }}`)'
+      priority: 10
+      middlewares: [edge-only, domain-headers]
+      service: frontend
+{{ end }}
+  middlewares:
+    internal-https:
+      redirectScheme:
+        scheme: https
+        permanent: true
+    internal-headers:
+      headers:
+        customRequestHeaders:
+          X-Forwarded-Proto: https
+          X-Forwarded-Host: '{{ $ct }}'
+          Forwarded: ''
+          X-Verified-Client-IP: ''
+          X-Real-IP: ''
+{{ if $public }}
+    edge-only:
+      ipAllowList:
+        # Match the socket peer, never a client-supplied forwarding header.
+        sourceRange: ['{{ $edge }}/32', '{{ $ct }}/32', '127.0.0.1/32', '::1/128']
+    domain-headers:
+      headers:
+        customRequestHeaders:
+          Host: '{{ $public }}'
+          X-Forwarded-Proto: https
+          X-Forwarded-Host: '{{ $public }}'
+          Forwarded: ''
+          X-Verified-Client-IP: ''
+          X-Real-IP: ''
+{{ end }}
+  services:
+    backend:
+      loadBalancer:
+        servers: [{url: 'http://backend:8000'}]
+        passHostHeader: true
+    frontend:
+      loadBalancer:
+        servers: [{url: 'http://frontend:3000'}]
+        passHostHeader: true
+tls:
+  certificates:
+    - certFile: /tls/tls.crt
+      keyFile: /tls/tls.key
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /tls/tls.crt
+        keyFile: /tls/tls.key
+  options:
+    default:
+      minVersion: VersionTLS12

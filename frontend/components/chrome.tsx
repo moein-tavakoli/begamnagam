@@ -28,7 +28,7 @@ export function Header() {
       <nav className="main-nav" aria-label="منوی اصلی">
         <Link href="/help#how-it-works">چطور کار می‌کنه؟</Link>
         <Link href="/help">راهنما و هزینه</Link>
-        <Link href="/history" className="nav-account">
+        <Link href="/history" prefetch={false} className="nav-account">
           <Icon name="receipt" size={18} /> پیام‌های من
         </Link>
       </nav>
@@ -50,10 +50,10 @@ export function Footer() {
           بیایید با هم مهربون‌تر حرف بزنیم.
         </div>
         <nav aria-label="پیوندهای پایین صفحه">
-          <Link href="/preferences">قطع دریافت پیام</Link>
+          <Link href="/preferences" prefetch={false}>قطع دریافت پیام</Link>
           <Link href="/privacy">حریم خصوصی و قوانین</Link>
           <Link href="/help">راهنمای استفاده</Link>
-          <a href="/admin/">ورود مدیر سیستم</a>
+          <a href="/admin/" rel="nofollow">ورود مدیر سیستم</a>
         </nav>
       </div>
       <div className="wrap footer-bottom">
@@ -73,5 +73,5 @@ export function MobileNav() {
     {href:"/history", label:"پیام‌های من", icon:"receipt" as const},
     {href:"/preferences", label:"دریافت پیام", icon:"shield" as const},
   ];
-  return <nav className="mobile-nav" aria-label="دسترسی سریع موبایل">{links.map(item => <Link key={item.href} href={item.href} aria-current={path === item.href ? "page" : undefined}><Icon name={item.icon} size={21}/><span>{item.label}</span></Link>)}</nav>;
+  return <nav className="mobile-nav" aria-label="دسترسی سریع موبایل">{links.map(item => <Link key={item.href} href={item.href} prefetch={item.href === "/" ? undefined : false} aria-current={path === item.href ? "page" : undefined}><Icon name={item.icon} size={21}/><span>{item.label}</span></Link>)}</nav>;
 }

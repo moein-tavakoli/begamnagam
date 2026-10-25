@@ -1,12 +1,15 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { Icon } from "@/components/icons";
 import { Pricing } from "@/components/pricing";
-export const metadata: Metadata = { title: "راهنما و هزینه" };
+import { StructuredData } from "@/components/structured-data";
+import { helpQuestions } from "@/lib/help-content";
+import { pageJsonLd, publicMetadata } from "@/lib/seo";
+export const metadata = publicMetadata("/help");
 
 export default function HelpPage() {
   return (
     <div className="document-page wrap">
+      <StructuredData data={pageJsonLd("/help", helpQuestions)} />
       <Link className="back-link" href="/">
         بازگشت به خانه <Icon name="arrow" size={16} />
       </Link>
@@ -58,57 +61,15 @@ export default function HelpPage() {
       </section>
       <section className="faq-section">
         <h2>سؤال‌هایی که ممکنه داشته باشی</h2>
-        <details>
-          <summary>گیرنده می‌فهمه پیام از طرف کیه؟</summary>
-          <p>
-            اسم و شماره فرستنده در پیام گیرنده نمایش داده نمی‌شه. سرویس برای
-            کنترل سوءاستفاده، شماره تأییدشده فرستنده و سوابق درخواست رو نگه
-            می‌داره. ناشناس‌بودن برای گیرنده، به معنی ناشناس‌بودن برای سرویس
-            نیست.
-          </p>
-        </details>
-        <details>
-          <summary>می‌شه به پیام پاسخ داد؟</summary>
-          <p>
-            خیر. بگم نگم گفت‌وگو، چت، پروفایل عمومی یا راه ارتباط مستقیم بین دو
-            نفر نداره.
-          </p>
-        </details>
-        <details>
-          <summary>هوش مصنوعی دقیقاً چه کاری می‌کنه؟</summary>
-          <p>
-            در حالت پایه، منظور شما به متن آمادهٔ بررسی‌شده تبدیل می‌شه. اگر مدل
-            زبانی فعال باشه، فقط به انتخاب از میان متن‌های بررسی‌شده کمک می‌کنه.
-            متن آزاد مدل مستقیماً برای گیرنده ارسال نمی‌شه. همیشه متن نهایی رو
-            قبل از ادامه می‌بینی.
-          </p>
-        </details>
-        <details>
-          <summary>اگر پیام نخواستم، چطور دریافت رو قطع کنم؟</summary>
-          <p>
-            در <Link href="/preferences">صفحه قطع دریافت</Link> شماره خودت رو
-            تأیید کن و دریافت تمام پیام‌های سرویس رو متوقف کن. همین‌جا می‌تونی
-            دوباره فعالش کنی.
-          </p>
-        </details>
-        <details>
-          <summary>وضعیت ارسال یعنی پیام خونده شده؟</summary>
-          <p>
-            خیر. وضعیت صف یا ارسال، وضعیت پردازش سیستم و سرویس پیامکی رو نشون
-            می‌ده؛ تأیید نمی‌کنه که کسی پیام رو دیده یا خونده.
-          </p>
-        </details>
-        <details>
-          <summary>نسخه آزمایشی پیامک واقعی می‌فرسته؟</summary>
-          <p>
-            در حالت آزمایشی، کد ورود با برچسب «کد ورود آزمایشی» در صفحه نمایش
-            داده می‌شه و پرداخت و ارسال شبیه‌سازی می‌شن. هیچ پولی کسر نمی‌شه و
-            پیامکی ارسال نمی‌شه.
-          </p>
-        </details>
+        {helpQuestions.map(faq => (
+          <details key={faq.question}>
+            <summary>{faq.question}</summary>
+            <p>{faq.answer}{"link" in faq && <> <Link href={faq.link.href} prefetch={false}>{faq.link.label}</Link></>}</p>
+          </details>
+        ))}
       </section>
       <div className="document-cta">
-        <p>یک حرف کوچک، با نیت خوب داری؟</p>
+        <p>پیش از نوشتن پیام، <Link href="/privacy">حریم خصوصی و قوانین استفاده</Link> رو مرور کن.</p>
         <Link href="/#compose" className="button primary">
           نوشتن پیام <Icon name="arrow" size={18} />
         </Link>

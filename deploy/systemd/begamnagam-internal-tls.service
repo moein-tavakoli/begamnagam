@@ -1,0 +1,9 @@
+[Unit]
+Description=Renew Begamnagam private-IP certificate for Traefik
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/begamnagam/current/scripts/renew-internal-tls.py --in-docker
+UMask=0077

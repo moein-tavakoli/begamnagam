@@ -135,6 +135,8 @@ services:
       context: ./frontend
       args:
         INTERNAL_API_URL: http://backend:8000
+        APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3000}
+        SEO_INDEXABLE: ${SEO_INDEXABLE:-0}
     environment:
       INTERNAL_API_URL: http://backend:8000
       NODE_ENV: production

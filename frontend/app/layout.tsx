@@ -8,8 +8,10 @@ import { AppProvider } from "@/components/app-provider";
 import { Header, Footer, MobileNav } from "@/components/chrome";
 
 import { PWAFoundation } from "@/components/pwa-foundation";
+import { getSeoConfig } from "@/lib/seo";
 
 export const metadata: Metadata = {
+  metadataBase: getSeoConfig().baseUrl,
   title: {
     default: "بگم نگم | حرفت رو مهربون‌تر برسون",
     template: "%s | بگم نگم",
@@ -20,6 +22,8 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }, { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }], apple: "/icons/apple-touch-icon.png" },
   appleWebApp: { capable: true, statusBarStyle: "default", title: "بگم نگم" },
+  referrer: "no-referrer",
+  formatDetection: { telephone: false },
   robots: { index: false, follow: false },
 };
 export const viewport: Viewport = {

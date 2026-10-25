@@ -23,7 +23,11 @@ const config: NextConfig = {
   },
   async headers() {
     return [
-      { source: "/r", headers: [{ key: "Cache-Control", value: "no-store" }, { key: "Referrer-Policy", value: "no-referrer" }, { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" }] },
+      { source: "/r", headers: [{ key: "Cache-Control", value: "no-store" }, { key: "Referrer-Policy", value: "no-referrer" }] },
+      ...["/r", "/history", "/preferences", "/api/:path*", "/admin/:path*", "/offline.html"].map(source => ({
+        source,
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow, noarchive, nosnippet" }],
+      })),
       { source: "/sw.js", headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }, { key: "Service-Worker-Allowed", value: "/" }] },
       { source: "/offline.html", headers: [{ key: "Cache-Control", value: "no-cache" }] },
       {

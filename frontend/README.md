@@ -19,6 +19,18 @@ The client only requests the same-origin `/api/v1` path. The Next rewrite forwar
 
 Local builds use the normal Next server for `npm start`. The Docker builder sets `BUILD_STANDALONE=1`, copies the traced standalone server plus static assets, and runs it directly as a non-root user.
 
+## SEO configuration
+
+Public pages (`/`, `/help`, `/privacy`) have Persian metadata, canonical URLs, social previews and JSON-LD. Open Graph and Twitter share the local 1200×630 asset at `/images/social-card.png`. History, recipient settings/token links, admin/API paths and the offline page stay excluded from indexing. JSON-LD contains public descriptive content only; it must never include phone numbers, recipient tokens, private messages or unverified ratings/prices.
+
+`APP_BASE_URL` is the single origin for canonical, social and structured-data URLs and the sitemap; its local fallback is `http://localhost:3000`. `SEO_INDEXABLE=0` is the default for local demo, private CT and staging: pages declare `noindex` and the sitemap contains no URLs. Robots allows HTML crawling so crawlers can observe `noindex`; API/admin paths are disallowed. Only an approved public release with a real public HTTPS origin may use `SEO_INDEXABLE=1`. This setting does not enable real SMS, payments or deployment.
+
+The confirmed public origin is `https://begamnagam.ir` (without `www`), recorded in `deploy/release.env.example`. Use it as `APP_BASE_URL` when building the public frontend image; native development and the private CT retain their local/internal origins and default `noindex` policy.
+
+For native `make dev-ui` / `npm run dev`, copy `.env.example` to `.env.local` **inside `frontend/`**, or export the two variables before starting the process. Next does not automatically load the repository root's Compose `.env` from this app. Restart the development process once after changing environment configuration; source edits continue through Fast Refresh.
+
+**Rebuild after changing `APP_BASE_URL` or `SEO_INDEXABLE`:** this app generates metadata, robots and sitemap during the frontend build. The Docker builder accepts both as build arguments, and `compose.yaml` forwards them from the root `.env`. Prebuilt images in `compose.release.yaml` / `compose.internal.yaml` must already have the correct values baked in: changing their runtime env file or restarting the container is insufficient. See [SEO operations](../docs/seo.md) for image build arguments and validation before publication.
+
 ```sh
 npm test
 npm run typecheck
@@ -51,7 +63,7 @@ No delivery status implies that the recipient opened or read a message. `deliver
 
 ## Validation scope
 
-The built-in Node tests cover Persian/Arabic/international phone normalization, rejection of malformed numbers, pending-status handling, CSRF and idempotency headers, API moderation errors, and offline/non-JSON proxy failures. Run the real browser journey against Django in addition to these tests when changing composition or authentication.
+The built-in Node tests cover Persian/Arabic/international phone normalization, rejection of malformed numbers, pending-status handling, CSRF and idempotency headers, API moderation errors, offline/non-JSON proxy failures, and SEO URL/indexing rules. Run the real browser journey against Django in addition to these tests when changing composition or authentication.
 
 The initial implementation was also checked in a real browser against PostgreSQL, Redis, RabbitMQ, and an independent Celery worker: preview → Persian-number OTP → explicit order → demo payment → asynchronous `delivered_demo` → masked history. Stop/resume persisted through reload, logout cleared the private history, rejected content focused an error and recovered after correction, and an unavailable bootstrap disabled sending until retry succeeded. Layout checks found no horizontal overflow at 375×812, 768×1024, and 812×375; reduced motion disabled smooth scrolling. `/admin/` reached Django's login page through the same-origin proxy without a redirect loop.
 

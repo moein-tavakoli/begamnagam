@@ -52,7 +52,13 @@ npm ci
 npm run dev
 ```
 
-سپس رابط روی `http://localhost:3000` است. `frontend/.env.example` تنظیم `INTERNAL_API_URL` را توضیح می‌دهد. در dev پس از تغییر مقصد API، dev server را یک بار restart کنید. در خروجی standalone، rewrite هنگام build ثبت می‌شود؛ بعد از تغییر مقصد API دوباره build کنید. برای تست PostgreSQL و RabbitMQ از Compose استفاده کنید.
+سپس رابط روی `http://localhost:3000` است. `frontend/.env.example` تنظیم `INTERNAL_API_URL` و متغیرهای SEO را توضیح می‌دهد. برای اجرای نیتیو، نمونه را به `frontend/.env.local` کپی کنید یا متغیرهای لازم را در محیط همان پردازش export کنید؛ `make dev-ui` فایل `.env` ریشهٔ Compose را خودکار وارد محیط Next نمی‌کند. در dev پس از تغییر تنظیم محیط، dev server را یک بار restart کنید. در خروجی standalone، rewrite و خروجی SEO هنگام build ثبت می‌شوند؛ بعد از تغییر مقصد API، `APP_BASE_URL` یا `SEO_INDEXABLE` دوباره frontend را build کنید. برای تست PostgreSQL و RabbitMQ از Compose استفاده کنید.
+
+## تنظیم SEO و انتشار
+
+`APP_BASE_URL` مبدأ یکتای canonical، Open Graph، JSON-LD و sitemap فرانت و نشانی لینک‌های گیرنده در بک‌اند است؛ این دو بخش باید یک مبدأ هماهنگ داشته باشند. `SEO_INDEXABLE=0` پیش‌فرض است: demo محلی، CT خصوصی و staging باید `noindex` بمانند و sitemap خالی باشد. robots خواندن HTML را مجاز می‌گذارد تا crawler بتواند `noindex` را ببیند؛ مسیرهای API/admin منع می‌شوند. فقط پس از مجوز انتشار عمومی، با دامنهٔ واقعی HTTPS، مقدار۱ مجاز است؛ این متغیر هیچ provider یا استقراری را فعال نمی‌کند.
+
+Compose توسعه هر دو مقدار را هنگام ساخت image فرانت می‌فرستد. در Compose داخلی/انتشار که image آماده می‌گیرد، باید همان image با build argهای درست ساخته شده باشد؛ تغییر `.env.internal` / `.env.release` در زمان اجرا، metadata، robots و sitemap آماده را اصلاح نمی‌کند. برای دستور ساخت و بررسی مسیرهای عمومی/خصوصی، [راهنمای SEO](seo.md) را دنبال کنید. این بررسی انتشار جدا از حلقهٔ روزمرهٔ Hot Reload است.
 
 ## تنظیمات مهم
 
@@ -72,7 +78,8 @@ npm run dev
 | `DEMO_TEST_TOOLS_ENABLED` | پیش‌فرض۰؛ ابزار ادمین برای ریست شمارش سفارش آزمایشی با ثبت سابقه |
 | `AI_MODE` | `template` یا `ollama`؛ هیچ حالت ارسال متن آزاد ندارد |
 | `OLLAMA_URL`, `OLLAMA_MODEL` | مقصد و نام مدل محلی، فقط برای حالت اختیاری |
-| `APP_BASE_URL` | نشانی عمومی محلی برای لینک تنظیمات گیرنده |
+| `APP_BASE_URL` | مبدأ لینک تنظیمات گیرنده و URLهای SEO فرانت؛ پیش‌فرض محلی، در فرانت هنگام build ثبت می‌شود |
+| `SEO_INDEXABLE` | پیش‌فرض۰؛ فقط انتشار عمومیِ مجاز با HTTPS واقعی می‌تواند۱ باشد؛ تغییر آن به build دوبارهٔ فرانت نیاز دارد |
 | `KAVENEGAR_API_KEY` | کلید خصوصی پنل کاوه‌نگار؛ در `.env` ریشه، فقط سمت سرور |
 | `KAVENEGAR_SENDER` | شماره خط ارسال تأییدشدهٔ کاوه‌نگار |
 | `KAVENEGAR_OTP_MODE` | پیش‌فرض `sms`: ارسال عادی کد؛ `lookup`: استفاده از الگوی تأییدشده |
@@ -146,6 +153,7 @@ Celery با صف‌های event/control از نوع exclusive و پیام‌ها
 | پیام دوم پذیرفته نمی‌شود | سقف فرستنده و فاصله گیرنده؛ API علت خصوصی گیرنده را اعلام نمی‌کند |
 | `migrate` ناموفق است | log همان سرویس و سلامت PostgreSQL؛ backend تا موفقیت migration شروع نمی‌شود |
 | تغییر مقصد API اثر ندارد | build دوبارهٔ frontend؛ rewrite در build ثبت شده است |
+| canonical یا robots دامنه/حالت قبلی را دارد | `APP_BASE_URL` و `SEO_INDEXABLE` را هنگام build فرانت اصلاح کنید؛ تغییر env زمان اجرای image آماده کافی نیست |
 | پس از تعویض رمز DB اتصال قطع است | رمز role موجود داخل volume خودکار با تغییر env عوض نمی‌شود؛ از راه تغییر رمز DB با حفظ داده استفاده کنید |
 | `address pools have been fully subnetted` یا تداخل subnet | شبکهٔ پروژه صریح تنظیم شده است؛ در صورت تداخل با شبکه یا VPN خود، `DOCKER_SUBNET` را به یک محدودهٔ خصوصی آزاد تغییر دهید |
 

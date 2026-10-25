@@ -1,5 +1,16 @@
 # Versions
 
+## 0.8.13 — Short SMS opt-out links
+
+- Print the SMS URL without its scheme and issue unique random eight-character
+  alphanumeric fragment codes; preserve existing43-character links and snapshots.
+- Retry collisions transactionally and fail closed; reserve expired delivered
+  code digests after clearing recipient links to prevent reassignment.
+- Add a per-IP recipient-action limit alongside session/token limits and CSRF.
+- HTTPS settings and frontend stay unchanged; no new migration or provider activation.
+-151 PostgreSQL tests pass, including collision rollback, expiry, legacy links
+  and per-IP guessing limits.
+
 ## 0.8.12 — Per-account test sending and respectful direct tone
 
 - Add independently permissioned, audited account checkboxes for unlimited demo

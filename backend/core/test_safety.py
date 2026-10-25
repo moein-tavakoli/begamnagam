@@ -32,8 +32,10 @@ class RecipientSafetyTests(TestCase):
         with self.captureOnCommitCallbacks(execute=True):
             self.post('/orders/'+self.o['id']+'/pay-demo')
 
-    def test_bound_quote_has_256_bit_fragment_capability_and_encrypted_snapshot(self):
-        self.assertEqual(len(self.token), 43)
+    def test_bound_quote_has_short_fragment_capability_and_encrypted_snapshot(self):
+        self.assertRegex(self.token, r'^[A-Za-z0-9]{8}$')
+        self.assertNotIn('https://', self.quote['full_sms'])
+        self.assertNotIn('http://', self.quote['full_sms'])
         self.assertEqual(RecipientGrant.objects.get().token_digest, digest('recipient-token:'+self.token))
         with connection.cursor() as cursor:
             cursor.execute('SELECT full_sms FROM core_order WHERE id=%s', [self.o['id']])

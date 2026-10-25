@@ -41,7 +41,9 @@ class Command(BaseCommand):
                 reports.update(details='')
                 Preview.objects.filter(expires_at__lt=now-timedelta(days=1)).update(session_key='')
                 for expired in RecipientGrant.objects.filter(stop_expires_at__lt=now).exclude(recipient_hash='').iterator(chunk_size=200):
-                    RecipientGrant.objects.filter(pk=expired.pk).update(recipient_hash='', token_digest='expired:'+str(expired.pk))
+                    # Keep only the opaque digest reserved: a printed short code
+                    # must never be reassigned to another recipient after expiry.
+                    RecipientGrant.objects.filter(pk=expired.pk).update(recipient_hash='')
                 ModerationAudit.objects.filter(created_at__lt=now-timedelta(days=30)).delete()
                 OperatorAudit.objects.filter(created_at__lt=now-timedelta(days=180)).delete()
                 # An active stop survives account/content cleanup, including forever

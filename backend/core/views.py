@@ -233,18 +233,21 @@ def preview(request):
         recipient_hash = digest(normalize_phone(data["recipient_phone"]))
         if recipient_hash == owner.account.phone_hash:
             raise APIError("recipient_unavailable", "ارسال به این شماره اکنون ممکن نیست.", 422)
-    token = secrets.token_urlsafe(32) if recipient_hash else ""
-    full_sms = rewritten + "\nبگم نگم | لغو: " + settings.APP_BASE_URL + ("/r#" + token if token else "/preferences")
-    if len(full_sms.encode("utf-16-le")) // 2 > 201:
-        raise APIError("message_too_long", "متن نهایی بیش از سه بخش پیامک است؛ موضوع دیگری انتخاب کن.", 422)
     expires_at = timezone.now() + timedelta(minutes=15)
     is_free = bool(owner and owner.account.free_sends_remaining > 0)
     with transaction.atomic():
         item = Preview.objects.create(owner=owner, session_key=session_key(request), category=category,
-            text=rewritten, full_sms=full_sms, recipient_hash=recipient_hash, terms_version=settings.TERMS_VERSION, moderation_mode=mode, expires_at=expires_at, is_free=is_free, price_toman=0 if is_free else settings.PRICE_TOMAN)
-        if token:
-            from .models import RecipientGrant
-            RecipientGrant.objects.create(preview=item, token_digest=digest("recipient-token:" + token), recipient_hash=recipient_hash)
+            text=rewritten, recipient_hash=recipient_hash, terms_version=settings.TERMS_VERSION, moderation_mode=mode, expires_at=expires_at, is_free=is_free, price_toman=0 if is_free else settings.PRICE_TOMAN)
+        token = ""
+        if recipient_hash:
+            from .recipient import issue_grant
+            token = issue_grant(item, recipient_hash)
+        sms_origin = settings.APP_BASE_URL.removeprefix("https://").removeprefix("http://")
+        full_sms = rewritten + "\nبگم نگم | لغو: " + sms_origin + ("/r#" + token if token else "/preferences")
+        if len(full_sms.encode("utf-16-le")) // 2 > 201:
+            raise APIError("message_too_long", "متن نهایی بیش از سه بخش پیامک است؛ موضوع دیگری انتخاب کن.", 422)
+        item.full_sms = full_sms
+        item.save(update_fields=["full_sms"])
     ModerationAudit.objects.create(owner=owner, category=category, outcome="accepted", reason_code=mode + ("_direct" if direct else ""), content_digest=digest(str(text)))
     return {"preview_id": str(item.id), "rewritten_text": item.text, "price_toman": item.price_toman, "is_free": item.is_free,
         "message_tone": "direct" if direct else "gentle",
@@ -342,6 +345,7 @@ def recipient_action(request, action):
     token = data.get('token')
     # Token is in JSON only, never request paths/query/access logs.
     limited('recipient-action-session', session_key(request), 30, 600)
+    limited('recipient-action-ip', request.META.get('REMOTE_ADDR', 'unknown'), 120, 600)
     limited('recipient-action-token', digest(str(token)[:100]), 30, 600)
     if action == 'inspect': return recipient.inspect(token)
     if action == 'stop': return recipient.stop(token)

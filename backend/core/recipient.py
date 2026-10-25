@@ -1,10 +1,35 @@
 import re
+import secrets
+import string
 from datetime import timedelta
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 from .models import RecipientGrant, RecipientState, AbuseReport
 from .privacy import digest
 from .services import APIError
+
+
+def generate_short_code():
+    return ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(8))
+
+
+def issue_grant(preview, recipient_hash):
+    # A uniqueness constraint arbitrates collisions across concurrent workers.
+    # Savepoints keep a rare collision from poisoning the enclosing preview tx.
+    for _ in range(5):
+        token = generate_short_code()
+        token_digest = digest('recipient-token:' + token)
+        try:
+            with transaction.atomic():
+                RecipientGrant.objects.create(preview=preview, token_digest=token_digest,
+                                              recipient_hash=recipient_hash)
+        except IntegrityError:
+            if (not RecipientGrant.objects.filter(token_digest=token_digest).exists()
+                    or RecipientGrant.objects.filter(preview=preview).exists()):
+                raise
+        else:
+            return token
+    raise APIError('link_generation_unavailable', 'ساخت لینک موقتاً ممکن نیست؛ دوباره تلاش کنید.', 503)
 
 
 def activate_grant(order):
@@ -14,7 +39,8 @@ def activate_grant(order):
 
 
 def lookup_grant(token, *, report=False, lock=False):
-    if not isinstance(token, str) or not re.fullmatch(r'[A-Za-z0-9_-]{43}', token):
+    # Old message snapshots keep their original 256-bit capabilities.
+    if not isinstance(token, str) or not re.fullmatch(r'(?:[A-Za-z0-9]{8}|[A-Za-z0-9_-]{43})', token):
         raise APIError('link_unavailable', 'این لینک فعال نیست یا مهلتش تمام شده است.', 404)
     query = RecipientGrant.objects.select_for_update() if lock else RecipientGrant.objects
     grant = query.filter(token_digest=digest('recipient-token:' + token), activated_at__isnull=False).first()

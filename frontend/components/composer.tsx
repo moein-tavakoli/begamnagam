@@ -13,6 +13,7 @@ import {
 } from "@/lib/api";
 import {
   isPending,
+  latinDigits,
   normalizePhone,
   statusLabel,
   toman,
@@ -32,7 +33,7 @@ const categoryIcons: Record<string, IconName> = {
   encouragement: "leaf",
   congratulations: "sparkle",
 };
-const stepLabels = ["حرفت رو بنویس", "شماره گیرنده", "متن نهایی", "تأیید و ارسال"];
+const stepLabels = ["حرفت رو بنویس", "شماره گیرنده", "متن نهایی و ارسال"];
 
 export function Composer({ onExit }: { onExit?: () => void }) {
   const { data, reload } = useApp();
@@ -124,7 +125,11 @@ export function Composer({ onExit }: { onExit?: () => void }) {
     setError("");
     setFields({});
     if (!data?.authenticated) { setError("اول شماره خودت رو تأیید کن."); return; }
-    if (!validPhone(recipient)) { setError("شماره گیرنده را درست وارد کن."); return; }
+    if (!validPhone(recipient)) {
+      setFields({ recipient_phone: "شماره موبایل گیرنده را با ۰۹ و ۱۱ رقم وارد کن." });
+      document.getElementById("quote-recipient")?.focus();
+      return;
+    }
     if (text.trim().length < 3) {
       setFields({
         text: "حرفت را در حداقل ۳ حرف بنویس یا از مثال موضوع استفاده کن.",
@@ -139,6 +144,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
         body: { category, text: text.trim(), recipient_phone: normalizePhone(recipient) },
       });
       setPreview(result);
+      setConsent(false);
       setStep(2);
       idempotencyKey.current = "";
     } catch (error) {
@@ -156,7 +162,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
       setFields({
         recipient_phone: "شماره موبایل گیرنده را با ۰۹ و ۱۱ رقم وارد کن.",
       });
-      document.getElementById("recipient-phone")?.focus();
+      document.getElementById("quote-recipient")?.focus();
       return;
     }
     if (!consent) {
@@ -165,26 +171,32 @@ export function Composer({ onExit }: { onExit?: () => void }) {
       return;
     }
     if (!preview || !data?.authenticated) return;
-    if (Date.parse(preview.expires_at) <= Date.now()) {
+    if (!order && Date.parse(preview.expires_at) <= Date.now()) {
       setError(
-        "مهلت پیش‌نمایش تمام شده. به مرحله قبل برگرد و متن نهایی را دوباره بساز.",
+        "مهلت پیش‌نمایش تمام شده. شماره یا متن را ویرایش کن تا پیش‌نمایش تازه ساخته شود.",
       );
       return;
     }
     setBusy(true);
     try {
-      if (!idempotencyKey.current)
-        idempotencyKey.current = createIdempotencyKey();
-      const result = await api<Order>("/orders", {
-        method: "POST",
-        body: {
-          preview_id: preview.preview_id,
-          recipient_phone: normalizePhone(recipient),
-          consent, terms_version: preview.terms_version,
-        },
-        idempotencyKey: idempotencyKey.current,
-      });
-      setOrder(result);
+      let currentOrder = order;
+      if (!currentOrder) {
+        if (!idempotencyKey.current)
+          idempotencyKey.current = createIdempotencyKey();
+        currentOrder = await api<Order>("/orders", {
+          method: "POST",
+          body: {
+            preview_id: preview.preview_id,
+            recipient_phone: normalizePhone(recipient),
+            consent, terms_version: preview.terms_version,
+          },
+          idempotencyKey: idempotencyKey.current,
+        });
+        setOrder(currentOrder);
+      }
+      // Continue the same reviewed order on a retry, without another confirmation screen.
+      if (["awaiting_payment", "pending_payment", "created"].includes(currentOrder.status))
+        await payOrder(currentOrder);
     } catch (error) {
       handleError(error);
     } finally {
@@ -192,30 +204,22 @@ export function Composer({ onExit }: { onExit?: () => void }) {
     }
   }
 
-  async function payDemo() {
-    if (!order) return;
-    setError("");
-    setBusy(true);
-    try {
-      if (data?.payment_backend === 'zarinpal') {
-        const result = await api<{redirect_url?: string}>(`/orders/${order.id}/payments`, {
-          method: 'POST', body: {}, idempotencyKey: idempotencyKey.current || (idempotencyKey.current = createIdempotencyKey()),
-        });
-        if (result.redirect_url) window.location.assign(approvedPaymentRedirect(result.redirect_url, !!data.demo_mode));
-        else await refreshOrder();
-        return;
-      }
-      const result = await api<Pick<Order, "id" | "status">>(
-        `/orders/${order.id}/pay-demo`,
-        { method: "POST", body: {} },
-      );
-      setOrder({ ...order, ...result });
-    } catch (error) {
-      handleError(error);
-    } finally {
-      setBusy(false);
+  async function payOrder(currentOrder: Order) {
+    if (data?.payment_backend === 'zarinpal') {
+      const result = await api<{redirect_url?: string}>(`/orders/${currentOrder.id}/payments`, {
+        method: 'POST', body: {}, idempotencyKey: idempotencyKey.current || (idempotencyKey.current = createIdempotencyKey()),
+      });
+      if (result.redirect_url) window.location.assign(approvedPaymentRedirect(result.redirect_url, !!data.demo_mode));
+      else setOrder(await api<Order>(`/orders/${currentOrder.id}`));
+      return;
     }
+    const result = await api<Pick<Order, "id" | "status">>(
+      `/orders/${currentOrder.id}/pay-demo`,
+      { method: "POST", body: {} },
+    );
+    setOrder({ ...currentOrder, ...result });
   }
+
 
   async function refreshOrder() {
     if (!order) return;
@@ -251,7 +255,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
       data-update-blocked={!!(step > 0 || text || recipient || order)}
       id="compose"
       className={`compose-section wrap ${!data?.authenticated ? "composer-auth-only" : ""}`}
-      data-screen={awaitingPayment ? "payment" : finished ? "receipt" : step}
+      data-screen={finished ? "receipt" : step}
       aria-labelledby="compose-title"
     >
       <div className="compose-toolbar">
@@ -260,7 +264,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
           <Icon name="arrow" size={20} /><span>قبلی</span>
         </button>
         <h1 id="compose-title" tabIndex={-1} ref={heading}>
-          {awaitingPayment ? "یک نگاه آخر" : finished ? "رسید پیامت" : !data?.authenticated ? "اول شماره خودت رو تأیید کن" : stepLabels[step]}
+          {finished ? "رسید پیامت" : !data?.authenticated ? "اول شماره خودت رو تأیید کن" : stepLabels[step]}
         </h1>
         <span className="flow-page-count">۲ از ۲</span>
       </div>
@@ -287,8 +291,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                       [
                         "موضوع و منظور اصلی",
                         "یک گیرنده آشنا",
-                        "یک لحن محترمانه‌تر",
-                        "تأیید و پرداخت آزمایشی",
+                        "بررسی متن، هزینه و تأیید ارسال",
                       ][index]
                     }
                   </small>
@@ -312,7 +315,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
           <div className="panel-top">
             <span>یک پیام، یک فرصت برای حال بهتر</span>
             <span className="step-count">
-              {new Intl.NumberFormat("fa-IR").format(step + 1)} از ۴
+              {new Intl.NumberFormat("fa-IR").format(step + 1)} از ۳
             </span>
           </div>
           <ServiceState />
@@ -412,13 +415,15 @@ export function Composer({ onExit }: { onExit?: () => void }) {
             <form className="recipient-form" onSubmit={makePreview} noValidate>
               <h2 className="form-heading">به دست چه کسی برسه؟</h2>
               <p className="muted form-intro">شماره کسی رو وارد کن که می‌شناسی. شماره تو به او نمایش داده نمی‌شه.</p>
-              <AuthGate />
+              {!data?.authenticated && <AuthGate />}
               <label htmlFor="quote-recipient">شماره موبایل گیرنده</label>
               <input id="quote-recipient" type="tel" inputMode="tel" dir="ltr"
-                value={recipient} onChange={e => setRecipient(e.target.value)}
+                value={recipient} onChange={e => setRecipient(latinDigits(e.target.value))}
                 autoComplete="off" placeholder="0912 345 6789" disabled={busy}
-                aria-describedby="quote-recipient-hint" />
+                aria-invalid={!!fields.recipient_phone}
+                aria-describedby={`quote-recipient-hint${fields.recipient_phone ? " quote-recipient-error" : ""}`} />
               <p id="quote-recipient-hint" className="small muted">فقط یک شماره موبایل ایران؛ ارسال به خودت مجاز نیست.</p>
+              {fields.recipient_phone && <p className="field-error" id="quote-recipient-error">{fields.recipient_phone}</p>}
               <div className="form-actions">
                 <span className="small muted">قبل از ارسال، متن نهایی و هزینه رو می‌بینی.</span>
                 <BusyButton busy={busy} className="button primary full-width" disabled={!data?.authenticated}>
@@ -428,15 +433,23 @@ export function Composer({ onExit }: { onExit?: () => void }) {
             </form>
           )}
 
-          {step === 2 && preview && (
-            <div>
-              <h2 className="form-heading" tabIndex={-1}>
-                این‌طوری مهربون‌تره.
-              </h2>
+          {step === 2 && preview && !finished && (
+            <form className="review-form" onSubmit={createOrder} noValidate>
+              <h2 className="form-heading">این‌طوری مهربون‌تره.</h2>
               <p className="muted form-intro">
-                این متن به‌جای حرف اولیه‌ات ثبت می‌شه. قبل از ادامه با دقت
-                بخونش.
+                متن، شماره و هزینه رو بررسی و ارسال رو تأیید کن.
               </p>
+              <div className="review-recipient">
+                <div>
+                  <span className="small muted">شماره گیرنده</span>
+                  <bdi>{normalizePhone(recipient)}</bdi>
+                </div>
+                <button className="text-button" type="button" disabled={busy || !!order}
+                  onClick={() => { setStep(1); setConsent(false); setError(""); setFields({}); }}>
+                  ویرایش شماره
+                </button>
+              </div>
+              {fields.recipient_phone && <p className="field-error">{fields.recipient_phone}</p>}
               <div className="final-message">
                 <div className="final-message-header">
                   <Icon name="leaf" size={19} />
@@ -444,172 +457,54 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                 </div>
                 <p>{preview.full_sms || preview.rewritten_text}</p>
                 <div className="final-message-footer">
-                  <Icon name="shield" size={15} /> بدون نمایش شماره فرستنده به
-                  گیرنده
+                  <Icon name="shield" size={15} /> هویت فرستنده پنهانه؛ پاسخ مستقیم فعال نیست.
                 </div>
               </div>
-              <p className="small muted">
-                گیرنده امکان پاسخ یا ارتباط با فرستنده نداره. مدیریت دریافت پیام
-                از صفحه «قطع دریافت» انجام می‌شه.
-              </p>
               <div className="preview-info">
                 <span>
                   <Icon name="sparkle" size={17} />
-                  {preview.moderation_mode === "ollama_curated"
-                    ? "انتخاب متن با کمک هوش مصنوعی"
-                    : "متن آمادهٔ بررسی‌شده"}
+                  {preview.moderation_mode === "ollama_curated" ? "انتخاب با کمک هوش مصنوعی" : "متن آمادهٔ بررسی‌شده"}
                 </span>
                 <span>
-                  هزینه: <b>{toman(preview.price_toman)}</b> · {preview.sms_segments || "—"} بخش پیامک
+                  هزینه: <b>{toman(order?.amount_toman ?? preview.price_toman)}</b> · {preview.sms_segments || "—"} بخش پیامک
                 </span>
               </div>
-              <div className="form-actions">
-                <button className="button ghost" type="button" onClick={() => { setStep(0); setError(""); setFields({}); }}>
-                  اصلاح حرفم
-                </button>
-                <button
-                  className="button primary"
-                  type="button"
-                  onClick={() => {
-                    setStep(3);
-                    setError("");
-                  }}
-                >
-                  خوبه، ادامه می‌دم <Icon name="arrow" size={19} />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {step === 3 && preview && !order && (
-            <div>
-              <h2 className="form-heading" tabIndex={-1}>
-                با خیال راحت تأیید کن.
-              </h2>
-              <p className="muted form-intro">
-                شماره رو با دقت وارد کن؛ گیرنده باید همون کسی باشه که واقعاً
-                می‌شناسی.
-              </p>
-              <form id="recipient-order-form" onSubmit={createOrder} noValidate>
-                <label htmlFor="recipient-phone">شماره موبایل گیرنده</label>
-                <input
-                  id="recipient-phone"
-                  type="tel"
-                  inputMode="tel"
-                  dir="ltr"
-                  autoComplete="off"
-                  readOnly
-                  value={recipient}
-                  onChange={(event) => {
-                    setRecipient(event.target.value);
-                    idempotencyKey.current = "";
-                  }}
-                  placeholder="0912 345 6789"
-                  aria-invalid={!!fields.recipient_phone}
-                  aria-describedby={
-                    fields.recipient_phone
-                      ? "recipient-error"
-                      : "recipient-hint"
-                  }
-                />
-                <p className="small muted" id="recipient-hint">
-                  فقط شماره موبایل ایران. ارسال به شماره خودت مجاز نیست.
-                </p>
-                {fields.recipient_phone && (
-                  <p className="field-error" id="recipient-error">
-                    {fields.recipient_phone}
-                  </p>
-                )}
-              </form>
               <label className="checkbox-label" htmlFor="respect-consent">
-                <input
-                  id="respect-consent"
-                  type="checkbox"
-                  form="recipient-order-form"
-                  checked={consent}
-                  onChange={(event) => setConsent(event.target.checked)}
-                  aria-describedby={
-                    fields.consent ? "consent-error" : undefined
-                  }
-                />
+                <input id="respect-consent" type="checkbox" checked={consent}
+                  disabled={busy || !!order}
+                  onChange={event => setConsent(event.target.checked)}
+                  aria-invalid={!!fields.consent}
+                  aria-describedby={fields.consent ? "consent-error" : undefined} />
                 <span>
-                  این فرد رو می‌شناسم؛ هدفم کمک و یادآوریه، نه تحقیر، تهدید یا
-                  مزاحمت. <Link href="/privacy">قوانین استفاده</Link> رو
-                  می‌پذیرم.
+                  این فرد رو می‌شناسم؛ هدفم کمک و یادآوریه، نه تحقیر، تهدید یا مزاحمت.
+                  {" "}<Link href="/privacy">قوانین استفاده</Link> رو می‌پذیرم.
                 </span>
               </label>
-              {fields.consent && (
-                <p className="field-error" id="consent-error">
-                  {fields.consent}
+              {fields.consent && <p className="field-error" id="consent-error">{fields.consent}</p>}
+              {data?.payment_backend !== "zarinpal" && data?.demo_mode ? (
+                <p className="review-demo-note small">
+                  پرداخت و ارسال به گیرنده آزمایشی‌اند؛ پولی کم نمی‌شه.
+                </p>
+              ) : (
+                <p className="small muted">
+                  {data?.payment_backend === "zarinpal" ? "برای پرداخت به درگاه امن منتقل می‌شی." : "درگاه پرداخت فعلاً فعال نیست."}
                 </p>
               )}
-              <div className="form-actions">
-                <button
-                  className="button ghost"
-                  type="button"
-                  onClick={goBack}
-                  disabled={busy}
-                >
-                  بازگشت
+              {awaitingPayment && (
+                <p className="small muted" role="status">سفارش ثبت شده؛ تلاش دوباره همین پرداخت رو ادامه می‌ده.</p>
+              )}
+              <div className="form-actions review-actions">
+                <button className="button ghost" type="button" disabled={busy || !!order}
+                  onClick={() => { setStep(0); setConsent(false); setError(""); setFields({}); }}>
+                  اصلاح حرفم
                 </button>
-                <BusyButton
-                  type="submit"
-                  form="recipient-order-form"
-                  className="button primary"
-                  busy={busy}
-                  disabled={!data?.authenticated}
-                >
-                  بررسی و پرداخت <Icon name="arrow" size={19} />
+                <BusyButton type="submit" className="button primary" busy={busy}
+                  disabled={!data?.authenticated || (!data.demo_mode && data.payment_backend !== "zarinpal")}>
+                  {awaitingPayment ? "تلاش دوباره برای پرداخت" : data?.payment_backend === "zarinpal" ? "تأیید و پرداخت" : "تأیید و ارسال آزمایشی"}
+                  <Icon name="arrow" size={18} />
                 </BusyButton>
               </div>
-            </div>
-          )}
-
-          {awaitingPayment && order && (
-            <div>
-              <h2 className="form-heading" tabIndex={-1}>
-                یک نگاه آخر، بعد ارسال.
-              </h2>
-              <div className="payment-summary">
-                <div>
-                  <span>شماره گیرنده</span>
-                  <bdi>{normalizePhone(recipient)}</bdi>
-                </div>
-                <div>
-                  <span>متن تأییدشده</span>
-                  <p>{preview?.full_sms || preview?.rewritten_text}</p>
-                </div>
-                <div>
-                  <span>هزینه کل</span>
-                  <strong>{toman(order.amount_toman)}</strong>
-                </div>
-              </div>
-              {data?.payment_backend !== "zarinpal" && data?.demo_mode ? (
-                <div className="demo-payment-note">
-                  <Icon name="info" size={20} />
-                  <p>
-                    این پرداخت آزمایشیه؛ پولی کم نمی‌شه و پیام واقعی به گیرنده نمی‌ره. با
-                    تأیید، صف و وضعیت ارسال رو آزمایش می‌کنی.
-                  </p>
-                </div>
-              ) : (
-                <p className="error-box">
-                  {data?.payment_backend === "zarinpal" ? "برای پرداخت به صفحه امن درگاه منتقل می‌شی؛ بعد از برگشت، وضعیت را در پیام‌های من ببین." : "درگاه پرداخت فعلاً فعال نیست."}
-                </p>
-              )}
-              <BusyButton
-                className="button primary full-width"
-                busy={busy}
-                onClick={payDemo}
-                disabled={!data?.demo_mode && data?.payment_backend !== "zarinpal"}
-              >
-                {data?.payment_backend === "zarinpal" ? "ادامه در درگاه پرداخت" : "تأیید پرداخت آزمایشی و ثبت ارسال"} <Icon name="arrow" size={18} />
-              </BusyButton>
-              <p className="small muted text-center">
-                برای تلاش دوباره، همین پرداخت ادامه پیدا می‌کنه و سفارش تازه
-                ساخته نمی‌شه.
-              </p>
-            </div>
+            </form>
           )}
 
           {finished && order && (

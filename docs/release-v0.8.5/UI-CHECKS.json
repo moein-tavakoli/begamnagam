@@ -1,0 +1,54 @@
+{
+  "version": "0.8.5",
+  "date": "2026-10-25",
+  "viewports": [
+    {
+      "consentPresent": true,
+      "documentOverflow": false,
+      "height": 812,
+      "panelOverflow": false,
+      "reviewPresent": true,
+      "steps": 3,
+      "width": 375
+    },
+    {
+      "consentPresent": true,
+      "documentOverflow": false,
+      "height": 667,
+      "panelOverflow": true,
+      "reviewPresent": true,
+      "steps": 3,
+      "width": 375
+    },
+    {
+      "consentPresent": true,
+      "documentOverflow": true,
+      "height": 900,
+      "panelOverflow": false,
+      "reviewPresent": true,
+      "steps": 3,
+      "width": 1440
+    }
+  ],
+  "fixturesOnlyInScreenshots": true,
+  "flow": {
+    "steps": 3,
+    "verifiedBadgeAbsent": true,
+    "consentRequired": true,
+    "retry": {
+      "createdOrders": 1,
+      "paymentRequests": 2,
+      "sameOrder": true,
+      "demoCaptures": 1,
+      "outbox": 1,
+      "finalStatus": "delivered_demo"
+    }
+  },
+  "numericInputs": {
+    "recipient": "Persian/Arabic mixed digits displayed as Latin",
+    "sender": "Persian/Arabic mixed digits displayed as Latin",
+    "otp": "Leading-zero mixed-script code displayed as 001234; mocked request only"
+  },
+  "externalSmsSentDuringChecks": false,
+  "frontendHotReload": true
+}

@@ -134,7 +134,7 @@ export function AuthGate({
               dir="ltr"
               placeholder="0912 345 6789"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => setPhone(latinDigits(e.target.value))}
               aria-invalid={!!fieldError}
               aria-describedby={fieldError ? "auth-field-error" : undefined}
             />

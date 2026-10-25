@@ -35,6 +35,14 @@ test("invalid recipients are never silently repaired into another number", () =>
   }
 });
 
+test("numeric input preserves leading zeroes and converts mixed Persian/Arabic digits", () => {
+  assert.equal(latinDigits("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩"), "01234567890123456789");
+  assert.equal(latinDigits("۰۰١۲٣۴"), "001234");
+  assert.equal(normalizePhone("+۹۸ (٩١٢) ۳۴۵-٦۷۸۹"), "09123456789");
+  assert.equal(validPhone("۰9١۲۳٤۵۶٧۸۹"), true);
+  assert.equal(validPhone("۰۹۱۲test۳۴۵۶۷۸۹"), false);
+});
+
 test("only pending orders trigger polling and unknown status makes no delivery claim", () => {
   assert.equal(isPending("queued"), true);
   assert.equal(isPending("simulated"), false);

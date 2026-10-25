@@ -190,6 +190,18 @@ body:has(input:focus,textarea:focus) .mobile-nav { display: none; }
 .home-flow .final-message { margin-block: 12px; padding: 16px; }
 .home-flow .final-message>p { margin-block: 12px; font-size: 14px; line-height: 1.9; }
 .home-flow .preview-info { padding-block: 10px; }
+.review-recipient { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.review-recipient>div { display: flex; flex-direction: column; gap: 4px; }
+.review-recipient bdi { font-size: 16px; }
+.review-recipient .text-button { min-height: 44px; }
+.review-demo-note { padding: 8px 12px; border-radius: 14px; background: var(--pale); margin-block: 10px; }
+.review-form .checkbox-label { margin-block: 10px; align-items: flex-start; }
+.review-form .checkbox-label input { flex-shrink: 0; }
+.home-flow .review-form { display: flex; flex-direction: column; min-height: 100%; }
+.home-flow .review-actions { margin-top: auto; padding-top: 8px; flex-wrap: wrap; }
+.home-flow .review-actions .button { min-width: 90px; font-size: 13px; padding-inline: 12px; }
+.home-flow .review-actions .button.primary { flex: 2; }
+.home-flow .review-form .final-message>p { font-size: 13px; line-height: 1.85; }
 .home-flow .payment-summary { margin-block: 12px; padding: 12px 16px; }
 .home-flow .payment-summary>div { padding-block: 10px; }
 .home-flow .demo-payment-note { margin-block: 12px; }

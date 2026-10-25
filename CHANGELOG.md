@@ -1,5 +1,17 @@
 # Versions
 
+## 0.8.5 — Combined final review and numeric inputs
+
+- Removed the sender verification badge from the recipient form; authentication stays required.
+- Convert Persian/Arabic digits to Latin as phone/OTP fields change, preserving leading
+  zeroes and normalized payloads across composer, login and reverification routes.
+- Combined final text, frozen recipient, cost, consent and sending into the third step;
+  removed the separate confirmation/payment screen and continue to the receipt.
+- A failed payment retries the same order. Browser failure injection verified one order,
+  two attempts on the same payment path, one demo capture/outbox and simulated delivery.
+-14 frontend tests/typecheck pass; mobile375×812/375×667 and desktop1440×900 reviewed
+  using hot reload. Evidence screenshots use synthetic data without live capabilities.
+
 ## 0.8.4 — Native OTP TLS failure and diagnostics
 
 - Configured the private native Python runtime to use the system CA bundle;

@@ -1,5 +1,19 @@
 # Versions
 
+## 0.8.15 — Real gift SMS, paid checkout closed
+
+- Add an explicit live gift SMS profile behind the existing trusted HTTPS proxies;
+  keep local demo defaults and the full paid-provider approval requirements.
+- Allow real delivery to all valid recipients, retain moderation, opt-outs,
+  idempotency and bounded spend. Reject stale demo consent and quotes.
+- Close paid order creation, demo payment and gateway access in live gift mode.
+- Restore demo-only gift balances once while halted, with an operator audit;
+  never replay old messages. Update live UI, help and SEO copy.
+- 160 PostgreSQL and24 frontend tests pass; HTTPS/SEO/CSRF routing checks pass.
+  Deployed0.8.15. One authorized real probe was rejected with Kavenegar420
+  (link permission disabled). Order dispatch is paused pending provider approval;
+  OTP remains real, three gifts are preserved and paid checkout stays closed.
+
 ## 0.8.14 — Login OTP for every valid phone number
 
 - Remove the login recipient allowlist from both the API and Kavenegar adapter;

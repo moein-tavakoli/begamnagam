@@ -4,6 +4,7 @@ import Link from "next/link";
 import { version } from "../package.json";
 import { usePathname } from "next/navigation";
 import { Icon } from "./icons";
+import { useApp } from "./app-provider";
 
 export function Brand() {
   return (
@@ -37,6 +38,7 @@ export function Header() {
 }
 
 export function Footer() {
+  const { data } = useApp();
   return (
     <footer className="site-footer">
       <div className="wrap footer-top">
@@ -57,7 +59,7 @@ export function Footer() {
         </nav>
       </div>
       <div className="wrap footer-bottom">
-        <span>بگم نگم · نسخه {version} آزمایشی</span>
+        <span>بگم نگم · نسخه {version}{data?.demo_mode ? " آزمایشی" : ""}</span>
         <span>با احترام، برای بهتر شدن</span>
       </div>
     </footer>

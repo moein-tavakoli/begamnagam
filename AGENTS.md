@@ -17,9 +17,14 @@ do not invent current APIs.
 
 - Demo remains the default. Provider protocol clients are present but network access
   defaults to disabled. External activation requires credentials, contract/refund
-  approval, bounded budget and a pilot allowlist; never infer permission to spend
+  approval, bounded budget and a pilot allowlist for paid activation; never infer permission to spend
   from implementation work. Local contract simulations are not vendor sandbox tests.
   Keep demo labeling explicit; `delivered_demo` is not a real delivery receipt.
+- The user separately authorized live OTP and three real gift SMS per verified
+  account on begamnagam.ir, with paid sends disabled. The explicit
+  `config.live_sms_settings` profile permits all valid recipients, preserves
+  bounded spend/moderation/opt-outs, and does not attest contract or legal approval.
+  Do not activate paid checkout or replay demo orders under this authorization.
 - A separately authorized local real-OTP test may keep `DEMO_MODE=1`, payment demo,
   message delivery console and the general provider network disabled. It requires
   `LOCAL_REAL_OTP_ENABLED`, Kavenegar credentials and positive per-code/daily

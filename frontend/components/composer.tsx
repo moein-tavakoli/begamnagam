@@ -481,7 +481,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
               {fields.consent && <p className="field-error" id="consent-error">{fields.consent}</p>}
               {!isFree && data && (!data.demo_mode || data.payment_backend === "zarinpal") && (
                 <p className="small muted">
-                  {data?.payment_backend === "zarinpal" ? "برای پرداخت به درگاه امن منتقل می‌شی." : "درگاه پرداخت فعلاً فعال نیست."}
+                  {data?.payment_backend === "zarinpal" ? "برای پرداخت به درگاه امن منتقل می‌شی." : "۳ ارسال هدیه‌ات تمام شده. ارسال پولی فعلاً بسته است؛ تا فعال‌شدن پرداخت نمی‌تونی پیام تازه بفرستی."}
                 </p>
               )}
               {awaitingPayment && (
@@ -494,7 +494,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                 </button>
                 <BusyButton type="submit" className="button primary" busy={busy}
                   disabled={!data?.authenticated || (!isFree && !data.demo_mode && data.payment_backend !== "zarinpal")}>
-                  {isFree ? (awaitingPayment ? "تلاش دوباره برای ارسال رایگان" : data?.demo_mode ? "ارسال رایگان آزمایشی" : "تأیید و ارسال رایگان") : awaitingPayment ? "تلاش دوباره برای پرداخت" : data?.payment_backend === "zarinpal" ? "تأیید و پرداخت" : "تأیید و ارسال آزمایشی"}
+                  {isFree ? (awaitingPayment ? "تلاش دوباره برای ارسال رایگان" : data?.demo_mode ? "ارسال رایگان آزمایشی" : "تأیید و ارسال رایگان") : !data?.demo_mode && data?.payment_backend === "disabled" ? "ارسال پولی فعلاً بسته است" : awaitingPayment ? "تلاش دوباره برای پرداخت" : data?.payment_backend === "zarinpal" ? "تأیید و پرداخت" : "تأیید و ارسال آزمایشی"}
                   <Icon name="arrow" size={18} />
                 </BusyButton>
               </div>

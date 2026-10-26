@@ -1,0 +1,362 @@
+{
+  "version": "0.8.15",
+  "result": "DEPLOYED_PROVIDER_BLOCKED",
+  "origin": "https://begamnagam.ir",
+  "target": "192.168.1.123",
+  "current_release": "/opt/begamnagam/releases/0.8.15",
+  "previous_release": "/opt/begamnagam/releases/0.8.14",
+  "backup": "/opt/begamnagam/backups/live-gifts-20261026T090353Z",
+  "database_backup": "/opt/begamnagam/backups/live-gifts-20261026T090353Z/database.sql.fernet",
+  "backend_postgresql_tests": {
+    "passed": 160,
+    "isolated_database": true,
+    "redis_database": 15,
+    "transport": "synthetic"
+  },
+  "frontend_tests": {
+    "passed": 24,
+    "typecheck": "PASS",
+    "release_build": "PASS",
+    "mobile_width": 375,
+    "desktop_width": 1440,
+    "ui_transport": "mocked"
+  },
+  "migration_consistency": "PASS_NO_CHANGES",
+  "acceptance": {
+    "result": "PASS",
+    "real_sms_sent": 0,
+    "transport": "mocked",
+    "diagnostic_data_rolled_back": true,
+    "real_profile": true,
+    "real_otp_login": true,
+    "real_gift_dispatch": true,
+    "csrf": true,
+    "idempotency": true,
+    "paid_checkout_closed": true,
+    "daily_budget_rial": 100000,
+    "sms_ceiling_rial": 20000
+  },
+  "routing": {
+    "origin": "https://begamnagam.ir",
+    "connect_ip": "192.168.1.6",
+    "tls_verification": true,
+    "routes": [
+      {
+        "path": "/",
+        "method": "GET",
+        "status": 200,
+        "bytes": 25089
+      },
+      {
+        "path": "/_next/static/chunks/0cz1d0mv5g_q7.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 112594
+      },
+      {
+        "path": "/_next/static/chunks/1x6obpmlu1_c2.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 5361
+      },
+      {
+        "path": "/_next/static/chunks/21v2_j1h0d25r.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 29494
+      },
+      {
+        "path": "/_next/static/chunks/2r4s4h5xul1n-.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 28739
+      },
+      {
+        "path": "/_next/static/chunks/3nn3hutqgrfib.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 34899
+      },
+      {
+        "path": "/_next/static/chunks/3re08s0g8bvb9.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 168238
+      },
+      {
+        "path": "/_next/static/chunks/3wbm-994r45kr.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 229820
+      },
+      {
+        "path": "/_next/static/chunks/44aeho67r3qb8.css",
+        "method": "GET",
+        "status": 200,
+        "bytes": 35331
+      },
+      {
+        "path": "/_next/static/chunks/turbopack-3-ry682tkyiqk.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 10030
+      },
+      {
+        "path": "/history",
+        "method": "GET",
+        "status": 200,
+        "bytes": 14398
+      },
+      {
+        "path": "/preferences",
+        "method": "GET",
+        "status": 200,
+        "bytes": 14938
+      },
+      {
+        "path": "/help",
+        "method": "GET",
+        "status": 200,
+        "bytes": 38226
+      },
+      {
+        "path": "/api/v1/bootstrap",
+        "method": "GET",
+        "status": 200,
+        "bytes": 940
+      },
+      {
+        "path": "/sitemap.xml",
+        "method": "GET",
+        "status": 200,
+        "bytes": 262
+      },
+      {
+        "path": "/robots.txt",
+        "method": "GET",
+        "status": 200,
+        "bytes": 126
+      },
+      {
+        "path": "/healthz",
+        "method": "GET",
+        "status": 200,
+        "bytes": 57
+      },
+      {
+        "path": "/api/v1/messages",
+        "method": "GET",
+        "status": 401,
+        "bytes": 115
+      },
+      {
+        "path": "/api/v1/preferences",
+        "method": "GET",
+        "status": 401,
+        "bytes": 115
+      },
+      {
+        "path": "/api/v1/does-not-exist",
+        "method": "GET",
+        "status": 404,
+        "bytes": 78
+      },
+      {
+        "path": "/admin",
+        "method": "GET",
+        "status": 301,
+        "bytes": 0
+      },
+      {
+        "path": "/admin/",
+        "method": "GET",
+        "status": 302,
+        "bytes": 0
+      },
+      {
+        "path": "/admin/login/?next=/admin/",
+        "method": "GET",
+        "status": 200,
+        "bytes": 4422
+      },
+      {
+        "path": "/static/admin/css/base.css",
+        "method": "GET",
+        "status": 200,
+        "bytes": 22120
+      },
+      {
+        "path": "/sw.js",
+        "method": "GET",
+        "status": 200,
+        "bytes": 2683
+      },
+      {
+        "path": "/manifest.webmanifest",
+        "method": "GET",
+        "status": 200,
+        "bytes": 702
+      },
+      {
+        "path": "/offline.html",
+        "method": "GET",
+        "status": 200,
+        "bytes": 1626
+      },
+      {
+        "path": "/api/v1/auth/request-otp",
+        "method": "POST",
+        "status": 403,
+        "bytes": 146
+      },
+      {
+        "path": "/api/v1/auth/request-otp",
+        "method": "POST",
+        "status": 400,
+        "bytes": 120
+      },
+      {
+        "path": "/api/v1/auth/request-otp",
+        "method": "POST",
+        "status": 403,
+        "bytes": 146
+      }
+    ],
+    "checks": {
+      "html_and_assets": true,
+      "live_gifts_and_public_seo": true,
+      "routes_and_pwa_files": true,
+      "secure_host_only_cookies": true,
+      "csrf_and_https_origin": true
+    },
+    "result": "PASS",
+    "real_sms_sent": 0,
+    "payments_created": 0
+  },
+  "unchanged_data_containers": {
+    "begamnagam-internal-postgres-1": true,
+    "begamnagam-internal-redis-1": true,
+    "begamnagam-internal-rabbitmq-1": true
+  },
+  "final": {
+    "at_utc": "2026-10-26T09:29:33.216244+00:00",
+    "state": {
+      "demo_mode": false,
+      "otp_is_real": true,
+      "payment_backend": "disabled",
+      "order_sms_paused": true,
+      "provider_block": "kavenegar_420_link_permission",
+      "accounts": 10,
+      "accounts_with_three_gifts": 10,
+      "gift_balances_restored": 7,
+      "demo_cooldowns_cleared": 8,
+      "historical_demo_orders": 13,
+      "real_product_deliveries": 0,
+      "budget_limit_rial": 100000,
+      "budget_reserved_rial": 40000
+    },
+    "containers": [
+      {
+        "name": "begamnagam-internal-frontend-1",
+        "image": "begamnagam-internal/frontend:0.8.15",
+        "image_id": "sha256:664292fabc2af6ea6458a34ec2d053637f5daec702183999b83541d5c7c16f3d",
+        "health": "healthy",
+        "restart_count": 0
+      },
+      {
+        "name": "begamnagam-internal-proxy-1",
+        "image": "traefik:v3.7.13",
+        "image_id": "sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0",
+        "health": "healthy",
+        "restart_count": 0
+      },
+      {
+        "name": "begamnagam-internal-beat-1",
+        "image": "begamnagam-internal/backend:0.8.15",
+        "image_id": "sha256:878cb6358d8e72c492abe9a50def4aeaf890381f72ae602c8e5f7213328806ae",
+        "health": null,
+        "restart_count": 0
+      },
+      {
+        "name": "begamnagam-internal-worker-1",
+        "image": "begamnagam-internal/backend:0.8.15",
+        "image_id": "sha256:878cb6358d8e72c492abe9a50def4aeaf890381f72ae602c8e5f7213328806ae",
+        "health": null,
+        "restart_count": 0
+      },
+      {
+        "name": "begamnagam-internal-backend-1",
+        "image": "begamnagam-internal/backend:0.8.15",
+        "image_id": "sha256:878cb6358d8e72c492abe9a50def4aeaf890381f72ae602c8e5f7213328806ae",
+        "health": "healthy",
+        "restart_count": 0
+      },
+      {
+        "name": "begamnagam-internal-postgres-1",
+        "image": "postgres:17-alpine",
+        "image_id": "sha256:e4cb93687b062cd25a0e8f672d85a7708235009d70d31f8a7698d9370092a9c4",
+        "health": "healthy",
+        "restart_count": 0
+      },
+      {
+        "name": "begamnagam-internal-redis-1",
+        "image": "redis:7.4-alpine",
+        "image_id": "sha256:1db42ccef14898aa29bae778452d567534b59c107129cbc1163fb552de184d3c",
+        "health": "healthy",
+        "restart_count": 0
+      },
+      {
+        "name": "begamnagam-internal-rabbitmq-1",
+        "image": "rabbitmq:4.4-alpine",
+        "image_id": "sha256:2225c65600dbdd89d7d0a8e2ed386b1d0b32817a3c97ab6ef621ac33056bec27",
+        "health": "healthy",
+        "restart_count": 0
+      }
+    ]
+  },
+  "runtime_source_sha256": {
+    "backend/config/internal_settings.py": "1a2e0cdd73478854fce971e6046f80ca18b9bcd6b2ebb6e6cb120f86f81ccde7",
+    "backend/config/settings.py": "7ead00a758c740e15608548196248cc4117224a0c9c361da7ea7444caff00140",
+    "backend/core/provider_delivery.py": "d24fa7eae8fbf5b8ec43007f91e27f0ab28e6ba76bb55a2bfd2bd9e5d774f235",
+    "backend/core/providers/http.py": "3c9f3ffc30c0e53a41781e7fb8876a842ddd7dc61b9747a806b7a48eb4bb2475",
+    "backend/core/services.py": "31ccce4a600468ab20b9e6fdb1c01bbc668701db055f7362e3eb958775be9c8b",
+    "backend/core/test_safety.py": "6eb51e5a037e12ff7453544009d9101b596c60707e0b0d331a5fbf0137fbeb59",
+    "frontend/app/privacy/page.tsx": "9eead4aa06208cef20fce675e69a5ff122299279d83405ebc42e7689f3c6c528",
+    "frontend/components/chrome.tsx": "85af71286b425c2f9141247d953ff30792bdd7ea3544cc3c7418b6427ef0c3de",
+    "frontend/components/composer.tsx": "8c19846540f576b5ec86f9930d05168d88e91ef11046894a8ece3a115f7e720b",
+    "frontend/components/pricing.tsx": "bfad55744a2e638d06bd3e848748d803faec8775a1fe1646f598b4669064afe3",
+    "frontend/lib/help-content.ts": "fef29c38c79ad15b6567cc1eed2efc92a02e46e1cb1d455e67f4b03374faea97",
+    "frontend/lib/seo.ts": "ecebd89794007aeed5c6d3904f3523ca10c8f1b182a9cc235a355d8534654228",
+    "frontend/package-lock.json": "45c6fd7d04e0798b319358110006c2a40cc57a95ae9e657afbacf3b1d18cf15e",
+    "frontend/package.json": "10f3fd318e9a8fff461fe7cdfaf8216c7d6f3d709b053943cf83be58de4c76f9",
+    "frontend/public/images/social-card.png": "f8ca85f9827278da2d74bab6e592b8885beb0cae606c40fb603124f6f6009f17",
+    "frontend/public/images/social-card.svg": "88c7654b2d93f773e1906fec5a9d2ad151707def1ed7c8a2b0a6eb8b450c5d0e",
+    "backend/config/live_sms_settings.py": "116407bfb94cf41cbe6defbd343ec7718659f56320bc49ba94ce54a1cfe434c8",
+    "backend/config/trusted_proxy_settings.py": "3c9eb83c3e1ff64adc8ba53142bbd2f91997f27f707929af2c3db53a1c87ef6d",
+    "backend/core/management/commands/launch_live_gifts.py": "080947b306824da08d356f4e597d7007b6a9e3af86a8f9a0b1c847edb9ab9add",
+    "backend/core/test_live_sms.py": "97c4958bed701f957550b13375cef237ede8e673d58a7a090a1fac95bd3fed02"
+  },
+  "real_sms_probe": {
+    "probe_id": "d687813e-bf13-4bbc-8ffa-92058f97d561",
+    "status": "failed",
+    "new_submission": true,
+    "cost_rial": null,
+    "sms_segments": 3,
+    "error_code": "sms_rejected_420",
+    "user_gift_credit_consumed": false,
+    "recipient": "user explicitly approved own number",
+    "resubmitted": false
+  },
+  "accepted_sms_by_agent": 0,
+  "sms_submission_attempts_by_agent": 1,
+  "payments_initiated_by_agent": 0,
+  "provider_config": {
+    "resendfailed": "disabled",
+    "debugmode": "disabled",
+    "other_settings_untouched": true
+  },
+  "blocker_reference": "https://kavenegar.com/rest.html",
+  "next_action": "Enable begamnagam.ir link permission with Kavenegar; then acknowledge the alert, resume order dispatch and perform one newly authorized delivery test.",
+  "public_internet_path": "Connection refused from this LAN; routing verified through the existing central Nginx with normal hostname TLS verification.",
+  "git_push": false
+}

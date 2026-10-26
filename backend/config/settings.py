@@ -167,6 +167,9 @@ PROVIDER_DAILY_BUDGET_RIAL = int(os.getenv('PROVIDER_DAILY_BUDGET_RIAL', '0'))
 SMS_MAX_COST_RIAL = int(os.getenv('SMS_MAX_COST_RIAL', '0'))
 OTP_MAX_COST_RIAL = int(os.getenv('OTP_MAX_COST_RIAL', '0'))
 PILOT_RECIPIENT_HASHES = set(filter(None, os.getenv('PILOT_RECIPIENT_HASHES', '').split(',')))
+SMS_RECIPIENT_POLICY = os.getenv('SMS_RECIPIENT_POLICY', 'pilot')
+if SMS_RECIPIENT_POLICY not in {'pilot', 'all'}:
+    raise ImproperlyConfigured('SMS_RECIPIENT_POLICY must be pilot or all')
 OPERATIONS_OWNER = os.getenv('OPERATIONS_OWNER', '')
 PROVIDER_CONTRACT_APPROVED = flag('PROVIDER_CONTRACT_APPROVED')
 REFUND_PROCESS_APPROVED = flag('REFUND_PROCESS_APPROVED')
@@ -192,10 +195,17 @@ if LOCAL_REAL_OTP_ENABLED:
     if KAVENEGAR_OTP_MODE == 'lookup' and not KAVENEGAR_OTP_TEMPLATE:
         raise ImproperlyConfigured('Kavenegar lookup OTP requires an approved template')
 if PROVIDER_NETWORK_MODE == 'external':
-    if DEMO_MODE or not LIVE_PROVIDERS_ENABLED or not OPERATIONS_OWNER or not PROVIDER_CONTRACT_APPROVED or not REFUND_PROCESS_APPROVED:
-        raise ImproperlyConfigured('External providers require non-demo mode, operations/contract/refund approval')
-    if not all([KAVENEGAR_API_KEY, KAVENEGAR_SENDER, ZARINPAL_MERCHANT_ID, PILOT_RECIPIENT_HASHES]):
-        raise ImproperlyConfigured('External providers require credentials and an explicit pilot recipient allowlist')
+    if DEMO_MODE or not LIVE_PROVIDERS_ENABLED or PAYMENT_BACKEND == 'demo':
+        raise ImproperlyConfigured('External providers require explicit non-demo activation')
+    if (SMS_BACKEND == 'kavenegar' or OTP_BACKEND == 'kavenegar') and (
+            not KAVENEGAR_API_KEY or not KAVENEGAR_SENDER or KAVENEGAR_BASE_URL != 'https://api.kavenegar.com'):
+        raise ImproperlyConfigured('Real SMS requires credentials and the official HTTPS Kavenegar endpoint')
+    if SMS_BACKEND == 'kavenegar' and SMS_RECIPIENT_POLICY == 'pilot' and not PILOT_RECIPIENT_HASHES:
+        raise ImproperlyConfigured('Pilot SMS requires an explicit recipient allowlist')
+    if PAYMENT_BACKEND == 'zarinpal' and not all([
+            ZARINPAL_MERCHANT_ID, OPERATIONS_OWNER, PROVIDER_CONTRACT_APPROVED, REFUND_PROCESS_APPROVED,
+            PILOT_RECIPIENT_HASHES, SMS_RECIPIENT_POLICY == 'pilot']):
+        raise ImproperlyConfigured('Paid activation requires merchant credentials and operations/contract/refund pilot approval')
     if OTP_BACKEND == 'kavenegar' and KAVENEGAR_OTP_MODE == 'lookup' and not KAVENEGAR_OTP_TEMPLATE:
         raise ImproperlyConfigured('Kavenegar lookup OTP requires an approved template')
     if min(PROVIDER_DAILY_BUDGET_RIAL, SMS_MAX_COST_RIAL, OTP_MAX_COST_RIAL) <= 0:
@@ -215,7 +225,7 @@ for fallback_key in PHONE_ENCRYPTION_FALLBACK_KEYS:
     except (ValueError, TypeError):
         raise ImproperlyConfigured('Invalid fallback encryption key') from None
 
-if PROVIDER_NETWORK_MODE == 'external' and (not SUPPORT_CONTACT or not flag('TERMS_APPROVED') or not flag('PRIVACY_POLICY_APPROVED')):
+if PROVIDER_NETWORK_MODE == 'external' and PAYMENT_BACKEND == 'zarinpal' and (not SUPPORT_CONTACT or not flag('TERMS_APPROVED') or not flag('PRIVACY_POLICY_APPROVED')):
     raise ImproperlyConfigured('External activation requires support contact and reviewed terms/privacy policy')
 
 CELERY_TASK_DEFAULT_QUEUE = os.getenv('CELERY_TASK_DEFAULT_QUEUE', 'celery')
@@ -224,7 +234,7 @@ BENCHMARK_RUN_ID = os.getenv('BENCHMARK_RUN_ID', '') if DEMO_MODE else ''
 
 TERMS_VERSION = os.getenv('TERMS_VERSION', 'draft-2026-10')
 if len(TERMS_VERSION) > 40 or (PROVIDER_NETWORK_MODE == 'external' and TERMS_VERSION.startswith('draft')):
-    raise ImproperlyConfigured('External checkout requires a reviewed, published terms version')
+    raise ImproperlyConfigured('External sending requires a published terms version')
 if AI_MODE == 'ollama':
     model_endpoint = urlparse(OLLAMA_URL)
     if model_endpoint.hostname not in {'localhost', '127.0.0.1', '::1', 'host.docker.internal', 'ollama'} or model_endpoint.username or model_endpoint.password:

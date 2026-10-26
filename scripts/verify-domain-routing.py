@@ -38,6 +38,7 @@ def main():
     parser.add_argument("--ca-file", help="Optional trusted CA bundle; certificate verification stays enabled")
     parser.add_argument("--admin-credentials", help="Optional private JSON with username/password; never logged")
     parser.add_argument("--product-session", help="Optional private JSON containing a synthetic diagnostic session")
+    parser.add_argument("--expect-live-gifts", action="store_true", help="Expect real SMS/OTP and disabled paid checkout")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     origin = args.base_url.rstrip("/")
@@ -84,10 +85,23 @@ def main():
         request(url.path + ("?" + url.query if url.query else ""))
     results["checks"]["html_and_assets"] = True
     for path in ["/history", "/preferences", "/help"]:
-        page, _ = request(path)
+        page, page_headers = request(path)
         assert len(page) > 1024 and 'lang="fa"' in page.decode(), path
+        if args.expect_live_gifts and path != "/help":
+            assert "noindex" in page_headers.get("X-Robots-Tag", "")
     bootstrap, headers = request("/api/v1/bootstrap")
-    assert json.loads(bootstrap)["demo_mode"] and "no-store" in headers.get("Cache-Control", "")
+    config = json.loads(bootstrap)
+    assert config["demo_mode"] is (not args.expect_live_gifts) and "no-store" in headers.get("Cache-Control", "")
+    if args.expect_live_gifts:
+        assert config["otp_is_real"] and config["payment_backend"] == "disabled"
+        assert any('rel="canonical" href="' + url + '"' in html for url in [origin, origin + '/'])
+        assert 'application/ld+json' in html and 'WebApplication' in html
+        sitemap, _ = request("/sitemap.xml")
+        assert all((origin + path).encode() in sitemap for path in ["/", "/help", "/privacy"])
+        assert b"/history" not in sitemap and b"/preferences" not in sitemap
+        robots, _ = request("/robots.txt")
+        assert ("Sitemap: " + origin + "/sitemap.xml").encode() in robots
+        results["checks"]["live_gifts_and_public_seo"] = True
     request("/healthz")
     request("/api/v1/messages", 401)
     request("/api/v1/preferences", 401)

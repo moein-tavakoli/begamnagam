@@ -49,6 +49,11 @@ def endpoint(base, path, allowed_hosts, *, otp=False):
     elif mode == 'external':
         if settings.DEMO_MODE or not settings.LIVE_PROVIDERS_ENABLED or parsed.scheme != 'https' or parsed.hostname not in allowed_hosts or parsed.port not in {None, 443}:
             raise ProviderDisabled('external_not_activated')
+        if parsed.hostname.endswith('.zarinpal.com') and settings.PAYMENT_BACKEND != 'zarinpal':
+            raise ProviderDisabled('payment_disabled')
+        if parsed.hostname == 'api.kavenegar.com' and (
+                settings.OTP_BACKEND != 'kavenegar' if otp else settings.SMS_BACKEND != 'kavenegar'):
+            raise ProviderDisabled('sms_disabled')
     else:
         raise ProviderDisabled('provider_network_disabled')
     return base.rstrip('/') + path

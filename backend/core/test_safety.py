@@ -218,7 +218,7 @@ class RecipientSafetyTests(TestCase):
 
     def test_external_checkout_records_frozen_terms_consent_and_rejects_missing_consent(self):
         quote = self.post('/messages/preview', {'category':'appreciation','text':'تشکر از تو','recipient_phone':'09901234568'}).json()
-        with override_settings(PROVIDER_NETWORK_MODE='external',TERMS_VERSION='changed-after-quote'):
+        with override_settings(PROVIDER_NETWORK_MODE='external',TERMS_VERSION=quote['terms_version']):
             self.assertEqual(self.order(recipient='09901234568',preview=quote).status_code,422)
             result = self.post('/orders', {'preview_id':quote['preview_id'],'recipient_phone':'09901234568','consent':True,'terms_version':quote['terms_version']}, HTTP_IDEMPOTENCY_KEY=str(uuid.uuid4()))
         self.assertEqual(result.status_code,200)

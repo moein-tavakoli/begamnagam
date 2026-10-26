@@ -128,13 +128,20 @@ def create_order(user, session_key, data, idempotency_key):
         if preview.recipient_hash and preview.recipient_hash != phone_hash:
             raise APIError("quote_recipient_changed", "شماره عوض شده؛ پیش‌نمایش تازه بساز.", 409)
         consent = data.get("consent") is True and data.get("terms_version") == preview.terms_version
+        if settings.PROVIDER_NETWORK_MODE == "external" and preview.terms_version != settings.TERMS_VERSION:
+            raise APIError("preview_expired", "شرایط ارسال تغییر کرده؛ متن نهایی را دوباره آماده کن.", 409)
         if settings.PROVIDER_NETWORK_MODE == "external" and not consent:
             raise APIError("consent_required", "نسخه شرایط و رضایت ارسال را پیش از خرید تأیید کن.", 422)
         if preview.expires_at <= now or Order.objects.filter(preview=preview).exists():
             raise APIError("preview_expired", "پیش‌نمایش منقضی یا استفاده شده است؛ دوباره متن را آماده کنید.", 409)
+        if not preview.is_free and not settings.DEMO_MODE and settings.PAYMENT_BACKEND != "zarinpal":
+            raise APIError("payment_disabled", "۳ ارسال هدیه تمام شده؛ ارسال پولی فعلاً بسته است.", 409)
         from .demo_limits import quota_start, recipient_in_cooldown
         sender_start = quota_start(now, hours=24, sender=user)
-        if not unlimited and Order.objects.filter(owner=user, created_at__gte=sender_start).count() >= settings.SENDER_DAILY_LIMIT:
+        sender_orders = Order.objects.filter(owner=user, created_at__gte=sender_start)
+        if not settings.DEMO_MODE:
+            sender_orders = sender_orders.exclude(status=Order.Status.DELIVERED_DEMO)
+        if not unlimited and sender_orders.count() >= settings.SENDER_DAILY_LIMIT:
             raise APIError("daily_limit", "سقف درخواست‌های روزانه شما تکمیل شده است.", 429)
         RecipientState.objects.get_or_create(phone_hash=phone_hash)
         state = RecipientState.objects.select_for_update().get(phone_hash=phone_hash)
@@ -142,7 +149,10 @@ def create_order(user, session_key, data, idempotency_key):
             models_busy_query(now)
         ).exists()
         pair_start = quota_start(now, hours=settings.SENDER_RECIPIENT_COOLDOWN_HOURS, sender=user, recipient_hash=phone_hash)
-        if not unlimited and Order.objects.filter(owner=user, recipient_hash=phone_hash, status__in=[Order.Status.DELIVERED_DEMO, Order.Status.ACCEPTED, Order.Status.DELIVERED, Order.Status.UNKNOWN],
+        sent_statuses = [Order.Status.ACCEPTED, Order.Status.DELIVERED, Order.Status.UNKNOWN]
+        if settings.DEMO_MODE:
+            sent_statuses.append(Order.Status.DELIVERED_DEMO)
+        if not unlimited and Order.objects.filter(owner=user, recipient_hash=phone_hash, status__in=sent_statuses,
                 updated_at__gte=pair_start).exists():
             raise recipient_unavailable()
         if state.blocked or busy or recipient_in_cooldown(state, now, sender=user):
@@ -261,6 +271,8 @@ def confirm_free_order(user, order_id):
                 and settings.PROVIDER_NETWORK_MODE == "external" and settings.LIVE_PROVIDERS_ENABLED)
         if not demo and not live:
             raise APIError("sms_disabled", "ارسال پیام فعلاً فعال نیست.", 503)
+        if live and (not order.consent_at or order.terms_version != settings.TERMS_VERSION):
+            raise APIError("preview_expired", "شرایط ارسال تغییر کرده؛ متن نهایی را دوباره آماده کن.", 409)
         # paid_at is the existing dispatch authorization timestamp; there is no payment.
         order.paid_at, order.status = timezone.now(), Order.Status.QUEUED
         order.save(update_fields=["paid_at", "status", "updated_at"])

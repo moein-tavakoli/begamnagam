@@ -59,10 +59,6 @@ class Kavenegar:
         return self._result(entry, message_id=message_id or None, local_id=None if message_id else local_id)
 
     def otp(self, *, phone, code):
-        if settings.LOCAL_REAL_OTP_ENABLED:
-            from ..privacy import digest, normalize_phone
-            if digest(normalize_phone(phone)) not in settings.OTP_TEST_RECIPIENT_HASHES:
-                raise ProviderRejected('outside_otp_test_allowlist')
         if not isinstance(code, str) or not re.fullmatch(r'[0-9]{6}', code):
             raise ProviderRejected('invalid_otp_code')
         if settings.KAVENEGAR_OTP_MODE == 'sms':

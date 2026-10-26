@@ -27,7 +27,7 @@ def otp_failure_reason(error):
     known = {'tls_certificate_verification_failed', 'provider_connection_failed',
         'daily_budget_exhausted', 'provider_cost_halt', 'cost_ceiling_missing',
         'missing_sms_key', 'invalid_otp_configuration', 'outside_pilot_allowlist',
-        'outside_otp_test_allowlist', 'provider_network_disabled', 'local_real_otp_scope_violation',
+        'provider_network_disabled', 'local_real_otp_scope_violation',
         'http_uncertain', 'transport_or_format', 'sms_unknown_response',
         'sms_ambiguous_entries', 'sms_unbound_response', 'sms_delivery_failed', 'sms_delivery_unknown'}
     if reason in known or (reason.startswith('sms_rejected_') and len(reason) == 16 and reason[-3:].isdigit()):
@@ -105,8 +105,6 @@ def request_otp(request):
     demo_otp = settings.DEMO_MODE and settings.OTP_BACKEND == "demo" and settings.SMS_BACKEND == "console"
     if not demo_otp and settings.OTP_BACKEND != "kavenegar":
         raise APIError("sms_disabled", "ارسال کد فعلاً فعال نیست.", 503)
-    if settings.LOCAL_REAL_OTP_ENABLED and phone_hash not in settings.OTP_TEST_RECIPIENT_HASHES:
-        raise APIError('otp_unavailable', 'ارسال کد فعلاً ممکن نیست؛ کمی بعد تلاش کن.', 503)
     code = f"{secrets.randbelow(1000000):06}"
     challenge_id = uuid.uuid4()
     OTPChallenge.objects.create(id=challenge_id, phone_hash=phone_hash, phone_cipher=encrypt(phone),
@@ -118,8 +116,6 @@ def request_otp(request):
     from .budget import reserve_cost
     delivery_status = 'accepted'
     try:
-        if settings.PROVIDER_NETWORK_MODE == 'external' and phone_hash not in settings.PILOT_RECIPIENT_HASHES:
-            raise ProviderDisabled('outside_pilot_allowlist')
         reserve_cost('otp:' + str(challenge_id), 'otp', settings.OTP_MAX_COST_RIAL)
         result = Kavenegar().otp(phone=phone, code=code)
         from .budget import observe_cost

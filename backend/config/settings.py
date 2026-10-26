@@ -163,7 +163,6 @@ ZARINPAL_MERCHANT_ID = os.getenv('ZARINPAL_MERCHANT_ID', '')
 PROVIDER_ENVIRONMENT = os.getenv('PROVIDER_ENVIRONMENT', 'sandbox')
 OTP_BACKEND = os.getenv('OTP_BACKEND', 'demo' if DEMO_MODE else 'disabled')
 LOCAL_REAL_OTP_ENABLED = flag('LOCAL_REAL_OTP_ENABLED')
-OTP_TEST_RECIPIENT_HASHES = set(filter(None, os.getenv('OTP_TEST_RECIPIENT_HASHES', '').split(',')))
 PROVIDER_DAILY_BUDGET_RIAL = int(os.getenv('PROVIDER_DAILY_BUDGET_RIAL', '0'))
 SMS_MAX_COST_RIAL = int(os.getenv('SMS_MAX_COST_RIAL', '0'))
 OTP_MAX_COST_RIAL = int(os.getenv('OTP_MAX_COST_RIAL', '0'))
@@ -186,10 +185,8 @@ if LOCAL_REAL_OTP_ENABLED:
         raise ImproperlyConfigured('Real test OTP requires an explicitly authorized HTTPS demo origin')
     if KAVENEGAR_BASE_URL != 'https://api.kavenegar.com':
         raise ImproperlyConfigured('Local real OTP requires the official HTTPS Kavenegar endpoint')
-    if not KAVENEGAR_API_KEY or not KAVENEGAR_SENDER or not OTP_TEST_RECIPIENT_HASHES:
-        raise ImproperlyConfigured('Local real OTP requires credentials and an explicit hashed test allowlist')
-    if any(len(value) != 64 or any(c not in '0123456789abcdef' for c in value) for value in OTP_TEST_RECIPIENT_HASHES):
-        raise ImproperlyConfigured('Local real OTP allowlist must contain keyed phone hashes')
+    if not KAVENEGAR_API_KEY or not KAVENEGAR_SENDER:
+        raise ImproperlyConfigured('Real OTP requires Kavenegar credentials and a sender')
     if not 0 < OTP_MAX_COST_RIAL <= PROVIDER_DAILY_BUDGET_RIAL:
         raise ImproperlyConfigured('Local real OTP requires a positive per-code and daily budget')
     if KAVENEGAR_OTP_MODE == 'lookup' and not KAVENEGAR_OTP_TEMPLATE:

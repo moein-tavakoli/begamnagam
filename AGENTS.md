@@ -22,8 +22,9 @@ do not invent current APIs.
   Keep demo labeling explicit; `delivered_demo` is not a real delivery receipt.
 - A separately authorized local real-OTP test may keep `DEMO_MODE=1`, payment demo,
   message delivery console and the general provider network disabled. It requires
-  `LOCAL_REAL_OTP_ENABLED`, Kavenegar credentials, a keyed test-number allowlist
-  and positive per-code/daily budgets. This permission applies only to fixed OTP
+  `LOCAL_REAL_OTP_ENABLED`, Kavenegar credentials and positive per-code/daily
+  budgets. Login OTP accepts all valid phone numbers; do not reintroduce a
+  recipient allowlist for authentication. This permission applies only to fixed OTP
   text and does not activate order SMS, payment providers or public deployment.
 - Recipients must never see sender identity. Sender-facing errors must not expose
   whether a target opted out or has an account. Preferences apply to the verified

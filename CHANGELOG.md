@@ -1,5 +1,16 @@
 # Versions
 
+## 0.8.14 — Login OTP for every valid phone number
+
+- Remove the login recipient allowlist from both the API and Kavenegar adapter;
+  authentication no longer depends on outgoing-message pilot membership.
+- Remove obsolete OTP_TEST_RECIPIENT_HASHES configuration. Keep explicit real-OTP
+  activation, fixed text, per-phone/session limits, CSRF, expiry and spend ceilings.
+- Keep payments and order messages simulated in the deployed demo.
+-153 PostgreSQL tests pass. Deployed backend/worker/beat0.8.14 to the CT;
+  two new-number logins passed with mocked SMS and rolled-back diagnostic data.
+  HTTPS routing/CSRF checks pass; data/frontend containers remain unchanged.
+
 ## 0.8.13 — Short SMS opt-out links
 
 - Print the SMS URL without its scheme and issue unique random eight-character

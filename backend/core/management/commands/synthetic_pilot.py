@@ -28,7 +28,7 @@ class Command(BaseCommand):
         scenarios=[]
         with LocalProviders() as fixture, override_settings(PROVIDER_NETWORK_MODE='local',
             KAVENEGAR_BASE_URL=fixture.url, ZARINPAL_BASE_URL=fixture.url, ZARINPAL_REDIRECT_BASE=fixture.url,
-            KAVENEGAR_API_KEY='synthetic-key', KAVENEGAR_OTP_TEMPLATE='synthetic', ZARINPAL_MERCHANT_ID='synthetic-merchant',
+            KAVENEGAR_API_KEY='synthetic-key', KAVENEGAR_OTP_MODE='lookup', KAVENEGAR_OTP_TEMPLATE='synthetic', ZARINPAL_MERCHANT_ID='synthetic-merchant',
             SMS_BACKEND='kavenegar', OTP_BACKEND='kavenegar', PAYMENT_BACKEND='zarinpal',
             PROVIDER_ENVIRONMENT='sandbox', PROVIDER_DAILY_BUDGET_RIAL=1000000, OTP_MAX_COST_RIAL=500,
             SMS_MAX_COST_RIAL=2000, ALLOWED_HOSTS=['testserver'], SENDING_WINDOW_ENABLED=False,
@@ -88,7 +88,7 @@ class Command(BaseCommand):
 
             public=Client(enforce_csrf_checks=True)
             call(public,'/bootstrap')
-            token=records[0][3]['full_sms'].split('/r#')[1]
+            token=records[0][3]['full_sms'].rsplit('/r/', 1)[1]
             before=call(public,'/recipient/actions/inspect',{'token':token})
             assert set(before)=={'active','can_report'}
             report={'token':token,'reason':'unwanted','details':'گزارش مصنوعی پایلوت محلی'}

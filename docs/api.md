@@ -143,7 +143,7 @@ UI همیشه quote دارای گیرنده می‌سازد. `terms_version` ه�
 
 وضعیت‌های افزوده: `accepted` یعنی پذیرش ارائه‌دهنده، `delivered` یعنی DLR تحویل، `unknown` یعنی نتیجه نیازمند تطبیق. هیچ‌کدام خوانده‌شدن یا هویت گیرنده را ثابت نمی‌کند. پاسخ سفارش، `financial_status` و `delivery_status` مستقل دارد؛ refund باز `refund_pending` و refund تأییدشده `refunded` است. توقف بعد پرداخت، موفقیت دیرهنگام و مبلغ نامطابق به رسیدگی مستقل می‌روند؛ ارسال دوم از حدس نتیجه مجاز نیست. تاریخچه پس از retention متن پاک‌شده را با placeholder نشان می‌دهد.
 
-لینک گیرنده `/r#<capability>` است. متن پیامک از نسخه۰٫۸٫۱۳ به‌شکل `begamnagam.ir/r#A7k2P9xQ` و بدون پیشوند `https://` نمایش داده می‌شود؛ APP_BASE_URL و تنظیمات HTTPS برنامه تغییر نمی‌کنند. fragment به access log نمی‌رود؛ توکن را هرگز در query/path یا analytics ارسال نکنید. ابتدا bootstrap و CSRF دریافت و سپس:
+لینک پیامک تازه از نسخه۰٫۸٫۱۶ به‌شکل `begamnagam.ir/r/A7k2P9xQ` است؛ کد فقط۸حرف انگلیسی و عدد دارد و `#` در متن پیامک نیست. GET/HEAD مسیر `/r/<code>` بدون lookup یا تغییر ترجیحات، با۳۰۷ به `/r#<code>` می‌روند؛ سپس صفحهٔ موجود، کد را با JSON و CSRF ارسال می‌کند. پاسخ redirect و صفحه `no-store`، `no-referrer` و `noindex` دارند. لینک‌های fragment قبلی معتبر می‌مانند و snapshot قدیمی تغییر نمی‌کند. مسیر تازه به proxy می‌رسد؛ پیش از فعال‌سازی باید ثبت URI این مسیر در همهٔ proxyها، access/error log و analytics بسته یا حذف شود. APP_BASE_URL و HTTPS تغییری نمی‌کنند. ابتدا bootstrap و CSRF دریافت و سپس:
 
 | مسیر POST | JSON | خروجی |
 | --- | --- | --- |

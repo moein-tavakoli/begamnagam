@@ -1,5 +1,22 @@
 # Versions
 
+## 0.8.16 — Plain SMS links and eighteen reviewed topics
+
+- Use `begamnagam.ir/r/Ab12Cd34` in fresh SMS previews, keeping eight random
+  alphanumeric characters and compatibility with existing fragment links.
+- Redirect GET/HEAD to the existing recipient screen without lookup or mutation;
+  apply no-store/no-referrer/noindex headers. Require private-path log protection
+  at every proxy before enabling the new format in production.
+- Add eleven topics with reviewed gentle/direct templates; retain moderation,
+  three-segment limits and frozen old snapshots. Expand extra topics with an
+  accessible disclosure, retaining a selected extra topic when collapsed.
+- Deploy0.8.16 with all18 topics enabled on the authorized live site. Protect
+  HTTP/HTTPS recipient paths from Nginx access/error logs, preserve the exact
+  legacy /r route, and verify private paths are absent while public logging works.
+- 163 PostgreSQL tests,25 frontend tests,12 local contract scenarios and33
+  HTTPS route/asset checks pass. Preserve gift balances and spending limits;
+  no real SMS, payment, database migration or Git push during this release.
+
 ## 0.8.15 — Real gift SMS, paid checkout closed
 
 - Add an explicit live gift SMS profile behind the existing trusted HTTPS proxies;

@@ -27,7 +27,7 @@ class PhaseTwoTests(TestCase):
         response = self.order(recipient='09901234568', preview=quote)
         self.assertEqual(response.status_code,409)
         self.assertEqual(Order.objects.count(),0)
-        self.assertIn('/r#',quote['full_sms'])
+        self.assertIn('/r/',quote['full_sms'])
 
     def test_bound_quote_requires_verified_sender(self):
         result=self.post('/messages/preview',{'category':'appreciation','text':'تشکر از تو','recipient_phone':'09901234567'})

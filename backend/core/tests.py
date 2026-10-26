@@ -15,7 +15,7 @@ from django.test import Client, TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 
 from .models import Account, ModerationAudit, OTPChallenge, Order, Outbox, Preview, RecipientState
-from .moderation import ModerationRejected, RewriteUnavailable, TEMPLATES, moderate, normalized, rewrite
+from .moderation import ModerationRejected, RewriteUnavailable, CATEGORIES, TEMPLATES, moderate, normalized, rewrite
 from .privacy import decrypt, digest, encrypt, mask, normalize_phone
 from .services import APIError, create_order, pay_order
 from .tasks import deliver_message, reconcile_outbox
@@ -59,7 +59,7 @@ class APITestCase(TestCase):
         self.assertFalse(response.json()["authenticated"])
         self.assertIn("csrftoken", response.cookies)
         self.assertEqual({item["id"] for item in response.json()["categories"]},
-            {"appreciation", "encouragement", "congratulations", "body", "breath", "noise", "shared_space"})
+            {item["id"] for item in CATEGORIES})
         self.assertEqual(self.client.get("/healthz").json()["status"], "ok")
 
     def test_positive_topics_complete_the_same_reviewed_delivery_flow(self):

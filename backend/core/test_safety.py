@@ -25,14 +25,14 @@ class RecipientSafetyTests(TestCase):
         self.client = Client()
         self.user = self.authenticate()
         self.quote = self.post('/messages/preview', {'category':'appreciation','text':'ممنون از همراهی تو','recipient_phone':'09901234567'}).json()
-        self.token = self.quote['full_sms'].split('/r#')[1]
+        self.token = self.quote['full_sms'].split('/r/')[1]
         self.o = self.order(recipient='09901234567', preview=self.quote).json()
 
     def deliver(self):
         with self.captureOnCommitCallbacks(execute=True):
             self.post('/orders/'+self.o['id']+'/pay-demo')
 
-    def test_bound_quote_has_short_fragment_capability_and_encrypted_snapshot(self):
+    def test_bound_quote_has_short_path_capability_and_encrypted_snapshot(self):
         self.assertRegex(self.token, r'^[A-Za-z0-9]{8}$')
         self.assertNotIn('https://', self.quote['full_sms'])
         self.assertNotIn('http://', self.quote['full_sms'])

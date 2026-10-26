@@ -74,6 +74,7 @@ p { margin-bottom: 16px; }
 fieldset { border: 0; padding: 0; margin: 0 0 23px; min-width: 0; }
 legend,label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 8px; }
 .category-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 9px; }
+.category-toggle { margin-top: 10px; min-height: 44px; width: 100%; }
 .category-card { position: relative; min-width: 0; min-height: 88px; padding: 12px 6px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 9px; border: 1px solid #ddd5e9; background: #fbf9ff; color: #554861; border-radius: 18px; font-size: 11px; transition: background-color 150ms ease; }
 .category-card[data-category="appreciation"] { background: #ffedf0; } .category-card[data-category="encouragement"] { background: #eae2fc; } .category-card[data-category="congratulations"] { background: #fff2c9; }
 .category-card:hover { border-color: #6f548f; } .category-card.selected { border: 2px solid var(--ink); color: var(--ink); box-shadow: 0 3px 0 #201c2918; }

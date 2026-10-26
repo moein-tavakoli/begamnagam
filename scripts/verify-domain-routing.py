@@ -39,6 +39,7 @@ def main():
     parser.add_argument("--admin-credentials", help="Optional private JSON with username/password; never logged")
     parser.add_argument("--product-session", help="Optional private JSON containing a synthetic diagnostic session")
     parser.add_argument("--expect-live-gifts", action="store_true", help="Expect real SMS/OTP and disabled paid checkout")
+    parser.add_argument("--expect-plain-recipient-links", action="store_true", help="Check plain alphanumeric SMS links without using a real recipient code")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     origin = args.base_url.rstrip("/")
@@ -84,6 +85,18 @@ def main():
         assert url.scheme == "https" and url.netloc == parsed.netloc, asset
         request(url.path + ("?" + url.query if url.query else ""))
     results["checks"]["html_and_assets"] = True
+    if args.expect_plain_recipient_links:
+        body, link_headers = request("/r/Ab12Cd34", 307)
+        assert not body and link_headers.get("Location") == "/r#Ab12Cd34"
+        for path, status in [("/r/too-short", 404), ("/r", 200)]:
+            _, private_headers = request(path, status)
+            assert "no-store" in private_headers.get("Cache-Control", "")
+            assert private_headers.get("Referrer-Policy") == "no-referrer"
+            assert "noindex" in private_headers.get("X-Robots-Tag", "")
+        assert "no-store" in link_headers.get("Cache-Control", "")
+        assert link_headers.get("Referrer-Policy") == "no-referrer"
+        assert "noindex" in link_headers.get("X-Robots-Tag", "")
+        results["checks"]["plain_recipient_link_redirect_and_privacy"] = True
     for path in ["/history", "/preferences", "/help"]:
         page, page_headers = request(path)
         assert len(page) > 1024 and 'lang="fa"' in page.decode(), path
@@ -91,6 +104,8 @@ def main():
             assert "noindex" in page_headers.get("X-Robots-Tag", "")
     bootstrap, headers = request("/api/v1/bootstrap")
     config = json.loads(bootstrap)
+    if args.expect_plain_recipient_links:
+        assert len(config["categories"]) == 18
     assert config["demo_mode"] is (not args.expect_live_gifts) and "no-store" in headers.get("Cache-Control", "")
     if args.expect_live_gifts:
         assert config["otp_is_real"] and config["payment_backend"] == "disabled"

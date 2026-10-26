@@ -33,6 +33,17 @@ const categoryIcons: Record<string, IconName> = {
   appreciation: "heart",
   encouragement: "leaf",
   congratulations: "sparkle",
+  punctuality: "clock",
+  listening: "chat",
+  conversation: "chat",
+  personal_space: "shield",
+  phone_etiquette: "phone",
+  neighbor: "space",
+  parking: "space",
+  teamwork: "heart",
+  apology: "heart",
+  good_wishes: "sparkle",
+  environment: "leaf",
 };
 const stepLabels = ["حرفت رو بنویس", "متن نهایی و ارسال"];
 
@@ -41,6 +52,11 @@ export function Composer({ onExit }: { onExit?: () => void }) {
   const [step, setStep] = useState(0);
   const activeStep = Math.min(step, stepLabels.length - 1);
   const [category, setCategory] = useState("appreciation");
+  const [showAllCategories, setShowAllCategories] = useState(false);
+  // Keep the selected topic visible when the extra options are collapsed.
+  const visibleCategories = data?.categories.filter((item, index) =>
+    showAllCategories || index < 7 || item.id === category) ?? [];
+  const hiddenCategoryCount = (data?.categories.length ?? 0) - visibleCategories.length;
   const [text, setText] = useState("");
   const [preview, setPreview] = useState<Preview | null>(null);
   const [recipient, setRecipient] = useState("");
@@ -349,8 +365,8 @@ export function Composer({ onExit }: { onExit?: () => void }) {
               </p>
               <fieldset className="category-fieldset">
                 <legend>موضوع پیام</legend>
-                <div className="category-grid">
-                  {data?.categories.map((item) => (
+                <div className="category-grid" id="message-categories">
+                  {visibleCategories.map((item) => (
                     <button
                       data-category={item.id}
                       className={`category-card ${category === item.id ? "selected" : ""}`}
@@ -375,6 +391,13 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                     </button>
                   ))}
                 </div>
+                {data.categories.length > 7 && (
+                  <button type="button" className="button secondary category-toggle"
+                    aria-expanded={showAllCategories} aria-controls="message-categories"
+                    disabled={busy} onClick={() => setShowAllCategories(value => !value)}>
+                    {showAllCategories ? "نمایش موضوع‌های اصلی" : `${new Intl.NumberFormat("fa-IR").format(hiddenCategoryCount)} موضوع بیشتر`}
+                  </button>
+                )}
                 {data && data.categories.length === 0 && (
                   <p className="field-error">
                     موضوعی برای ارسال فعال نیست؛ لطفاً بعداً مراجعه کن.

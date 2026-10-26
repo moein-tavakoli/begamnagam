@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import config from "../next.config.ts";
+import { GET as recipientRedirect, HEAD as recipientHead } from "../app/r/[code]/route.ts";
 import { helpQuestions } from "../lib/help-content.ts";
 import {
   getSeoConfig,
@@ -215,7 +216,7 @@ test("JSON-LD serialization cannot close its script element and preserves Persia
 test("private, administrative and offline HTTP responses are protected against indexing", async () => {
   assert.ok(config.headers);
   const rules = await config.headers();
-  for (const source of ["/r", "/history", "/preferences", "/api/:path*", "/admin/:path*", "/offline.html"]) {
+  for (const source of ["/r", "/r/:path*", "/history", "/preferences", "/api/:path*", "/admin/:path*", "/offline.html"]) {
     const headers = rules.filter(rule => rule.source === source).flatMap(rule => rule.headers);
     const robots = headers.find(header => header.key.toLowerCase() === "x-robots-tag");
     assert.ok(robots, source);
@@ -225,4 +226,25 @@ test("private, administrative and offline HTTP responses are protected against i
   const recipientHeaders = rules.filter(rule => rule.source === "/r").flatMap(rule => rule.headers);
   assert.ok(recipientHeaders.some(header => header.key === "Cache-Control" && header.value === "no-store"));
   assert.ok(recipientHeaders.some(header => header.key === "Referrer-Policy" && header.value === "no-referrer"));
+});
+
+test("plain SMS links accept only eight English letters or digits and keep the recipient screen private", async () => {
+  const request = new Request('https://begamnagam.ir/r/Ab12Cd34?untrusted=ignored');
+  for (const method of [recipientRedirect, recipientHead]) {
+    const response = await method(request, { params: Promise.resolve({ code: 'Ab12Cd34' }) });
+    assert.equal(response.status, 307);
+    assert.equal(response.headers.get('location'), '/r#Ab12Cd34');
+    assert.ok(response.headers.get('cache-control')?.includes('no-store'));
+    assert.equal(response.headers.get('referrer-policy'), 'no-referrer');
+    assert.ok(response.headers.get('x-robots-tag')?.includes('noindex'));
+    assert.equal(await response.text(), '');
+  }
+  for (const code of ['abc', 'Abcd_123', 'Abcd-123', 'AB۱۲cd34', 'A'.repeat(43), 'Ab12Cd34/extra']) {
+    const response = await recipientRedirect(request, { params: Promise.resolve({ code }) });
+    assert.equal(response.status, 404);
+    assert.equal(response.headers.get('location'), null);
+  }
+  const headers = (await config.headers!()).filter(item => item.source === '/r/:path*').flatMap(item => item.headers);
+  assert.ok(headers.some(item => item.key === 'Cache-Control' && item.value === 'no-store'));
+  assert.ok(headers.some(item => item.key === 'Referrer-Policy' && item.value === 'no-referrer'));
 });

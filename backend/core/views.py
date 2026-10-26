@@ -239,7 +239,7 @@ def preview(request):
             from .recipient import issue_grant
             token = issue_grant(item, recipient_hash)
         sms_origin = settings.APP_BASE_URL.removeprefix("https://").removeprefix("http://")
-        full_sms = rewritten + "\nبگم نگم | لغو: " + sms_origin + ("/r#" + token if token else "/preferences")
+        full_sms = rewritten + "\nبگم نگم | لغو: " + sms_origin + ("/r/" + token if token else "/preferences")
         if len(full_sms.encode("utf-16-le")) // 2 > 201:
             raise APIError("message_too_long", "متن نهایی بیش از سه بخش پیامک است؛ موضوع دیگری انتخاب کن.", 422)
         item.full_sms = full_sms

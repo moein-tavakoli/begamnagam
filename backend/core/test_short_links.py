@@ -41,12 +41,12 @@ class ShortRecipientLinkTests(TestCase):
         self.assertEqual(response.status_code, 200, response.content)
         quote = response.json()
         link = quote['full_sms'].split('لغو: ')[1]
-        self.assertRegex(link, r'^begamnagam\.ir/r#[A-Za-z0-9]{8}$')
-        old_link = 'https://' + link.split('#')[0] + '#' + 'A'*43
+        self.assertRegex(link, r'^begamnagam\.ir/r/[A-Za-z0-9]{8}$')
+        old_link = 'https://begamnagam.ir/r#' + 'A'*43
         self.assertEqual(len(old_link) - len(link), 43)
         self.assertLessEqual(quote['sms_segments'], 3)
         self.deliver(quote)
-        token = link.split('#')[1]
+        token = link.rsplit('/', 1)[1]
         public = Client(enforce_csrf_checks=True)
         public.get('/api/v1/bootstrap')
         headers = {'HTTP_X_CSRFTOKEN': public.cookies['csrftoken'].value}
@@ -60,13 +60,22 @@ class ShortRecipientLinkTests(TestCase):
     def test_existing_long_links_and_frozen_snapshots_remain_valid(self):
         quote = self.quote().json()
         legacy = secrets.token_urlsafe(32)
-        current = quote['full_sms'].split('/r#')[1]
-        old_sms = quote['full_sms'].replace(current, legacy).replace('لغو: ', 'لغو: https://')
+        current = quote['full_sms'].split('/r/')[1]
+        old_sms = quote['full_sms'].replace('/r/'+current, '/r#'+legacy).replace('لغو: ', 'لغو: https://')
         Preview.objects.filter(pk=quote['preview_id']).update(full_sms=old_sms)
         RecipientGrant.objects.filter(preview_id=quote['preview_id']).update(token_digest=digest('recipient-token:'+legacy))
         self.deliver(quote)
         self.assertEqual(self.post('/recipient/actions/stop', {'token': legacy}, Client()).json(), {'blocked': True})
         self.assertEqual(Preview.objects.get(pk=quote['preview_id']).full_sms, old_sms)
+        self.assertEqual(Order.objects.get().full_sms, old_sms)
+
+    def test_existing_short_fragment_links_still_stop_receiving(self):
+        quote = self.quote().json()
+        token = quote['full_sms'].rsplit('/', 1)[1]
+        old_sms = quote['full_sms'].replace('/r/'+token, '/r#'+token)
+        Preview.objects.filter(pk=quote['preview_id']).update(full_sms=old_sms)
+        self.deliver(quote)
+        self.assertEqual(self.post('/recipient/actions/stop', {'token':token}, Client()).json(), {'blocked':True})
         self.assertEqual(Order.objects.get().full_sms, old_sms)
 
     def test_collision_retries_without_replacing_an_existing_grant(self):
@@ -76,7 +85,7 @@ class ShortRecipientLinkTests(TestCase):
         with patch('core.recipient.generate_short_code', side_effect=['AbCd1234', 'XyZ98765']) as generate:
             second = self.quote()
         self.assertEqual(second.status_code, 200, second.content)
-        self.assertTrue(second.json()['full_sms'].endswith('/r#XyZ98765'))
+        self.assertTrue(second.json()['full_sms'].endswith('/r/XyZ98765'))
         self.assertEqual(generate.call_count, 2)
         original.refresh_from_db()
         self.assertEqual(original.token_digest, digest('recipient-token:AbCd1234'))
@@ -92,7 +101,7 @@ class ShortRecipientLinkTests(TestCase):
 
     def test_expired_delivered_codes_are_not_reassigned_after_private_data_cleanup(self):
         quote = self.quote().json()
-        token = quote['full_sms'].split('/r#')[1]
+        token = quote['full_sms'].split('/r/')[1]
         self.deliver(quote)
         RecipientGrant.objects.update(stop_expires_at=timezone.now()-timedelta(days=1),
                                       report_expires_at=timezone.now()-timedelta(days=1))
@@ -103,7 +112,7 @@ class ShortRecipientLinkTests(TestCase):
         with patch('core.recipient.generate_short_code', side_effect=[token, 'Fresh123']):
             response = self.quote()
         self.assertEqual(response.status_code, 200, response.content)
-        self.assertTrue(response.json()['full_sms'].endswith('/r#Fresh123'))
+        self.assertTrue(response.json()['full_sms'].endswith('/r/Fresh123'))
         self.assertEqual(self.post('/recipient/actions/stop', {'token': token}, Client()).status_code, 404)
 
     def test_invalid_lengths_or_symbols_are_rejected_and_rotating_sessions_do_not_skip_ip_limit(self):

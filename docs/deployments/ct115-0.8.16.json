@@ -1,0 +1,216 @@
+{
+  "version": "0.8.16",
+  "at_utc": "2026-10-26T11:30:07.241530+00:00",
+  "current": "/opt/begamnagam/releases/0.8.16",
+  "result": "DEPLOYED",
+  "images": {
+    "BACKEND_IMAGE": "sha256:e83ade3cb66c70093ae7435a07c033772a1e72e07507b7a94d78db4aaf09b520",
+    "FRONTEND_IMAGE": "sha256:7c2f06a101e0b9f203c7ec96787c9f2a2708328be428c00242e3d575275d4b6b"
+  },
+  "containers": [
+    {
+      "name": "begamnagam-internal-proxy-1",
+      "id": "6724b2b454f07622a4b0e981b6b40788b9b4c277ca8ea564069cc28ea945d6e3",
+      "image": "traefik:v3.7.13",
+      "image_id": "sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-beat-1",
+      "id": "0d5adcefceb2979f6dc57e0d03f654cb0ee9368bb2d95faa38a9e03d195650bf",
+      "image": "begamnagam-internal/backend:0.8.16",
+      "image_id": "sha256:e83ade3cb66c70093ae7435a07c033772a1e72e07507b7a94d78db4aaf09b520",
+      "health": null,
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-worker-1",
+      "id": "fdf4e348c10e3e3170b4aa0c3084d17ed603df93127224bb88e01afcc7998442",
+      "image": "begamnagam-internal/backend:0.8.16",
+      "image_id": "sha256:e83ade3cb66c70093ae7435a07c033772a1e72e07507b7a94d78db4aaf09b520",
+      "health": null,
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-frontend-1",
+      "id": "693f7cb70eb9ccfeca09bafcc6464d18600e9b6dcd58da778b3574294982228a",
+      "image": "begamnagam-internal/frontend:0.8.16",
+      "image_id": "sha256:7c2f06a101e0b9f203c7ec96787c9f2a2708328be428c00242e3d575275d4b6b",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-backend-1",
+      "id": "978168ca378c29c268b714c3c50834e77659fe68be5cdbbc816caf17d0f1de11",
+      "image": "begamnagam-internal/backend:0.8.16",
+      "image_id": "sha256:e83ade3cb66c70093ae7435a07c033772a1e72e07507b7a94d78db4aaf09b520",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-postgres-1",
+      "id": "86757705be67d50fc7bb1cf3240cb6687d902ee00747ec50ce434cb4a64c5ada",
+      "image": "postgres:17-alpine",
+      "image_id": "sha256:e4cb93687b062cd25a0e8f672d85a7708235009d70d31f8a7698d9370092a9c4",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-redis-1",
+      "id": "c29a7b9d11346a7723351bc5aa2cd1018c34399f87e703c2905a4213dd06b18f",
+      "image": "redis:7.4-alpine",
+      "image_id": "sha256:1db42ccef14898aa29bae778452d567534b59c107129cbc1163fb552de184d3c",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-rabbitmq-1",
+      "id": "ce5ccc99c6287034e4ed113aff268ef62a2bcd2cda33b2a82bdaf097301f8c59",
+      "image": "rabbitmq:4.4-alpine",
+      "image_id": "sha256:2225c65600dbdd89d7d0a8e2ed386b1d0b32817a3c97ab6ef621ac33056bec27",
+      "health": "healthy",
+      "restart_count": 0
+    }
+  ],
+  "unchanged_data_containers": {
+    "begamnagam-internal-postgres-1": true,
+    "begamnagam-internal-redis-1": true,
+    "begamnagam-internal-rabbitmq-1": true
+  },
+  "activation": {
+    "sending_enabled": true,
+    "payments": "disabled",
+    "topics": 18,
+    "gift_balances_preserved": true,
+    "daily_reserved_rial": 90000,
+    "daily_limit_rial": 100000
+  },
+  "backup": "/opt/begamnagam/backups/live-gifts-20261026T111918Z/database.sql.fernet",
+  "source_code_sha256": {
+    "backend/core/management/commands/synthetic_pilot.py": "06fc32c1ddc1375632848daccf37e1e9c4f2189ef604e08c1ab249e019177799",
+    "backend/core/moderation.py": "ff4472d580988e87a5b70e8f2582fb8728b41d2f7dd98b465cf3369d82411349",
+    "backend/core/test_phase_two.py": "cb8e29f857e88bd1e5e9153b509416d344850e1370893ca70e1578f59890735c",
+    "backend/core/test_safety.py": "4aa976b2e2144f1fddd10e2d5e9e9b585498de288b0c42ff566da92149b6a51f",
+    "backend/core/test_short_links.py": "353569cce113abf0e46a5d57b06c94d4ce7588a0bda4420e7348d4b3303c3b5d",
+    "backend/core/tests.py": "5a098fca9d24ff294b0b3b62e6da85028a3301971fd95bb7fa9f24d47d873638",
+    "backend/core/views.py": "1ef326de32dd9b45c7e7be464e678209d362397a2c0ea1a996cdeea5f04e1a82",
+    "frontend/app/globals.css": "c5307be222adefb8de9835283d8f5c4f5e95ab7f4f4eb94632575ec385445982",
+    "frontend/components/composer.tsx": "080c1f010166ea31bd170ddb00224f669d914f7cbd60de1636de5405260c20c6",
+    "frontend/next.config.ts": "333a236f71fc0e7585a139d71e30bd99b96c1d03fc3a5948503b04f369028add",
+    "frontend/package-lock.json": "88c644533bd977fd7274b625658282610e03005ccdfa2a1791d0fc40250a8697",
+    "frontend/package.json": "1acb0bb01b9fc5e7c732d3ee83bc8f58f591e71b605379bc26c835ec1a823fd3",
+    "frontend/tests/seo.test.ts": "0c82d8ee49bb891580bc073e4b3eebd591ad305b8a870b5c753a2794693a8747",
+    "scripts/verify-domain-routing.py": "f7e53730afd23cc66a9070f7e7df4722d2a5e293df5fd9b9675e471fde684173",
+    "backend/core/test_topics.py": "b73ddfa6ed67b81f959ac796805362f88dc588738ec85b8dbbd67a9502e9c838",
+    "frontend/app/r/[code]/route.ts": "c7f7497d43156f8eb4e0a51dd5f4cd1361bf7092690614658498308af9d3224d"
+  },
+  "checks": {
+    "backend_postgresql": {
+      "tests": 163,
+      "result": "PASS"
+    },
+    "frontend": {
+      "tests": 25,
+      "typecheck": "PASS",
+      "production_build": "PASS"
+    },
+    "synthetic_pilot": {
+      "scenarios": 12,
+      "result": "PASS",
+      "external_calls": 0
+    },
+    "ui": {
+      "widths": [
+        375,
+        1440
+      ],
+      "synthetic_data": true,
+      "keyboard_disclosure": "PASS",
+      "selected_extra_topic_retained": "PASS"
+    },
+    "https_domain": {
+      "result": "PASS",
+      "routes": 33,
+      "checks": {
+        "html_and_assets": true,
+        "plain_recipient_link_redirect_and_privacy": true,
+        "live_gifts_and_public_seo": true,
+        "routes_and_pwa_files": true,
+        "secure_host_only_cookies": true,
+        "csrf_and_https_origin": true
+      }
+    },
+    "mocked_live_profile": {
+      "result": "PASS",
+      "real_sms_sent": 0,
+      "transport": "mocked",
+      "budget_reservation": "mocked",
+      "budget_limits_covered_by_postgresql_tests": true,
+      "diagnostic_data_rolled_back": true,
+      "real_profile": true,
+      "real_otp_login": true,
+      "real_gift_dispatch": true,
+      "csrf": true,
+      "idempotency": true,
+      "paid_checkout_closed": true,
+      "daily_budget_rial": 100000,
+      "sms_ceiling_rial": 20000
+    },
+    "edge": {
+      "host": "192.168.1.6",
+      "config": "/etc/nginx/sites-available/begamnagam.ir",
+      "backup": "/root/begamnagam-nginx-backups/20261026T112421Z/begamnagam.ir",
+      "before_sha256": "03c84b929e83e498985e6fca502f29872e7ecc0c0b9e17e36dc3e8702f065b3c",
+      "after_sha256": "5c824002b4cf8edbca15e227b50bc263032f492295520ad1930561980b60b3b6",
+      "nginx_config_test": "PASS",
+      "reload": "PASS",
+      "private_locations": [
+        "http:/r/",
+        "https:/r/"
+      ],
+      "existing_locations_preserved": true,
+      "proxy_headers_preserved": true,
+      "exact_legacy_r_route": true
+    },
+    "edge_log_audit": {
+      "private_path_absent_from_access_and_error_logs": true,
+      "other_routes_still_logged": true,
+      "result": "PASS",
+      "tls_verification": true,
+      "requests": [
+        {
+          "scheme": "http",
+          "kind": "private_link",
+          "status": 301
+        },
+        {
+          "scheme": "https",
+          "kind": "private_link",
+          "status": 307
+        },
+        {
+          "scheme": "https",
+          "kind": "private_link",
+          "status": 404
+        },
+        {
+          "scheme": "https",
+          "kind": "public_log_control",
+          "status": 200
+        }
+      ],
+      "only_synthetic_codes": true
+    }
+  },
+  "sms_link_example": "begamnagam.ir/r/Ab12Cd34",
+  "legacy_fragment_links": "preserved",
+  "real_sms_sent": 0,
+  "payments_created": 0,
+  "database_migrations": 0,
+  "gift_reset": false,
+  "budget_reset": false,
+  "public_internet_from_this_lan": "connection_refused; verified edge IP with domain TLS instead",
+  "provider_resend_warning": "existing warning unchanged; not reconfigured in this release",
+  "git_push": false
+}

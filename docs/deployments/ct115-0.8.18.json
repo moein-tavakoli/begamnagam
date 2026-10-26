@@ -1,0 +1,161 @@
+{
+  "version": "0.8.18",
+  "at_utc": "2026-10-26T12:46:26.191710+00:00",
+  "current": "/opt/begamnagam/releases/0.8.18",
+  "result": "DEPLOYED",
+  "images": {
+    "BACKEND_IMAGE": "sha256:fa6cde1a61981ec54c3e34c9a40a0299451e5f6c22eaaef433a52ecbcef3c080",
+    "FRONTEND_IMAGE": "sha256:f14556d7028b31721705379e22402b7f619cbab28891f18f5d80e26ececfe167"
+  },
+  "containers": [
+    {
+      "name": "begamnagam-internal-proxy-1",
+      "id": "5800d9369e7587b27964c586919da839a7e05c4e3082865f4a922354398056c0",
+      "image": "traefik:v3.7.13",
+      "image_id": "sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-worker-1",
+      "id": "4fa101f2330fca83bf47fe191e703e3b939e2074599b162543046b620d2f73bd",
+      "image": "begamnagam-internal/backend:0.8.18",
+      "image_id": "sha256:fa6cde1a61981ec54c3e34c9a40a0299451e5f6c22eaaef433a52ecbcef3c080",
+      "health": null,
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-beat-1",
+      "id": "6bbf4f050b19d826ee1b1adef6b0a4d8f9b12ae18bd964a5bb1e9e6ffec41d8e",
+      "image": "begamnagam-internal/backend:0.8.18",
+      "image_id": "sha256:fa6cde1a61981ec54c3e34c9a40a0299451e5f6c22eaaef433a52ecbcef3c080",
+      "health": null,
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-frontend-1",
+      "id": "8d1410ec18a88ec29eb968fc93dda015dcf43499673c91ac8b9c857239be7501",
+      "image": "begamnagam-internal/frontend:0.8.18",
+      "image_id": "sha256:f14556d7028b31721705379e22402b7f619cbab28891f18f5d80e26ececfe167",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-backend-1",
+      "id": "033618f89643044d2f49536dbf7cd90d22c65a5c47f6c0e76c203b3acb1c9eec",
+      "image": "begamnagam-internal/backend:0.8.18",
+      "image_id": "sha256:fa6cde1a61981ec54c3e34c9a40a0299451e5f6c22eaaef433a52ecbcef3c080",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-postgres-1",
+      "id": "86757705be67d50fc7bb1cf3240cb6687d902ee00747ec50ce434cb4a64c5ada",
+      "image": "postgres:17-alpine",
+      "image_id": "sha256:e4cb93687b062cd25a0e8f672d85a7708235009d70d31f8a7698d9370092a9c4",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-redis-1",
+      "id": "c29a7b9d11346a7723351bc5aa2cd1018c34399f87e703c2905a4213dd06b18f",
+      "image": "redis:7.4-alpine",
+      "image_id": "sha256:1db42ccef14898aa29bae778452d567534b59c107129cbc1163fb552de184d3c",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-rabbitmq-1",
+      "id": "ce5ccc99c6287034e4ed113aff268ef62a2bcd2cda33b2a82bdaf097301f8c59",
+      "image": "rabbitmq:4.4-alpine",
+      "image_id": "sha256:2225c65600dbdd89d7d0a8e2ed386b1d0b32817a3c97ab6ef621ac33056bec27",
+      "health": "healthy",
+      "restart_count": 0
+    }
+  ],
+  "unchanged_data_containers": {
+    "begamnagam-internal-postgres-1": true,
+    "begamnagam-internal-redis-1": true,
+    "begamnagam-internal-rabbitmq-1": true
+  },
+  "activation": {
+    "sending_enabled": true,
+    "payments": "disabled",
+    "topics": 18,
+    "gift_balances_preserved": true,
+    "daily_reserved_rial": 90000,
+    "daily_limit_rial": 100000
+  },
+  "backup": "/opt/begamnagam/backups/live-gifts-20261026T123849Z/database.sql.fernet",
+  "source_code_sha256": {
+    "backend/core/test_phase_two.py": "fac7fc593359f46c6a4499bdd8e9e2e2ab74f8a55bea5422f6362ce3f5b8f1f4",
+    "backend/core/test_short_links.py": "3ab706bbddfffe323a8849ad0a12311e533dbdb9eed36a11008f15f234d642eb",
+    "backend/core/test_topics.py": "b652973906318d4dceeead524b1ac1676b64500b073b1cde9e71454612d19462",
+    "backend/core/views.py": "468d600a0f6ab1bdb71634f86198903ca3ef5c035f3f0aa3a02c15825d915281",
+    "frontend/package-lock.json": "187f0d542e0d6c963adcda9fdc0cac6a9464717ae5aae1fde976ab398fba5cdc",
+    "frontend/package.json": "84bceab3b69cd1f1fb35b6502212f14662a5f8ac5a327cb42b3149a8e3152987",
+    "backend/core/sms.py": "f4640524e9badab2e52267d9f31bf128aadf7f42dc056f70145f1ec6ba22b770",
+    "backend/core/test_sms_intro.py": "c2dc3f34802133e06e427799a22f2da70f98863532329c7c54431a7d666e4bde",
+    "frontend/app/globals.css": "67ca71a6d6c9c9eefa1db5f58451c250581b1170700136e015e277865d5dd68c"
+  },
+  "sms_intro": "نمیدونم بهت بگم یا نگم؟",
+  "separator": "newline",
+  "sms_unicode_units_limit": 201,
+  "checks": {
+    "backend_postgresql": {
+      "tests": 175,
+      "result": "PASS",
+      "separate_database": true
+    },
+    "frontend": {
+      "tests": 26,
+      "typecheck": "PASS",
+      "production_build": "PASS"
+    },
+    "ui": {
+      "widths": [
+        375,
+        1440
+      ],
+      "line_breaks": "PASS",
+      "synthetic_data": true
+    },
+    "mocked_live_profile": {
+      "result": "PASS",
+      "real_sms_sent": 0,
+      "transport": "mocked",
+      "budget_reservation": "mocked",
+      "budget_limits_covered_by_postgresql_tests": true,
+      "diagnostic_data_rolled_back": true,
+      "real_profile": true,
+      "real_otp_login": true,
+      "real_gift_dispatch": true,
+      "csrf": true,
+      "idempotency": true,
+      "paid_checkout_closed": true,
+      "daily_budget_rial": 100000,
+      "sms_ceiling_rial": 20000
+    },
+    "https": {
+      "routes": 33,
+      "result": "PASS",
+      "checks": {
+        "html_and_assets": true,
+        "plain_recipient_link_redirect_and_privacy": true,
+        "live_gifts_and_public_seo": true,
+        "routes_and_pwa_files": true,
+        "secure_host_only_cookies": true,
+        "csrf_and_https_origin": true
+      }
+    }
+  },
+  "old_snapshots": "unchanged; dispatched exactly as reviewed",
+  "otp_text": "unchanged",
+  "nginx_config_changed": false,
+  "database_migrations": 0,
+  "real_sms_sent": 0,
+  "payments_created": 0,
+  "gifts_reset": false,
+  "budget_reset": false,
+  "git_push": false
+}

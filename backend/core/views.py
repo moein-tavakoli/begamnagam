@@ -18,6 +18,7 @@ from .models import Account, ModerationAudit, OTPChallenge, Order, Preview, Reci
 from .moderation import CATEGORIES, ModerationRejected, RewriteUnavailable, rewrite
 from .privacy import DIGITS, decrypt, digest, encrypt, mask, normalize_phone
 from .services import APIError, api, is_product_authenticated, limited
+from .sms import compose_recipient_sms, SMSTooLong
 
 logger = logging.getLogger(__name__)
 
@@ -239,11 +240,12 @@ def preview(request):
             from .recipient import issue_grant
             token = issue_grant(item, recipient_hash)
         sms_origin = settings.APP_BASE_URL.removeprefix("https://").removeprefix("http://")
-        full_sms = rewritten + "\nبگم نگم | لغو: " + sms_origin + ("/r/" + token if token else "/preferences")
-        if len(full_sms.encode("utf-16-le")) // 2 > 201:
+        try:
+            item.text, full_sms = compose_recipient_sms(category, rewritten, sms_origin, token, direct=direct)
+        except SMSTooLong:
             raise APIError("message_too_long", "متن نهایی بیش از سه بخش پیامک است؛ موضوع دیگری انتخاب کن.", 422)
         item.full_sms = full_sms
-        item.save(update_fields=["full_sms"])
+        item.save(update_fields=["text", "full_sms"])
     ModerationAudit.objects.create(owner=owner, category=category, outcome="accepted", reason_code=mode + ("_direct" if direct else ""), content_digest=digest(str(text)))
     return {"preview_id": str(item.id), "rewritten_text": item.text, "price_toman": item.price_toman, "is_free": item.is_free,
         "message_tone": "direct" if direct else "gentle",

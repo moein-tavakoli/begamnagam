@@ -61,7 +61,7 @@ class ShortRecipientLinkTests(TestCase):
         quote = self.quote().json()
         legacy = secrets.token_urlsafe(32)
         current = quote['full_sms'].split('/r/')[1]
-        old_sms = quote['full_sms'].replace('/r/'+current, '/r#'+legacy).replace('لغو: ', 'لغو: https://')
+        old_sms = quote['full_sms'].split('\n', 1)[1].replace('/r/'+current, '/r#'+legacy).replace('لغو: ', 'لغو: https://')
         Preview.objects.filter(pk=quote['preview_id']).update(full_sms=old_sms)
         RecipientGrant.objects.filter(preview_id=quote['preview_id']).update(token_digest=digest('recipient-token:'+legacy))
         self.deliver(quote)
@@ -72,7 +72,7 @@ class ShortRecipientLinkTests(TestCase):
     def test_existing_short_fragment_links_still_stop_receiving(self):
         quote = self.quote().json()
         token = quote['full_sms'].rsplit('/', 1)[1]
-        old_sms = quote['full_sms'].replace('/r/'+token, '/r#'+token)
+        old_sms = quote['full_sms'].split('\n', 1)[1].replace('/r/'+token, '/r#'+token)
         Preview.objects.filter(pk=quote['preview_id']).update(full_sms=old_sms)
         self.deliver(quote)
         self.assertEqual(self.post('/recipient/actions/stop', {'token':token}, Client()).json(), {'blocked':True})

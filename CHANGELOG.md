@@ -1,5 +1,15 @@
 # Versions
 
+## 0.8.18 — Recipient SMS introduction
+
+- Start fresh recipient SMS previews with the exact Persian introduction and a
+  newline, followed by the reviewed body and the existing opt-out footer.
+- Keep the three-segment ceiling by using a fitting complete reviewed alternative
+  from the same topic/tone when needed. Never truncate text or rewrite old quotes.
+- Preserve the exact confirmed provider payload, retry idempotency and fixed OTP.
+- Preserve line breaks in preview/history. Deploy0.8.18 with175 PostgreSQL and26
+  frontend tests, typecheck, release build and33 HTTPS route checks passing.
+
 ## 0.8.17 — Explain delivery restrictions and cancellations
 
 - Add public status reasons to receipts and history, including account restrictions,

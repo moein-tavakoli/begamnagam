@@ -44,6 +44,8 @@ class MessageTopicTests(TestCase):
                 self.assertEqual(response.status_code,200,response.content)
                 data=response.json()
                 self.assertIn(data['rewritten_text'],(DIRECT_TEMPLATES if direct else TEMPLATES)[item['id']])
+                self.assertTrue(data['full_sms'].startswith('نمیدونم بهت بگم یا نگم؟\n' + data['rewritten_text'] + '\n'))
+                self.assertLessEqual(len(data['full_sms'].encode('utf-16-le'))//2, 201)
                 self.assertRegex(data['full_sms'].split('لغو: ')[1],r'^begamnagam\.ir/r/[A-Za-z0-9]{8}$')
 
     def test_new_topic_keeps_moderation_before_and_after_preview(self):

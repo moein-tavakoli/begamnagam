@@ -1,5 +1,13 @@
 # Versions
 
+## 0.10.0 — Prepared GapGPT freeform rewriting
+
+- Make examples optional; custom drafts keep their own intent.
+- Locally filter input, generate/review with bounded GapGPT calls, validate the
+  output and bind its encrypted snapshot to owner/recipient/price/terms/expiry.
+- Enforce durable rewrite quotas and validate the exact confirmed SMS in workers.
+- Keep API key/model blank, quotas zero and live template mode as requested.
+
 ## 0.9.0 — Phone invitations and signup rewards
 
 - Add a private invitation panel: unique phone claims, membership/self checks,

@@ -1,0 +1,179 @@
+{
+  "version": "0.10.0",
+  "current": "/opt/begamnagam/releases/0.10.0",
+  "at_utc": "2026-10-26T15:16:01.857124+00:00",
+  "containers": [
+    {
+      "name": "begamnagam-internal-proxy-1",
+      "id": "aa16e4c80c9e2ab0f7978423e2c643547ed606d6276661fe30a709864631ef42",
+      "image": "traefik:v3.7.13",
+      "image_id": "sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-beat-1",
+      "id": "da4cb92f73638418ee0bc2c594c885ad503e475a9814fd9bff0b76ddac87abab",
+      "image": "begamnagam-internal/backend:0.10.0",
+      "image_id": "sha256:1bd35d80a24db06d69404b5d5c5e451abc880b45982001e1c01071fa07f51dcf",
+      "health": null,
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-worker-1",
+      "id": "159da351d3cd015564b98cf57a3fbeba066ce2abef40da5916bc770ba177ed85",
+      "image": "begamnagam-internal/backend:0.10.0",
+      "image_id": "sha256:1bd35d80a24db06d69404b5d5c5e451abc880b45982001e1c01071fa07f51dcf",
+      "health": null,
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-frontend-1",
+      "id": "d8825a105d5c1bf5b03304718d6f220354fce6ebb563a4079b662349c1ea358a",
+      "image": "begamnagam-internal/frontend:0.10.0",
+      "image_id": "sha256:8003c7ac128e1c4e5a1bff4a56917c2c697e19bd3ae2c159a3f67fb7088643b6",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-backend-1",
+      "id": "79ae8f6a27fc44cb4a260e4fcb4df807ff5540daa2f8f032d5b48b782c62299d",
+      "image": "begamnagam-internal/backend:0.10.0",
+      "image_id": "sha256:1bd35d80a24db06d69404b5d5c5e451abc880b45982001e1c01071fa07f51dcf",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-postgres-1",
+      "id": "86757705be67d50fc7bb1cf3240cb6687d902ee00747ec50ce434cb4a64c5ada",
+      "image": "postgres:17-alpine",
+      "image_id": "sha256:e4cb93687b062cd25a0e8f672d85a7708235009d70d31f8a7698d9370092a9c4",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-redis-1",
+      "id": "c29a7b9d11346a7723351bc5aa2cd1018c34399f87e703c2905a4213dd06b18f",
+      "image": "redis:7.4-alpine",
+      "image_id": "sha256:1db42ccef14898aa29bae778452d567534b59c107129cbc1163fb552de184d3c",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-rabbitmq-1",
+      "id": "ce5ccc99c6287034e4ed113aff268ef62a2bcd2cda33b2a82bdaf097301f8c59",
+      "image": "rabbitmq:4.4-alpine",
+      "image_id": "sha256:2225c65600dbdd89d7d0a8e2ed386b1d0b32817a3c97ab6ef621ac33056bec27",
+      "health": "healthy",
+      "restart_count": 0
+    }
+  ],
+  "images": {
+    "BACKEND_IMAGE": "sha256:1bd35d80a24db06d69404b5d5c5e451abc880b45982001e1c01071fa07f51dcf",
+    "FRONTEND_IMAGE": "sha256:8003c7ac128e1c4e5a1bff4a56917c2c697e19bd3ae2c159a3f67fb7088643b6"
+  },
+  "unchanged_data_services": {
+    "begamnagam-internal-postgres-1": true,
+    "begamnagam-internal-redis-1": true,
+    "begamnagam-internal-rabbitmq-1": true
+  },
+  "activation": {
+    "sending_enabled": true,
+    "payments": "disabled",
+    "topics": 18,
+    "gift_balances_preserved": true,
+    "daily_reserved_rial": 100000,
+    "daily_limit_rial": 100000
+  },
+  "gapgpt": {
+    "prepared": true,
+    "activated": false,
+    "api_key": "empty",
+    "model": "empty",
+    "daily_request_limit": 0,
+    "user_daily_limit": 0,
+    "network_calls_for_verification": 0,
+    "live_model_quality": "not_tested_without_credentials"
+  },
+  "backend_postgresql": {
+    "tests": 252,
+    "result": "PASS",
+    "database": "isolated PostgreSQL",
+    "redis_database": 15
+  },
+  "frontend": {
+    "tests": 31,
+    "result": "PASS",
+    "typecheck": "PASS",
+    "production_build": "PASS"
+  },
+  "profile_acceptance": {
+    "result": "PASS",
+    "real_sms_sent": 0,
+    "transport": "mocked",
+    "budget_reservation": "mocked",
+    "budget_limits_covered_by_postgresql_tests": true,
+    "diagnostic_data_rolled_back": true,
+    "isolated_test_database": true,
+    "invitation_wire_snapshot": true,
+    "verified_signup_reward_once": true,
+    "real_profile": true,
+    "real_otp_login": true,
+    "real_gift_dispatch": true,
+    "csrf": true,
+    "idempotency": true,
+    "paid_checkout_closed": true,
+    "daily_budget_rial": 100000,
+    "sms_ceiling_rial": 20000
+  },
+  "routing": {
+    "checks": 35,
+    "result": "PASS",
+    "tls_verification": true,
+    "connect_ip": "192.168.1.6",
+    "ordinary_public_connectivity": "not verified in this release; edge IP and verified domain used"
+  },
+  "ui": {
+    "desktop_width": 1440,
+    "mobile_width": 375,
+    "horizontal_overflow": false,
+    "data": "synthetic responses cleared after verification",
+    "custom_draft_without_categories": "PASS",
+    "exact_preview_body": "PASS",
+    "inactive_suggestions": "PASS"
+  },
+  "migrations": [
+    "0015_reviewed_gapgpt_rewrites"
+  ],
+  "provider_sms_budget_changed": false,
+  "real_sms_sent_for_verification": 0,
+  "payments": "disabled",
+  "code_sha256": {
+    "backend/config/settings.py": "2a72babb4e6a2ac19c49f0fd57987b96addca89b18ee8082047f9ef6f155ee6e",
+    "backend/core/admin.py": "cda4af72bfc3b13048a80bf7ba236d8f7dd8b15cb33a9fe109dd6f25e14c4136",
+    "backend/core/management/commands/prune_private_data.py": "0ef50360968707024e2e5c6227a22a2c0da631b3184a02e8cc354598884385c6",
+    "backend/core/management/commands/rotate_encryption.py": "6dde6435385c7ffa20ab4f3f22477dbde3c31c1f9c06d7a8be33bae75be4053f",
+    "backend/core/models.py": "56543cb92383a2d6a60f69c3ded9f05c1f92428827d622a2ceeb1bb7f278711c",
+    "backend/core/provider_delivery.py": "eef76eeeb656533ca09173b1573cb769b30c3210c5877b0d48a0cef6940842e9",
+    "backend/core/services.py": "9cc0a0300294c95a1d702e10b15e0adb6bdb7204318aa9a0d626562db93acd8a",
+    "backend/core/sms.py": "dd5c9616fa25f957ec72230564dede3be7f018f79a1cc5701255dcda8f0f7700",
+    "backend/core/tasks.py": "f94902fcaa1c9bcaa1d0206fb0dfc85a903fa1c92f663074b77636a6d037e3e2",
+    "backend/core/views.py": "ffe19ae6a321f1cf8b1593de4ca19c9bef6ab77d2514adb97564d247d1d9f251",
+    "frontend/app/globals.css": "8c1654f4d1ede57e8c33a3cc7368f6566b69b9c99e76ac9ec2687bb02b5da206",
+    "frontend/app/privacy/page.tsx": "34ca23cd63cbafaecd4a77f70cbf997a558ad3bb82939c9136d25f052f9e0dd8",
+    "frontend/components/composer.tsx": "d13229486fe87809d274fbf4b23499515ce2ffc7b38fd99e8d10186ff52190b2",
+    "frontend/lib/api.ts": "441930a472c703116e983903f107c8abeadb05827f3e139f2abf8d299559b516",
+    "frontend/lib/help-content.ts": "6ceb6fb0513bc8c05326c3e6bfc8a4c05dce0e79b6854adc3f736a36fcf466a0",
+    "frontend/package-lock.json": "cd917db29523f574ad3a1b63a61ba25dddf4460f145aaa95b5b8d23fe7d0ed2a",
+    "frontend/package.json": "4315b40f292aa2f8bcce652dfade55a579b196ddf278f18abd2f7e6b3888b4bd",
+    "backend/core/draft_guard.py": "daf78533f75476831df76cd284afc722ef964163c17d0c256e88966bccc26de9",
+    "backend/core/freeform.py": "a4c9cbb7288fe014f7c393e40cdb204b8eb128af9316cfa5d2e4a3db3c92c946",
+    "backend/core/gapgpt.py": "8e31aee7e01c2ee297fe7f585ba62506fd6cd2537c5b0e9001939feb485b32cd",
+    "backend/core/migrations/0015_reviewed_gapgpt_rewrites.py": "1b141bcd0950f82d2686c281b9aca6147d7ff3835f5e50cac3eb81f2cec96d38",
+    "backend/core/test_draft_guard.py": "efcc024729e97da929d1cd41e18822a88dbf05fc4ff9c08c9bb801bda7b6e616",
+    "backend/core/test_freeform.py": "ed6197e369919522966ef296949d73dc078b5877a6b61d720e90bc672e4e7a3e",
+    "backend/core/test_gapgpt.py": "1417aa0e1261b3167231827ebc2524dbcaa74f008c9f016cf77576ed2bf121a5",
+    "frontend/lib/composer-draft.ts": "a787fbaf5cdc997f75ec9af34bae3c74c7d7e4923319d65f2d28894e2d05540d",
+    "frontend/tests/composer-draft.test.ts": "9df58c8b981cac448f9ab650fbe66ff92f0430a84f43df828c1bf77b5ff44504"
+  }
+}

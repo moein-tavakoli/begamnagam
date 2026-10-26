@@ -14,7 +14,7 @@ class Command(BaseCommand):
         count = 0
         try:
             with transaction.atomic():
-                for model, field in [(Account, 'phone_cipher'), (OTPChallenge, 'phone_cipher'), (Order, 'recipient_cipher'), (Order, 'full_sms'), (Preview, 'full_sms'), (AbuseReport, 'details'), (Invitation, 'phone_cipher'), (InvitationSend, 'full_sms')]:
+                for model, field in [(Account, 'phone_cipher'), (OTPChallenge, 'phone_cipher'), (Order, 'recipient_cipher'), (Order, 'full_sms'), (Preview, 'full_sms'), (Preview, 'generated_body'), (AbuseReport, 'details'), (Invitation, 'phone_cipher'), (InvitationSend, 'full_sms')]:
                     for obj in model.objects.select_for_update().iterator(chunk_size=200):
                         value = getattr(obj, field)
                         if not value:

@@ -47,9 +47,8 @@ def deliver_message(event_id):
             event.last_error_code = "sms_disabled"
         else:
             try:
-                moderate(order.text)
-                if not is_reviewed_template(order.category, order.text):
-                    raise ModerationRejected("unreviewed_template")
+                from .freeform import validate_order
+                validate_order(order)
             except ModerationRejected:
                 order.status = Order.Status.FAILED
                 event.state = "failed"

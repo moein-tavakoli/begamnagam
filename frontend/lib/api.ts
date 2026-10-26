@@ -112,7 +112,7 @@ export async function api<T>(
   const timer = setTimeout(() => {
     timedOut = true;
     controller.abort();
-  }, 15000);
+  }, path === '/messages/preview' ? 25000 : 15000);
   const cancel = () => controller.abort();
   if (options.signal?.aborted) cancel();
   options.signal?.addEventListener("abort", cancel, { once: true });

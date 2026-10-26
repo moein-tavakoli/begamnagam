@@ -41,13 +41,23 @@ OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11434").rstrip("/")
 if not OLLAMA_URL.endswith("/api/generate"):
     OLLAMA_URL += "/api/generate"
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3:4b")
+GAPGPT_API_KEY = os.getenv('GAPGPT_API_KEY', '')
+GAPGPT_MODEL = os.getenv('GAPGPT_MODEL', '')
+GAPGPT_BASE_URL = os.getenv('GAPGPT_BASE_URL', 'https://api.gapgpt.app/v1').rstrip('/')
+GAPGPT_TIMEOUT_SECONDS = int(os.getenv('GAPGPT_TIMEOUT_SECONDS', '5'))
+# Explicit positive limits are required before this separately billed API opens.
+GAPGPT_DAILY_REQUEST_LIMIT = int(os.getenv('GAPGPT_DAILY_REQUEST_LIMIT', '0'))
+GAPGPT_USER_DAILY_LIMIT = int(os.getenv('GAPGPT_USER_DAILY_LIMIT', '0'))
+if (GAPGPT_BASE_URL != 'https://api.gapgpt.app/v1' or not 1 <= GAPGPT_TIMEOUT_SECONDS <= 10
+        or min(GAPGPT_DAILY_REQUEST_LIMIT, GAPGPT_USER_DAILY_LIMIT) < 0):
+    raise ImproperlyConfigured('Invalid GapGPT endpoint or limits')
 SMS_BACKEND = os.getenv("SMS_BACKEND", "console")
 PAYMENT_BACKEND = os.getenv("PAYMENT_BACKEND", "demo")
 
 if SMS_BACKEND not in {"console", "disabled", "kavenegar"} or PAYMENT_BACKEND not in {"demo", "disabled", "zarinpal"}:
     raise ImproperlyConfigured("Unknown provider backend")
 
-if AI_MODE not in {"template", "ollama"} or PRICE_TOMAN < 1:
+if AI_MODE not in {"template", "ollama", "gapgpt"} or PRICE_TOMAN < 1:
     raise ImproperlyConfigured("Invalid AI_MODE or PRICE_TOMAN")
 try:
     Fernet(PHONE_ENCRYPTION_KEY.encode())

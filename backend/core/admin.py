@@ -288,7 +288,10 @@ class AbuseReportAdmin(ReadOnlyAdmin):
 
     @admin.display(description='متن بررسی‌شده مرتبط با پرونده')
     def reviewed_text(self, obj):
-        return obj.grant.preview.text
+        if obj.grant.preview_id:
+            return obj.grant.preview.generated_body or obj.grant.preview.text
+        from .invitations import INVITE_BODY
+        return INVITE_BODY if obj.grant.invitation_send_id else 'متن طبق سیاست نگهداری حذف شده است.'
 
     def change_view(self, request, object_id, form_url='', extra_context=None):
         if self.has_view_permission(request):

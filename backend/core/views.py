@@ -75,8 +75,9 @@ def health(request):
 def bootstrap(request):
     session_key(request)
     authenticated = is_product_authenticated(request.user)
+    from .freeform import available as freeform_available
     data = {"demo_mode": settings.DEMO_MODE, "authenticated": authenticated,
-        "price_toman": settings.PRICE_TOMAN, "categories": [c for c in CATEGORIES if not settings.PILOT_POSITIVE_ONLY or c["id"] in {"appreciation", "encouragement", "congratulations"}], "rewrite_mode": settings.AI_MODE, "payment_backend": settings.PAYMENT_BACKEND, "support_contact": settings.SUPPORT_CONTACT,
+        "price_toman": settings.PRICE_TOMAN, "categories": [c for c in CATEGORIES if not settings.PILOT_POSITIVE_ONLY or c["id"] in {"appreciation", "encouragement", "congratulations"}], "rewrite_mode": settings.AI_MODE if settings.AI_MODE != 'gapgpt' or freeform_available() else 'template', "payment_backend": settings.PAYMENT_BACKEND, "support_contact": settings.SUPPORT_CONTACT,
         "otp_is_real": otp_is_real()}
     if authenticated:
         data["free_sends_remaining"] = request.user.account.free_sends_remaining
@@ -212,47 +213,77 @@ def preview(request):
     if not unlimited:
         limited("preview-session", session_key(request), 20, 600)
     limited("preview-ip-flood", request.META.get("REMOTE_ADDR", "unknown"), 10000, 600)
-    category = data.get("category")
+    category = data.get("category", 'custom')
     text = data.get("text", "")
     if not isinstance(category, str):
         raise APIError("invalid_input", "دسته‌بندی معتبر را انتخاب کنید.")
-    if settings.PILOT_POSITIVE_ONLY and category not in {"appreciation", "encouragement", "congratulations"}:
+    category = category or 'custom'
+    from .freeform import available as freeform_available, prepare, signature
+    use_freeform = freeform_available()
+    source_mode = data.get('source_mode')
+    if source_mode is not None and (not isinstance(source_mode, str) or source_mode not in {'suggestion', 'freeform'}):
+        raise APIError('invalid_input', 'روش آماده‌سازی متن معتبر نیست.')
+    if source_mode == 'freeform' and not use_freeform:
+        raise APIError('freeform_unavailable', 'بازنویسی متن دلخواه فعلاً فعال نیست؛ از پیشنهاد آماده استفاده کن.', 409)
+    if source_mode == 'suggestion' and not use_freeform:
+        example = next((c['example'] for c in CATEGORIES if c['id'] == category), None)
+        if text != example:
+            raise APIError('freeform_unavailable', 'متن عوض شده است؛ برای بازنویسی دلخواه باید این قابلیت فعال باشد.', 409)
+    if not use_freeform and category == 'custom':
+        raise APIError('freeform_unavailable', 'بازنویسی متن دلخواه فعلاً فعال نیست؛ از پیشنهاد آماده استفاده کن.', 409)
+    if settings.PILOT_POSITIVE_ONLY and (use_freeform or category not in {"appreciation", "encouragement", "congratulations"}):
         raise APIError("category_unavailable", "این موضوع فعلاً فعال نیست.", 422)
+    recipient_hash = ''
+    if data.get('recipient_phone'):
+        if not owner:
+            raise APIError('authentication_required', 'ابتدا شماره خودت را تأیید کن.', 401)
+        recipient_hash = digest(normalize_phone(data['recipient_phone']))
+        if recipient_hash == owner.account.phone_hash:
+            raise APIError('self_recipient', 'شمارهٔ گیرنده باید با شمارهٔ خودت متفاوت باشد.', 422)
+    if use_freeform and (not owner or not recipient_hash):
+        raise APIError('authentication_required' if not owner else 'recipient_required',
+            'برای آماده‌سازی متن، ابتدا وارد شو و شمارهٔ گیرنده را وارد کن.', 401 if not owner else 422)
     if owner and not unlimited:
         limited("preview-user", str(owner.pk), 20, 600)
     direct = bool(owner and owner.account.direct_message_tone)
+    sms_origin = settings.APP_BASE_URL.removeprefix('https://').removeprefix('http://')
     try:
-        rewritten, mode = rewrite(category, text, direct=direct)
+        if use_freeform:
+            from .sms import freeform_body_limit
+            limit = freeform_body_limit(sms_origin)
+            if limit < 20:
+                raise RewriteUnavailable()
+            rewritten, mode = prepare(owner, text, max_units=limit, direct=direct), 'gapgpt'
+            category = 'custom'
+        else:
+            rewritten, mode = rewrite(category, text, direct=direct)
     except ModerationRejected as exc:
-        ModerationAudit.objects.create(owner=owner, category=category[:32], outcome="rejected", reason_code=str(exc), content_digest=digest(str(text)))
-        raise APIError("moderation_rejected", "این متن قابل ارسال نیست. لطفاً موضوعی محترمانه و بدون توهین، تهدید یا اطلاعات شخصی انتخاب کنید.", 422)
+        ModerationAudit.objects.create(owner=owner, category=category[:32], outcome="rejected", reason_code=str(exc), content_digest=digest(json.dumps(text, ensure_ascii=True)))
+        raise APIError("moderation_rejected", "منظور این متن به شکل امن و محترمانه قابل آماده‌سازی نیست؛ درخواست مشخصت را بدون تهدید یا اطلاعات شخصی بنویس.", 422)
     except RewriteUnavailable:
         raise APIError("rewrite_unavailable", "آماده‌سازی متن موقتاً در دسترس نیست؛ کمی بعد تلاش کنید.", 503)
-    recipient_hash = ""
-    if data.get("recipient_phone"):
-        if not owner:
-            raise APIError("authentication_required", "ابتدا شماره خودت را تأیید کن.", 401)
-        recipient_hash = digest(normalize_phone(data["recipient_phone"]))
-        if recipient_hash == owner.account.phone_hash:
-            raise APIError("self_recipient", "شمارهٔ گیرنده باید با شمارهٔ خودت متفاوت باشد.", 422)
     expires_at = timezone.now() + timedelta(minutes=15)
     is_free = bool(owner and owner.account.free_sends_remaining > 0)
     with transaction.atomic():
         item = Preview.objects.create(owner=owner, session_key=session_key(request), category=category,
-            text=rewritten, recipient_hash=recipient_hash, terms_version=settings.TERMS_VERSION, moderation_mode=mode, expires_at=expires_at, is_free=is_free, price_toman=0 if is_free else settings.PRICE_TOMAN)
+            text='' if use_freeform else rewritten, generated_body=rewritten if use_freeform else '', recipient_hash=recipient_hash, terms_version=settings.TERMS_VERSION, moderation_mode=mode, expires_at=expires_at, is_free=is_free, price_toman=0 if is_free else settings.PRICE_TOMAN)
         token = ""
         if recipient_hash:
             from .recipient import issue_grant
             token = issue_grant(item, recipient_hash)
-        sms_origin = settings.APP_BASE_URL.removeprefix("https://").removeprefix("http://")
         try:
-            item.text, full_sms = compose_recipient_sms(category, rewritten, sms_origin, token, direct=direct)
+            if use_freeform:
+                from .sms import compose_freeform_sms
+                full_sms = compose_freeform_sms(rewritten, sms_origin, token)
+            else:
+                item.text, full_sms = compose_recipient_sms(category, rewritten, sms_origin, token, direct=direct)
         except SMSTooLong:
             raise APIError("message_too_long", "متن نهایی بیش از سه بخش پیامک است؛ موضوع دیگری انتخاب کن.", 422)
         item.full_sms = full_sms
-        item.save(update_fields=["text", "full_sms"])
-    ModerationAudit.objects.create(owner=owner, category=category, outcome="accepted", reason_code=mode + ("_direct" if direct else ""), content_digest=digest(str(text)))
-    return {"preview_id": str(item.id), "rewritten_text": item.text, "price_toman": item.price_toman, "is_free": item.is_free,
+        item.review_signature = signature(item) if use_freeform else ''
+        item.save(update_fields=["text", "full_sms", 'review_signature'])
+    ModerationAudit.objects.create(owner=owner, category=category, outcome="accepted", reason_code=mode + ("_direct" if direct else ""), content_digest=digest(json.dumps(text, ensure_ascii=True)))
+    return {"preview_id": str(item.id), "rewritten_text": item.generated_body if use_freeform else item.text, "price_toman": item.price_toman, "is_free": item.is_free,
         "message_tone": "direct" if direct else "gentle",
         "expires_at": expires_at.isoformat(), "moderation_mode": mode, "terms_version": item.terms_version, "full_sms": item.full_sms, "sms_segments": 1 if len(full_sms.encode("utf-16-le")) // 2 <= 70 else (len(full_sms.encode("utf-16-le")) // 2 + 66) // 67}
 

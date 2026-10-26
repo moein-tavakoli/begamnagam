@@ -24,6 +24,7 @@ import { AuthGate } from "./auth-gate";
 import { BusyButton, DeliveryReason, ErrorBox, ServiceState } from "./feedback";
 import { Icon, type IconName } from "./icons";
 import { FreeSendsBalance } from "./free-sends";
+import { draftProblem, draftTopicHint } from "@/lib/composer-draft";
 
 const categoryIcons: Record<string, IconName> = {
   body: "drop",
@@ -51,7 +52,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
   const { data, reload } = useApp();
   const [step, setStep] = useState(0);
   const activeStep = Math.min(step, stepLabels.length - 1);
-  const [category, setCategory] = useState("appreciation");
+  const [category, setCategory] = useState("");
   const [showAllCategories, setShowAllCategories] = useState(false);
   // Keep the selected topic visible when the extra options are collapsed.
   const visibleCategories = data?.categories.filter((item, index) =>
@@ -66,6 +67,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
   const [pollingError, setPollingError] = useState("");
   const [error, setError] = useState("");
   const [fields, setFields] = useState<Record<string, string>>({});
+  const freeformRewrite = data?.rewrite_mode === "gapgpt";
   const awaitingPayment =
     !!order &&
     ["awaiting_payment", "pending_payment", "created"].includes(order.status);
@@ -122,6 +124,13 @@ export function Composer({ onExit }: { onExit?: () => void }) {
     }
     if (error instanceof ApiError && error.code === "authentication_required")
       void reload();
+    if (error instanceof ApiError && error.code === "freeform_unavailable") {
+      setStep(0);
+      setPreview(null);
+      setConsent(false);
+      idempotencyKey.current = "";
+      void reload();
+    }
     if (error instanceof ApiError && error.fields) {
       setFields(
         Object.fromEntries(
@@ -138,8 +147,11 @@ export function Composer({ onExit }: { onExit?: () => void }) {
     event.preventDefault();
     setError("");
     setFields({});
-    if (text.trim().length < 3) {
-      setFields({ text: "حرفت را در حداقل ۳ حرف بنویس یا یک موضوع را انتخاب کن." });
+    const problem = draftProblem(text, category, data?.categories ?? [], freeformRewrite);
+    if (problem) {
+      setFields({ text: problem === "too_short"
+        ? "منظورت را در حداقل ۳ حرف بنویس یا از یک مثال کمک بگیر."
+        : "بازنویسی متن دلخواه هنوز فعال نیست؛ فعلاً یکی از مثال‌های پیشنهادی رو انتخاب کن." });
       document.getElementById("message-text")?.focus();
       return;
     }
@@ -161,7 +173,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
     }
     if (text.trim().length < 3) {
       setFields({
-        text: "حرفت را در حداقل ۳ حرف بنویس یا از مثال موضوع استفاده کن.",
+        text: "منظورت را در حداقل ۳ حرف بنویس یا از یک مثال کمک بگیر.",
       });
       document.getElementById("message-text")?.focus();
       return;
@@ -170,7 +182,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
     try {
       const result = await api<Preview>("/messages/preview", {
         method: "POST",
-        body: { category, text: text.trim(), recipient_phone: normalizePhone(recipient) },
+        body: { category, text: text.trim(), recipient_phone: normalizePhone(recipient), source_mode: freeformRewrite ? 'freeform' : 'suggestion' },
       });
       setPreview(result);
       setConsent(false);
@@ -276,6 +288,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
   function startOver() {
     setStep(0);
     setPreview(null);
+    setCategory("");
     setText("");
     setRecipient("");
     setConsent(false);
@@ -323,7 +336,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                   <small>
                     {
                       [
-                        "موضوع و منظور اصلی",
+                        "منظور خودت، با مثال‌های اختیاری",
                         "گیرنده، متن، هزینه و تأیید ارسال",
                       ][index]
                     }
@@ -361,59 +374,32 @@ export function Composer({ onExit }: { onExit?: () => void }) {
               </h2>
               <FreeSendsBalance />
               <p className="muted form-intro">
-                اول موضوع رو انتخاب کن؛ بعد خیلی ساده منظورت رو بنویس.
+                {freeformRewrite
+                  ? "منظورت رو با کلمه‌های خودت بنویس؛ هوش مصنوعی کمک می‌کنه محترمانه بیانش کنی."
+                  : "فعلاً می‌تونی از مثال‌های آماده استفاده کنی."}
               </p>
-              <fieldset className="category-fieldset">
-                <legend>موضوع پیام</legend>
-                <div className="category-grid" id="message-categories">
-                  {visibleCategories.map((item) => (
-                    <button
-                      data-category={item.id}
-                      className={`category-card ${category === item.id ? "selected" : ""}`}
-                      key={item.id}
-                      type="button"
-                      disabled={busy}
-                      onClick={() => {
-                        setCategory(item.id);
-                        setText(item.example);
-                        setFields({});
-                        setError("");
-                      }}
-                      aria-pressed={category === item.id}
-                    >
-                      <Icon name={categoryIcons[item.id] || "chat"} />
-                      <span>{item.label}</span>
-                      {category === item.id && (
-                        <span className="category-check">
-                          <Icon name="check" size={11} />
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-                {data.categories.length > 7 && (
-                  <button type="button" className="button secondary category-toggle"
-                    aria-expanded={showAllCategories} aria-controls="message-categories"
-                    disabled={busy} onClick={() => setShowAllCategories(value => !value)}>
-                    {showAllCategories ? "نمایش موضوع‌های اصلی" : `${new Intl.NumberFormat("fa-IR").format(hiddenCategoryCount)} موضوع بیشتر`}
-                  </button>
-                )}
-                {data && data.categories.length === 0 && (
-                  <p className="field-error">
-                    موضوعی برای ارسال فعال نیست؛ لطفاً بعداً مراجعه کن.
-                  </p>
-                )}
-              </fieldset>
+              {!freeformRewrite && <div className="rewrite-note" role="note">
+                <Icon name="info" size={19} />
+                <p>بازنویسی متن دلخواه هنوز فعال نیست. فعلاً یک مثال پیشنهادی رو انتخاب کن؛ متن نهایی از قالب‌های آماده تهیه می‌شه.</p>
+              </div>}
               <div className="field-label-row">
                 <label htmlFor="message-text">حرفی که می‌خوای برسونی</label>
               </div>
               <textarea
                 id="message-text"
                 value={text}
-                onChange={(event) => setText(event.target.value)}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setText(value);
+                  setCategory(draftTopicHint(category, value, data.categories));
+                  setFields({});
+                  setError("");
+                }}
                 maxLength={280}
                 rows={4}
-                placeholder="مثلاً: می‌خوام از دوستم بابت مهربونی و کمکش تشکر کنم…"
+                placeholder={freeformRewrite
+                  ? "مثلاً: می‌خوام قبل از قرض گرفتن وسایلم از خودم اجازه بگیره…"
+                  : "برای شروع یکی از مثال‌های پایین رو انتخاب کن…"}
                 aria-describedby={`message-hint message-count${fields.text ? " message-error" : ""}`}
                 aria-invalid={!!fields.text}
                 disabled={!data || busy}
@@ -431,15 +417,60 @@ export function Composer({ onExit }: { onExit?: () => void }) {
               <div className="message-guidance" id="message-hint" role="note">
                 <Icon name="info" size={19} />
                 <p>
-                  اسم، نشانی یا اطلاعات خصوصی کسی رو ننویس. دربارهٔ یک رفتار مشخص حرف بزن، نه شخصیت آدم‌ها.
+                  {freeformRewrite
+                    ? "نسخهٔ پالایش‌شدهٔ پیش‌نویس برای بازنویسی محترمانه به GapGPT فرستاده می‌شه. اسم، نشانی یا اطلاعات خصوصی ننویس؛ پیش از تأیید، متن نهایی رو بخون."
+                    : "اسم، نشانی یا اطلاعات خصوصی کسی رو ننویس. دربارهٔ یک رفتار مشخص حرف بزن، نه شخصیت آدم‌ها."}
                 </p>
               </div>
+              {data.categories.length > 0 && <details className="suggestion-disclosure" open={!freeformRewrite || undefined}>
+                <summary>{freeformRewrite ? <>از مثال‌های پیشنهادی کمک بگیر <span className="muted">(اختیاری)</span></> : "مثال‌های آماده برای ارسال"}</summary>
+                <fieldset className="category-fieldset suggested-topics">
+                <legend>یک مثال برای شروع</legend>
+                <p className="small muted category-guidance">{freeformRewrite
+                  ? "هر گزینه یک مثال داخل کادر می‌گذاره؛ متن خودت می‌تونه دربارهٔ موضوع دیگه‌ای باشه."
+                  : "هر گزینه یک مثال داخل کادر می‌گذاره. بازنویسی متن شخصی بعد از فعال‌شدن هوش مصنوعی در دسترسه."}</p>
+                <div className="category-grid" id="message-categories">
+                  {visibleCategories.map((item) => (
+                    <button
+                      data-category={item.id}
+                      className={`category-card ${category === item.id ? "selected" : ""}`}
+                      key={item.id}
+                      type="button"
+                      disabled={busy}
+                      onClick={() => {
+                        setCategory(item.id);
+                        setText(item.example);
+                        setFields({});
+                        setError("");
+                        document.getElementById("message-text")?.focus();
+                      }}
+                      aria-pressed={category === item.id}
+                    >
+                      <Icon name={categoryIcons[item.id] || "chat"} />
+                      <span>{item.label}</span>
+                      {category === item.id && (
+                        <span className="category-check">
+                          <Icon name="check" size={11} />
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                {data.categories.length > 7 && (
+                  <button type="button" className="button secondary category-toggle"
+                    aria-expanded={showAllCategories} aria-controls="message-categories"
+                    disabled={busy} onClick={() => setShowAllCategories(value => !value)}>
+                    {showAllCategories ? "مثال‌های کمتر" : `${new Intl.NumberFormat("fa-IR").format(hiddenCategoryCount)} مثال بیشتر`}
+                  </button>
+                )}
+                </fieldset>
+              </details>}
               <div className="form-actions">
                 <span className="small muted">دیدن پیش‌نمایش رایگانه</span>
                 <BusyButton
                   busy={busy}
                   className="button primary"
-                  disabled={!data?.authenticated || !data.categories.length}
+                  disabled={!data?.authenticated}
                 >
                   بعدی؛ متن نهایی و ارسال <Icon name="arrow" size={19} />
                 </BusyButton>
@@ -474,7 +505,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
               <div className="final-message">
                 <div className="final-message-header">
                   <Icon name="leaf" size={19} />
-                  <span>متن نهایی پیام</span>
+                  <span>متن کامل پیامک؛ همین متن ارسال می‌شه</span>
                 </div>
                 <p>{preview.full_sms || preview.rewritten_text}</p>
                 <div className="final-message-footer">
@@ -484,7 +515,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
               <div className="preview-info">
                 <span>
                   <Icon name="sparkle" size={17} />
-                  {preview.moderation_mode === "ollama_curated" ? "انتخاب با کمک هوش مصنوعی" : "متن آمادهٔ بررسی‌شده"}
+                  {preview.moderation_mode === "gapgpt" ? "بازنویسی با GapGPT و بررسی محتوا" : preview.moderation_mode === "ollama_curated" ? "انتخاب با کمک هوش مصنوعی" : "متن آمادهٔ بررسی‌شده"}
                 </span>
                 <span>
                   هزینه: <b>{isFree ? "رایگان؛ از سهمیهٔ هدیه" : toman(order?.amount_toman ?? preview.price_toman)}</b> · {preview.sms_segments || "—"} بخش پیامک
@@ -497,7 +528,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                   aria-invalid={!!fields.consent}
                   aria-describedby={fields.consent ? "consent-error" : undefined} />
                 <span>
-                  این فرد رو می‌شناسم؛ هدفم کمک و یادآوریه، نه تحقیر، تهدید یا مزاحمت.
+                  متن نهایی رو خوندم و منظورم رو می‌رسونه. این فرد رو می‌شناسم؛ هدفم کمک و یادآوریه، نه تحقیر، تهدید یا مزاحمت.
                   {" "}<Link href="/privacy">قوانین استفاده</Link> رو می‌پذیرم.
                 </span>
               </label>
@@ -524,7 +555,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
               </> : <>
                 <div className="review-placeholder" role="note">
                   <Icon name="chat" size={24} />
-                  <p>شماره رو وارد کن تا متن نهایی و هزینهٔ همین پیام آماده بشه.</p>
+                  <p>{freeformRewrite ? "شماره رو وارد کن؛ پیش‌نویس پالایش‌شده با GapGPT بازنویسی می‌شه. قبل از ارسال، متن کامل پیامک رو می‌بینی." : "شماره رو وارد کن تا متن نهایی و هزینهٔ همین پیام آماده بشه."}</p>
                 </div>
                 <div className="form-actions review-actions">
                   <button className="button ghost" type="button" disabled={busy} onClick={goBack}>اصلاح حرفم</button>

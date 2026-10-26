@@ -41,9 +41,12 @@ do not invent current APIs.
 - Prices are integer toman values. A preview snapshots the reviewed price and text.
   Retries preserve the checkout idempotency key. Payment and outbox creation stay
   transactional; queue payloads contain identifiers rather than private content.
-- Only reviewed templates can reach the demo delivery adapter. Raw input and
-  unrestricted model text must not be dispatched. Preserve moderation before and
-  after model selection and fail closed on invalid model responses.
+- Reviewed templates remain the default. The user also requested opt-in GapGPT
+  freeform rewriting with credentials left empty for now. Only locally filtered,
+  independently model-reviewed, locally rechecked output sealed to its exact
+  preview may reach either SMS adapter. Raw input and unapproved model text must
+  not be dispatched. Missing credentials or uncertain checks must fail closed;
+  never silently substitute a topic template for a requested AI rewrite.
 - Rate limits must account for the Next.js reverse proxy: do not interpret the
   frontend container's address as a unique end user or blindly trust forwarded IPs.
 - Keep phones encrypted at rest and use keyed hashes for matching. Do not log full

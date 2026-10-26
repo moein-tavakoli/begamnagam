@@ -40,6 +40,8 @@ class OTPChallenge(models.Model):
 
 
 class Preview(models.Model):
+    generated_body = EncryptedTextField(blank=True, default='', db_default='')
+    review_signature = models.CharField(max_length=64, blank=True, default='', db_default='')
     is_free = models.BooleanField(default=False)
     recipient_hash = models.CharField(max_length=64, blank=True)
     terms_version = models.CharField(max_length=40, blank=True)
@@ -60,6 +62,22 @@ class RecipientState(models.Model):
     blocked = models.BooleanField(default=False)
     last_sent_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+
+class RewriteBudget(models.Model):
+    day = models.DateField(primary_key=True)
+    reserved_requests = models.PositiveIntegerField(default=0)
+    limit_requests = models.PositiveIntegerField()
+
+
+class RewriteUsage(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    budget = models.ForeignKey(RewriteBudget, on_delete=models.PROTECT)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=['owner', 'created_at'])]
 
 
 class DemoLimitReset(models.Model):

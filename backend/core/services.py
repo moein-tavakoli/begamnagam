@@ -132,6 +132,13 @@ def create_order(user, session_key, data, idempotency_key):
             raise APIError("not_found", "پیش‌نمایش پیدا نشد.", 404)
         if preview.recipient_hash and preview.recipient_hash != phone_hash:
             raise APIError("quote_recipient_changed", "شماره عوض شده؛ پیش‌نمایش تازه بساز.", 409)
+        if preview.moderation_mode == 'gapgpt':
+            from .freeform import validate_preview
+            from .moderation import ModerationRejected
+            try:
+                validate_preview(preview, recipient_hash=phone_hash)
+            except ModerationRejected:
+                raise APIError('preview_expired', 'متن نهایی معتبر نیست؛ دوباره آماده‌اش کن.', 409) from None
         consent = data.get("consent") is True and data.get("terms_version") == preview.terms_version
         if settings.PROVIDER_NETWORK_MODE == "external" and preview.terms_version != settings.TERMS_VERSION:
             raise APIError("preview_expired", "شرایط ارسال تغییر کرده؛ متن نهایی را دوباره آماده کن.", 409)

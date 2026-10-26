@@ -85,9 +85,8 @@ def submit_delivery(event_id):
             fail_paid(order, event, delivery, 'sms_disabled')
             return
         try:
-            moderate(order.text)
-            if not is_reviewed_template(order.category, order.text) or order.full_sms != order.preview.full_sms:
-                raise ModerationRejected('unreviewed_snapshot')
+            from .freeform import validate_order
+            validate_order(order)
             if (settings.PROVIDER_NETWORK_MODE == 'external' and settings.SMS_RECIPIENT_POLICY != 'all'
                     and order.recipient_hash not in settings.PILOT_RECIPIENT_HASHES):
                 raise ProviderDisabled('outside_pilot_allowlist')

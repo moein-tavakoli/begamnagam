@@ -61,7 +61,7 @@ def operator_action(actor, action, object_id, reason, reference=''):
             obj.halted = action == 'halt'
             if action == 'resume':
                 budget = SpendBudget.objects.filter(day=timezone.localdate()).first()
-                if budget and budget.reserved_rial >= min(budget.limit_rial, settings.PROVIDER_DAILY_BUDGET_RIAL):
+                if not settings.PROVIDER_DAILY_BUDGET_UNLIMITED and budget and budget.reserved_rial >= min(budget.limit_rial, settings.PROVIDER_DAILY_BUDGET_RIAL):
                     raise APIError('budget_exhausted', 'بودجه مصرف شده؛ ازسرگیری ممکن نیست.', 409)
             obj.save()
             after = {'halted': obj.halted}
@@ -115,13 +115,17 @@ def snapshot():
     invite_oldest = InvitationSend.objects.filter(status__in=['pending', 'submitting', 'unknown']).aggregate(value=Min('created_at'))['value']
     oldest = min(filter(None, [oldest, invite_oldest]), default=None)
     budget = SpendBudget.objects.filter(day=timezone.localdate()).first()
+    daily_limit = min(budget.limit_rial, settings.PROVIDER_DAILY_BUDGET_RIAL) if budget else settings.PROVIDER_DAILY_BUDGET_RIAL
+    if settings.PROVIDER_DAILY_BUDGET_UNLIMITED:
+        daily_limit = None
     return {'sending_halted': halted(), 'outbox_pending': Outbox.objects.filter(state='pending').count()+InvitationSend.objects.filter(status='pending').count(),
         'oldest_queue_seconds': max(0, int((now-oldest).total_seconds())) if oldest else 0,
         'payment_unknown': PaymentAttempt.objects.filter(status='unknown').count(),
         'delivery_unknown': MessageDelivery.objects.filter(status__in=['unknown', 'submitting']).count()+InvitationSend.objects.filter(status__in=['unknown', 'submitting']).count(),
         'refund_open': Refund.objects.exclude(status='refunded').count(), 'reports_open': AbuseReport.objects.filter(status='open').count(),
         'provider_budget_reserved_rial': budget.reserved_rial if budget else 0,
-        'provider_budget_limit_rial': min(budget.limit_rial, settings.PROVIDER_DAILY_BUDGET_RIAL) if budget else settings.PROVIDER_DAILY_BUDGET_RIAL}
+        'provider_budget_unlimited': settings.PROVIDER_DAILY_BUDGET_UNLIMITED,
+        'provider_budget_limit_rial': daily_limit}
 
 
 def refresh_alerts():
@@ -129,7 +133,7 @@ def refresh_alerts():
     limits = {'queue_age': data['oldest_queue_seconds'] if data['oldest_queue_seconds'] > 120 else 0,
         'payment_unknown': data['payment_unknown'], 'delivery_unknown': data['delivery_unknown'],
         'refund_open': data['refund_open'], 'reports_open': data['reports_open'],
-        'budget_80_percent': int(data['provider_budget_limit_rial'] > 0 and data['provider_budget_reserved_rial']*100 >= data['provider_budget_limit_rial']*80)}
+        'budget_80_percent': int(bool(data['provider_budget_limit_rial']) and data['provider_budget_reserved_rial']*100 >= data['provider_budget_limit_rial']*80)}
     for code, count in limits.items():
         OperationalAlert.objects.update_or_create(code=code, defaults={'active': bool(count), 'count': count, 'severity': 'high' if code in {'refund_open', 'payment_unknown', 'delivery_unknown'} else 'warning'})
     return data

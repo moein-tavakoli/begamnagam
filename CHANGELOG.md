@@ -1,5 +1,15 @@
 # Versions
 
+## 0.10.1 — Remove the live gift daily provider cost cap
+
+- Honor the user's explicit request with an opt-in unlimited daily cost mode for
+  live gifts, retaining cost accounting, per-call anomaly checks and idempotency.
+- Preserve gifts, closed paid checkout, recipient controls and historical orders.
+- Record specific bounded pre-provider policy reasons for operators while keeping
+  provider credit and system details out of public receipts.
+- Deploy backend0.10.1 with263 PostgreSQL tests and35 HTTPS checks passing;
+  reuse frontend0.10.0 and all data services, preserve gift balances and ledger.
+
 ## 0.10.0 — Prepared GapGPT freeform rewriting
 
 - Make examples optional; custom drafts keep their own intent.

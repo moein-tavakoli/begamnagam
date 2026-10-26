@@ -23,8 +23,12 @@ do not invent current APIs.
 - The user separately authorized live OTP and three real gift SMS per verified
   account on begamnagam.ir, with paid sends disabled. The explicit
   `config.live_sms_settings` profile permits all valid recipients, preserves
-  bounded spend/moderation/opt-outs, and does not attest contract or legal approval.
+  cost accounting/moderation/opt-outs, and does not attest contract or legal approval.
   Do not activate paid checkout or replay demo orders under this authorization.
+- The user explicitly removed the aggregate daily provider cost cap for this live
+  gift profile. `PROVIDER_DAILY_BUDGET_UNLIMITED=1` opts in; keep default/demo and
+  paid pilots bounded. Preserve the ledger, per-call anomaly checks, three gift
+  credits, recipient controls and retry idempotency. Never replay cancelled orders.
 - A separately authorized local real-OTP test may keep `DEMO_MODE=1`, payment demo,
   message delivery console and the general provider network disabled. It requires
   `LOCAL_REAL_OTP_ENABLED`, Kavenegar credentials and positive per-code/daily

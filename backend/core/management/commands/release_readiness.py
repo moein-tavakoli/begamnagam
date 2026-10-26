@@ -65,7 +65,7 @@ def collect(path=None):
         'provider_contract': settings.PROVIDER_CONTRACT_APPROVED,
         'refund_process': settings.REFUND_PROCESS_APPROVED,
         'operations_contact': bool(settings.OPERATIONS_OWNER and settings.SUPPORT_CONTACT),
-        'bounded_pilot': bool(settings.PILOT_RECIPIENT_HASHES and min(settings.PROVIDER_DAILY_BUDGET_RIAL, settings.SMS_MAX_COST_RIAL, settings.OTP_MAX_COST_RIAL) > 0),
+        'bounded_pilot': bool(not settings.PROVIDER_DAILY_BUDGET_UNLIMITED and settings.PILOT_RECIPIENT_HASHES and min(settings.PROVIDER_DAILY_BUDGET_RIAL, settings.SMS_MAX_COST_RIAL, settings.OTP_MAX_COST_RIAL) > 0),
         'pilot_sending_window': settings.PILOT_POSITIVE_ONLY and settings.SENDING_WINDOW_ENABLED,
         'reviewed_terms': bool(settings.TERMS_VERSION.strip()) and not settings.TERMS_VERSION.startswith('draft') and all(os.getenv(k, '').lower() in {'true', 'yes', '1'} for k in ['TERMS_APPROVED', 'PRIVACY_POLICY_APPROVED']),
     }

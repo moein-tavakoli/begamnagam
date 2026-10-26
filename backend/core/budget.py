@@ -6,10 +6,12 @@ from .providers import ProviderDisabled
 
 
 def reserve_cost(operation_key, kind, amount_rial):
-    """Conservative gross ceiling: unknowns and successful calls both retain reserve.
+    """Gross cost ledger: unknowns and successful calls both retain reserve.
 
     Retrying the same logical operation does not reserve twice. Refunds never
-    reopen the gross provider budget. A shared locked day row serializes callers.
+    reopen a bounded provider budget. An explicit live-gift flag bypasses only
+    the aggregate daily ceiling; per-call ceilings and cost-overrun halts remain.
+    A shared locked day row serializes callers in either mode.
     """
     from .models import OperationalAlert
     if OperationalAlert.objects.filter(code='provider_cost_exceeded', active=True).exists():
@@ -24,7 +26,7 @@ def reserve_cost(operation_key, kind, amount_rial):
         if previous:
             return previous
         limit = min(budget.limit_rial, settings.PROVIDER_DAILY_BUDGET_RIAL)
-        if budget.reserved_rial + amount_rial > limit:
+        if not settings.PROVIDER_DAILY_BUDGET_UNLIMITED and budget.reserved_rial + amount_rial > limit:
             raise ProviderDisabled('daily_budget_exhausted')
         budget.reserved_rial += amount_rial
         budget.save(update_fields=['reserved_rial'])

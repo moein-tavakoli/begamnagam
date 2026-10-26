@@ -59,7 +59,8 @@ class LiveGiftSMSTests(TestCase):
             PROVIDER_ENVIRONMENT='live', SMS_BACKEND='kavenegar', PAYMENT_BACKEND='disabled',
             OTP_BACKEND='kavenegar', LOCAL_REAL_OTP_ENABLED=False, SMS_RECIPIENT_POLICY='all',
             PILOT_RECIPIENT_HASHES=set(), TERMS_VERSION='v0.8.15-live-sms', SENDING_WINDOW_ENABLED=False,
-            PROVIDER_DAILY_BUDGET_RIAL=100000, SMS_MAX_COST_RIAL=20000, OTP_MAX_COST_RIAL=10000)
+            PROVIDER_DAILY_BUDGET_RIAL=100000, PROVIDER_DAILY_BUDGET_UNLIMITED=False,
+            SMS_MAX_COST_RIAL=20000, OTP_MAX_COST_RIAL=10000)
         config.enable()
         self.addCleanup(config.disable)
 
@@ -138,6 +139,49 @@ class LiveGiftSMSTests(TestCase):
         self.assertEqual(Account.objects.get(user=self.user).free_sends_remaining, 3)
         self.assertEqual(OperatorAudit.objects.filter(action='live_gift_launch').count(), 1)
         self.assertFalse(Outbox.objects.exists())
+
+    @override_settings(PROVIDER_DAILY_BUDGET_UNLIMITED=True)
+    def test_unlimited_daily_cost_sends_once_after_existing_day_is_full(self):
+        from django.utils import timezone
+        from .models import SpendReservation
+        SpendBudget.objects.create(day=timezone.localdate(), limit_rial=100000, reserved_rial=100000)
+        quote = self.preview(category='appreciation', text='تشکر از تو')
+        order = self.make_order(quote=quote).json()
+        self.confirm(order)
+        event = Outbox.objects.get(order_id=order['id'])
+        delivery = MessageDelivery.objects.get(order_id=order['id'])
+        with patch('core.provider_delivery.Kavenegar.submit', return_value=SMSResult('accepted', '701', 1000)) as wire:
+            submit_delivery(event.pk)
+            submit_delivery(event.pk)
+        wire.assert_called_once_with(phone='09901234567', text=quote['full_sms'], local_id=delivery.local_id)
+        self.assertEqual(Order.objects.get(pk=order['id']).status, 'accepted')
+        self.assertEqual(Account.objects.get(user=self.user).free_sends_remaining, 2)
+        self.assertEqual(SpendBudget.objects.get().reserved_rial, 120000)
+        reservation = SpendReservation.objects.get()
+        self.assertEqual((reservation.amount_rial, reservation.actual_rial), (20000, 1000))
+
+    def test_internal_policy_reason_is_recorded_without_untrusted_exception_text(self):
+        order = self.make_order().json()
+        self.confirm(order)
+        event = Outbox.objects.get(order_id=order['id'])
+        with patch('core.provider_delivery.reserve_cost', side_effect=ProviderDisabled('daily_budget_exhausted')), \
+                patch('core.provider_delivery.Kavenegar.submit') as wire:
+            submit_delivery(event.pk)
+        wire.assert_not_called()
+        self.assertEqual(MessageDelivery.objects.get(order_id=order['id']).last_error_code, 'daily_budget_exhausted')
+        event.refresh_from_db()
+        self.assertEqual(event.last_error_code, 'daily_budget_exhausted')
+        result = self.client.get('/api/v1/orders/'+order['id']).json()
+        self.assertEqual(result['status_reason']['code'], 'send_unavailable')
+        self.assertNotIn('daily_budget_exhausted', str(result))
+        self.assertEqual(Account.objects.get(user=self.user).free_sends_remaining, 3)
+        order2 = self.make_order().json()
+        self.confirm(order2)
+        with patch('core.provider_delivery.reserve_cost', side_effect=ProviderDisabled('private-provider-detail')), \
+                patch('core.provider_delivery.Kavenegar.submit') as wire:
+            submit_delivery(Outbox.objects.get(order_id=order2['id']).pk)
+        wire.assert_not_called()
+        self.assertEqual(MessageDelivery.objects.get(order_id=order2['id']).last_error_code, 'policy_unavailable')
 
     def test_gift_restoration_skips_accounts_with_real_delivery(self):
         order = self.make_order().json()

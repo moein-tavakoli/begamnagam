@@ -94,8 +94,14 @@ def submit_delivery(event_id):
         except ModerationRejected:
             fail_paid(order, event, delivery, 'moderation_rejected', True)
             return
-        except ProviderDisabled:
-            fail_paid(order, event, delivery, 'policy_unavailable', True)
+        except ProviderDisabled as error:
+            # Keep a bounded operator reason without persisting arbitrary provider
+            # exceptions; public receipts independently hide infrastructure details.
+            code = str(error)
+            if code not in {'daily_budget_exhausted', 'provider_cost_halt',
+                            'cost_ceiling_missing', 'outside_pilot_allowlist'}:
+                code = 'policy_unavailable'
+            fail_paid(order, event, delivery, code, True)
             return
         delivery.status = 'submitting'
         delivery.lease_until = timezone.now() + timedelta(seconds=30)

@@ -174,6 +174,9 @@ PROVIDER_ENVIRONMENT = os.getenv('PROVIDER_ENVIRONMENT', 'sandbox')
 OTP_BACKEND = os.getenv('OTP_BACKEND', 'demo' if DEMO_MODE else 'disabled')
 LOCAL_REAL_OTP_ENABLED = flag('LOCAL_REAL_OTP_ENABLED')
 PROVIDER_DAILY_BUDGET_RIAL = int(os.getenv('PROVIDER_DAILY_BUDGET_RIAL', '0'))
+# Explicitly authorized live gift traffic can retain the cost ledger without a
+# site-wide daily ceiling. Zero alone still means no daily spend is available.
+PROVIDER_DAILY_BUDGET_UNLIMITED = flag('PROVIDER_DAILY_BUDGET_UNLIMITED')
 SMS_MAX_COST_RIAL = int(os.getenv('SMS_MAX_COST_RIAL', '0'))
 OTP_MAX_COST_RIAL = int(os.getenv('OTP_MAX_COST_RIAL', '0'))
 PILOT_RECIPIENT_HASHES = set(filter(None, os.getenv('PILOT_RECIPIENT_HASHES', '').split(',')))
@@ -189,6 +192,14 @@ if not 0 < PROVIDER_TIMEOUT_SECONDS <= 15:
     raise ImproperlyConfigured('Provider timeout must be at most15 seconds')
 if KAVENEGAR_OTP_MODE not in {'sms', 'lookup'}:
     raise ImproperlyConfigured('Kavenegar OTP mode must be sms or lookup')
+if PROVIDER_DAILY_BUDGET_RIAL < 0:
+    raise ImproperlyConfigured('Provider daily budget cannot be negative')
+if PROVIDER_DAILY_BUDGET_UNLIMITED and (
+        DEMO_MODE or DEBUG or PROVIDER_NETWORK_MODE != 'external' or not LIVE_PROVIDERS_ENABLED
+        or PROVIDER_ENVIRONMENT != 'live' or SMS_BACKEND != 'kavenegar' or OTP_BACKEND != 'kavenegar'
+        or PAYMENT_BACKEND != 'disabled' or LOCAL_REAL_OTP_ENABLED or DEMO_TEST_TOOLS_ENABLED
+        or SMS_RECIPIENT_POLICY != 'all'):
+    raise ImproperlyConfigured('Unlimited daily provider spend requires the explicit live gift SMS profile')
 if LOCAL_REAL_OTP_ENABLED:
     if (not DEMO_MODE or PROVIDER_NETWORK_MODE != 'disabled' or LIVE_PROVIDERS_ENABLED
             or OTP_BACKEND != 'kavenegar' or SMS_BACKEND != 'console' or PAYMENT_BACKEND != 'demo'):
@@ -218,7 +229,7 @@ if PROVIDER_NETWORK_MODE == 'external':
         raise ImproperlyConfigured('Paid activation requires merchant credentials and operations/contract/refund pilot approval')
     if OTP_BACKEND == 'kavenegar' and KAVENEGAR_OTP_MODE == 'lookup' and not KAVENEGAR_OTP_TEMPLATE:
         raise ImproperlyConfigured('Kavenegar lookup OTP requires an approved template')
-    if min(PROVIDER_DAILY_BUDGET_RIAL, SMS_MAX_COST_RIAL, OTP_MAX_COST_RIAL) <= 0:
+    if min(SMS_MAX_COST_RIAL, OTP_MAX_COST_RIAL) <= 0 or (not PROVIDER_DAILY_BUDGET_UNLIMITED and PROVIDER_DAILY_BUDGET_RIAL <= 0):
         raise ImproperlyConfigured('External providers require positive bounded cost configuration')
 
 PHONE_ENCRYPTION_FALLBACK_KEYS = list(filter(None, os.getenv('PHONE_ENCRYPTION_FALLBACK_KEYS', '').split(',')))

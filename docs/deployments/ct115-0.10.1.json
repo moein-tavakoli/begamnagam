@@ -1,0 +1,166 @@
+{
+  "version": "0.10.1",
+  "status": "live",
+  "current": "/opt/begamnagam/releases/0.10.1",
+  "at_utc": "2026-10-26T17:34:35.374614+00:00",
+  "authorization": "Explicit user request to remove global daily provider cost ceiling",
+  "diagnosis": {
+    "last_cancelled_orders": 3,
+    "internal_reason": "policy_unavailable",
+    "network_attempts_each": 0,
+    "gift_credits_returned": true,
+    "daily_reserved_rial_before": 100000,
+    "daily_historical_limit_rial": 100000,
+    "provider_contacted_for_cancelled_orders": false
+  },
+  "containers": [
+    {
+      "name": "begamnagam-internal-beat-1",
+      "id": "3ca4e7998ea6a075536e66d2d65152bf7c0be53744bcb799500672c2c7791484",
+      "image": "begamnagam-internal/backend:0.10.1",
+      "image_id": "sha256:1a93303fb06b5202e6fc88cc446ba01cbe441a91895d493849406146d52ec083",
+      "health": null,
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-worker-1",
+      "id": "31a2f25e5102f1c772903804f8f2ca3033da65953fb103c961ac19ab847a7dbe",
+      "image": "begamnagam-internal/backend:0.10.1",
+      "image_id": "sha256:1a93303fb06b5202e6fc88cc446ba01cbe441a91895d493849406146d52ec083",
+      "health": null,
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-backend-1",
+      "id": "b7bec00b4db5afd6d4c54a39b78edda356e0ce05a08b27d56465bbe45e17ca74",
+      "image": "begamnagam-internal/backend:0.10.1",
+      "image_id": "sha256:1a93303fb06b5202e6fc88cc446ba01cbe441a91895d493849406146d52ec083",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-proxy-1",
+      "id": "aa16e4c80c9e2ab0f7978423e2c643547ed606d6276661fe30a709864631ef42",
+      "image": "traefik:v3.7.13",
+      "image_id": "sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-frontend-1",
+      "id": "d8825a105d5c1bf5b03304718d6f220354fce6ebb563a4079b662349c1ea358a",
+      "image": "begamnagam-internal/frontend:0.10.0",
+      "image_id": "sha256:8003c7ac128e1c4e5a1bff4a56917c2c697e19bd3ae2c159a3f67fb7088643b6",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-postgres-1",
+      "id": "86757705be67d50fc7bb1cf3240cb6687d902ee00747ec50ce434cb4a64c5ada",
+      "image": "postgres:17-alpine",
+      "image_id": "sha256:e4cb93687b062cd25a0e8f672d85a7708235009d70d31f8a7698d9370092a9c4",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-redis-1",
+      "id": "c29a7b9d11346a7723351bc5aa2cd1018c34399f87e703c2905a4213dd06b18f",
+      "image": "redis:7.4-alpine",
+      "image_id": "sha256:1db42ccef14898aa29bae778452d567534b59c107129cbc1163fb552de184d3c",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-rabbitmq-1",
+      "id": "ce5ccc99c6287034e4ed113aff268ef62a2bcd2cda33b2a82bdaf097301f8c59",
+      "image": "rabbitmq:4.4-alpine",
+      "image_id": "sha256:2225c65600dbdd89d7d0a8e2ed386b1d0b32817a3c97ab6ef621ac33056bec27",
+      "health": "healthy",
+      "restart_count": 0
+    }
+  ],
+  "images": {
+    "BACKEND_IMAGE": "sha256:1a93303fb06b5202e6fc88cc446ba01cbe441a91895d493849406146d52ec083",
+    "FRONTEND_IMAGE": "sha256:8003c7ac128e1c4e5a1bff4a56917c2c697e19bd3ae2c159a3f67fb7088643b6"
+  },
+  "unchanged_data_services": {
+    "begamnagam-internal-postgres-1": true,
+    "begamnagam-internal-redis-1": true,
+    "begamnagam-internal-rabbitmq-1": true
+  },
+  "frontend_reused": "0.10.0",
+  "proxy_reused": true,
+  "activation": {
+    "sending_enabled": true,
+    "payments": "disabled",
+    "topics": 18,
+    "gift_balances_preserved": true,
+    "daily_reserved_rial": 100000,
+    "daily_limit_rial": null,
+    "daily_budget_unlimited": true
+  },
+  "implementation": {
+    "daily_cost_unlimited_flag": "PROVIDER_DAILY_BUDGET_UNLIMITED",
+    "default": false,
+    "live": true,
+    "ledger_preserved": true,
+    "old_orders_replayed": false,
+    "per_call_anomaly_halt_preserved": true,
+    "initial_gift_credits": 3,
+    "paid_checkout": "disabled",
+    "migrations": [],
+    "sending_hours": "09:00-21:00 Asia/Tehran",
+    "anti_abuse_limits_preserved": true,
+    "gapgpt_credentials": "still empty"
+  },
+  "backend_postgresql": {
+    "tests": 263,
+    "result": "PASS",
+    "database": "isolated PostgreSQL",
+    "redis_database": 15,
+    "migrations_consistent": true
+  },
+  "profile_acceptance": {
+    "result": "PASS",
+    "real_sms_sent": 0,
+    "transport": "mocked",
+    "budget_reservation": "real isolated ledger at exhausted historical daily cap",
+    "budget_limits_covered_by_postgresql_tests": true,
+    "diagnostic_data_rolled_back": true,
+    "isolated_test_database": true,
+    "invitation_wire_snapshot": true,
+    "verified_signup_reward_once": true,
+    "real_profile": true,
+    "real_otp_login": true,
+    "real_gift_dispatch": true,
+    "csrf": true,
+    "idempotency": true,
+    "paid_checkout_closed": true,
+    "daily_budget_unlimited": true,
+    "sms_ceiling_rial": 20000
+  },
+  "routing": {
+    "checks": 35,
+    "result": "PASS",
+    "tls_verification": true,
+    "connect_ip": "192.168.1.6",
+    "ordinary_public_connectivity": "edge IP with verified domain used"
+  },
+  "verification": {
+    "independent_review": "PASS",
+    "real_sms_sent": 0,
+    "payments_created": 0,
+    "provider_transport": "mocked",
+    "gift_balances_preserved": true,
+    "daily_ledger_not_reset": true
+  },
+  "code_sha256": {
+    "backend/config/settings.py": "2c3550f41af953040d4067ab178bf56da340c16d933cdbc9b77439789257c500",
+    "backend/core/budget.py": "529c21909bc44776522ea21196feeebed7fa40cef11092d21e3df5d691b2326f",
+    "backend/core/management/commands/release_readiness.py": "6b0d55dabadbc8f43b848fcc6596ebaf013b44b812b9fa00dc53492cd90e0d1a",
+    "backend/core/provider_delivery.py": "7fd947f2bdd7674684c1fbdd4a25c159fb0d56167ded7e3be7e948235825bb7f",
+    "backend/core/safety.py": "9111409936586cde15aae4587c8bcbd766a27f9c391f921a328207b3a45b6a79",
+    "backend/core/test_live_sms.py": "a33c9de009e7cbfc256f38dad5004b7e0e63057770719030f15d0a75af48c176",
+    "backend/core/test_provider_budget.py": "46a6c01097e32bde0656b286fa9cf88565ea3a35949215086cdd4e47850eef45"
+  }
+}

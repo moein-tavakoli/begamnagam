@@ -228,7 +228,7 @@ def preview(request):
             raise APIError("authentication_required", "ابتدا شماره خودت را تأیید کن.", 401)
         recipient_hash = digest(normalize_phone(data["recipient_phone"]))
         if recipient_hash == owner.account.phone_hash:
-            raise APIError("recipient_unavailable", "ارسال به این شماره اکنون ممکن نیست.", 422)
+            raise APIError("self_recipient", "شمارهٔ گیرنده باید با شمارهٔ خودت متفاوت باشد.", 422)
     expires_at = timezone.now() + timedelta(minutes=15)
     is_free = bool(owner and owner.account.free_sends_remaining > 0)
     with transaction.atomic():

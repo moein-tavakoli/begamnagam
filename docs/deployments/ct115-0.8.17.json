@@ -1,0 +1,174 @@
+{
+  "version": "0.8.17",
+  "at_utc": "2026-10-26T11:46:00.715603+00:00",
+  "current": "/opt/begamnagam/releases/0.8.17",
+  "result": "DEPLOYED",
+  "images": {
+    "BACKEND_IMAGE": "sha256:720d914c93160733832c0f7c66622fbc6048c3a73cdd37b37cb298c002dc4e24",
+    "FRONTEND_IMAGE": "sha256:ca7409d8b69cf30f9ad65393ed6e2234ee997dfaa8b78dad3d6202facd353d8c"
+  },
+  "containers": [
+    {
+      "name": "begamnagam-internal-proxy-1",
+      "id": "d6acc08b1f410837ef40e0507fd0bdb8675461937913ed4187de8f108b8a96a2",
+      "image": "traefik:v3.7.13",
+      "image_id": "sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-worker-1",
+      "id": "359c5cf63930a997fe67071f860a027d0419cf86d2971b3250a526d55627c04e",
+      "image": "begamnagam-internal/backend:0.8.17",
+      "image_id": "sha256:720d914c93160733832c0f7c66622fbc6048c3a73cdd37b37cb298c002dc4e24",
+      "health": null,
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-beat-1",
+      "id": "5412fcbc62fa7d31d6455baa1ecfe958491666c0868c629374b8f7bb26c95546",
+      "image": "begamnagam-internal/backend:0.8.17",
+      "image_id": "sha256:720d914c93160733832c0f7c66622fbc6048c3a73cdd37b37cb298c002dc4e24",
+      "health": null,
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-frontend-1",
+      "id": "e4756875d027c4d73e8f414e89aebb92043659b6d949dab4fe862df93223eb25",
+      "image": "begamnagam-internal/frontend:0.8.17",
+      "image_id": "sha256:ca7409d8b69cf30f9ad65393ed6e2234ee997dfaa8b78dad3d6202facd353d8c",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-backend-1",
+      "id": "d1f2e2c2068a01521ac7425cfee767d2371a1f4fa40527929ef7da67b38eb46b",
+      "image": "begamnagam-internal/backend:0.8.17",
+      "image_id": "sha256:720d914c93160733832c0f7c66622fbc6048c3a73cdd37b37cb298c002dc4e24",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-postgres-1",
+      "id": "86757705be67d50fc7bb1cf3240cb6687d902ee00747ec50ce434cb4a64c5ada",
+      "image": "postgres:17-alpine",
+      "image_id": "sha256:e4cb93687b062cd25a0e8f672d85a7708235009d70d31f8a7698d9370092a9c4",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-redis-1",
+      "id": "c29a7b9d11346a7723351bc5aa2cd1018c34399f87e703c2905a4213dd06b18f",
+      "image": "redis:7.4-alpine",
+      "image_id": "sha256:1db42ccef14898aa29bae778452d567534b59c107129cbc1163fb552de184d3c",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-rabbitmq-1",
+      "id": "ce5ccc99c6287034e4ed113aff268ef62a2bcd2cda33b2a82bdaf097301f8c59",
+      "image": "rabbitmq:4.4-alpine",
+      "image_id": "sha256:2225c65600dbdd89d7d0a8e2ed386b1d0b32817a3c97ab6ef621ac33056bec27",
+      "health": "healthy",
+      "restart_count": 0
+    }
+  ],
+  "unchanged_data_containers": {
+    "begamnagam-internal-postgres-1": true,
+    "begamnagam-internal-redis-1": true,
+    "begamnagam-internal-rabbitmq-1": true
+  },
+  "activation": {
+    "sending_enabled": true,
+    "payments": "disabled",
+    "topics": 18,
+    "gift_balances_preserved": true,
+    "daily_reserved_rial": 90000,
+    "daily_limit_rial": 100000
+  },
+  "backup": "/opt/begamnagam/backups/live-gifts-20261026T113930Z/database.sql.fernet",
+  "source_code_sha256": {
+    "backend/core/provider_delivery.py": "b853d1202e6da0c3633ca0f3eb0ad4307b61a30ce155e7c732c99cd6f1a79582",
+    "backend/core/safety.py": "674513317205c6829cd80497b6e4d33678741088da867406082b16b4f1bdd7b5",
+    "backend/core/services.py": "93bfa58679fcb972e870d7e88394e3f490f24cb5678dca1ba683ee711ad3d783",
+    "backend/core/tasks.py": "6fbfee20c0ec4ea62ec5d79faa7f7abe84a950734785cd24c094b9aa67b3f85f",
+    "backend/core/views.py": "c51c9b6ea07967135f04b6d5c9c1dace3bf294ea583212a5189467544ea8d6ce",
+    "frontend/app/globals.css": "af1ed55e833cb86eb1530669e20437ae82584922cba55a4f2c7385db04f29adf",
+    "frontend/components/account-pages.tsx": "85937a0056efc664830390597e6eaab7ef0c552858365378b082a77a78b89e08",
+    "frontend/components/composer.tsx": "d4185f2abdcfc5ed7a67f7067e64a6ff72783d3ce249d683b565b1a2a078a093",
+    "frontend/components/feedback.tsx": "5d31e4a2106d3e23fb5f7e327924874f6114b30acacfb9f154495f455ea56e33",
+    "frontend/lib/api.ts": "da059b06e000a0bda63c58879fc9ef4dbf8efe65b6e46fbdcf663b6651e6d0e7",
+    "frontend/package-lock.json": "46a60112eb063eadbc7a0f63e07b06e7a4c6071e22fb63675efb24ec7213c26b",
+    "frontend/package.json": "cd3dc671c7e52dc2dc9b001de037f6ef58e4a83da3ffe229c059d2347f8df065",
+    "frontend/tests/api.test.ts": "040d8fc3c6614ea10c1e62a0b17c09e3b64a083d94db963b4318e29f517d6800",
+    "backend/core/status_reasons.py": "4a8a76ae54d212f260a9322aa3b76853331a72a2cdedbefc852f1d2c5f761b21",
+    "backend/core/test_status_reasons.py": "8093f37e13cb3cbac72852979252828cae0e82627057fc814fdc326e37863746"
+  },
+  "checks": {
+    "backend_postgresql": {
+      "tests": 171,
+      "result": "PASS",
+      "separate_database": true
+    },
+    "frontend": {
+      "tests": 26,
+      "typecheck": "PASS",
+      "production_build": "PASS"
+    },
+    "ui": {
+      "history_widths": [
+        375,
+        1440
+      ],
+      "receipt_mobile_width": 375,
+      "synthetic_data": true,
+      "result": "PASS"
+    },
+    "mocked_live_profile": {
+      "result": "PASS",
+      "real_sms_sent": 0,
+      "transport": "mocked",
+      "budget_reservation": "mocked",
+      "budget_limits_covered_by_postgresql_tests": true,
+      "diagnostic_data_rolled_back": true,
+      "real_profile": true,
+      "real_otp_login": true,
+      "real_gift_dispatch": true,
+      "csrf": true,
+      "idempotency": true,
+      "paid_checkout_closed": true,
+      "daily_budget_rial": 100000,
+      "sms_ceiling_rial": 20000
+    },
+    "https": {
+      "routes": 33,
+      "result": "PASS",
+      "checks": {
+        "html_and_assets": true,
+        "plain_recipient_link_redirect_and_privacy": true,
+        "live_gifts_and_public_seo": true,
+        "routes_and_pwa_files": true,
+        "secure_host_only_cookies": true,
+        "csrf_and_https_origin": true
+      }
+    },
+    "historical_orders": {
+      "result": "PASS",
+      "existing_terminal_orders_checked": 2,
+      "public_reason_counts": {
+        "send_unavailable": 2
+      },
+      "private_content_logged": false
+    }
+  },
+  "public_reason_field": "status_reason",
+  "internal_provider_and_credit_reasons": "not exposed in public status reason; generic failure instead",
+  "receiver_restrictions": "opt-out, recipient cooldown and busy order share one public response",
+  "nginx_config_changed": false,
+  "database_migrations": 0,
+  "real_sms_sent": 0,
+  "payments_created": 0,
+  "gifts_reset": false,
+  "budget_reset": false,
+  "git_push": false
+}

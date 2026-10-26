@@ -3,6 +3,16 @@
 import { useEffect, useRef } from "react";
 import { Icon } from "./icons";
 import { useApp } from "./app-provider";
+import type { Order } from "@/lib/api";
+import { isPending } from "@/lib/format";
+
+export function DeliveryReason({ order }: { order: Order }) {
+  if (!order.status_reason) return null;
+  return <div className="delivery-reason" role="status">
+    <Icon name="info" size={20} />
+    <p><strong>{isPending(order.status) ? "توضیح وضعیت: " : "دلیل ارسال‌نشدن: "}</strong>{order.status_reason.message}</p>
+  </div>;
+}
 
 export function ErrorBox({
   message,

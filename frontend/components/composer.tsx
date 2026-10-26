@@ -21,7 +21,7 @@ import {
 } from "@/lib/format";
 import { useApp } from "./app-provider";
 import { AuthGate } from "./auth-gate";
-import { BusyButton, ErrorBox, ServiceState } from "./feedback";
+import { BusyButton, DeliveryReason, ErrorBox, ServiceState } from "./feedback";
 import { Icon, type IconName } from "./icons";
 import { FreeSendsBalance } from "./free-sends";
 
@@ -566,6 +566,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
               <p className="receipt-status" role="status">
                 {statusLabel(order.status)}
               </p>
+              <DeliveryReason order={order} />
               <p className="muted">
                 {data?.demo_mode
                   ? "این نتیجه مربوط به محیط آزمایشی است. پیام واقعی به گیرنده ارسال نشده و هزینه‌ای دریافت نشده است."

@@ -1,5 +1,18 @@
 # Versions
 
+## 0.8.17 — Explain delivery restrictions and cancellations
+
+- Add public status reasons to receipts and history, including account restrictions,
+  moderation, order/queue expiry, sending hours and uncertain outcomes.
+- Explain sender daily/pair limits and self-recipient validation at request time;
+  keep receiver opt-out, cooldown and busy states indistinguishable.
+- Preserve internal operator codes while hiding provider credit and system details
+  from public status reasons, HTTP5xx messages and unknown client exceptions.
+- Keep delivery authorization, refunds, gift balances, budgets and retry behavior.
+- Deploy0.8.17 with171 PostgreSQL and26 frontend tests passing; typecheck,
+  release build and33 HTTPS route/asset checks pass. Verify receipt/history
+  explanations at375px/1440px with synthetic responses; preserve all data services.
+
 ## 0.8.16 — Plain SMS links and eighteen reviewed topics
 
 - Use `begamnagam.ir/r/Ab12Cd34` in fresh SMS previews, keeping eight random

@@ -38,6 +38,7 @@ export type Order = {
   payment_mode?: string;
   financial_status?: string;
   delivery_status?: string;
+  status_reason?: { code: string; message: string } | null;
 };
 export type Message = Order & {
   recipient_masked: string;
@@ -59,6 +60,8 @@ export class ApiError extends Error {
     this.fields = fields;
   }
 }
+
+const requestUnavailable = "درخواست فعلاً انجام نشد؛ کمی بعد دوباره تلاش کن.";
 
 // randomUUID is unavailable on a phone opening a local HTTP LAN address.
 // getRandomValues remains available there and keeps retry keys unpredictable.
@@ -125,10 +128,10 @@ export async function api<T>(
     const data = await response.json().catch(() => null);
     if (!response.ok) {
       throw new ApiError(
-        data?.error?.message ||
+        (response.status >= 500 ? requestUnavailable : data?.error?.message) ||
           "سرویس در دسترس نیست. چند لحظه دیگر دوباره تلاش کنید.",
         data?.error?.code || "service_error",
-        data?.error?.fields,
+        response.status >= 500 ? undefined : data?.error?.fields,
       );
     }
     if (data === null)
@@ -159,9 +162,9 @@ export async function api<T>(
 }
 
 export function errorMessage(error: unknown): string {
-  return error instanceof Error
+  return error instanceof ApiError
     ? error.message
-    : "خطایی رخ داد. دوباره تلاش کنید.";
+    : requestUnavailable;
 }
 
 

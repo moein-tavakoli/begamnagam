@@ -7,7 +7,7 @@ import { api, errorMessage, type Message } from "@/lib/api";
 import { statusLabel, toman } from "@/lib/format";
 import { useApp } from "./app-provider";
 import { AuthGate } from "./auth-gate";
-import { BusyButton, ErrorBox, ServiceState } from "./feedback";
+import { BusyButton, DeliveryReason, ErrorBox, ServiceState } from "./feedback";
 import { Icon } from "./icons";
 
 export function Preferences() {
@@ -230,6 +230,7 @@ export function History() {
                       </span>
                     </div>
                     <p>{message.text || "متن این پیام طبق سیاست نگهداری حذف شده است."}</p>
+                    <DeliveryReason order={message} />
                     <p className="small muted">مالی: {message.financial_status === "free_credit_returned" ? "رایگان؛ سهمیه برگشت داده شد" : message.is_free ? "رایگان؛ بدون پرداخت" : message.financial_status === "refund_pending" ? "بازپرداخت در حال پیگیری است" : message.financial_status === "refunded" ? "مسترد شد" : message.financial_status === "verified" ? "تأیید شد" : message.financial_status === "unknown" ? "نیازمند بررسی؛ دوباره پرداخت نکن" : "در انتظار"}</p>
                     <div className="history-message-bottom">
                       <time dateTime={message.created_at}>

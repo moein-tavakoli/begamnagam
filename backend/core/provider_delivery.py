@@ -75,7 +75,10 @@ def submit_delivery(event_id):
             return
         from .safety import defer_until_open
         if defer_until_open(event): return
-        if state.blocked or order.owner.account.suspended or order.owner.account.deletion_requested_at:
+        if not hasattr(order.owner, 'account') or order.owner.account.suspended or order.owner.account.deletion_requested_at:
+            fail_paid(order, event, delivery, 'account_unavailable', True)
+            return
+        if state.blocked:
             fail_paid(order, event, delivery, 'recipient_unavailable', True)
             return
         if settings.SMS_BACKEND != 'kavenegar':
@@ -89,7 +92,10 @@ def submit_delivery(event_id):
                     and order.recipient_hash not in settings.PILOT_RECIPIENT_HASHES):
                 raise ProviderDisabled('outside_pilot_allowlist')
             reserve_cost('sms:' + str(delivery.submission_key), 'sms', settings.SMS_MAX_COST_RIAL)
-        except (ProviderDisabled, ModerationRejected):
+        except ModerationRejected:
+            fail_paid(order, event, delivery, 'moderation_rejected', True)
+            return
+        except ProviderDisabled:
             fail_paid(order, event, delivery, 'policy_unavailable', True)
             return
         delivery.status = 'submitting'
@@ -108,7 +114,7 @@ def submit_delivery(event_id):
         delivery = MessageDelivery.objects.select_for_update().get(order=order)
         from .models import Account, SafetyControl
         from .safety import defer_until_open
-        account = Account.objects.select_for_update().get(user_id=order.owner_id)
+        account = Account.objects.select_for_update().filter(user_id=order.owner_id).first()
         SafetyControl.objects.select_for_update().get(pk=1)
         if defer_until_open(event):
             delivery.status = 'queued'
@@ -119,7 +125,10 @@ def submit_delivery(event_id):
             delivery.save()
             event.save(update_fields=['state','attempts'])
             return
-        if state.blocked or account.suspended or account.deletion_requested_at:
+        if not account or account.suspended or account.deletion_requested_at:
+            fail_paid(order, event, delivery, 'account_unavailable', True)
+            return
+        if state.blocked:
             fail_paid(order, event, delivery, 'recipient_unavailable', True)
             return
         try:

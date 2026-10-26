@@ -49,8 +49,9 @@ def api(methods, authenticated=False):
 
 
 def error_response(exc):
-    error = {"code": exc.code, "message": exc.message}
-    if exc.fields:
+    from .status_reasons import REQUEST_UNAVAILABLE
+    error = {"code": exc.code, "message": REQUEST_UNAVAILABLE if exc.status >= 500 else exc.message}
+    if exc.fields and exc.status < 500:
         error["fields"] = exc.fields
     response = JsonResponse({"error": error}, status=exc.status, json_dumps_params={"ensure_ascii": False})
     response["Cache-Control"] = "no-store"
@@ -70,7 +71,8 @@ def limited(scope, identity, limit, seconds):
 
 def recipient_unavailable():
     # Do not reveal whether a recipient is registered, opted out or in cooldown.
-    return APIError("recipient_unavailable", "در حال حاضر امکان ارسال به این شماره وجود ندارد. هزینه‌ای دریافت نشده است.", 409)
+    from .status_reasons import RECIPIENT_LIMIT
+    return APIError("recipient_unavailable", RECIPIENT_LIMIT, 409)
 
 
 def get_owned_order(user, order_id):
@@ -85,7 +87,10 @@ def serialize_order(order):
     delivery = MessageDelivery.objects.filter(order=order).first()
     from .models import Refund
     open_refund = Refund.objects.filter(payment__order=order).exclude(status="refunded").exists()
+    from .status_reasons import order_status_reason
+    event = Outbox.objects.filter(order=order).first()
     return {"financial_status": ("free_credit_returned" if order.free_credit_released_at else "free") if order.is_free else "refunded" if payment and payment.refunds.filter(status="refunded").exists() else "refund_pending" if open_refund else payment.status if payment else "legacy_demo_paid" if order.paid_at else "unpaid",
+        "status_reason": order_status_reason(order, delivery, event),
         "delivery_status": delivery.status if delivery else "not_ready","id": str(order.id), "status": order.status, "amount_toman": order.amount_toman,
         "payment_mode": order.payment_mode, "recipient_masked": order.recipient_masked, "is_free": order.is_free,
         "text": order.full_sms or order.text, "category": order.category, "paid_at": order.paid_at.isoformat() if order.paid_at else None,
@@ -118,7 +123,7 @@ def create_order(user, session_key, data, idempotency_key):
         if not unlimited:
             limited("orders", str(user.pk), 10, 60)
         if user.account.phone_hash == phone_hash:
-            raise recipient_unavailable()
+            raise APIError("self_recipient", "شمارهٔ گیرنده باید با شمارهٔ خودت متفاوت باشد.", 409)
         try:
             preview = Preview.objects.select_for_update().get(id=preview_id)
         except Preview.DoesNotExist:
@@ -142,7 +147,7 @@ def create_order(user, session_key, data, idempotency_key):
         if not settings.DEMO_MODE:
             sender_orders = sender_orders.exclude(status=Order.Status.DELIVERED_DEMO)
         if not unlimited and sender_orders.count() >= settings.SENDER_DAILY_LIMIT:
-            raise APIError("daily_limit", "سقف درخواست‌های روزانه شما تکمیل شده است.", 429)
+            raise APIError("daily_limit", f"سقف {settings.SENDER_DAILY_LIMIT} درخواست در ۲۴ ساعت شما تکمیل شده است؛ بعد از گذشت این بازه دوباره تلاش کن.", 429)
         RecipientState.objects.get_or_create(phone_hash=phone_hash)
         state = RecipientState.objects.select_for_update().get(phone_hash=phone_hash)
         busy = Order.objects.filter(recipient_hash=phone_hash).filter(
@@ -154,7 +159,7 @@ def create_order(user, session_key, data, idempotency_key):
             sent_statuses.append(Order.Status.DELIVERED_DEMO)
         if not unlimited and Order.objects.filter(owner=user, recipient_hash=phone_hash, status__in=sent_statuses,
                 updated_at__gte=pair_start).exists():
-            raise recipient_unavailable()
+            raise APIError("pair_cooldown", f"بین ارسال‌های شما به همین شماره باید {settings.SENDER_RECIPIENT_COOLDOWN_HOURS} ساعت فاصله باشد؛ بعد از گذشت این زمان دوباره تلاش کن.", 409)
         if state.blocked or busy or recipient_in_cooldown(state, now, sender=user):
             raise recipient_unavailable()
         if preview.is_free:

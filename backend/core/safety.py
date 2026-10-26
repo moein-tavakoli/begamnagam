@@ -23,20 +23,26 @@ def defer_until_open(event):
         cache.get("dispatch-availability-probe")
     except Exception:
         event.available_at = timezone.now() + timedelta(seconds=30)
-        event.save(update_fields=["available_at"])
+        event.last_error_code = 'service_unavailable'
+        event.save(update_fields=["available_at", "last_error_code"])
         OperationalAlert.objects.update_or_create(code="recipient_controls_unavailable", defaults={"active": True, "severity": "critical", "count": 1})
         return True
     OperationalAlert.objects.filter(code="recipient_controls_unavailable", active=True).update(active=False)
     if halted():
         event.available_at = timezone.now() + timedelta(seconds=30)
-        event.save(update_fields=['available_at'])
+        event.last_error_code = 'dispatch_paused'
+        event.save(update_fields=['available_at', 'last_error_code'])
         return True
     now = timezone.localtime()
     if settings.SENDING_WINDOW_ENABLED and not settings.SENDING_START_HOUR <= now.hour < settings.SENDING_END_HOUR:
         tomorrow = now + timedelta(days=1) if now.hour >= settings.SENDING_END_HOUR else now
         event.available_at = tomorrow.replace(hour=settings.SENDING_START_HOUR, minute=0, second=0, microsecond=0)
-        event.save(update_fields=['available_at'])
+        event.last_error_code = 'outside_sending_window'
+        event.save(update_fields=['available_at', 'last_error_code'])
         return True
+    if event.last_error_code:
+        event.last_error_code = ''
+        event.save(update_fields=['last_error_code'])
     return False
 
 

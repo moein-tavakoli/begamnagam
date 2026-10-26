@@ -33,7 +33,11 @@ def deliver_message(event_id):
         if defer_until_open(event): return
         if order.status != Order.Status.QUEUED or not order.paid_at:
             event.state = "cancelled"
-        elif state.blocked or order.owner.account.suspended or order.owner.account.deletion_requested_at:
+        elif not hasattr(order.owner, 'account') or order.owner.account.suspended or order.owner.account.deletion_requested_at:
+            order.status = Order.Status.CANCELLED
+            event.state = "cancelled"
+            event.last_error_code = "account_unavailable"
+        elif state.blocked:
             order.status = Order.Status.CANCELLED
             event.state = "cancelled"
             event.last_error_code = "recipient_unavailable"
@@ -61,9 +65,10 @@ def deliver_message(event_id):
                 event.state = "sent"
         delivery, _ = MessageDelivery.objects.get_or_create(order=order)
         delivery.status = {"sent": "delivered_demo", "cancelled": "suppressed", "failed": "failed"}[event.state]
+        delivery.last_error_code = event.last_error_code
         delivery.attempts += 1
         delivery.resolved_at = timezone.now()
-        delivery.save(update_fields=["status", "attempts", "resolved_at", "updated_at"])
+        delivery.save(update_fields=["status", "last_error_code", "attempts", "resolved_at", "updated_at"])
         if event.state in {"cancelled", "failed"}:
             from .services import record_demo_refund
             record_demo_refund(order, "delivery_unavailable")

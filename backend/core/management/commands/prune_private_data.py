@@ -3,7 +3,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
-from core.models import Account, AbuseReport, ModerationAudit, OTPChallenge, Order, Preview, RecipientState, RecipientGrant, OperatorAudit
+from core.models import Account, AbuseReport, ModerationAudit, OTPChallenge, Order, Preview, RecipientState, RecipientGrant, OperatorAudit, Invitation, InvitationSend
 
 
 class Command(BaseCommand):
@@ -14,7 +14,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         now = timezone.now()
-        counts = {'otp': 0, 'unused_preview': 0, 'orders_redacted': 0, 'accounts_redacted': 0, 'reports_redacted': 0}
+        counts = {'otp': 0, 'unused_preview': 0, 'orders_redacted': 0, 'accounts_redacted': 0, 'reports_redacted': 0, 'invitations_redacted': 0}
         with transaction.atomic():
             otp = OTPChallenge.objects.filter(expires_at__lt=now-timedelta(days=1))
             previews = Preview.objects.filter(expires_at__lt=now-timedelta(days=1), order__isnull=True)
@@ -34,6 +34,15 @@ class Command(BaseCommand):
             counts['accounts_redacted'] = accounts.count()
             reports = AbuseReport.objects.filter(Q(closed_at__lt=now-timedelta(days=180)) | Q(closed_at__isnull=True, created_at__lt=now-timedelta(days=180))).filter(Q(hold_until__isnull=True) | Q(hold_until__lte=now)).exclude(details='')
             counts['reports_redacted'] = reports.count()
+            invitations = Invitation.objects.filter(created_at__lt=now-timedelta(days=90)).exclude(phone_cipher='').exclude(
+                pk__in=InvitationSend.objects.filter(status__in=['pending', 'submitting', 'unknown', 'accepted']).values('invitation_id'))
+            for invitation in invitations.select_for_update().iterator(chunk_size=200):
+                if AbuseReport.objects.filter(grant__invitation_send__invitation=invitation, hold_until__gt=now).exists():
+                    continue
+                counts['invitations_redacted'] += 1
+                if not options['dry_run']:
+                    Invitation.objects.filter(pk=invitation.pk).update(phone_cipher='', phone_masked='حذف‌شده')
+                    invitation.sends.update(full_sms='')
             if not options['dry_run']:
                 otp.delete()
                 previews.delete()
@@ -48,5 +57,5 @@ class Command(BaseCommand):
                 OperatorAudit.objects.filter(created_at__lt=now-timedelta(days=180)).delete()
                 # An active stop survives account/content cleanup, including forever
                 # until the verified owner re-enables receipt. Never bulk-delete it.
-                RecipientState.objects.filter(blocked=False, last_sent_at__lt=now-timedelta(days=31)).exclude(phone_hash__in=Order.objects.filter(status__in=['queued', 'accepted', 'unknown']).values('recipient_hash')).delete()
+                RecipientState.objects.filter(blocked=False, last_sent_at__lt=now-timedelta(days=31)).exclude(phone_hash__in=Order.objects.filter(status__in=['queued', 'accepted', 'unknown']).values('recipient_hash')).exclude(phone_hash__in=Invitation.objects.values('phone_hash')).delete()
         self.stdout.write(('Dry run: ' if options['dry_run'] else 'Applied: ') + str(counts))

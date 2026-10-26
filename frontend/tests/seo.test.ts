@@ -216,7 +216,7 @@ test("JSON-LD serialization cannot close its script element and preserves Persia
 test("private, administrative and offline HTTP responses are protected against indexing", async () => {
   assert.ok(config.headers);
   const rules = await config.headers();
-  for (const source of ["/r", "/r/:path*", "/history", "/preferences", "/api/:path*", "/admin/:path*", "/offline.html"]) {
+  for (const source of ["/r", "/r/:path*", "/history", "/invitations", "/preferences", "/api/:path*", "/admin/:path*", "/offline.html"]) {
     const headers = rules.filter(rule => rule.source === source).flatMap(rule => rule.headers);
     const robots = headers.find(header => header.key.toLowerCase() === "x-robots-tag");
     assert.ok(robots, source);

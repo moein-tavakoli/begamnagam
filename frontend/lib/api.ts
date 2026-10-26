@@ -11,6 +11,7 @@ export type Bootstrap = {
   phone_masked?: string;
   free_sends_remaining?: number;
   free_sends_total?: number;
+  free_sends_earned_total?: number;
   price_toman: number;
   categories: Category[];
   rewrite_mode: string;

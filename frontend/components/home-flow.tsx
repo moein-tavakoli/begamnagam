@@ -74,6 +74,7 @@ export function HomeFlow() {
             بعدی؛ حرفم رو بگم <Icon name="arrow" size={20} />
           </button>
           <Link href="/help" className="hero-help">اول ببینم چطوری کار می‌کنه</Link>
+          <Link href="/invitations" prefetch={false} className="hero-help">دعوت دوستان <Icon name="heart" size={16} /></Link>
           <div className="slide-dots" aria-label="صفحه اول از دو صفحه">
             <span className="active" /><span />
           </div>

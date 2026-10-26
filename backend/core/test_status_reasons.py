@@ -47,7 +47,7 @@ class PublicStatusReasonTests(TestCase):
 
     def test_receiver_block_cooldown_and_busy_order_have_identical_public_errors(self):
         order = self.make_order().json()
-        state = RecipientState.objects.get()
+        state = RecipientState.objects.get(phone_hash=Order.objects.get(pk=order['id']).recipient_hash)
         responses = []
         for blocked, last_sent in [(False, None), (True, None), (False, timezone.now())]:
             # The first case is an existing open order, not a blocked receiver.

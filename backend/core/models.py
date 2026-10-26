@@ -11,7 +11,8 @@ class Account(models.Model):
     phone_cipher = models.TextField()
     phone_masked = models.CharField(max_length=20)
     suspended = models.BooleanField(default=False)
-    free_sends_remaining = models.PositiveSmallIntegerField(default=3)
+    free_sends_remaining = models.PositiveIntegerField(default=3)
+    free_sends_earned_total = models.PositiveIntegerField(default=0, db_default=0)
     unlimited_demo_sends = models.BooleanField("ارسال نامحدود برای تست", default=False, db_default=False,
         help_text="فقط در محیط آزمایشی: حذف سقف روزانه و فاصلهٔ ارسال برای همین فرستنده؛ قطع دریافت، سفارش باز و OTP حفظ می‌شوند.")
     direct_message_tone = models.BooleanField("لحن صریح‌تر و محترمانه", default=False, db_default=False,
@@ -23,7 +24,7 @@ class Account(models.Model):
         permissions = [('suspend_account', 'Suspend or resume product senders'),
                        ('manage_test_sending', 'Manage unlimited simulated sending for individual accounts'),
                        ('manage_message_tone', 'Manage respectful direct message tone for individual accounts')]
-        constraints = [models.CheckConstraint(condition=models.Q(free_sends_remaining__lte=3), name="free_sends_max_three")]
+        constraints = [models.CheckConstraint(condition=models.Q(free_sends_remaining__lte=models.F('free_sends_earned_total')+3), name="free_sends_within_grants")]
 
 
 class OTPChallenge(models.Model):
@@ -275,13 +276,65 @@ class SpendReservation(models.Model):
 
 class RecipientGrant(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    preview = models.OneToOneField(Preview, on_delete=models.CASCADE, related_name='recipient_grant')
+    preview = models.OneToOneField(Preview, null=True, blank=True, on_delete=models.CASCADE, related_name='recipient_grant')
+    invitation_send = models.OneToOneField('InvitationSend', null=True, blank=True, on_delete=models.CASCADE, related_name='recipient_grant')
     token_digest = models.CharField(max_length=64, unique=True)
     recipient_hash = models.CharField(max_length=64, db_index=True)
     activated_at = models.DateTimeField(null=True, blank=True)
     stop_expires_at = models.DateTimeField(null=True, blank=True)
     report_expires_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=(models.Q(preview__isnull=False, invitation_send__isnull=True) |
+            models.Q(preview__isnull=True, invitation_send__isnull=False)), name='recipient_grant_one_source')]
+
+
+class Invitation(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    inviter = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='invitations')
+    # Retained after redaction so a number cannot be claimed by another inviter.
+    phone_hash = models.CharField(max_length=64, unique=True)
+    phone_cipher = models.TextField()
+    phone_masked = models.CharField(max_length=20)
+    registered_at = models.DateTimeField(null=True, blank=True)
+    reward_awarded_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=['inviter', '-created_at'])]
+
+
+def invitation_local_id():
+    import secrets
+    return secrets.randbelow(2**63-1)+1
+
+
+class InvitationSend(models.Model):
+    """Durable outbox and delivery record; an uncertain submission is never resent."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    invitation = models.ForeignKey(Invitation, on_delete=models.PROTECT, related_name='sends')
+    ordinal = models.PositiveSmallIntegerField()
+    idempotency_key = models.UUIDField(unique=True)
+    consent_version = models.CharField(max_length=32)
+    consent_at = models.DateTimeField()
+    full_sms = EncryptedTextField()
+    local_id = models.BigIntegerField(default=invitation_local_id, unique=True)
+    provider = models.CharField(max_length=16)
+    status = models.CharField(max_length=20, default='pending', db_index=True)
+    provider_reference = models.CharField(max_length=100, blank=True)
+    last_error_code = models.CharField(max_length=40, blank=True)
+    available_at = models.DateTimeField()
+    lease_until = models.DateTimeField(null=True, blank=True)
+    checked_at = models.DateTimeField(null=True, blank=True)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['invitation', 'ordinal'], name='invitation_send_ordinal'),
+            models.CheckConstraint(condition=models.Q(ordinal__gte=1, ordinal__lte=3), name='invitation_max_three_sends')]
 
 
 class AbuseReport(models.Model):

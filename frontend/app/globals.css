@@ -143,6 +143,26 @@ input[aria-invalid="true"],textarea[aria-invalid="true"] { border-color: var(--e
 .inline-form { display: flex; flex-direction: column; gap: 10px; margin-block: 12px; }
 .demo-code { padding: 12px; border-radius: 14px; background: #fff0bd; font-size: 12px; }
 body:has(input:focus,textarea:focus) .mobile-nav { display: none; }
+.mobile-nav { grid-template-columns: repeat(5,minmax(0,1fr)); }
+.invitation-stats { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; margin-block: 24px; }
+.invitation-stats>div { background: #f3eefc; border-radius: 18px; padding: 16px 8px; text-align: center; }
+.invitation-stats strong { display: block; font-size: 25px; line-height: 1.5; }
+.invitation-stats span { display: block; font-size: 11px; color: var(--muted); line-height: 1.8; }
+.invitation-form { background: #fff7dc; border: 1px solid #eedca6; border-radius: 22px; padding: 20px; }
+.invitation-form h2 { font-size: 18px; margin-top: 0; }
+.invitation-form input[type=tel] { min-width: 0; width: 100%; background: white; }
+.invitation-consent { margin-top: 18px; font-size: 12px; align-items: flex-start; }
+.invitation-consent input { flex-shrink: 0; margin-top: 5px; }
+.invitation-rules { font-size: 12px; }
+.invitation-rules summary { min-height: 44px; cursor: pointer; display: flex; align-items: center; text-decoration: underline; text-underline-offset: 4px; }
+.invitation-sms { white-space: pre-line; padding: 14px; background: white; border-radius: 14px; }
+.invitation-progress { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 12px; margin-block: 18px; }
+.invitation-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.invitation-actions p { flex: 1; min-width: 160px; margin: 0; }
+.status-pill.invitation-registered { color: #244d36; background: #d9efdf; }
+.invitations-page .inline-form { flex-wrap: wrap; }
+.invitations-page .inline-form input { flex: 1 1 180px; }
+.invitations-page .inline-form button { flex: 1 1 160px; }
 .environment-banner { padding-top: calc(7px + env(safe-area-inset-top)); }
 .mobile-nav { padding-right: max(10px,env(safe-area-inset-right)); padding-left: max(10px,env(safe-area-inset-left)); }
 @media(min-width:700px) { .inline-form { flex-direction: row; } .inline-form input { flex: 1; width: 0 !important; } }
@@ -270,3 +290,5 @@ body:has(input:focus,textarea:focus) .mobile-nav { display: none; }
 }
 
 .home-flow .auth-title { display: none; }
+
+.invitation-reward { display: flex; align-items: center; gap: 6px; color: #28533b; }

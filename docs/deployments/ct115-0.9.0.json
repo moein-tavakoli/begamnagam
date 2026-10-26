@@ -1,0 +1,192 @@
+{
+  "version": "0.9.0",
+  "current": "/opt/begamnagam/releases/0.9.0",
+  "at_utc": "2026-10-26T13:32:41.577450+00:00",
+  "containers": [
+    {
+      "name": "begamnagam-internal-worker-1",
+      "id": "e6afec3c0033dc19cd1ae0f21943a25b1732692316561ce4adc45892e69bf47b",
+      "image": "begamnagam-internal/backend:0.9.0",
+      "image_id": "sha256:81c38ae8468508fb9d24a6bde80cadf2be8651ac63b39fd503ab04e48c2e351e",
+      "health": null,
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-beat-1",
+      "id": "c43c1788cb698665559f9ab2654c6f7b9f5950cb662f9ef5c9a194e76b34118e",
+      "image": "begamnagam-internal/backend:0.9.0",
+      "image_id": "sha256:81c38ae8468508fb9d24a6bde80cadf2be8651ac63b39fd503ab04e48c2e351e",
+      "health": null,
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-backend-1",
+      "id": "fa0875dc22f37b8181f7ce7ac20e8db6df82269e75ad643072ad504876064fef",
+      "image": "begamnagam-internal/backend:0.9.0",
+      "image_id": "sha256:81c38ae8468508fb9d24a6bde80cadf2be8651ac63b39fd503ab04e48c2e351e",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-proxy-1",
+      "id": "013b5d1720b304e6ee4da94e80a5c3796d9362033a922c10320955d418f89f4f",
+      "image": "traefik:v3.7.13",
+      "image_id": "sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-frontend-1",
+      "id": "a43e12234154ea3a4881eaae7047f3b842fdd766ce2a1606897c3c2f6be90762",
+      "image": "begamnagam-internal/frontend:0.9.0",
+      "image_id": "sha256:df007fd09ad8627f5178e321bb8aeaa0abd9418674cca1af001ba9e9c763d6d0",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-postgres-1",
+      "id": "86757705be67d50fc7bb1cf3240cb6687d902ee00747ec50ce434cb4a64c5ada",
+      "image": "postgres:17-alpine",
+      "image_id": "sha256:e4cb93687b062cd25a0e8f672d85a7708235009d70d31f8a7698d9370092a9c4",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-redis-1",
+      "id": "c29a7b9d11346a7723351bc5aa2cd1018c34399f87e703c2905a4213dd06b18f",
+      "image": "redis:7.4-alpine",
+      "image_id": "sha256:1db42ccef14898aa29bae778452d567534b59c107129cbc1163fb552de184d3c",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-rabbitmq-1",
+      "id": "ce5ccc99c6287034e4ed113aff268ef62a2bcd2cda33b2a82bdaf097301f8c59",
+      "image": "rabbitmq:4.4-alpine",
+      "image_id": "sha256:2225c65600dbdd89d7d0a8e2ed386b1d0b32817a3c97ab6ef621ac33056bec27",
+      "health": "healthy",
+      "restart_count": 0
+    }
+  ],
+  "images": {
+    "BACKEND_IMAGE": "sha256:81c38ae8468508fb9d24a6bde80cadf2be8651ac63b39fd503ab04e48c2e351e",
+    "FRONTEND_IMAGE": "sha256:df007fd09ad8627f5178e321bb8aeaa0abd9418674cca1af001ba9e9c763d6d0"
+  },
+  "unchanged_data_services": {
+    "begamnagam-internal-postgres-1": true,
+    "begamnagam-internal-redis-1": true,
+    "begamnagam-internal-rabbitmq-1": true
+  },
+  "activation": {
+    "sending_enabled": true,
+    "payments": "disabled",
+    "topics": 18,
+    "gift_balances_preserved": true,
+    "daily_reserved_rial": 100000,
+    "daily_limit_rial": 100000
+  },
+  "backend_postgresql": {
+    "tests": 207,
+    "result": "PASS",
+    "database": "isolated PostgreSQL",
+    "redis_database": 15
+  },
+  "frontend": {
+    "tests": 28,
+    "result": "PASS",
+    "typecheck": "PASS",
+    "production_build": "PASS"
+  },
+  "profile_acceptance": {
+    "result": "PASS",
+    "real_sms_sent": 0,
+    "transport": "mocked",
+    "budget_reservation": "mocked",
+    "budget_limits_covered_by_postgresql_tests": true,
+    "diagnostic_data_rolled_back": true,
+    "isolated_test_database": true,
+    "invitation_wire_snapshot": true,
+    "verified_signup_reward_once": true,
+    "real_profile": true,
+    "real_otp_login": true,
+    "real_gift_dispatch": true,
+    "csrf": true,
+    "idempotency": true,
+    "paid_checkout_closed": true,
+    "daily_budget_rial": 100000,
+    "sms_ceiling_rial": 20000
+  },
+  "routing": {
+    "checks": 35,
+    "result": "PASS",
+    "tls_verification": true,
+    "connect_ip": "192.168.1.6",
+    "ordinary_public_connectivity": "Not verified in this release; edge IP with valid HTTPS hostname was checked."
+  },
+  "ui": {
+    "desktop_width": 1440,
+    "mobile_width": 375,
+    "horizontal_overflow": false,
+    "data": "synthetic responses, cleared afterwards",
+    "membership_notice": "PASS",
+    "latin_phone_conversion": "PASS",
+    "resend_consent": "PASS",
+    "proof": [
+      "../release-v0.9.0/ui-desktop.png",
+      "../release-v0.9.0/ui-mobile.png"
+    ]
+  },
+  "migrations": [
+    "0013_phone_invitations",
+    "0014_invitation_rewards"
+  ],
+  "reward": {
+    "inviter": 3,
+    "invitee_initial": 3,
+    "once_per_verified_first_signup": true
+  },
+  "limits": {
+    "per_recipient_requests": 3,
+    "cooldown_hours": 24,
+    "per_inviter_requests_per_24h": 5,
+    "resend_window_days": 30,
+    "pending_expiry_hours": 48
+  },
+  "provider_budget_changed": false,
+  "real_sms_sent_for_verification": 0,
+  "payments": "disabled",
+  "code_sha256": {
+    "backend/config/urls.py": "d8e6350f29715f1823b91e2a066007eadd349a172db22223a2a75195721a18da",
+    "backend/core/admin.py": "031eb1a26314c554517ae6860186f6fbafc4efdf0e5059e07924545186672f04",
+    "backend/core/management/commands/prune_private_data.py": "0e98bd07476aa2b24adc385361b4f7bbca70df53a290e49e80b6cfed09b523fc",
+    "backend/core/management/commands/rotate_encryption.py": "351252a50cdbe0cb8e201f237072beedcdb8795bde8fa0ceacf0b3ba6d6f65a3",
+    "backend/core/models.py": "1252f3d83dbe5bc8039cea5fc3ff5a260c872c27e436e064eacfda54d7a5a5f5",
+    "backend/core/recipient.py": "9b05b012926429c8379f1a94f23d31ee66d5e94e9bb43acb3a232fbe2e0261fb",
+    "backend/core/safety.py": "6bf9da7b5cc08cfee32d5ff3f4b6d58279034a67e52e663a4509cadc34f82054",
+    "backend/core/services.py": "2104696fc18062861bc1dce055902413ccc6c314afc343bc56c207a7117d3a7d",
+    "backend/core/tasks.py": "2445b8815ad0f4b3738d688ffd807dae978f31ddd37cf93d6f51cfc573339d52",
+    "backend/core/test_status_reasons.py": "e6dc80fe560b672fda69e73c1cd0fe4592c9b37a33e54501793949bc979397da",
+    "backend/core/views.py": "3d447b1c793e2172af854396260f57943b9ec02e05c8349b1b20a4d18e6fa869",
+    "frontend/app/globals.css": "7d4b9dd4bc2522599bf11aca833eb9ca6ff450d66f44be96eb7d533d582b934b",
+    "frontend/app/privacy/page.tsx": "54c8c1bfb5ccc4409daed60ae9ae19c4feb9f063e803c3e82edf682206678539",
+    "frontend/components/chrome.tsx": "9f0d8f8bf196c7aee97b9baeaee8b38ffaa3cd312a28aff023901e92f4639f0b",
+    "frontend/components/home-flow.tsx": "f7429c98c2687b6a8894f61c9272dc72fd8447c75e63eab69d0ae2dd2ec986e9",
+    "frontend/lib/api.ts": "4a7430272c4ab2328bc6910a707903b6ce2c91276590183a42984b642c59ce7d",
+    "frontend/lib/help-content.ts": "1333b8b16df96e9a8a407b750583064337a40f6b4db1c5a37e996a602d0f071b",
+    "frontend/next.config.ts": "fe104aec681aa083bad72a5aa69a969a2914925135b13c35391b787bef085ce7",
+    "frontend/package-lock.json": "0edcda0fb6139060c5821ad8af2c7a3637fca2e0f4996776a188e3676741419a",
+    "frontend/package.json": "17704c1db3bd092db8aac6fa2d20e4992031857c8c88856ffbf42301bd623774",
+    "frontend/tests/seo.test.ts": "0925f7d37fcfbbe81a8bff1648c8822f03303db9ae3309adc766ccad5148d4c5",
+    "scripts/verify-domain-routing.py": "1529ec6d6a5dd989f72d144ac7bddf2c9e44ce48ac0d661e5979d6b2f245c9e5",
+    "backend/core/invitation_delivery.py": "8dd09406987be088e457f373e03712aa5573b32dbf63c278453314f5e03beba8",
+    "backend/core/invitations.py": "a1869c2afbe1c0e38fcd13c8465e91942a82c7f943f9009bada3cbee8f72e704",
+    "backend/core/migrations/0013_phone_invitations.py": "75df8c53b95fd0b6716fe8b6b8bceaa905f32b0f8325926f73fbd3f4dbf1a675",
+    "backend/core/migrations/0014_invitation_rewards.py": "b447f3f9831e3364138ecb8dd6b06222a12b6395ab01bcaf72a15cfbbb9c3f34",
+    "backend/core/test_invitations.py": "4847ae1cd2c3d18033fcbb8a2b00d7e02efb43cb12c6c69b8be31fd2cd593631",
+    "frontend/app/invitations/page.tsx": "b8dc33b4a238e4acf3d7ede5c431854d3eb4ca90225017460f5f3213444a5cfa",
+    "frontend/components/invitations.tsx": "5deb6af3886f36ed12bceb1bc0bda51a684bd6e777672f21d1ffc7234b67eefe",
+    "frontend/lib/invitations.ts": "729040642dfd8c57df1cb7dc3b719ad5edf7f59622f9b20107dbc0fcc44d401a",
+    "frontend/tests/invitations.test.ts": "6a93bb4e79a34d4af76746c758954f0dd27232c44f1bb45bfb1e2aa37c31115d"
+  },
+  "runtime_backend_hashes": "PASS"
+}

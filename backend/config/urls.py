@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.urls import path
 from core import views
+from core import invitations
 
 handler404 = "core.views.not_found"
 handler500 = "core.views.server_error"
@@ -24,4 +25,6 @@ urlpatterns = [
     path("api/v1/account/deletion", views.request_deletion),
     path("api/v1/operations/status", views.operations_status),
     path("api/v1/preferences", views.preferences),
+    path("api/v1/invitations", invitations.invitations_view),
+    path("api/v1/invitations/<uuid:invitation_id>/resend", invitations.resend_view),
 ]

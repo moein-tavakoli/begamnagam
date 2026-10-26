@@ -80,7 +80,8 @@ def bootstrap(request):
         "otp_is_real": otp_is_real()}
     if authenticated:
         data["free_sends_remaining"] = request.user.account.free_sends_remaining
-        data["free_sends_total"] = 3
+        data["free_sends_total"] = 3 + request.user.account.free_sends_earned_total
+        data["free_sends_earned_total"] = request.user.account.free_sends_earned_total
         data["recent_auth"] = timezone.now().timestamp() - request.session.get("phone_verified_at", 0) <= 300
         data["session_identity"] = digest("session-identity:" + request.session.session_key)
         data["phone_masked"] = request.user.account.phone_masked
@@ -169,12 +170,16 @@ def verify_otp(request):
             challenge.consumed_at = timezone.now()
             challenge.save(update_fields=["attempts", "consumed_at"])
             phone = decrypt(challenge.phone_cipher)
+            from .invitations import lock_phone, record_registration
+            lock_phone(challenge.phone_hash)
             user, created = get_user_model().objects.get_or_create(username="phone_" + challenge.phone_hash)
             if created:
                 user.set_unusable_password()
                 user.save(update_fields=["password"])
-            Account.objects.get_or_create(user=user, defaults={"phone_hash": challenge.phone_hash,
+            account, account_created = Account.objects.get_or_create(user=user, defaults={"phone_hash": challenge.phone_hash,
                 "phone_cipher": challenge.phone_cipher, "phone_masked": mask(phone)})
+            if account_created and user.is_active:
+                record_registration(account)
             challenge.phone_cipher = ""
             challenge.code_digest = ""
             challenge.save(update_fields=["phone_cipher", "code_digest"])

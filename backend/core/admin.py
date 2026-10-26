@@ -5,7 +5,7 @@ from django.http import HttpResponseNotAllowed, HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
 
-from .models import Account, ModerationAudit, Order, Outbox, RecipientState
+from .models import Account, ModerationAudit, Order, Outbox, RecipientState, Invitation, InvitationSend
 from .account_options import OPTION_PERMISSIONS, update_account_options
 
 
@@ -55,8 +55,9 @@ class AccountAdmin(ReadOnlyAdmin):
     list_display = ("id", "phone_masked", "free_sends_remaining", "unlimited_demo_sends", "direct_message_tone", "created_at")
     list_filter = ("unlimited_demo_sends", "direct_message_tone")
     search_fields = ("phone_masked",)
-    fields = ("id", "phone_masked", "free_sends_remaining", "created_at")
+    fields = ("id", "phone_masked", "free_sends_remaining", "free_sends_earned_total", "created_at")
     readonly_fields = fields
+
 
     def has_change_permission(self, request, obj=None):
         return any(request.user.has_perm(permission) for permission in OPTION_PERMISSIONS.values())
@@ -334,3 +335,18 @@ class OperationalAlertAdmin(ReadOnlyAdmin):
 @admin.register(SpendBudget)
 class SpendBudgetAdmin(ReadOnlyAdmin):
     list_display = ('day', 'reserved_rial', 'limit_rial')
+
+
+@admin.register(Invitation)
+class InvitationAdmin(ReadOnlyAdmin):
+    list_display = ('id', 'phone_masked', 'created_at', 'registered_at', 'reward_awarded_at')
+    fields = list_display
+    readonly_fields = fields
+
+
+@admin.register(InvitationSend)
+class InvitationSendAdmin(ReadOnlyAdmin):
+    list_display = ('id', 'ordinal', 'status', 'created_at', 'accepted_at')
+    list_filter = ('status', 'provider')
+    fields = ('id', 'ordinal', 'status', 'provider', 'last_error_code', 'consent_at', 'consent_version', 'created_at', 'accepted_at')
+    readonly_fields = fields

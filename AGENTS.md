@@ -32,7 +32,9 @@ do not invent current APIs.
   recipient allowlist for authentication. This permission applies only to fixed OTP
   text and does not activate order SMS, payment providers or public deployment.
 - Recipients must never see sender identity. Sender-facing errors must not expose
-  whether a target opted out or has an account. Preferences apply to the verified
+  whether a target opted out or has an account. The explicitly requested authenticated
+  invitation panel alone reports existing membership and signup after a phone invitation;
+  it must not reveal opt-out or another inviter's identity. Preferences apply to the verified
   account's own number only.
 - A product session requires a verified phone `Account`; Django admin login alone
   is insufficient. Mutating requests require CSRF protection.

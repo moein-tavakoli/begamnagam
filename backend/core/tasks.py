@@ -83,6 +83,15 @@ def reconcile_outbox():
     from .services import dispatch
     for event_id in Outbox.objects.filter(state="pending", available_at__lte=timezone.now()).values_list("id", flat=True)[:100]:
         dispatch(event_id)
+    from .invitations import publish
+    from .models import InvitationSend
+    for send_id in InvitationSend.objects.filter(status='pending', available_at__lte=timezone.now()).order_by('available_at').values_list('pk', flat=True)[:100]:
+        publish(send_id)
+    from .models import Invitation
+    from .invitations import reward_registration
+    for invitation_id in Invitation.objects.filter(registered_at__isnull=False, reward_awarded_at__isnull=True,
+            inviter__account__deletion_requested_at__isnull=True).order_by('registered_at').values_list('pk', flat=True)[:100]:
+        reward_registration(invitation_id)
 
 
 @shared_task(ignore_result=True)
@@ -139,9 +148,24 @@ def reconcile_providers():
         reconcile_delivery(delivery_id)
     for refund_id in Refund.objects.exclude(status='refunded').values_list('pk', flat=True)[:100]:
         process_refund(refund_id)
+    from .models import InvitationSend
+    from .invitation_delivery import reconcile
+    from django.db.models import Q
+    now = timezone.now()
+    due = InvitationSend.objects.filter(provider='kavenegar', status__in=['submitting', 'unknown', 'accepted']).filter(
+        Q(checked_at__isnull=True) | Q(checked_at__lte=now-timedelta(minutes=5))).filter(
+        Q(lease_until__isnull=True) | Q(lease_until__lte=now))
+    for send_id in due.order_by('created_at').values_list('pk', flat=True)[:100]:
+        reconcile(send_id)
 
 
 @shared_task(ignore_result=True)
 def verify_provider_payment(attempt_id):
     from .provider_services import verify_payment
     verify_payment(attempt_id)
+
+
+@shared_task(ignore_result=True)
+def deliver_invitation(send_id):
+    from .invitation_delivery import submit
+    submit(send_id)

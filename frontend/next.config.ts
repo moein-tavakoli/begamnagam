@@ -25,7 +25,8 @@ const config: NextConfig = {
     return [
       { source: "/r", headers: [{ key: "Cache-Control", value: "no-store" }, { key: "Referrer-Policy", value: "no-referrer" }] },
       { source: "/r/:path*", headers: [{ key: "Cache-Control", value: "no-store" }, { key: "Referrer-Policy", value: "no-referrer" }] },
-      ...["/r", "/r/:path*", "/history", "/preferences", "/api/:path*", "/admin/:path*", "/offline.html"].map(source => ({
+      { source: "/invitations", headers: [{ key: "Cache-Control", value: "no-store" }] },
+      ...["/r", "/r/:path*", "/history", "/invitations", "/preferences", "/api/:path*", "/admin/:path*", "/offline.html"].map(source => ({
         source,
         headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow, noarchive, nosnippet" }],
       })),

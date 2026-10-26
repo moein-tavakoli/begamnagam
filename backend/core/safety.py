@@ -109,13 +109,16 @@ def operator_action(actor, action, object_id, reason, reference=''):
 
 
 def snapshot():
+    from .models import InvitationSend
     now = timezone.now()
     oldest = Outbox.objects.filter(state__in=['pending', 'submitting', 'unknown']).aggregate(value=Min('created_at'))['value']
+    invite_oldest = InvitationSend.objects.filter(status__in=['pending', 'submitting', 'unknown']).aggregate(value=Min('created_at'))['value']
+    oldest = min(filter(None, [oldest, invite_oldest]), default=None)
     budget = SpendBudget.objects.filter(day=timezone.localdate()).first()
-    return {'sending_halted': halted(), 'outbox_pending': Outbox.objects.filter(state='pending').count(),
+    return {'sending_halted': halted(), 'outbox_pending': Outbox.objects.filter(state='pending').count()+InvitationSend.objects.filter(status='pending').count(),
         'oldest_queue_seconds': max(0, int((now-oldest).total_seconds())) if oldest else 0,
         'payment_unknown': PaymentAttempt.objects.filter(status='unknown').count(),
-        'delivery_unknown': MessageDelivery.objects.filter(status__in=['unknown', 'submitting']).count(),
+        'delivery_unknown': MessageDelivery.objects.filter(status__in=['unknown', 'submitting']).count()+InvitationSend.objects.filter(status__in=['unknown', 'submitting']).count(),
         'refund_open': Refund.objects.exclude(status='refunded').count(), 'reports_open': AbuseReport.objects.filter(status='open').count(),
         'provider_budget_reserved_rial': budget.reserved_rial if budget else 0,
         'provider_budget_limit_rial': min(budget.limit_rial, settings.PROVIDER_DAILY_BUDGET_RIAL) if budget else settings.PROVIDER_DAILY_BUDGET_RIAL}

@@ -13,7 +13,7 @@ def generate_short_code():
     return ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(8))
 
 
-def issue_grant(preview, recipient_hash):
+def issue_grant(preview, recipient_hash, *, invitation_send=None):
     # A uniqueness constraint arbitrates collisions across concurrent workers.
     # Savepoints keep a rare collision from poisoning the enclosing preview tx.
     for _ in range(5):
@@ -21,11 +21,12 @@ def issue_grant(preview, recipient_hash):
         token_digest = digest('recipient-token:' + token)
         try:
             with transaction.atomic():
-                RecipientGrant.objects.create(preview=preview, token_digest=token_digest,
+                RecipientGrant.objects.create(preview=preview, invitation_send=invitation_send, token_digest=token_digest,
                                               recipient_hash=recipient_hash)
         except IntegrityError:
             if (not RecipientGrant.objects.filter(token_digest=token_digest).exists()
-                    or RecipientGrant.objects.filter(preview=preview).exists()):
+                    or (RecipientGrant.objects.filter(invitation_send=invitation_send).exists() if invitation_send
+                        else RecipientGrant.objects.filter(preview=preview).exists())):
                 raise
         else:
             return token

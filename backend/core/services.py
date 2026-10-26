@@ -153,6 +153,9 @@ def create_order(user, session_key, data, idempotency_key):
         busy = Order.objects.filter(recipient_hash=phone_hash).filter(
             models_busy_query(now)
         ).exists()
+        from .models import InvitationSend
+        busy = busy or InvitationSend.objects.filter(invitation__phone_hash=phone_hash,
+            status__in=['pending', 'submitting', 'unknown']).exists()
         pair_start = quota_start(now, hours=settings.SENDER_RECIPIENT_COOLDOWN_HOURS, sender=user, recipient_hash=phone_hash)
         sent_statuses = [Order.Status.ACCEPTED, Order.Status.DELIVERED, Order.Status.UNKNOWN]
         if settings.DEMO_MODE:

@@ -97,7 +97,7 @@ def main():
         assert link_headers.get("Referrer-Policy") == "no-referrer"
         assert "noindex" in link_headers.get("X-Robots-Tag", "")
         results["checks"]["plain_recipient_link_redirect_and_privacy"] = True
-    for path in ["/history", "/preferences", "/help"]:
+    for path in ["/history", "/invitations", "/preferences", "/help"]:
         page, page_headers = request(path)
         assert len(page) > 1024 and 'lang="fa"' in page.decode(), path
         if args.expect_live_gifts and path != "/help":
@@ -113,13 +113,14 @@ def main():
         assert 'application/ld+json' in html and 'WebApplication' in html
         sitemap, _ = request("/sitemap.xml")
         assert all((origin + path).encode() in sitemap for path in ["/", "/help", "/privacy"])
-        assert b"/history" not in sitemap and b"/preferences" not in sitemap
+        assert b"/history" not in sitemap and b"/preferences" not in sitemap and b"/invitations" not in sitemap
         robots, _ = request("/robots.txt")
         assert ("Sitemap: " + origin + "/sitemap.xml").encode() in robots
         results["checks"]["live_gifts_and_public_seo"] = True
     request("/healthz")
     request("/api/v1/messages", 401)
     request("/api/v1/preferences", 401)
+    request("/api/v1/invitations", 401)
     request("/api/v1/does-not-exist", 404)
     request("/admin", 301)
     request("/admin/", 302)

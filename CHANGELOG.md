@@ -1,5 +1,16 @@
 # Versions
 
+## 0.9.0 — Phone invitations and signup rewards
+
+- Add a private invitation panel: unique phone claims, membership/self checks,
+  three requests per target, 24h cooldown, five requests per sender/day.
+- Send only reviewed invitation snapshots with an opt-out capability; durable
+  outbox, gross shared budget and query-only uncertain outcomes preserve safety.
+- Award the inviter three credits exactly once after first verified signup.
+  Invitees retain their three initial gifts; existing balances are preserved.
+- Add registration/delivery history, reward status, consent, encryption, retention,
+  migrations0013–0014 and authenticated invitation-only membership disclosure.
+
 ## 0.8.18 — Recipient SMS introduction
 
 - Start fresh recipient SMS previews with the exact Persian introduction and a

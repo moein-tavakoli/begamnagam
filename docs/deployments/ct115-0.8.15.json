@@ -358,5 +358,6 @@
   "blocker_reference": "https://kavenegar.com/rest.html",
   "next_action": "Enable begamnagam.ir link permission with Kavenegar; then acknowledge the alert, resume order dispatch and perform one newly authorized delivery test.",
   "public_internet_path": "Connection refused from this LAN; routing verified through the existing central Nginx with normal hostname TLS verification.",
-  "git_push": false
+  "git_push": false,
+  "superseded_by": "ct115-0.8.15-live-activation.json"
 }

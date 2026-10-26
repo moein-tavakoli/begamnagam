@@ -10,9 +10,12 @@
 - Restore demo-only gift balances once while halted, with an operator audit;
   never replay old messages. Update live UI, help and SEO copy.
 - 160 PostgreSQL and24 frontend tests pass; HTTPS/SEO/CSRF routing checks pass.
-  Deployed0.8.15. One authorized real probe was rejected with Kavenegar420
-  (link permission disabled). Order dispatch is paused pending provider approval;
+  Deployed0.8.15. After the user enabled link permission, a fresh authorized
+  real probe received a delivered receipt at6906 rial. Order dispatch resumed;
   OTP remains real, three gifts are preserved and paid checkout stays closed.
+- Track a provider configuration discrepancy: resendfailed updates return disabled
+  but an independent GET still reports enabled. Record an operator warning for
+  console follow-up; app-level idempotency and spend limits remain enforced.
 
 ## 0.8.14 — Login OTP for every valid phone number
 

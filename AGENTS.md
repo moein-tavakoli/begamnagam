@@ -4,6 +4,21 @@ This repository is a Persian RTL local-demo product. Read `README.md` and the
 relevant document in `docs/` before changing behavior. Current architecture is a
 Django monolith with Next.js, PostgreSQL, Redis, RabbitMQ and Celery.
 
+## Deployment policy
+
+Make changes and run checks locally by default. Deploy to the server only when
+the user explicitly asks to send the current changes to the server. Previous
+deployment authorization does not authorize deploying subsequent changes.
+
+## User-facing product runs
+
+The user is testing the real product. OTP and recipient/invitation SMS must use
+the real provider in every user-facing run. Do not switch their session to demo,
+console delivery, a synthetic account database or a simulated success. If the real
+service is unavailable, diagnose it and show the actual failure; never substitute
+a demo. Start a demo only when the user explicitly requests it. Automated tests
+may use isolated databases and mocked providers; do not expose those as the product.
+
 ## Documentation
 
 Use Context7 MCP whenever working with a library, framework, SDK, API, CLI or

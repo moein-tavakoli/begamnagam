@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { api, ApiError, errorMessage } from "@/lib/api";
 import { latinDigits, normalizePhone, validPhone } from "@/lib/format";
 import { useApp } from "./app-provider";
@@ -10,9 +10,11 @@ import { Icon } from "./icons";
 export function AuthGate({
   purpose = "برای ادامه، شماره خودت را تأیید کن.",
   forceReverify = false,
+  renderActions,
 }: {
   purpose?: string;
   forceReverify?: boolean;
+  renderActions?: (primary: ReactNode, busy: boolean) => ReactNode;
 }) {
   const { data, authenticate, reload } = useApp();
   const [phone, setPhone] = useState("");
@@ -24,6 +26,7 @@ export function AuthGate({
   const [error, setError] = useState("");
   const [fieldError, setFieldError] = useState("");
   const confirmation = useRef<HTMLDivElement>(null);
+  const actionRow = (primary: ReactNode) => renderActions ? renderActions(primary, busy) : primary;
   if (data?.authenticated && !forceReverify)
     return (
       <div
@@ -106,7 +109,7 @@ export function AuthGate({
   }
 
   return (
-    <div className="auth-card">
+    <div className={`auth-card${renderActions ? " has-custom-actions" : ""}`}>
       <div className="auth-title">
         <Icon name="lock" size={20} />
         <h3>{purpose}</h3>
@@ -116,10 +119,9 @@ export function AuthGate({
         سوءاستفاده است.
       </p>
       <ErrorBox message={error} />
-      {data?.otp_is_real && (
+      {data?.otp_is_real && data.demo_mode && (
         <p className="muted small" role="status">
-          کد ورود با پیامک واقعی می‌رسد.
-          {data.demo_mode && " پرداخت و ارسال پیام به گیرنده در این محیط آزمایشی‌اند."}
+          پرداخت و ارسال پیام به گیرنده در این محیط آزمایشی‌اند.
         </p>
       )}
       {!challenge ? (
@@ -138,13 +140,13 @@ export function AuthGate({
               aria-invalid={!!fieldError}
               aria-describedby={fieldError ? "auth-field-error" : undefined}
             />
-            <BusyButton
+            {actionRow(<BusyButton
               className="button secondary"
               busy={busy}
               disabled={!data}
             >
               دریافت کد تأیید
-            </BusyButton>
+            </BusyButton>)}
           </div>
           {fieldError && (
             <p className="field-error" id="auth-field-error">
@@ -182,9 +184,9 @@ export function AuthGate({
               aria-invalid={!!fieldError}
               aria-describedby={fieldError ? "auth-field-error" : undefined}
             />
-            <BusyButton className="button secondary" busy={busy}>
+            {actionRow(<BusyButton className="button secondary" busy={busy}>
               تأیید و ادامه
-            </BusyButton>
+            </BusyButton>)}
           </div>
           {fieldError && (
             <p className="field-error" id="auth-field-error">

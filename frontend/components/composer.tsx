@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   api,
   createIdempotencyKey,
@@ -24,6 +24,7 @@ import { AuthGate } from "./auth-gate";
 import { BusyButton, DeliveryReason, ErrorBox, ServiceState } from "./feedback";
 import { Icon, type IconName } from "./icons";
 import { FreeSendsBalance } from "./free-sends";
+import { TermsDialog } from "./terms-dialog";
 import { draftProblem, draftTopicHint } from "@/lib/composer-draft";
 
 const categoryIcons: Record<string, IconName> = {
@@ -282,6 +283,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
 
   function goBack() {
     setStep(0);
+    setConsent(false);
     setError("");
     setFields({});
   }
@@ -297,6 +299,17 @@ export function Composer({ onExit }: { onExit?: () => void }) {
     setFields({});
     idempotencyKey.current = "";
   }
+  function renderActions(primary: ReactNode, disableBack = busy || !!order) {
+    return (
+      <div className="form-actions composer-actions" role="group" aria-label="ادامه یا بازگشت">
+        <button type="button" className="button ghost composer-back" disabled={busy || disableBack || (!!order && !finished)}
+          onClick={() => step === 0 || finished ? onExit?.() : goBack()}>
+          <Icon name="arrow" size={18} /><span>قبلی</span>
+        </button>
+        {primary}
+      </div>
+    );
+  }
   return (
     <section
       data-update-blocked={!!(step > 0 || text || recipient || order)}
@@ -305,16 +318,9 @@ export function Composer({ onExit }: { onExit?: () => void }) {
       data-screen={finished ? "receipt" : step}
       aria-labelledby="compose-title"
     >
-      <div className="compose-toolbar">
-        <button type="button" className="flow-back" disabled={busy} aria-label={step === 0 || order ? "بازگشت به معرفی" : "مرحله قبل"}
-          onClick={() => step === 0 || order ? onExit?.() : goBack()}>
-          <Icon name="arrow" size={20} /><span>قبلی</span>
-        </button>
-        <h1 id="compose-title" tabIndex={-1} ref={heading}>
-          {finished ? "رسید پیامت" : !data?.authenticated ? "اول شماره خودت رو تأیید کن" : stepLabels[activeStep]}
-        </h1>
-        <span className="flow-page-count">۲ از ۲</span>
-      </div>
+      <h1 id="compose-title" className="sr-only" tabIndex={-1} ref={heading}>
+        {finished ? "رسید پیامت" : !data?.authenticated ? "اول شماره خودت رو تأیید کن" : stepLabels[activeStep]}
+      </h1>
       <div className="compose-layout">
         <aside className="compose-aside">
           <div className="step-list" aria-label="مراحل ارسال">
@@ -366,22 +372,20 @@ export function Composer({ onExit }: { onExit?: () => void }) {
           </div>
           <ServiceState />
           <ErrorBox message={error} />
-          {step === 0 && !data?.authenticated && <AuthGate />}
+          {step === 0 && !data?.authenticated && <AuthGate renderActions={renderActions} />}
           {step === 0 && data?.authenticated && (
             <form className="draft-form" onSubmit={advanceDraft} noValidate>
-              <h2 className="form-heading" tabIndex={-1}>
-                چه حرفی توی دلت مونده؟
-              </h2>
-              <FreeSendsBalance />
+              <div className="draft-heading-row">
+                <h2 className="form-heading" tabIndex={-1}>
+                  چه حرفی توی دلت مونده؟
+                </h2>
+                <FreeSendsBalance compact />
+              </div>
               <p className="muted form-intro">
                 {freeformRewrite
                   ? "منظورت رو با کلمه‌های خودت بنویس؛ هوش مصنوعی کمک می‌کنه محترمانه بیانش کنی."
                   : "فعلاً می‌تونی از مثال‌های آماده استفاده کنی."}
               </p>
-              {!freeformRewrite && <div className="rewrite-note" role="note">
-                <Icon name="info" size={19} />
-                <p>بازنویسی متن دلخواه هنوز فعال نیست. فعلاً یک مثال پیشنهادی رو انتخاب کن؛ متن نهایی از قالب‌های آماده تهیه می‌شه.</p>
-              </div>}
               <div className="field-label-row">
                 <label htmlFor="message-text">حرفی که می‌خوای برسونی</label>
               </div>
@@ -465,22 +469,21 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                 )}
                 </fieldset>
               </details>}
-              <div className="form-actions">
-                <span className="small muted">دیدن پیش‌نمایش رایگانه</span>
+              {renderActions(
                 <BusyButton
                   busy={busy}
                   className="button primary"
                   disabled={!data?.authenticated}
                 >
                   بعدی؛ متن نهایی و ارسال <Icon name="arrow" size={19} />
-                </BusyButton>
-              </div>
+                </BusyButton>,
+              )}
             </form>
           )}
 
-          {step > 0 && !finished && (
+          {step > 0 && !finished && !data?.authenticated && <AuthGate renderActions={renderActions} />}
+          {step > 0 && !finished && data?.authenticated && (
             <form className="review-form" aria-labelledby="compose-title" onSubmit={preview ? createOrder : makePreview} noValidate>
-              {!data?.authenticated && <AuthGate />}
               <label htmlFor="quote-recipient">شماره موبایل گیرنده</label>
               <input id="quote-recipient" type="tel" inputMode="tel" dir="ltr"
                 value={recipient}
@@ -498,8 +501,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                 autoComplete="off" placeholder="0912 345 6789" disabled={busy}
                 readOnly={!!order}
                 aria-invalid={!!fields.recipient_phone}
-                aria-describedby={`quote-recipient-hint${fields.recipient_phone ? " quote-recipient-error" : ""}`} />
-              <p id="quote-recipient-hint" className="small muted review-phone-hint">فقط یک شماره موبایل ایران؛ ارسال به خودت مجاز نیست.</p>
+                aria-describedby={fields.recipient_phone ? "quote-recipient-error" : undefined} />
               {fields.recipient_phone && <p className="field-error" id="quote-recipient-error">{fields.recipient_phone}</p>}
               {preview ? <>
               <div className="final-message">
@@ -529,7 +531,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                   aria-describedby={fields.consent ? "consent-error" : undefined} />
                 <span>
                   متن نهایی رو خوندم و منظورم رو می‌رسونه. این فرد رو می‌شناسم؛ هدفم کمک و یادآوریه، نه تحقیر، تهدید یا مزاحمت.
-                  {" "}<Link href="/privacy">قوانین استفاده</Link> رو می‌پذیرم.
+                  {" "}<TermsDialog /> رو می‌پذیرم.
                 </span>
               </label>
               {fields.consent && <p className="field-error" id="consent-error">{fields.consent}</p>}
@@ -541,28 +543,23 @@ export function Composer({ onExit }: { onExit?: () => void }) {
               {awaitingPayment && (
                 <p className="small muted" role="status">سفارش ثبت شده؛ تلاش دوباره همین سفارش رو ادامه می‌ده.</p>
               )}
-              <div className="form-actions review-actions">
-                <button className="button ghost" type="button" disabled={busy || !!order}
-                  onClick={() => { setStep(0); setConsent(false); setError(""); setFields({}); }}>
-                  اصلاح حرفم
-                </button>
+              {data?.authenticated && renderActions(
                 <BusyButton type="submit" className="button primary" busy={busy}
                   disabled={!data?.authenticated || (!isFree && !data.demo_mode && data.payment_backend !== "zarinpal")}>
                   {isFree ? (awaitingPayment ? "تلاش دوباره برای ارسال رایگان" : data?.demo_mode ? "ارسال رایگان آزمایشی" : "تأیید و ارسال رایگان") : !data?.demo_mode && data?.payment_backend === "disabled" ? "ارسال پولی فعلاً بسته است" : awaitingPayment ? "تلاش دوباره برای پرداخت" : data?.payment_backend === "zarinpal" ? "تأیید و پرداخت" : "تأیید و ارسال آزمایشی"}
                   <Icon name="arrow" size={18} />
-                </BusyButton>
-              </div>
+                </BusyButton>,
+              )}
               </> : <>
                 <div className="review-placeholder" role="note">
                   <Icon name="chat" size={24} />
                   <p>{freeformRewrite ? "شماره رو وارد کن؛ پیش‌نویس پالایش‌شده با GapGPT بازنویسی می‌شه. قبل از ارسال، متن کامل پیامک رو می‌بینی." : "شماره رو وارد کن تا متن نهایی و هزینهٔ همین پیام آماده بشه."}</p>
                 </div>
-                <div className="form-actions review-actions">
-                  <button className="button ghost" type="button" disabled={busy} onClick={goBack}>اصلاح حرفم</button>
+                {data?.authenticated && renderActions(
                   <BusyButton type="submit" className="button primary" busy={busy} disabled={!data?.authenticated}>
                     آماده‌سازی متن <Icon name="arrow" size={18} />
-                  </BusyButton>
-                </div>
+                  </BusyButton>,
+                )}
               </>}
             </form>
           )}
@@ -616,13 +613,11 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                 >
                   <Icon name="refresh" size={17} /> به‌روزرسانی وضعیت
                 </BusyButton>
-                <Link className="button ghost" href="/history">
-                  پیام‌های من
-                </Link>
               </div>
               <button className="text-button" type="button" onClick={startOver}>
                 نوشتن یک پیام دیگر <Icon name="arrow" size={16} />
               </button>
+              {renderActions(<Link className="button primary" href="/history">پیام‌های من</Link>, busy)}
             </div>
           )}
         </div>

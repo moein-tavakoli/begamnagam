@@ -16,6 +16,8 @@ export function HomeFlow() {
       const viewport = window.visualViewport;
       if (viewport && Math.abs(viewport.scale - 1) > 0.01) return;
       document.documentElement.style.setProperty("--app-height", `${viewport?.height || window.innerHeight}px`);
+      const keyboardInset = viewport ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop) : 0;
+      document.documentElement.style.setProperty("--composer-keyboard-inset", `${keyboardInset}px`);
     };
     sync();
     resize();
@@ -23,12 +25,15 @@ export function HomeFlow() {
     window.addEventListener("popstate", sync);
     window.addEventListener("resize", resize);
     window.visualViewport?.addEventListener("resize", resize);
+    window.visualViewport?.addEventListener("scroll", resize);
     return () => {
       window.removeEventListener("hashchange", sync);
       window.removeEventListener("popstate", sync);
       window.removeEventListener("resize", resize);
       window.visualViewport?.removeEventListener("resize", resize);
+      window.visualViewport?.removeEventListener("scroll", resize);
       document.documentElement.style.removeProperty("--app-height");
+      document.documentElement.style.removeProperty("--composer-keyboard-inset");
     };
   }, []);
 

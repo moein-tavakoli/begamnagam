@@ -1,5 +1,14 @@
 # Versions
 
+## Unreleased — Compact composer and inline terms
+
+- Remove the visible composer toolbar and the selected OTP/rewrite/recipient hints.
+- Keep a smaller outlined previous button beside the primary action in a fixed
+  bottom row, with safe-area and keyboard viewport clearance.
+- Place step numbers beside their labels and the compact gift balance beside the
+  draft heading. Open the shared privacy/terms text in an accessible dialog.
+- Prepare locally only; preserve real delivery configuration and consent rules.
+
 ## 0.10.1 — Remove the live gift daily provider cost cap
 
 - Honor the user's explicit request with an opt-in unlimited daily cost mode for

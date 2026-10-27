@@ -1,0 +1,170 @@
+{
+  "version": "0.10.2",
+  "status": "live",
+  "current": "/opt/begamnagam/releases/0.10.2",
+  "at_utc": "2026-10-27T11:50:52.859479+00:00",
+  "frontend_image": "sha256:27d5239523f4f63caed6ffea2f509aa4deeb32b83d2be1e4b0d4cce6785126c2",
+  "backend_image_reused": "begamnagam-internal/backend:0.10.1",
+  "containers": [
+    {
+      "name": "begamnagam-internal-frontend-1",
+      "id": "cd52f5fc816aff050ece76dde1505494bdfb7d5789c3e570ed2e960aa01075e8",
+      "image": "begamnagam-internal/frontend:0.10.2",
+      "image_id": "sha256:27d5239523f4f63caed6ffea2f509aa4deeb32b83d2be1e4b0d4cce6785126c2",
+      "health": "healthy"
+    },
+    {
+      "name": "begamnagam-internal-beat-1",
+      "id": "3ca4e7998ea6a075536e66d2d65152bf7c0be53744bcb799500672c2c7791484",
+      "image": "begamnagam-internal/backend:0.10.1",
+      "image_id": "sha256:1a93303fb06b5202e6fc88cc446ba01cbe441a91895d493849406146d52ec083",
+      "health": null
+    },
+    {
+      "name": "begamnagam-internal-worker-1",
+      "id": "31a2f25e5102f1c772903804f8f2ca3033da65953fb103c961ac19ab847a7dbe",
+      "image": "begamnagam-internal/backend:0.10.1",
+      "image_id": "sha256:1a93303fb06b5202e6fc88cc446ba01cbe441a91895d493849406146d52ec083",
+      "health": null
+    },
+    {
+      "name": "begamnagam-internal-backend-1",
+      "id": "b7bec00b4db5afd6d4c54a39b78edda356e0ce05a08b27d56465bbe45e17ca74",
+      "image": "begamnagam-internal/backend:0.10.1",
+      "image_id": "sha256:1a93303fb06b5202e6fc88cc446ba01cbe441a91895d493849406146d52ec083",
+      "health": "healthy"
+    },
+    {
+      "name": "begamnagam-internal-proxy-1",
+      "id": "aa16e4c80c9e2ab0f7978423e2c643547ed606d6276661fe30a709864631ef42",
+      "image": "traefik:v3.7.13",
+      "image_id": "sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0",
+      "health": "healthy"
+    },
+    {
+      "name": "begamnagam-internal-postgres-1",
+      "id": "86757705be67d50fc7bb1cf3240cb6687d902ee00747ec50ce434cb4a64c5ada",
+      "image": "postgres:17-alpine",
+      "image_id": "sha256:e4cb93687b062cd25a0e8f672d85a7708235009d70d31f8a7698d9370092a9c4",
+      "health": "healthy"
+    },
+    {
+      "name": "begamnagam-internal-redis-1",
+      "id": "c29a7b9d11346a7723351bc5aa2cd1018c34399f87e703c2905a4213dd06b18f",
+      "image": "redis:7.4-alpine",
+      "image_id": "sha256:1db42ccef14898aa29bae778452d567534b59c107129cbc1163fb552de184d3c",
+      "health": "healthy"
+    },
+    {
+      "name": "begamnagam-internal-rabbitmq-1",
+      "id": "ce5ccc99c6287034e4ed113aff268ef62a2bcd2cda33b2a82bdaf097301f8c59",
+      "image": "rabbitmq:4.4-alpine",
+      "image_id": "sha256:2225c65600dbdd89d7d0a8e2ed386b1d0b32817a3c97ab6ef621ac33056bec27",
+      "health": "healthy"
+    }
+  ],
+  "unchanged_containers": {
+    "begamnagam-internal-beat-1": true,
+    "begamnagam-internal-worker-1": true,
+    "begamnagam-internal-backend-1": true,
+    "begamnagam-internal-proxy-1": true,
+    "begamnagam-internal-postgres-1": true,
+    "begamnagam-internal-redis-1": true,
+    "begamnagam-internal-rabbitmq-1": true
+  },
+  "provider_configuration": {
+    "real_otp": true,
+    "real_sms": true,
+    "paid_checkout": "disabled",
+    "daily_budget_unlimited": true,
+    "sending_enabled": true
+  },
+  "frontend": {
+    "tests": 31,
+    "result": "PASS",
+    "typecheck": "PASS",
+    "production_build": "PASS",
+    "next": "16.4.3",
+    "react": "19.3.1"
+  },
+  "routing": {
+    "checks": 36,
+    "result": "PASS",
+    "tls_verification": true,
+    "connect_ip": "192.168.1.6"
+  },
+  "content_checks": {
+    "version": "0.10.2",
+    "toolbar_removed": true,
+    "fixed_action_css": true,
+    "fresh_asset_hashes_verified": 10,
+    "real_sms_sent": 0,
+    "tls_verification": true
+  },
+  "retained_static": {
+    "retained": 79,
+    "version": "0.10.2"
+  },
+  "browser": {
+    "url": "https://begamnagam.ir/#compose",
+    "real_product": true,
+    "synthetic_responses": false,
+    "new_tab_preserved": true,
+    "existing_draft_tab_not_reloaded": true,
+    "version": "0.10.2",
+    "toolbar_removed": true,
+    "compact_balance": true,
+    "fixed_actions": true,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "migrations": [],
+  "backend_or_data_recreated": false,
+  "provider_settings_changed": false,
+  "gift_or_budget_reset": false,
+  "real_sms_sent_for_verification": 0,
+  "simulated_sms_sent_for_verification": 0,
+  "source_sha256": {
+    "frontend/app/globals.css": "919b8f6c2784be0ba203c11870bd03170afb89cbe47cd9828c3c9e99fc88d8ef",
+    "frontend/app/privacy/page.tsx": "57f4d2e5df374ff2f0c1d40a4cea6dc7ee9f5512e13bd073578e063bfde1c6c2",
+    "frontend/components/auth-gate.tsx": "aea759014c648d6e0d7b0bb7f950a5c9b86d4b8f92f991e6d5c508f49e22b077",
+    "frontend/components/composer.tsx": "a6f29e0ee86162c0b7c7f30aea15a0e530ac345103ae617fb0fc3037547c5310",
+    "frontend/components/free-sends.tsx": "4a71f468c02c5b2401c0a61a24c1f89b98eddbe581aa9330cf75477e7677c0e2",
+    "frontend/components/home-flow.tsx": "1593784f599efea527138bbe381fdd0c36bc6d5ff3996bf765ee20db83976c99",
+    "frontend/components/privacy-content.tsx": "e30b1de28a2c71c80e81ab2930db38187f989d2776d1289ee24df3613b8cef9b",
+    "frontend/components/terms-dialog.module.css": "8412d1c4b8ea412fc9ebf27bbf12b1a02b1c33464490c3ca0c0378af278a0759",
+    "frontend/components/terms-dialog.tsx": "b00a6f16fcdc8d8ce245338de1c1f3de364fe6b27c56a1d27ffa86ce68a387f9",
+    "frontend/package-lock.json": "f9a6de1294e97e823add2bb03953b12d3f1f01707ff6a1e6c4d09912c829fc7f",
+    "frontend/package.json": "2083303d1c5377fd6957ec4bc75c5343adf3d8a38b6a6abea77e800931236543"
+  },
+  "retest": {
+    "client_date": "2026-10-27",
+    "scope": "real product stages without a recipient, as selected by user",
+    "result": "PASS",
+    "https_checks": 36,
+    "responsive_widths": [
+      375,
+      478,
+      1440
+    ],
+    "horizontal_overflow": false,
+    "fixed_actions": true,
+    "compact_heading_balance": true,
+    "back_preserves_text_and_selection": true,
+    "incomplete_phone_rejected_before_api": true,
+    "error_visible_above_fixed_actions": true,
+    "real_otp_and_sms_configured": true,
+    "sending_enabled": true,
+    "demo_mode": false,
+    "recipient_preview_created": false,
+    "order_created": false,
+    "otp_requested": false,
+    "sms_sent": 0,
+    "live_terms_popup": "not retested after user limited scope to stages without recipient",
+    "draft_restored": true,
+    "viewport_reset": true,
+    "independent_read_only_audit": "PASS"
+  }
+}

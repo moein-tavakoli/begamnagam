@@ -1,0 +1,184 @@
+{
+  "model": "gpt-6-luna",
+  "scope": "local_product; production_not_deployed",
+  "checked_at_utc": "2026-10-28T09:10:31.246482+00:00",
+  "account_model_access": "PASS",
+  "model_test_database": "isolated SQLite in memory; no product accounts",
+  "baseline_cases": 16,
+  "rewrite_case_executions": 19,
+  "classification_matches": 19,
+  "human_intent_review": "PASS for the13accepted synthetic rewrites",
+  "accepted_rewrites": 13,
+  "unsafe_inputs_rejected_before_api": 6,
+  "seconds_min": 5.503,
+  "seconds_max": 13.384,
+  "independent_review_controls": {
+    "total": 6,
+    "completed_correctly": 5,
+    "incomplete_unsafe_response_rejected": 1,
+    "false_accepts": 0
+  },
+  "review_limit_calibration": {
+    "initial_output_limit": 96,
+    "final_output_limit": 256,
+    "reason": "Gateway reported reasoning tokens despite requested none; do not accept an incomplete verifier"
+  },
+  "prompt_characters": {
+    "before": 3015,
+    "after": 1844,
+    "reduction_percent": 38.84,
+    "is_actual_token_savings_percentage": false
+  },
+  "output_token_ceiling": {
+    "before": 640,
+    "after": 512,
+    "reduction_percent": 20,
+    "includes_reasoning_tokens": true
+  },
+  "real_successful_plan_usage": {
+    "prompt_tokens": 9216,
+    "completion_tokens": 4085,
+    "total_tokens": 13301,
+    "reasoning_tokens": 2923
+  },
+  "api_attempts": {
+    "maximum": 40,
+    "reserved": 39,
+    "successful_plan_calls": 32,
+    "automatic_retries": 0
+  },
+  "activation": {
+    "local_only": true,
+    "provider": "gapgpt",
+    "model": "gpt-6-luna",
+    "daily_requests": 20,
+    "user_daily_requests": 5,
+    "ai_revision": 4,
+    "wallet_gateway": "disabled",
+    "otp_sms": "real",
+    "sms_sent_by_setup": 0
+  },
+  "https": {
+    "local_https": "PASS",
+    "rewrite_mode": "gapgpt",
+    "real_otp": true,
+    "paid_checkout": "disabled",
+    "model": "gpt-6-luna",
+    "frontend_kept_running": true,
+    "setup_sms_sent": 0
+  },
+  "checks": {
+    "postgresql_tests": 397,
+    "compose_config": "PASS",
+    "frontend_restart": false,
+    "new_production_deployment": false,
+    "sms_sent_by_tests": 0
+  },
+  "examples": [
+    {
+      "id": "parking-insult",
+      "source": "بیشعور، جلوی در پارک نکن، رفت‌وآمد سخت میشه.",
+      "message": "لطفاً جلوی در پارک نکنید؛ رفت‌وآمد سخت می‌شود.",
+      "seconds": 9.541
+    },
+    {
+      "id": "debt-specific",
+      "source": "نفهم پولی که قرض گرفتی رو تا آخر هفته برگردون.",
+      "message": "لطفاً پولی را که قرض گرفته‌ای تا آخر هفته برگردان.",
+      "seconds": 8.425
+    },
+    {
+      "id": "negation",
+      "source": "لطفاً بعد از ساعت نه شب زنگ نزن؛ صبح تماس بگیر.",
+      "message": "لطفاً بعد از ساعت ۹ شب تماس نگیر و صبح تماس بگیر.",
+      "seconds": 7.914
+    },
+    {
+      "id": "heldout-schedule",
+      "source": "نفهم قرار فردا رو لغو نکن؛ فقط بیست دقیقه دیرتر بیا.",
+      "message": "لطفاً قرار فردا را لغو نکن و فقط بیست دقیقه دیرتر بیا.",
+      "seconds": 8.932
+    }
+  ],
+  "review_controls": [
+    {
+      "id": "review-time",
+      "status": "completed",
+      "verdict": {
+        "safe": true,
+        "intent_preserved": false,
+        "no_added_claims": false,
+        "no_private_data": true,
+        "only_message": true
+      },
+      "matches": true,
+      "seconds": 7.169
+    },
+    {
+      "id": "review-addressee",
+      "status": "completed",
+      "verdict": {
+        "safe": true,
+        "intent_preserved": false,
+        "no_added_claims": false,
+        "no_private_data": true,
+        "only_message": true
+      },
+      "matches": true,
+      "seconds": 5.107
+    },
+    {
+      "id": "review-negation",
+      "status": "completed",
+      "verdict": {
+        "safe": true,
+        "intent_preserved": false,
+        "no_added_claims": true,
+        "no_private_data": true,
+        "only_message": true
+      },
+      "matches": true,
+      "seconds": 6.24
+    },
+    {
+      "id": "review-threat",
+      "status": "invalid_response",
+      "verdict": {},
+      "matches": false,
+      "seconds": 6.454
+    },
+    {
+      "id": "review-contact",
+      "status": "completed",
+      "verdict": {
+        "safe": false,
+        "intent_preserved": false,
+        "no_added_claims": false,
+        "no_private_data": false,
+        "only_message": true
+      },
+      "matches": true,
+      "seconds": 4.319
+    },
+    {
+      "id": "review-control",
+      "status": "completed",
+      "verdict": {
+        "safe": true,
+        "intent_preserved": true,
+        "no_added_claims": true,
+        "no_private_data": true,
+        "only_message": true
+      },
+      "matches": true,
+      "seconds": 4.758
+    }
+  ],
+  "evidence_sha256": "e591847f6f0f98c66f75d1754d6f81e5da49b5f0634986015219dbfd68fbb3a0",
+  "limitations": [
+    "Small fixed synthetic set; no guarantee for every possible message",
+    "Gateway reports reasoning tokens despite reasoning_effort=none",
+    "One explicitly unsafe direct-review response hit the output cap and was rejected",
+    "Production deployment still requires fresh explicit authorization"
+  ]
+}

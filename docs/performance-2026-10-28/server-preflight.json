@@ -1,0 +1,70 @@
+{
+  "observed_utc": "2026-10-28T04:55:04.004407+00:00",
+  "active_release": "/opt/begamnagam/releases/0.11.0",
+  "root_mount": "/dev/mapper/pve-vm--115--disk--0 / ext4 rw,relatime,stripe=32,emergency_ro 0 0",
+  "public_edge_http": {
+    "/healthz": "503",
+    "/": "200",
+    "/api/v1/bootstrap": "503"
+  },
+  "core_services": [
+    {
+      "name": "/begamnagam-internal-proxy-1",
+      "health": "unhealthy",
+      "restart_count_before_new_work": 0,
+      "oom": false,
+      "last_health_error": "OCI runtime exec failed: open /tmp/runc-process2860931197: read-only file system"
+    },
+    {
+      "name": "/begamnagam-internal-beat-1",
+      "health": null,
+      "restart_count_before_new_work": 0,
+      "oom": false,
+      "last_health_error": ""
+    },
+    {
+      "name": "/begamnagam-internal-worker-1",
+      "health": null,
+      "restart_count_before_new_work": 1,
+      "oom": false,
+      "last_health_error": ""
+    },
+    {
+      "name": "/begamnagam-internal-frontend-1",
+      "health": "unhealthy",
+      "restart_count_before_new_work": 0,
+      "oom": false,
+      "last_health_error": "OCI runtime exec failed: open /tmp/runc-process1465776723: read-only file system"
+    },
+    {
+      "name": "/begamnagam-internal-backend-1",
+      "health": "unhealthy",
+      "restart_count_before_new_work": 0,
+      "oom": false,
+      "last_health_error": "OCI runtime exec failed: open /tmp/runc-process3173465557: read-only file system"
+    },
+    {
+      "name": "/begamnagam-internal-redis-1",
+      "health": "unhealthy",
+      "restart_count_before_new_work": 0,
+      "oom": false,
+      "last_health_error": "OCI runtime exec failed: open /tmp/runc-process2801567561: read-only file system"
+    },
+    {
+      "name": "/begamnagam-internal-postgres-1",
+      "health": "unhealthy",
+      "restart_count_before_new_work": 0,
+      "oom": false,
+      "last_health_error": "OCI runtime exec failed: open /tmp/runc-process730653803: read-only file system"
+    },
+    {
+      "name": "/begamnagam-internal-rabbitmq-1",
+      "health": "unhealthy",
+      "restart_count_before_new_work": 0,
+      "oom": false,
+      "last_health_error": "OCI runtime exec failed: open /tmp/runc-process2968185429: read-only file system"
+    }
+  ],
+  "new_deployment_applied": false,
+  "new_load_test_started": false
+}

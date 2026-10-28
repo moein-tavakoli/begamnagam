@@ -14,19 +14,21 @@ def reserve_cost(operation_key, kind, amount_rial):
     A shared locked day row serializes callers in either mode.
     """
     from .models import OperationalAlert
+    from .limits import policy, daily_budget_limit
+    limits = policy()
     if OperationalAlert.objects.filter(code='provider_cost_exceeded', active=True).exists():
         raise ProviderDisabled('provider_cost_halt')
     if type(amount_rial) is not int or amount_rial <= 0:
         raise ProviderDisabled('cost_ceiling_missing')
     with transaction.atomic():
         day = timezone.localdate()
-        SpendBudget.objects.get_or_create(day=day, defaults={'limit_rial': settings.PROVIDER_DAILY_BUDGET_RIAL})
+        SpendBudget.objects.get_or_create(day=day, defaults={'limit_rial': limits.provider_daily_budget_rial})
         budget = SpendBudget.objects.select_for_update().get(day=day)
         previous = SpendReservation.objects.filter(operation_key=operation_key).first()
         if previous:
             return previous
-        limit = min(budget.limit_rial, settings.PROVIDER_DAILY_BUDGET_RIAL)
-        if not settings.PROVIDER_DAILY_BUDGET_UNLIMITED and budget.reserved_rial + amount_rial > limit:
+        limit = daily_budget_limit(budget)
+        if not limits.provider_budget_unlimited and budget.reserved_rial + amount_rial > limit:
             raise ProviderDisabled('daily_budget_exhausted')
         budget.reserved_rial += amount_rial
         budget.save(update_fields=['reserved_rial'])

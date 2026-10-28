@@ -1,0 +1,52 @@
+{
+  "active_release": "/opt/begamnagam/releases/0.11.2-capacity",
+  "application_images_changed": false,
+  "schema_migrations_run": false,
+  "frontend_replicas": 6,
+  "all_13_services_healthy": true,
+  "data_and_queue_service_ids_unchanged": true,
+  "soak_rps": 750,
+  "soak_seconds": 1800,
+  "soak_completed": 1350000,
+  "soak_errors": 0,
+  "soak_dropped": 0,
+  "soak_p95_ms": 27.278,
+  "soak_p99_ms": 61.453,
+  "edge_soak_resources": {
+    "samples": 1797,
+    "nginx_mean_cores": 0.1795113220081173,
+    "nginx_peak_cores": 0.30946373895216417,
+    "edge_mean_cores": 0.18206796372539383,
+    "edge_peak_working_mib": 381.98046875,
+    "nginx_peak_rss_mib": 27.70703125
+  },
+  "network_scope": "Verified public-domain HTTPS through LAN Nginx and CT Traefik; WAN excluded",
+  "edge_deployment": {
+    "observed_utc": "2026-10-28T05:39:07.362969+00:00",
+    "nginx_version": "1.22.1",
+    "edge_effective_cpus": 1,
+    "upstream_keepalive": 128,
+    "upstream_keepalive_requests": 1000,
+    "websocket_upgrade_conditional": true,
+    "client_supplied_xff_overwritten": true,
+    "response_cache_enabled": false,
+    "recipient_logging_preserved": true,
+    "global_nginx_config_changed": false,
+    "nginx_config_test": "PASS",
+    "reload": "PASS",
+    "sha256": {
+      "/etc/nginx/sites-available/begamnagam.ir": "8cdcb27f101a0ed8a51318db1be97cdb2e615560f3dff923047adefee3f39faf",
+      "/etc/nginx/conf.d/begamnagam-upstream.conf": "317ee8a99178af14e72a688cd10f280f6451ffe56f5868e6936b108e5b30386e"
+    }
+  },
+  "raw_archive": {
+    "sha256": "6140dce7f7a4e835282650fd9167f4bdd9285bdba1b2917ab12fd0de2bc8df58",
+    "bytes": 89313384,
+    "server_path": "/opt/begamnagam/benchmarks/capacity-artifacts-20261028.tar.gz",
+    "local_path": ".local/performance-tuning-2026-10-28/capacity-artifacts-20261028.tar.gz"
+  },
+  "security_http_checks": 22,
+  "seo_checks": 40,
+  "backup_restore_check": "PASS",
+  "live_activity_before_soak_explains_counter_deltas": true
+}

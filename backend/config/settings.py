@@ -6,6 +6,7 @@ from urllib.parse import unquote, urlparse
 
 from cryptography.fernet import Fernet
 from config.origins import local_otp_origin_allowed
+from config.database import connection_options
 from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -16,11 +17,20 @@ def flag(name, default=False):
 
 
 TESTING = flag("DJANGO_TESTING")
-DEBUG = flag("DEBUG", True)
+DEBUG = flag("DEBUG")
 DEMO_MODE = flag("DEMO_MODE", True)
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "local-demo-only-change-this-secret-before-deployment")
-PHONE_HASH_KEY = os.getenv("PHONE_HASH_KEY", "local-demo-phone-hash-only")
-PHONE_ENCRYPTION_KEY = os.getenv("PHONE_ENCRYPTION_KEY") or base64.urlsafe_b64encode(hashlib.sha256(SECRET_KEY.encode()).digest()).decode()
+
+
+def required_secret(name):
+    value = os.getenv(name, "")
+    if not value or value.startswith("replace-with-"):
+        raise ImproperlyConfigured(f"{name} must be supplied through the private environment")
+    return value
+
+
+SECRET_KEY = required_secret("DJANGO_SECRET_KEY")
+PHONE_HASH_KEY = required_secret("PHONE_HASH_KEY")
+PHONE_ENCRYPTION_KEY = required_secret("PHONE_ENCRYPTION_KEY")
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,backend,testserver").split(",")
 CSRF_TRUSTED_ORIGINS = [x for x in os.getenv("CSRF_TRUSTED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",") if x]
 APP_BASE_URL = os.getenv("APP_BASE_URL", "http://localhost:3000").rstrip("/")
@@ -40,14 +50,15 @@ AI_MODE = os.getenv("AI_MODE", "template")
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11434").rstrip("/")
 if not OLLAMA_URL.endswith("/api/generate"):
     OLLAMA_URL += "/api/generate"
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3:4b")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3:4b-instruct-2507-q4_K_M")
 GAPGPT_API_KEY = os.getenv('GAPGPT_API_KEY', '')
-GAPGPT_MODEL = os.getenv('GAPGPT_MODEL', '')
+GAPGPT_MODEL = os.getenv('GAPGPT_MODEL', 'gpt-4.1-mini')
 GAPGPT_BASE_URL = os.getenv('GAPGPT_BASE_URL', 'https://api.gapgpt.app/v1').rstrip('/')
 GAPGPT_TIMEOUT_SECONDS = int(os.getenv('GAPGPT_TIMEOUT_SECONDS', '5'))
-# Explicit positive limits are required before this separately billed API opens.
+# Positive account quota and a site quota or explicit unlimited opt-in are required.
 GAPGPT_DAILY_REQUEST_LIMIT = int(os.getenv('GAPGPT_DAILY_REQUEST_LIMIT', '0'))
 GAPGPT_USER_DAILY_LIMIT = int(os.getenv('GAPGPT_USER_DAILY_LIMIT', '0'))
+GAPGPT_DAILY_REQUEST_UNLIMITED = flag('GAPGPT_DAILY_REQUEST_UNLIMITED')
 if (GAPGPT_BASE_URL != 'https://api.gapgpt.app/v1' or not 1 <= GAPGPT_TIMEOUT_SECONDS <= 10
         or min(GAPGPT_DAILY_REQUEST_LIMIT, GAPGPT_USER_DAILY_LIMIT) < 0):
     raise ImproperlyConfigured('Invalid GapGPT endpoint or limits')
@@ -68,6 +79,9 @@ if not DEMO_MODE:
         raise ImproperlyConfigured("Non-demo requires DEBUG=false and a strong DJANGO_SECRET_KEY")
     if not os.getenv("PHONE_ENCRYPTION_KEY") or len(PHONE_HASH_KEY) < 32:
         raise ImproperlyConfigured("Non-demo requires independent phone encryption and hashing keys")
+    derived_key = base64.urlsafe_b64encode(hashlib.sha256(SECRET_KEY.encode()).digest()).decode()
+    if PHONE_HASH_KEY in {SECRET_KEY, PHONE_ENCRYPTION_KEY} or PHONE_ENCRYPTION_KEY == derived_key:
+        raise ImproperlyConfigured("Non-demo requires three independently generated application keys")
     if (SMS_BACKEND != "disabled" or PAYMENT_BACKEND != "disabled") and not flag("LIVE_PROVIDERS_ENABLED"):
         raise ImproperlyConfigured("Provider activation requires LIVE_PROVIDERS_ENABLED")
     if "*" in ALLOWED_HOSTS or any(x.startswith("http:") for x in CSRF_TRUSTED_ORIGINS):
@@ -79,9 +93,11 @@ INSTALLED_APPS = [
 ]
 MIDDLEWARE = [
     "core.middleware.PrivateResponses",
+    "core.middleware.RuntimeLimits",
     "django.middleware.security.SecurityMiddleware", "whitenoise.middleware.WhiteNoiseMiddleware", "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware", "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware", "django.contrib.messages.middleware.MessageMiddleware",
+    "core.middleware.AdminLoginThrottle",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 ROOT_URLCONF = "config.urls"
@@ -95,7 +111,8 @@ if DATABASE_URL:
         raise ImproperlyConfigured("DATABASE_URL must use PostgreSQL")
     DATABASES = {"default": {"ENGINE": "django.db.backends.postgresql", "NAME": unquote(db.path[1:]),
         "USER": unquote(db.username or ""), "PASSWORD": unquote(db.password or ""),
-        "HOST": db.hostname, "PORT": db.port or 5432, "CONN_MAX_AGE": 60}}
+        "HOST": db.hostname, "PORT": db.port or 5432, "CONN_MAX_AGE": 60,
+        "OPTIONS": connection_options(db.query)}}
 else:
     DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3", "OPTIONS": {"timeout": 20}}}
 if not DEMO_MODE and not DATABASE_URL:
@@ -103,7 +120,9 @@ if not DEMO_MODE and not DATABASE_URL:
 
 REDIS_URL = os.getenv("REDIS_URL", "")
 if REDIS_URL:
-    CACHES = {"default": {"BACKEND": "django.core.cache.backends.redis.RedisCache", "LOCATION": REDIS_URL, "KEY_PREFIX": os.getenv("CACHE_KEY_PREFIX", "")}}
+    CACHES = {"default": {"BACKEND": "django.core.cache.backends.redis.RedisCache", "LOCATION": REDIS_URL,
+        "KEY_PREFIX": os.getenv("CACHE_KEY_PREFIX", ""), "OPTIONS": {
+            "serializer": "core.cache.JSONSerializer", "socket_connect_timeout": 3, "socket_timeout": 3}}}
 else:
     CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "begamnagam"}}
 if not DEMO_MODE and not REDIS_URL:
@@ -115,6 +134,10 @@ CELERY_TASK_EAGER_PROPAGATES = True
 CELERY_TASK_IGNORE_RESULT = True
 CELERY_TASK_SERIALIZER = "json"
 CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_RESULT_ACCEPT_CONTENT = ["json"]
+CELERY_WORKER_ENABLE_REMOTE_CONTROL = False
+CELERY_WORKER_SEND_TASK_EVENTS = False
+CELERY_TASK_SEND_SENT_EVENT = False
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_BEAT_SCHEDULE = {
     "reconcile-providers": {"task": "core.tasks.reconcile_providers", "schedule": 30.0},
@@ -145,6 +168,10 @@ X_FRAME_OPTIONS = "DENY"
 CSRF_FAILURE_VIEW = "core.views.csrf_failure"
 DATA_UPLOAD_MAX_MEMORY_SIZE = 8192
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 7
+# These protect administrator passwords independently of editable product limits.
+ADMIN_LOGIN_WINDOW_SECONDS = 600
+ADMIN_LOGIN_PAIR_LIMIT = 10
+ADMIN_LOGIN_IP_LIMIT = 50
 LOGGING = {"version": 1, "disable_existing_loggers": False,
     "handlers": {"console": {"class": "logging.StreamHandler"}},
     "root": {"handlers": ["console"], "level": "INFO"}}

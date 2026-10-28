@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily encrypted BegamNagam backup
+
+[Timer]
+OnCalendar=*-*-* 03:15:00 Asia/Tehran
+RandomizedDelaySec=5min
+Persistent=yes
+
+[Install]
+WantedBy=timers.target

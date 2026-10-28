@@ -101,7 +101,7 @@ class InvitationTests(TestCase):
         self.assertEqual(self.resend(invitation).json()['error']['code'], 'invitation_limit')
         self.assertEqual(invitation.sends.count(), 3)
         with self.assertRaises(IntegrityError), transaction.atomic():
-            InvitationSend.objects.filter(pk=send.pk).update(ordinal=4)
+            InvitationSend.objects.filter(pk=send.pk).update(ordinal=0)
 
     def test_daily_limit_counts_resends_and_errors_do_not_claim_numbers(self):
         for n in range(5):

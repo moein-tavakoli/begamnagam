@@ -1,6 +1,7 @@
 import re
 from dataclasses import dataclass
 from django.conf import settings
+from config.origins import web_otp_sms_host
 from .http import post, ProviderRejected, ProviderUnknown
 
 
@@ -63,8 +64,12 @@ class Kavenegar:
             raise ProviderRejected('invalid_otp_code')
         if settings.KAVENEGAR_OTP_MODE == 'sms':
             # Fixed server-owned text; never dispatch user input through the OTP path.
+            text = f'بگم نگم\nکد ورود: {code}\nاعتبار: ۵ دقیقه\nکد را در اختیار کسی نگذارید.'
+            host = web_otp_sms_host(settings.APP_BASE_URL)
+            if host:
+                text += f'\n\n@{host} #{code}'
             return self._result(self._call('sms/send', {'receptor': phone,
-                'message': f'بگم نگم\nکد ورود: {code}\nاعتبار: ۵ دقیقه\nکد را در اختیار کسی نگذارید.',
+                'message': text,
                 'sender': settings.KAVENEGAR_SENDER, 'hide': 1}, otp=True))
         if settings.KAVENEGAR_OTP_MODE == 'lookup' and settings.KAVENEGAR_OTP_TEMPLATE:
             return self._result(self._call('verify/lookup', {'receptor': phone, 'token': code,

@@ -1,6 +1,40 @@
 # قرارداد API نسخه اول
 
-از نسخه۰٫۸٫۱۵ پروفایل `config.live_sms_settings`، `demo_mode:false`، `otp_is_real:true` و `payment_backend:disabled` برمی‌گرداند. هر حساب ۳ هدیهٔ واقعی دارد؛ پس از اتمام هدیه، ساخت سفارش پولی با `payment_disabled` و409رد می‌شود و مسیرهای پرداخت503می‌دهند. ارسال رایگان به رضایت و `terms_version` جاری نیاز دارد؛ پیش‌نمایش یا سفارش آزمایشی قدیمی باید دوباره ساخته و تأیید شود. `accepted` پذیرش کاوه‌نگار و `delivered` رسید تحویل است؛ `delivered_demo` تاریخی هرگز واقعی محسوب نمی‌شود.
+## لحن پیام
+
+bootstrap فهرست `message_tones:[{id,label,description}]` از لحن‌های فعال و `default_message_tone` را می‌دهد. `POST /messages/preview` فیلد اختیاری `message_tone: polite|firm|angry` می‌پذیرد و همان را در پاسخ برمی‌گرداند؛ مقدار نامعتبر422و لحن غیرفعال409با `tone_unavailable` است. انتخاب حذف‌شده از پنل باید با bootstrap تازه به‌روز شود. بدون گزینهٔ فعال، فهرست خالی و پیش‌فرض `polite` است. قیمت/متن/مجوز بررسی همچنان از سرور می‌آیند.
+
+`/manage/ai` در `values` سه Boolean مستقل `tone_polite_enabled`, `tone_firm_enabled`, `tone_angry_enabled` و در `tone_options` شرح گزینه‌ها را دارد. ذخیره، مجوز `core.manage_ai`، CSRF، دلیل و revision لازم دارد. `/manage/ai/test` هم فیلد اختیاری `message_tone` را با همان گزینه‌های فعال می‌پذیرد. [معنا و حدود لحن‌ها](ai-ollama.fa.md#مدیریت).
+
+## کیف پول و روش پرداخت
+
+`GET /api/v1/wallet` ماندهٔ صحیح تومان به‌صورت رشته، وضعیت روش‌ها، `withdrawable:false`،۱۰۰گردش آخر و۳۰درخواست شارژ آخر صاحب نشست را می‌دهد. `GET /wallet/topups/<uuid>` فقط شارژ متعلق به همان حساب و محیط را برمی‌گرداند. اطلاعات provider، شماره و متن پیام در این پاسخ‌ها نیست.
+
+`POST /wallet/topups` بدنهٔ دقیق `{amount_toman: integer, consent: true, terms_version: "wallet-credit-v1"}`، `Idempotency-Key` و CSRF می‌خواهد. مبلغ۱تا۲۱۴۷۴۸۳۶۴۷تومان است. پاسخ `id, amount_toman, status, created_at, redirect_url` دارد؛ redirect فقط برای همان پرداخت pending برمی‌گردد. `unknown` اجازهٔ تلاش خودکار تازه نمی‌دهد؛ شارژ فقط پس از verify سمت سرور ثبت می‌شود. callback به `/wallet?topup=<uuid>` هدایت می‌کند.
+
+فروش تازه فقط بسته‌ای است. پیش‌نمایش فقط `payment_method:credit` با قیمت صفر می‌سازد؛ درخواست صریح `wallet|gateway` با409و `package_required` رد می‌شود، مستقل از هدیه و کلیدهای روش پرداخت. `POST /orders` پیش‌نمایش قدیمی پولی را رد می‌کند و اعتبار هدیه/بسته را اتمیک رزرو می‌کند. `POST /orders/<uuid>/pay-wallet` برداشت تازه نمی‌کند؛ فقط پاسخ سفارش تاریخیِ قبلاً پرداخت‌شده را تکرار می‌کند. `/orders/<uuid>/payments` فقط همان authority تاریخی pending در محیط جاری را ادامه می‌دهد و درخواست درگاه تازه نمی‌سازد. وضعیت‌های `wallet_paid|wallet_returned` برای سوابق قدیمی حفظ‌اند؛ callback، verify و تعهد برگشت هزینه تغییری نمی‌کنند.
+
+کلیدهای `wallet_enabled` و `gateway_enabled` از API مدیریت تنظیمات با reason/revision و مجوز فعلی مدیریت محدودیت قابل تغییرند. سوابق `wallet-entries` و `wallet-topups` در API رکوردهای ادمین، فقط خواندنی و با مجوز مدل مربوط هستند. هیچ endpoint برداشت، انتقال یا افزایش دلخواه موجودی وجود ندارد. [قرارداد مالی و رفتار خاموش‌کردن](wallet.fa.md).
+
+## پنل مدیریت Next.js
+
+برای پیش‌نمایش‌های جدیدِ موفق، `Preview.original_text` متن دقیق ورودی را جدا از خروجی نهایی و به‌صورت رمزگذاری‌شده نگه می‌دارد. این فیلد در پاسخ پیش‌نمایش، سفارش و تاریخچهٔ کاربر وجود ندارد. پس از ثبت سفارش، `POST /api/v1/manage/orders/<uuid>/texts` با `reason`، نشست فعال کارکنان و هر دو مجوز `core.view_order` و `core.view_private_message_text`، متن اولیه/نهایی را برمی‌گرداند؛ هر مشاهده با `message_text_viewed` ثبت می‌شود. سوابق مدیر شامل متن نیستند. در ادمین جنگو هم همین مجوز و ثبت سابقه اعمال می‌شود. پیام‌های قدیمی مقدار خالی دارند؛ متن اولیهٔ آن‌ها بازسازی نمی‌شود. دادهٔ ردشده یا بازنویسی ناموفق ذخیره نمی‌شود؛ تنها متن نهایی بررسی‌شده وارد snapshot پیامک می‌شود.
+
+مسیر فرانت `/manage` است. APIهای کارکنان در `/api/v1/manage/` از نشست جنگو و CSRF استفاده می‌کنند؛ حساب تلفنی عادی دسترسی ندارد. فهرست‌ها مجوز مشاهدهٔ مدل و اقدامات مجوز اختصاصی لازم دارند. قرارداد مسیرها و کنترل نسخهٔ تنظیمات در [راهنمای مدیریت](management.fa.md) آمده است. `/admin/` برای مدیریت پیشرفته باقی می‌ماند.
+
+## تنظیمات محدودیت در زمان اجرا
+
+قیمت بسته از snapshot بسته می‌آید و فقط در بخش بسته‌ها قابل تنظیم است. تعرفهٔ تکی دیگر در تنظیمات مدیر پذیرفته نمی‌شود؛ `bootstrap.price_toman` و قیمت تمام پیش‌نمایش‌های تازه صفرند. [API خرید و مدیریت بسته‌ها](message-packages.fa.md) و [کیف پول](wallet.fa.md).
+
+تنظیم مشترک `SiteLimits` در ادمین، تعداد/بازهٔ ارسال و دریافت، فاصله‌ها، ساعت تهران، دفعات و مهلت دعوت، اعتبار OTP/پیش‌نمایش، سقف هزینه و سهمیهٔ بازنویسی را تعیین می‌کند. `RequestLimit` تعداد و بازهٔ درخواست هر مسیر را کنترل می‌کند. API مدیریتی عمومی یا دسترسی فرستنده برای تغییر این داده‌ها وجود ندارد؛ مجوز `core.manage_site_limits`، دلیل تغییر و ثبت قبل/بعد لازم‌اند. هر درخواست وب یک snapshot دارد؛ درخواست بعدی و worker تنظیم ذخیره‌شده را می‌خوانند.
+
+در پاسخ دعوت، `daily_remaining` و `sends_remaining` می‌توانند `null` باشند؛ یعنی سقف تعداد غیرفعال است، نه صفر نوبت. `max_sends`, `daily_limit`, `window_hours`, `cooldown_hours`, `validity_days` تنظیم جاری را توضیح می‌دهند؛ مهلت یا سقف غیرفعال با `null` نمایش داده می‌شود. تغییر عدد پایین‌تر از مصرف قبلی، مانده را صفر می‌کند و عدد منفی برنمی‌گرداند. دلیل عمومی گیرنده همچنان قطع دریافت، صف باز و سقف/فاصله را از هم تفکیک نمی‌کند.
+
+`sender_window_hours`، `recipient_window_hours` و `invitation_window_hours` صفر را برای غیرفعال‌کردن سقف تعداد متناظر می‌پذیرند؛ مقدار تعداد و تاریخچه حفظ می‌شوند. با `invitation_window_hours=0`، پاسخ دعوت `daily_remaining=null` و `daily_limit=null` دارد، در حالی که `window_hours=0` است. فیلدهای فاصلهٔ ساعتی نیز با صفر خاموش‌اند. `sending_start_hour` در محدودهٔ ۰ تا ۲۳ و `sending_end_hour` در محدودهٔ ۰ تا ۲۴ است؛ صفر یعنی نیمه‌شب. شروع و پایان برابر فقط وقتی `sending_window_enabled=false` است پذیرفته می‌شوند. کنترل قطع دریافت، پیام/دعوت در انتظار نتیجه، اعتبارها، انقضای OTP/پیش‌نمایش و محدودیت‌های امنیتی مستقل‌اند.
+
+اعتبار OTP و پیش‌نمایش جدید از تنظیم جاری می‌آید؛ snapshotهای قبلی تمدید نمی‌شوند. دفتر هزینه با تغییر سقف پاک نمی‌شود و نتیجهٔ نامعلوم دوباره ارسال نمی‌شود. سهمیهٔ۳هدیه و۳جایزهٔ دعوت طبق تصمیم کارفرما تغییری نکرده‌اند.
+
+از نسخه۰٫۸٫۱۵ پروفایل `config.live_sms_settings`، `demo_mode:false`، `otp_is_real:true` و `payment_backend:disabled` برمی‌گرداند. هر حساب ۳ هدیهٔ واقعی دارد؛ پس از اتمام هدیه، سفارش تازه به اعتبار بسته نیاز دارد؛ نبود اعتبار409با `credit_required` می‌دهد. خرید بسته تا آماده‌سازی و مجوز مستقل درگاه بسته است و مسیر پرداخت تکی، تراکنش تازه نمی‌سازد. ارسال رایگان به رضایت و `terms_version` جاری نیاز دارد؛ پیش‌نمایش یا سفارش آزمایشی قدیمی باید دوباره ساخته و تأیید شود. `accepted` پذیرش کاوه‌نگار و `delivered` رسید تحویل است؛ `delivered_demo` تاریخی هرگز واقعی محسوب نمی‌شود.
 
 مبنای مسیرها `/api/v1` است؛ بدون slash پایانی. فرانت همه درخواست‌ها را از همان مبدأ می‌فرستد و Next.js آن‌ها را به Django بازنویسی می‌کند. نسخه۰٫۷ اتصال‌های محافظت‌شده ارائه‌دهندگان را دارد؛ اجرای پیش‌فرض محلی همچنان demo و شبکه خارجی خاموش است. در تنظیم انتشار، Caddy مسیرهای API/admin را مستقیم به backend خصوصی می‌رساند.
 
@@ -21,6 +55,8 @@ await fetch('/api/v1/messages/preview', {
 ```
 
 ## قرارداد عمومی
+
+بدنهٔ JSON بیش از۸۱۹۲بایت با HTTP413 و کد `request_too_large` رد می‌شود. خطاهای ValueError غیرمنتظره، متن داخلی یا مقدار خصوصی را در پاسخ منعکس نمی‌کنند؛ پیام‌های اعتبارسنجی مشخص عمومی حفظ شده‌اند. همهٔ پاسخ‌های API دارای CSP محدود و `no-store` هستند. فرم بومی ادمین از referrer همان origin برای CSRF استفاده می‌کند؛ API و لینک‌های گیرنده همچنان `no-referrer` هستند.
 
 - موفقیت APIهای JSON با HTTP 200 برمی‌گردد؛ تکرار سفارش نیز همان سفارش را با 200 بازمی‌گرداند.
 - شناسهٔ پیش‌نمایش، چالش و سفارش UUID است؛ حدس‌نزدنی‌بودن شناسه جای کنترل مالکیت را نمی‌گیرد.
@@ -49,6 +85,8 @@ await fetch('/api/v1/messages/preview', {
 
 OTP به نشست درخواست‌کننده متصل، زمان‌دار و محدود به تعداد تلاش است. در حالت پیش‌فرض `OTP_BACKEND=demo` کد در پاسخ و رابط نمایش داده می‌شود و SMS ندارد. این رفتار ورود واقعی محسوب نمی‌شود و در حالت غیرآزمایشی فعال نیست.
 
+تکمیل خودکار OTP قرارداد JSON را تغییر نمی‌دهد. در حالت `KAVENEGAR_OTP_MODE=sms` و با `APP_BASE_URL` عمومی HTTPS معتبر، خط آخر متن ثابت پیامک به‌شکل `@begamnagam.ir #123456` از دامنهٔ تنظیم‌شده و همان کد تولید می‌شود؛ مقدار نمونه است. مرورگر پشتیبان فقط با اجازهٔ کاربر کد را در فرم می‌گذارد و تأیید همچنان POST دارای CSRF و `challenge_id` همان نشست است. حالت `lookup` قالب تأییدشدهٔ ارائه‌دهنده را تغییر نمی‌دهد؛ قالب آن نیز برای این قابلیت باید خط آخر متناظر را داشته باشد. [راهنمای تکمیل خودکار و PWA](otp-pwa.fa.md).
+
 از نسخه۰٫۸٫۳، حالت صریحاً فعال‌شده می‌تواند `demo_mode=true` و `otp_is_real=true` داشته باشد: کد ورود واقعی است، اما پرداخت و پیام به گیرنده شبیه‌سازی می‌شوند. از نسخه۰٫۸٫۱۴، `POST /auth/request-otp` برای همهٔ شماره‌های معتبر ایران کار می‌کند و فهرست مجاز شمارهٔ ورود وجود ندارد؛ `OTP_TEST_RECIPIENT_HASHES` حذف شده است. فهرست پایلوت تحویل پیام در حالت خارجی هم شرط ورود نیست. اعتبارسنجی شماره، CSRF، حداکثر۳درخواست هر شماره در۱۰دقیقه،۶درخواست هر نشست، محدودیت سیل IP و بودجهٔ مشترک پیش از تماس provider اعمال می‌شوند. پاسخ کد واقعی هرگز `debug_code` ندارد و `demo_mode=false` در پاسخ همان درخواست OTP است؛ `demo_mode` در bootstrap همچنان محیط پرداخت/پیام را توصیف می‌کند. `GET /healthz` هم `otp_is_real` را بدون افشای شماره یا اعتبارنامه برمی‌گرداند. smoke قبل از درخواست کد، چنین محیطی را رد می‌کند.
 
 نسخه۰٫۸٫۴ در پاسخ OTP واقعی، `delivery_status=accepted` برای پذیرش سرویس‌دهنده یا `unknown` برای پاسخ نامطمئن دارد؛ هیچ‌کدام رسید گوشی نیست. در unknown، کد احتمالی را می‌توان وارد کرد و ارسال خودکار تکرار نمی‌شود. شکست قطعی TLS/DNS/اتصال پیش از ارسال یا پاسخ ردشده، خطای `otp_unavailable` با HTTP503 می‌دهد و چالش مصرف‌شده می‌شود؛ پاسخ موفق ساختگی برنمی‌گردد.
@@ -69,21 +107,21 @@ OTP به نشست درخواست‌کننده متصل، زمان‌دار و م
 
 پیش‌نمایش به نشست سازنده متصل است و پس از تأیید شماره در همان نشست قابل استفاده می‌ماند. متن و مبلغ قابل تغییر از سمت کلاینت نیستند. تغییر موضوع یا متن نیازمند پیش‌نمایش تازه است.
 
-## سفارش و پرداخت آزمایشی
+## سفارش و تأیید ارسال
 
 ### سهمیهٔ رایگان۰٫۸٫۹
 
-هر `Account` موجود یا جدید۳ارسال رایگان یک‌باره دارد؛ ورود مجدد یا تغییر روز آن را شارژ نمی‌کند. bootstrap فقط برای حساب تأییدشده `free_sends_total:3` و `free_sends_remaining` را برمی‌گرداند. قیمت پایهٔ `price_toman` در bootstrap همان قیمت معمول است.
+هر `Account` موجود یا جدید۳ارسال رایگان یک‌باره دارد؛ ورود مجدد یا تغییر روز آن را شارژ نمی‌کند. bootstrap فقط برای حساب تأییدشده `free_sends_total:3` و `free_sends_remaining` را برمی‌گرداند. اعتبار خریداری‌شده در `purchased_sends_remaining` و بسته‌های فعال در `message_packages` هستند؛ `package_checkout_enabled` وضعیت خرید تازه را مشخص می‌کند.
 
-پیش‌نمایش با سهمیهٔ باقی‌مانده `is_free:true, price_toman:0` دارد؛ ساختن چند پیش‌نمایش، سهمیه را رزرو نمی‌کند. `POST /orders` برای quote رایگان یک واحد را اتمیک رزرو و سفارش را با `is_free:true, amount_toman:0, payment_mode:free` ثبت می‌کند. فیلدهای قیمت/رایگان ارسالی کلاینت معتبر نیستند؛ snapshot سرور ملاک است. همان Idempotency-Key دوباره سهمیه مصرف نمی‌کند. اگر تب دیگری سهمیه را مصرف کرده باشد، پاسخ409با `free_quota_changed` می‌آید؛ کاربر باید متن و هزینهٔ تازه را تأیید کند، پرداخت خودکار رخ نمی‌دهد. quote پولی قبلی نیز بعد از برگشت سهمیه خودکار تغییر قیمت نمی‌دهد.
+پیش‌نمایش با سهمیهٔ باقی‌مانده `is_free:true, price_toman:0` دارد؛ ساختن چند پیش‌نمایش، سهمیه را رزرو نمی‌کند. `POST /orders` برای quote رایگان یک واحد را اتمیک رزرو و سفارش را با `is_free:true, amount_toman:0, payment_mode:free` ثبت می‌کند. فیلدهای قیمت/رایگان ارسالی کلاینت معتبر نیستند؛ snapshot سرور ملاک است. همان Idempotency-Key دوباره سهمیه مصرف نمی‌کند. اگر تب دیگری سهمیه را مصرف کرده باشد، پاسخ409با `free_quota_changed` می‌آید؛ کاربر باید متن و هزینهٔ تازه را تأیید کند، پرداخت خودکار رخ نمی‌دهد. پیش‌نمایش‌های قدیمی خرید تکی باید دوباره ساخته شوند. هر ارسال غیرهدیه یک اعتبار از بسته رزرو می‌کند.
 
 `POST /orders/{id}/confirm-free` با `{}` برای مالک تأییدشده، CSRF و سفارش رایگان معتبر است. کنترل تعلیق/گیرنده و مجوز سرویس انجام و همان outbox ساخته می‌شود؛ تکرار آن ارسال یا مصرف سهمیهٔ تازه ندارد. `POST /orders/{id}/payments` سفارش رایگان را به درگاه نمی‌برد. مسیر قدیمی pay-demo در محیط demo سفارش رایگان را به همین منطق هدایت می‌کند؛ پرداخت صفر یا تراکنش مالی ساختگی ساخته نمی‌شود. `paid_at` در سفارش رایگان زمان اجازهٔ پردازش صف است؛ `financial_status:free` و `is_free` مشخص می‌کنند پولی پرداخت نشده است.
 
-انقضای رزرو پرداخت‌نشده پس از۱۵دقیقه، انقضای صف ارسال‌نشده، توقف یا شکست قطعی ارسال، سهمیه را یک‌بار برمی‌گرداند و `financial_status:free_credit_returned` می‌دهد. نتیجهٔ نامعلوم سهمیه را آزاد نمی‌کند تا ارسال تکراری رخ ندهد. سه سهمیهٔ رزروشده می‌توانند موقتاً مانده را صفر کنند. سایر محدودیت‌ها، قیمت معمولِ پس از سهمیه، تعدیل محتوا و سیاست provider برقرارند؛ رایگان بودن، ارسال واقعی را فعال نمی‌کند.
+انقضای رزرو پرداخت‌نشده پس از۱۵دقیقه، انقضای صف ارسال‌نشده، توقف یا شکست قطعی ارسال، سهمیه را یک‌بار برمی‌گرداند و `financial_status:free_credit_returned` می‌دهد. نتیجهٔ نامعلوم سهمیه را آزاد نمی‌کند تا ارسال تکراری رخ ندهد. سه سهمیهٔ رزروشده می‌توانند موقتاً مانده را صفر کنند. سایر محدودیت‌ها، مصرف اعتبار بسته پس از سهمیه، تعدیل محتوا و سیاست provider برقرارند؛ رایگان بودن، ارسال واقعی را فعال نمی‌کند.
 
 از نسخه۰٫۸٫۸ سقف فرستنده۵سفارش در۲۴ساعت گذشته است؛ پرداخت‌نشده/لغوشده نیز حساب می‌شود. به هر گیرنده از مجموع فرستنده‌ها حداکثر یک پیام در۲۴ساعت می‌رسد و همان جفت فرستنده/گیرنده نیز فاصله۲۴ساعته دارد. شمارهٔ خود، قطع دریافت و رزرو باز همچنان مانع‌اند. علت خصوصی در خطای عمومی گیرنده افشا نمی‌شود. ابزار ادمین `/admin/core/account/test-limits/` فقط در محیط آزمایشیِ صریحاً فعال‌شده، با مجوز و CSRF پنجرهٔ شمارش را از نو شروع می‌کند؛ API عمومی یا تغییر در OTP/پرداخت ندارد. از نسخه۰٫۸٫۱۲ مدیر با مجوز مستقل می‌تواند برای یک حساب ارسال نامحدود آزمایشی را فعال کند؛ فقط در محیط کاملاً demo و با حفظ قطع دریافت و سفارش باز اثر دارد. پارامترهای درخواست کاربر نمی‌توانند این مجوز را تغییر دهند.
 
-در رابط۰٫۸٫۵، پیش‌نمایش، شمارهٔ ثابت گیرنده، هزینه و تأیید قوانین در یک مرحله‌اند. یک بار ارسال پس از تأیید، ابتدا سفارش و سپس پرداخت همان سفارش را فراخوانی می‌کند؛ APIهای سفارش و پرداخت مستقل باقی مانده‌اند. اگر پرداخت شکست بخورد، تلاش دوباره سفارش تازه نمی‌سازد و شماره/متن سفارش ساخته‌شده قابل ویرایش نیستند. پیش‌نمایش تازه، تأیید قوانین تازه می‌خواهد.
+در رابط جاری، پیش‌نمایش، شمارهٔ ثابت گیرنده، مصرف اعتبار و تأیید قوانین در یک مرحله‌اند. پس از تأیید، ابتدا سفارش و سپس تأیید هدیه/بستهٔ همان سفارش فراخوانی می‌شود؛ خرید بسته جداست. تلاش دوباره همان سفارش و کلید را حفظ می‌کند و شماره/متن سفارش ساخته‌شده قابل ویرایش نیستند. پیش‌نمایش تازه، تأیید قوانین تازه می‌خواهد.
 
 `POST /orders` نیازمند ورود است. هدر `Idempotency-Key` باید UUID تازه‌ای برای هر قصد خرید باشد؛ در retry همان کلید حفظ می‌شود.
 
@@ -93,12 +131,12 @@ OTP به نشست درخواست‌کننده متصل، زمان‌دار و م
 
 پاسخ: `id`, `status`, `amount_toman`, `payment_mode`. یک پیش‌نمایش برای یک سفارش است. استفاده دوباره از همان کلید با محتوای متفاوت باید خطای تعارض بدهد. فرستادن به شماره خود و سفارش خارج از محدودیت‌ها پذیرفته نمی‌شود. API علت خصوصی عدم امکان ارسال به گیرنده را نمایش نمی‌دهد.
 
-`POST /orders/{id}/pay-demo` با بدنه `{}` فقط برای صاحب سفارش و در demo مجاز است. تکرار آن برداشت یا outbox تازه نمی‌سازد. این endpoint درگاه واقعی یا callback آن نیست. پس از ثبت تراکنش، worker سفارش را شبیه‌سازی می‌کند؛ بازیابی outbox به کمک beat انجام می‌شود.
+`POST /orders/{id}/pay-demo` با بدنه `{}` فقط در محیط demo و برای صاحب سفارش معتبر است. سفارش هدیه یا اعتباری را به همان منطق تأیید ارسال هدایت می‌کند؛ پرداخت تکی یا capture تازه نمی‌سازد. سفارش پولی تاریخیِ قبلاً پرداخت‌شده فقط پاسخ قبلی را می‌دهد و سفارش پولی پرداخت‌نشده409با `package_required` می‌گیرد. بازیابی همان outbox با beat انجام می‌شود. این endpoint در محصول واقعی بسته است؛ آزمون خودکار آن در دیتابیس جدا اجرا می‌شود.
 
 | وضعیت | معنا |
 | --- | --- |
-| `awaiting_payment` | سفارش ساخته شده؛ پرداخت آزمایشی انجام نشده |
-| `queued` | پرداخت آزمایشی ثبت و outbox آماده شده |
+| `awaiting_payment` | سفارش ساخته و هدیه/اعتبار رزرو شده؛ تأیید ارسال انجام نشده |
+| `queued` | تأیید ارسال ثبت و outbox آماده شده |
 | `delivered_demo` | پردازش شبیه‌سازی موفق؛ هیچ SMS واقعی یا خوانده‌شدن ادعا نمی‌شود |
 | `cancelled` | سفارش متوقف شده |
 | `failed` | پردازش ناموفق |
@@ -130,16 +168,17 @@ The server rejects final messages over three Unicode SMS segments.
 Order responses add `financial_status` and `delivery_status`. `text` now exposes
 the frozen full SMS including the service/footer URL; internal reviewed body is
 kept separately. Live delivery/read receipts are never inferred from demo states.
-Demo payment, capture event, delivery and outbox are written atomically; worker
-suppression/failure records one compensating demo refund. These endpoints do not
-move money or call a real provider.
+Historical demo captures and compensating refunds remain readable and idempotent.
+New demo sends use isolated gift/package credits and create no per-message capture;
+definitive failure returns one reserved unit. They never move real money or call
+a real provider, and are never substituted for the user-facing real product.
 
 
 ## نسخه۰٫۷: اتصال، رضایت و کنترل گیرنده
 
 UI همیشه quote دارای گیرنده می‌سازد. `terms_version` همراه quote ثابت می‌شود؛ ایجاد سفارش در حالت خارجی به `consent:true` و همان نسخه نیاز دارد. `consent_at` و نسخه در سرور ثبت می‌شوند؛ تغییر تنظیم شرایط، snapshot قبلی را عوض نمی‌کند. بدنهٔ پیام و قیمت/گیرنده را از کلاینت نمی‌پذیریم.
 
-`POST /orders/{id}/payments` با `{}`، برای مالک سفارش یک intent مستقل می‌سازد و `redirect_url` معتبر همان provider را برمی‌گرداند. تکرار درخواست همان تلاش حل‌نشده را استفاده می‌کند و پرداخت تازهٔ کور ایجاد نمی‌کند. `GET /payments/return/zarinpal?Authority=…&Status=…` فقط محرک verify مستقل سمت سرور است؛ query و نشست مرورگر اثبات پرداخت نیستند. callback به history با پرچم عمومی بازمی‌گردد. pay-demo بیرون حالت demo غیرفعال است.
+`POST /orders/{id}/payments` با `{}` فقط برای مالک، همان authority تاریخیِ pending در محیط جاری را با همان `attempt_id` و `redirect_url` برمی‌گرداند؛ intent یا درخواست درگاه تازه نمی‌سازد. سفارش تازهٔ هدیه/بسته یا سفارش پولی بدون authority قبلی409با `package_required` و تلاش نامعلوم/نامنطبق409با `payment_reconciliation` می‌گیرد. `GET /payments/return/zarinpal?Authority=…&Status=…` فقط محرک verify مستقلِ محیط متناظر است؛ query و نشست مرورگر اثبات پرداخت نیستند. callback خرید بسته به credits، شارژ به wallet و سفارش تاریخی به history برمی‌گردد. pay-demo بیرون حالت demo غیرفعال است.
 
 وضعیت‌های افزوده: `accepted` یعنی پذیرش ارائه‌دهنده، `delivered` یعنی DLR تحویل، `unknown` یعنی نتیجه نیازمند تطبیق. هیچ‌کدام خوانده‌شدن یا هویت گیرنده را ثابت نمی‌کند. پاسخ سفارش، `financial_status` و `delivery_status` مستقل دارد؛ refund باز `refund_pending` و refund تأییدشده `refunded` است. توقف بعد پرداخت، موفقیت دیرهنگام و مبلغ نامطابق به رسیدگی مستقل می‌روند؛ ارسال دوم از حدس نتیجه مجاز نیست. تاریخچه پس از retention متن پاک‌شده را با placeholder نشان می‌دهد.
 
@@ -157,7 +196,7 @@ UI همیشه quote دارای گیرنده می‌سازد. `terms_version` ه�
 
 ## لحن حساب و پیش‌نمایش۰٫۸٫۱۲
 
-`POST /messages/preview` در پاسخ، فیلد `message_tone` با مقدار `gentle` یا `direct` هم دارد. این مقدار از تیک مدیریت حسابِ فرستندهٔ احرازشده تعیین می‌شود؛ ورودی client برای انتخاب یا فعال‌سازی آن پذیرفته نمی‌شود. کاربر مهمان و حساب بدون تیک همان لحن ملایم را دارند. `moderation_mode` همچنان `template` یا `ollama_curated` است. متن نهایی، قیمت و شماره همان snapshot قبلی‌اند؛ تغییر تنظیم مدیر، preview موجود را بازنویسی نمی‌کند. مجموعهٔ بررسی‌شدهٔ صریح نیز در worker دوباره اعتبارسنجی می‌شود.
+قرارداد قدیمی `gentle|direct` با سه لحن سراسری ابتدای این سند جایگزین شده است. پیش‌نمایش تازه، انتخاب مجاز `polite|firm|angry` را می‌پذیرد و همان را برمی‌گرداند؛ تیک قدیمی حساب روی انتخاب تازه اثر ندارد. متن نهایی و لحن snapshot ثابت‌اند و تغییر تنظیم مدیر پیش‌نمایش یا سفارش قبلی را بازنویسی نمی‌کند. worker همان متن بررسی‌شده و امضای معتبر را دوباره اعتبارسنجی می‌کند.
 
 تیک `unlimited_demo_sends` فقط از پنل مدیریت با مجوز `manage_test_sending` و ثبت دلیل قابل تنظیم است. فقط سقف‌ها و فاصله‌های ارسال/پیش‌نمایش مربوط به همان حساب را در محیط بستهٔ demo کنار می‌گذارد؛ محدودیت IP، OTP، بودجه، قطع دریافت، تعلیق، ارسال به خود و رزرو باز حفظ می‌شوند. تیک `direct_message_tone` مجوز مستقل `manage_message_tone` دارد. هیچ‌کدام فیلد قابل‌ویرایش API عمومی یا profile نیستند.
 
@@ -209,8 +248,38 @@ bootstrap فقط با AI_MODE=gapgpt، کلید/مدل و سقف مثبت، rewr
 
 حساب تأییدشده و گیرندهٔ معتبر پیش از تماس AI لازم‌اند. ورودی۲۸۰نویسه، پالایش محلی، تولید و بررسی مستقل مدل و کنترل محلی خروجی برقرارند؛ تهدید/دادهٔ تماس/دستور دورزدن و فحش بدون منظور پیش از شبکه رد می‌شوند. خطا یا پاسخ نامعتبر، قالب جایگزین یا retry خودکار ندارد. rewrite_daily_limit با۴۲۹سقف حساب را توضیح می‌دهد؛ خطاهای فنی/اعتبار عمومی‌اند.
 
+اصلاح نسخهٔ۰٫۱۲٫۲، خطای معنایی را از رد محتوایی جدا می‌کند. پاسخ‌ها همچنان در قالب معمول `error.code` و `error.message` هستند و پیش‌نمایش ارسال تولید نمی‌کنند:
+
+| HTTP | کد | معنی |
+| --- | --- | --- |
+| 422 | `rewrite_intent_changed` | بازبین تغییر منظور یا اضافه‌شدن ادعا را تشخیص داده است؛ پیام دربارهٔ حفظ‌نشدن منظور است، نه تهدیدبودن ورودی. |
+| 422 | `rewrite_intent_unclear` | مدل هدف جمله را روشن تشخیص نداده است. |
+| 422 | `rewrite_output_rejected` | نسخهٔ تولیدشده در کنترل محلی، قالب یا لحن تأیید نشده است. |
+| 422 | `moderation_rejected` | رد محتوایی/حریم خصوصی با توضیح متناسب؛ اگر علت معلوم نیست پیام خنثی است. |
+| 503 | `rewrite_unavailable` | خطای شبکه، مهلت، پاسخ ناقص یا ساختار نامعتبر سرویس. |
+
+تعریف، ابراز محبت و شوخی دوستانهٔ بی‌آزار بدون درخواست عملی هم منظور معتبر دارند. مثال پرامپت مجوز عبور نیست؛ تمام کنترل‌ها، بازبینی مستقل و امضای دقیق متن برقرارند. فقط کد ثابتِ علت و نام کنترل‌های شکست‌خورده ثبت می‌شوند؛ توضیح آزاد مدل، متن کاربر و پاسخ خام در audit یا لاگ قرار نمی‌گیرند. این اصلاح روی سرور منتشر شده است؛ [ارزیابی واقعی و محدودیت آن](ai-gapgpt.fa.md#اصلاح-رد-اشتباه-پیام-دوستانه).
+
 پاسخ شکل قبلی دارد: moderation_mode=gapgpt، rewritten_text بدنهٔ تأییدشده، full_sms جملهٔ آغاز+بدنه+لینک لغو و حداکثر۳بخش است. generated_body رمز و review_signature فقط داخلی‌اند. تأیید نهایی شامل حفظ منظور است و همان snapshot بدون AI دوباره به adapter می‌رود. تغییر بدنه، گیرنده، صاحب، قیمت، شرایط یا انقضا امضا را باطل می‌کند. کلید فعلاً خالی است و اتصال واقعی آزموده نشده است.
 
 ## حذف سقف هزینهٔ روزانه۰٫۱۰٫۱
 
 در پروفایل هدیهٔ واقعی با flag خصوصی `PROVIDER_DAILY_BUDGET_UNLIMITED=1`، پرشدن بودجهٔ روزانه مانع OTP، پیام یا دعوت نیست. ثبت هزینه، idempotency، ماندهٔ۳هدیه، پرداخت بسته و قرارداد پاسخ سفارش حفظ شده‌اند. API عملیات `provider_budget_unlimited:true, provider_budget_limit_rial:null` می‌دهد؛ مقدار رزرو تاریخچه پاک نمی‌شود. علت‌های داخلی معتبرِ توقف پیش از provider در delivery/outbox ذخیره می‌شوند و جزئیات فنی/اعتبار در رسید عمومی پنهان می‌مانند. سفارش لغوشدهٔ قبلی بازپخش نمی‌شود.
+
+## Synchronous local AI and administration
+
+`rewrite_mode` and preview `moderation_mode` may be `ollama` for locally generated, independently reviewed freeform text. Both `ollama` and `gapgpt` previews retain encrypted bodies and exact signed snapshots. Legacy `ollama_curated` remains a reviewed-template snapshot type. New AI requests run synchronously, with no background job or provider fallback. Local admission is immediate; `429 ai_busy` means capacity is occupied and the caller may explicitly retry. A model timeout or uncertain review yields `503 rewrite_unavailable`; no draft is queued for later dispatch.
+
+Staff with `core.manage_ai` may GET/POST `/api/v1/manage/ai`; writes require CSRF, `values`, `revision`, and `reason`. Editable values are `provider` (`template`, `ollama`, `gapgpt`), `ollama_model`, `gapgpt_model`, `timeout_seconds` (2–20), `parallel_requests` (1–2), `daily_limit`, and `user_daily_limit`. Endpoints and credentials remain server-owned. Selecting GapGPT requires existing credentials and positive paid-provider limits. `POST /api/v1/manage/ai/test` accepts a transient `text` of up to 280 characters, tests only the saved local model, and returns `allowed`, `message`, and `elapsed_seconds`; it never creates an SMS, preview or order. The payload never returns credentials. See [Ollama operating guide](ai-ollama.fa.md).
+
+### Message submission trust boundary
+
+The server is authoritative even for direct HTTP clients and modified browser code. Preview accepts only `text`, `category`, `recipient_phone`, `source_mode`, `message_tone`, and the compatibility field `payment_method` (only `credit` can create a quote); the backend computes moderation and the final snapshot. Order creation accepts only `preview_id`, `recipient_phone`, `consent`, `terms_version`, and legacy `wallet_consent` for compatibility; that field cannot authorize a new direct charge. Attempts to supply a replacement body, moderation result, price, identity or signature are rejected with `422 server_snapshot_required`. Free confirmation and demo payment accept an empty JSON object only. Editing rendered text or a JavaScript preview object cannot change the stored outgoing SMS.
+
+AI previews bind the exact approved body, full SMS, owner, recipient, price, terms and expiry with a keyed signature. The order copies server data only; the snapshot is checked again before dispatch authorization. The real SMS worker reloads and locks the preview and verifies the order immediately before provider submission, so a change between its two transactions cancels dispatch. Missing consent in a real run, changed/expired snapshots, another owner's preview, unsigned output, raw profanity and fabricated client review flags cannot authorize an outgoing message. Changing text or recipient requires a fresh backend preview and confirmation. Both AI providers share these controls.
+
+### GapGPT preset and output bounds
+
+The active model since release 0.12.1 is gpt-4.1-mini. It uses Chat Completions with response_format=json_object and max_tokens=256 for each of the two stateless calls. The older Luna preset uses max_completion_tokens and reasoning_effort=none; reported reasoning tokens count within its output bound. Both incomplete choices and any failed/uncertain review are rejected without retry or fallback. No client API keys or provider-selected text overrides are accepted. The local product launcher forwards the private GapGPT environment to Python services only. See [operating guide](ai-gapgpt.fa.md).
+
+تنظیم سراسری GapGPT در `GET/POST /api/v1/manage/limits` فیلد بولی `rewrite_daily_unlimited` دارد (پیش‌فرض `false`). مقدار `true` فقط سقف `rewrite_daily_limit` را کنار می‌گذارد؛ `rewrite_user_limit`، شمارش مصرف، مجوز مدیریت، CSRF، دلیل تغییر و کنترل revision برقرارند. با بازگشت به `false` مصرف قبلی همان روز در سقف عددی لحاظ می‌شود؛ صفر در سقف سایتِ محدود یا سقف هر حساب، بازنویسی را غیرفعال می‌کند.

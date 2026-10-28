@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { api, ApiError, errorMessage } from "@/lib/api";
 import { latinDigits, normalizePhone, validPhone } from "@/lib/format";
+import { listenForSmsCode } from "@/lib/otp-autofill";
 import { useApp } from "./app-provider";
 import { BusyButton, ErrorBox } from "./feedback";
 import { Icon } from "./icons";
@@ -26,6 +27,8 @@ export function AuthGate({
   const [error, setError] = useState("");
   const [fieldError, setFieldError] = useState("");
   const confirmation = useRef<HTMLDivElement>(null);
+  const stopAutofill = useRef<() => void>(() => {});
+  useEffect(() => () => stopAutofill.current(), []);
   const actionRow = (primary: ReactNode) => renderActions ? renderActions(primary, busy) : primary;
   if (data?.authenticated && !forceReverify)
     return (
@@ -54,6 +57,10 @@ export function AuthGate({
     }
     setFieldError("");
     setBusy(true);
+    stopAutofill.current();
+    setCode("");
+    // Listen before requesting the SMS, including fast provider responses.
+    stopAutofill.current = listenForSmsCode(setCode);
     try {
       const result = await api<{ challenge_id: string; debug_code?: string; delivery_status?: string }>(
         "/auth/request-otp",
@@ -64,6 +71,8 @@ export function AuthGate({
       setDeliveryStatus(result.delivery_status || "");
       window.setTimeout(() => document.getElementById("otp-code")?.focus(), 0);
     } catch (error) {
+      stopAutofill.current();
+      setCode("");
       setError(errorMessage(error));
     } finally {
       setBusy(false);
@@ -79,6 +88,7 @@ export function AuthGate({
       document.getElementById("otp-code")?.focus();
       return;
     }
+    stopAutofill.current();
     setBusy(true);
     try {
       const result = await api<{
@@ -130,6 +140,7 @@ export function AuthGate({
           <div className="inline-form">
             <input
               id="sender-phone"
+              name="tel"
               type="tel"
               inputMode="tel"
               autoComplete="tel"
@@ -155,10 +166,13 @@ export function AuthGate({
           )}
         </form>
       ) : (
-        <form onSubmit={verify} noValidate>
+        <form onSubmit={verify} noValidate data-update-blocked="true">
           <label htmlFor="otp-code">
             کد تأیید شماره <bdi>{normalizePhone(phone)}</bdi>
           </label>
+          <p className="muted small" id="otp-code-help">
+            کد پیامک را وارد کن یا از پیشنهاد تکمیل خودکار استفاده کن.
+          </p>
           {deliveryStatus === "unknown" && (
             <p className="muted small" role="status">
               نتیجهٔ ارسال کد هنوز مشخص نیست. اگر پیامک رسید، کد را وارد کن؛ ارسال خودکار تکرار نمی‌شود.
@@ -173,16 +187,23 @@ export function AuthGate({
           <div className="inline-form">
             <input
               id="otp-code"
+              name="otp"
               type="text"
               inputMode="numeric"
               autoComplete="one-time-code"
+              autoCapitalize="off"
+              spellCheck={false}
+              pattern="[0-9]{6}"
               maxLength={6}
               dir="ltr"
               placeholder="------"
               value={code}
-              onChange={(e) => setCode(latinDigits(e.target.value))}
+              onChange={(e) => {
+                stopAutofill.current();
+                setCode(latinDigits(e.target.value));
+              }}
               aria-invalid={!!fieldError}
-              aria-describedby={fieldError ? "auth-field-error" : undefined}
+              aria-describedby={`otp-code-help${fieldError ? " auth-field-error" : ""}`}
             />
             {actionRow(<BusyButton className="button secondary" busy={busy}>
               تأیید و ادامه
@@ -198,6 +219,7 @@ export function AuthGate({
             className="text-button"
             disabled={busy}
             onClick={() => {
+              stopAutofill.current();
               setChallenge("");
               setCode("");
               setFieldError("");

@@ -14,9 +14,14 @@ def download(url):
 machine = platform.machine().lower()
 arch = 'aarch64' if machine in {'arm64','aarch64'} else 'x86_64' if machine in {'amd64','x86_64'} else None
 if not arch: raise SystemExit('Unsupported cache architecture; use normal pip resolution')
-metadata=json.loads(download('https://pypi.org/pypi/cryptography/46.0.7/json'))
-filename=f'cryptography-46.0.7-cp311-abi3-manylinux_2_34_{arch}.whl'
-artifact=next(row for row in metadata['urls'] if row['filename']==filename)
+version='50.0.2'
+metadata=json.loads(download(f'https://pypi.org/pypi/cryptography/{version}/json'))
+# Select the supported Linux ABI3 wheel from official release metadata; ABI
+# baselines and manylinux tags can change between reviewed dependency releases.
+artifact=next(row for row in metadata['urls'] if row['filename'].endswith(f'{arch}.whl')
+              and '-abi3-' in row['filename'] and 'manylinux_2_34' in row['filename']
+              and row['filename'].startswith(f'cryptography-{version}-cp311-'))
+filename=artifact['filename']
 folder=Path(__file__).resolve().parent.parent/'backend/wheels'
 folder.mkdir(exist_ok=True)
 target=folder/filename

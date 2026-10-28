@@ -2,11 +2,36 @@ from django.contrib import admin
 from django.urls import path
 from core import views
 from core import invitations
+from core import management_api as management
+from core import ai_management
+from core import wallet_views
+from core import package_views
 
 handler404 = "core.views.not_found"
 handler500 = "core.views.server_error"
 
 urlpatterns = [
+    path('api/v1/wallet', wallet_views.wallet),
+    path('api/v1/wallet/topups', wallet_views.topups),
+    path('api/v1/wallet/topups/<uuid:topup_id>', wallet_views.topup),
+    path('api/v1/orders/<uuid:order_id>/pay-wallet', wallet_views.pay_order),
+    path('api/v1/manage/packages', package_views.packages),
+    path('api/v1/manage/packages/<int:package_id>', package_views.package_update),
+    path('api/v1/credit-purchases', package_views.purchases),
+    path('api/v1/credit-purchases/<uuid:purchase_id>', package_views.purchase_detail),
+    path('api/v1/orders/<uuid:order_id>/confirm-credit', views.confirm_free),
+    path("api/v1/manage/ai", ai_management.configuration),
+    path("api/v1/manage/ai/test", ai_management.evaluate),
+    path("api/v1/manage/session", management.session),
+    path("api/v1/manage/login", management.login_view),
+    path("api/v1/manage/logout", management.logout_view),
+    path("api/v1/manage/dashboard", management.dashboard),
+    path("api/v1/manage/records/<slug:resource>", management.records),
+    path("api/v1/manage/limits", management.limits),
+    path("api/v1/manage/request-limits/<slug:scope>", management.request_limits),
+    path("api/v1/manage/actions", management.action),
+    path("api/v1/manage/reports/<uuid:report_id>/review", management.review_report),
+    path("api/v1/manage/orders/<uuid:order_id>/texts", management.review_message),
     path("admin/", admin.site.urls),
     path("healthz", views.health),
     path("api/v1/bootstrap", views.bootstrap),

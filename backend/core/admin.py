@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib import admin
+from . import ai_admin  # noqa: F401 — register the shared AI configuration
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseNotAllowed, HttpResponseRedirect
 from django.template.response import TemplateResponse
@@ -47,6 +48,30 @@ class OrderAdmin(ReadOnlyAdmin):
     fields = ("id", "status", "amount_toman", "payment_mode", "paid_at", "created_at")
     readonly_fields = fields
 
+    def get_fields(self, request, obj=None):
+        from .message_review import may_review_messages
+        return self.fields + (("original_message", "reviewed_message") if may_review_messages(request.user) else ())
+
+    def get_readonly_fields(self, request, obj=None):
+        return self.get_fields(request, obj)
+
+    @admin.display(description="متن اولیهٔ کاربر — فقط مدیریت")
+    def original_message(self, obj):
+        return obj.preview.original_text or "متن اولیه برای این سابقه موجود نیست."
+
+    @admin.display(description="متن نهایی بررسی‌شده")
+    def reviewed_message(self, obj):
+        from .message_review import message_texts
+        return message_texts(obj)["final_text"] or "متن طبق سیاست نگهداری حذف شده است."
+
+    def change_view(self, request, object_id, form_url='', extra_context=None):
+        from .message_review import may_review_messages, audit_review
+        if request.method == "GET" and self.has_view_permission(request) and may_review_messages(request.user):
+            obj = self.get_object(request, object_id)
+            if obj:
+                audit_review(request.user, obj, "django_order_text_review")
+        return super().change_view(request, object_id, form_url, extra_context)
+
 
 @admin.register(Account)
 class AccountAdmin(ReadOnlyAdmin):
@@ -55,7 +80,7 @@ class AccountAdmin(ReadOnlyAdmin):
     list_display = ("id", "phone_masked", "free_sends_remaining", "unlimited_demo_sends", "direct_message_tone", "created_at")
     list_filter = ("unlimited_demo_sends", "direct_message_tone")
     search_fields = ("phone_masked",)
-    fields = ("id", "phone_masked", "free_sends_remaining", "free_sends_earned_total", "created_at")
+    fields = ("id", "phone_masked", "free_sends_remaining", "free_sends_earned_total", "purchased_sends_remaining", "demo_sends_remaining", "created_at")
     readonly_fields = fields
 
 
@@ -142,6 +167,8 @@ class OutboxAdmin(ReadOnlyAdmin):
 admin.site.site_header = "مدیریت بگم نگم"
 admin.site.site_title = "بگم نگم"
 
+from . import limit_admin  # noqa: F401,E402
+
 
 # Foundation records are inspection-only, including for superusers. Future
 # support/refund actions need separate services and an explicit phase approval.
@@ -152,7 +179,7 @@ from .models import FinancialEvent, MessageDelivery, PaymentAttempt, Refund
 class PaymentAttemptAdmin(ReadOnlyAdmin):
     list_display = ("id", "order_id", "status", "amount_toman", "environment", "created_at")
     list_filter = ("status", "environment")
-    fields = ("id", "order", "status", "amount_toman", "currency", "environment", "applied_to_order", "created_at", "updated_at")
+    fields = ("id", "order", "purchase", "status", "amount_toman", "currency", "environment", "applied_to_order", "created_at", "updated_at")
     readonly_fields = fields
 
 
@@ -353,3 +380,7 @@ class InvitationSendAdmin(ReadOnlyAdmin):
     list_filter = ('status', 'provider')
     fields = ('id', 'ordinal', 'status', 'provider', 'last_error_code', 'consent_at', 'consent_version', 'created_at', 'accepted_at')
     readonly_fields = fields
+
+# Bundle settings share the same audited service with the Next management UI.
+from . import package_admin  # noqa: F401,E402
+from . import wallet_admin  # noqa: F401,E402

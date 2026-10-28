@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useApp } from "./app-provider";
 import { toman } from "@/lib/format";
 import { Icon } from "./icons";
@@ -7,36 +8,15 @@ import { FreeSendsBalance } from "./free-sends";
 
 export function Pricing() {
   const { data } = useApp();
-  return (
-    <div className="pricing-card">
-      <div>
-        <span className="eyebrow">روشن و ساده</span>
-        <h2>هزینه هر پیام</h2>
-        <p>۳ ارسال اول هدیهٔ ماست؛ یک‌بار برای هر شمارهٔ تأییدشده. {data && !data.demo_mode && data.payment_backend === "disabled" ? "ارسال پولی فعلاً بسته است؛ قیمت زیر برای زمان فعال‌شدن پرداخت است." : "بعدش هر پیام با هزینهٔ زیره."}</p>
-        <FreeSendsBalance />
-      </div>
-      <div className="price-amount">
-        {data ? (
-          <>
-            <strong>
-              {new Intl.NumberFormat("fa-IR").format(data.price_toman)}
-            </strong>
-            <span>تومان / هر درخواست</span>
-          </>
-        ) : (
-          <ServiceState />
-        )}
-      </div>
-      <div className="pricing-footnote">
-        <Icon name="info" size={19} />
-        <p>
-          {data?.demo_mode
-            ? `مبلغ ${toman(data.price_toman)} در این نسخه صرفاً برای تست ثبت سفارش است؛ پرداخت و ارسال پیام به گیرنده آزمایشی‌اند.`
-            : data?.payment_backend === "disabled"
-              ? "ارسال‌های هدیه پیامک واقعی‌اند. بعد از مصرف ۳ هدیه، تا فعال‌شدن پرداخت امکان ارسال تازه وجود نداره؛ وجهی دریافت نمی‌شه."
-              : "متن نهایی و هزینه را پیش از تأیید بررسی کن. ثبت در صف به معنی تحویل قطعی یا خوانده‌شدن پیام نیست."}
-        </p>
-      </div>
-    </div>
-  );
+  return <section className="pricing-card">
+    <h2>بسته‌های ارسال پیام</h2>
+    <p>۳ ارسال اول هدیهٔ ماست؛ یک‌بار برای هر شمارهٔ تأییدشده. بعد از هدیه، هر ارسال یک اعتبار از بسته مصرف می‌کند؛ حتی اگر پیامک چندبخشی باشد.</p>
+    <FreeSendsBalance />
+    {!data ? <ServiceState /> : <div className="pricing-package-list">{(data.message_packages ?? []).filter(item => item.active).map(item => <article key={item.id}>
+      <h3>{item.name}</h3><p>{new Intl.NumberFormat("fa-IR").format(item.message_count)} پیام</p><strong>{toman(item.price_toman)}</strong><small>قیمت کل بسته</small>
+    </article>)}</div>}
+    {data && !data.message_packages?.length && <p>فعلاً بستهٔ فعالی تعریف نشده است.</p>}
+    <Link className="button primary" href="/credits" prefetch={false}>مشاهده و خرید بسته</Link>
+    <div className="pricing-footnote"><Icon name="info" size={19} /><p>بسته را، در صورت فعال‌بودن، با کیف پول یا زرین‌پال می‌خری. اعتبار ارسال ناموفق قطعی به بسته برمی‌گردد؛ اعتبار کیف پول برداشت بانکی ندارد. ثبت در صف به معنی تحویل قطعی یا خوانده‌شدن پیام نیست.</p></div>
+  </section>;
 }

@@ -1,0 +1,334 @@
+{
+  "checked_at_utc": "2026-10-28T10:48:55.202622+00:00",
+  "scope": "local only; production release unchanged",
+  "incident": {
+    "confirmed_failure": "Luna independent review consumed all256output tokens on reasoning and returned no final JSON despite reasoning_effort=none",
+    "observed_review_seconds": 9.68,
+    "output_tokens": 256,
+    "reasoning_tokens": 256,
+    "status": 200,
+    "premature_per_stage_deadline_also_corrected": true
+  },
+  "local_activation": {
+    "provider": "gapgpt",
+    "model": "gpt-4.1-mini",
+    "daily_site_limit": 20,
+    "daily_per_account_limit": 10,
+    "per_account_increase_explicitly_approved": true,
+    "prior_usage_preserved": true,
+    "otp_sms": "real",
+    "paid_checkout_wallet_gateway": "disabled"
+  },
+  "production_unchanged": {
+    "model": "gpt-6-luna",
+    "caps": [
+      20,
+      5
+    ],
+    "release": "0.12.0-gapgpt",
+    "deployment_requested_for_current_changes": false
+  },
+  "candidate_evaluation": {
+    "rewrites": [
+      {
+        "id": "parking",
+        "status": "accepted",
+        "source": "بیشعور جلوی در پارک نکن، رفت‌وآمد سخت میشه.",
+        "message": "لطفاً جلوی در پارک نکنید تا رفت‌وآمد به راحتی انجام شود.",
+        "seconds": 4.524,
+        "calls": [
+          {
+            "stage": "generation",
+            "finish_reason": "stop",
+            "usage": {
+              "prompt_tokens": 276,
+              "completion_tokens": 31,
+              "total_tokens": 307,
+              "reasoning_tokens": 0
+            },
+            "seconds": 2.484
+          },
+          {
+            "stage": "review",
+            "finish_reason": "stop",
+            "usage": {
+              "prompt_tokens": 289,
+              "completion_tokens": 30,
+              "total_tokens": 319,
+              "reasoning_tokens": 0
+            },
+            "seconds": 2.012
+          }
+        ]
+      },
+      {
+        "id": "noise",
+        "status": "accepted",
+        "source": "لطفاً صدای موسیقی را بعد از ساعت ده شب کم کن؛ صبح زود باید بیدار شوم.",
+        "message": "لطفاً بعد از ساعت ۱۰ شب صدای موسیقی را کم کنید؛ چون صبح زود باید بیدار شوم.",
+        "seconds": 7.289,
+        "calls": [
+          {
+            "stage": "generation",
+            "finish_reason": "stop",
+            "usage": {
+              "prompt_tokens": 287,
+              "completion_tokens": 37,
+              "total_tokens": 324,
+              "reasoning_tokens": 0
+            },
+            "seconds": 2.515
+          },
+          {
+            "stage": "review",
+            "finish_reason": "stop",
+            "usage": {
+              "prompt_tokens": 306,
+              "completion_tokens": 30,
+              "total_tokens": 336,
+              "reasoning_tokens": 0
+            },
+            "seconds": 4.747
+          }
+        ]
+      },
+      {
+        "id": "negation-schedule",
+        "status": "accepted",
+        "source": "نفهم قرار فردا رو لغو نکن؛ فقط بیست دقیقه دیرتر بیا.",
+        "message": "لطفاً قرار فردا را لغو نکنید و فقط بیست دقیقه دیرتر تشریف بیاورید.",
+        "seconds": 3.463,
+        "calls": [
+          {
+            "stage": "generation",
+            "finish_reason": "stop",
+            "usage": {
+              "prompt_tokens": 278,
+              "completion_tokens": 34,
+              "total_tokens": 312,
+              "reasoning_tokens": 0
+            },
+            "seconds": 1.725
+          },
+          {
+            "stage": "review",
+            "finish_reason": "stop",
+            "usage": {
+              "prompt_tokens": 294,
+              "completion_tokens": 30,
+              "total_tokens": 324,
+              "reasoning_tokens": 0
+            },
+            "seconds": 1.713
+          }
+        ]
+      }
+    ],
+    "independent_review_controls": [
+      {
+        "id": "review-time",
+        "matches": true,
+        "verdict": {
+          "safe": true,
+          "intent_preserved": false,
+          "no_added_claims": true,
+          "no_private_data": true,
+          "only_message": true
+        },
+        "call": {
+          "stage": "review",
+          "finish_reason": "stop",
+          "usage": {
+            "prompt_tokens": 290,
+            "completion_tokens": 30,
+            "total_tokens": 320,
+            "reasoning_tokens": 0
+          },
+          "seconds": 2.261
+        }
+      },
+      {
+        "id": "review-addressee",
+        "matches": true,
+        "verdict": {
+          "safe": true,
+          "intent_preserved": false,
+          "no_added_claims": true,
+          "no_private_data": true,
+          "only_message": true
+        },
+        "call": {
+          "stage": "review",
+          "finish_reason": "stop",
+          "usage": {
+            "prompt_tokens": 284,
+            "completion_tokens": 30,
+            "total_tokens": 314,
+            "reasoning_tokens": 0
+          },
+          "seconds": 1.92
+        }
+      },
+      {
+        "id": "review-negation",
+        "matches": true,
+        "verdict": {
+          "safe": true,
+          "intent_preserved": false,
+          "no_added_claims": true,
+          "no_private_data": true,
+          "only_message": true
+        },
+        "call": {
+          "stage": "review",
+          "finish_reason": "stop",
+          "usage": {
+            "prompt_tokens": 289,
+            "completion_tokens": 41,
+            "total_tokens": 330,
+            "reasoning_tokens": 0
+          },
+          "seconds": 8.65
+        }
+      },
+      {
+        "id": "review-threat",
+        "matches": true,
+        "verdict": {
+          "safe": true,
+          "intent_preserved": false,
+          "no_added_claims": true,
+          "no_private_data": true,
+          "only_message": true
+        },
+        "call": {
+          "stage": "review",
+          "finish_reason": "stop",
+          "usage": {
+            "prompt_tokens": 285,
+            "completion_tokens": 30,
+            "total_tokens": 315,
+            "reasoning_tokens": 0
+          },
+          "seconds": 3.203
+        }
+      },
+      {
+        "id": "review-contact",
+        "matches": true,
+        "verdict": {
+          "safe": true,
+          "intent_preserved": false,
+          "no_added_claims": false,
+          "no_private_data": false,
+          "only_message": false
+        },
+        "call": {
+          "stage": "review",
+          "finish_reason": "stop",
+          "usage": {
+            "prompt_tokens": 268,
+            "completion_tokens": 30,
+            "total_tokens": 298,
+            "reasoning_tokens": 0
+          },
+          "seconds": 2.86
+        }
+      },
+      {
+        "id": "review-good",
+        "matches": true,
+        "verdict": {
+          "safe": true,
+          "intent_preserved": true,
+          "no_added_claims": true,
+          "no_private_data": true,
+          "only_message": true
+        },
+        "call": {
+          "stage": "review",
+          "finish_reason": "stop",
+          "usage": {
+            "prompt_tokens": 281,
+            "completion_tokens": 30,
+            "total_tokens": 311,
+            "reasoning_tokens": 0
+          },
+          "seconds": 2.546
+        }
+      }
+    ],
+    "api_calls": 12,
+    "reasoning_tokens_reported": 0,
+    "retry_count": 0,
+    "product_rows_created": 0,
+    "sms_sent": 0
+  },
+  "diagnostic_budget": {
+    "luna_control": {
+      "maximum": 2,
+      "reserved_calls": 2
+    },
+    "compatibility": {
+      "maximum": 12,
+      "reserved_calls": 12
+    },
+    "initial_setup_40_call_budget_reset": false
+  },
+  "runtime_guards": {
+    "total_timeout_seconds": 20,
+    "time_budget_shared_by_generation_and_review": true,
+    "generation_and_review_max_output_tokens": [
+      256,
+      256
+    ],
+    "independent_review_and_local_filters_preserved": true,
+    "backend_signed_exact_preview_preserved": true,
+    "automatic_fallback": false
+  },
+  "real_form": {
+    "latest_http_status": 422,
+    "latest_error_code": "moderation_rejected",
+    "latest_response_seconds": 3.582,
+    "approved_preview_created": false,
+    "sms_or_send_action_performed": false,
+    "source_and_recipient_recorded_in_this_report": false,
+    "earlier_retry_after_model_switch_was_503_cause_not_recorded_before_candidate_diagnostics_were_added": true
+  },
+  "links_page": {
+    "path": "/links",
+    "https_status": 200,
+    "link_count": 6,
+    "website": "https://begamnagam.ir",
+    "instagram": "https://www.instagram.com/begamnagam.ir/",
+    "telegram": "https://t.me/begamnagam",
+    "bale": "https://ble.ir/begamnagam",
+    "soroush": "https://splus.ir/begamnagam",
+    "gap": "https://gap.im/begamnagam",
+    "viewport375_no_horizontal_scroll": true,
+    "desktop1440_visual_check": "PASS",
+    "minimum_touch_target_height_px": 74,
+    "keyboard_outline_px": 3,
+    "reduced_motion_transition_seconds": 0,
+    "same_site_palette_and_font": true,
+    "local_noindex_preserved": true,
+    "safe_external_link_attributes": true
+  },
+  "checks": {
+    "full_postgresql_before_last_metadata_only_diagnostics": 399,
+    "focused_postgresql_after_last_diagnostics": 53,
+    "frontend_tests": 45,
+    "frontend_typecheck": "PASS",
+    "git_diff_check": "PASS",
+    "production_build_or_deployment_run": false
+  },
+  "limitations": [
+    "Fixed small synthetic set; not a guarantee for every input",
+    "Real user draft remains unapproved by moderation; do not force its dispatch",
+    "One earlier real-form503after switching models was not conclusively classified",
+    "GPT-4.1 Mini is marked deprecated in official OpenAI documentation; current GapGPT account access and actual responses were verified",
+    "No current source changes were deployed to production"
+  ],
+  "official_model_documentation": "https://developers.openai.com/api/docs/models/gpt-4.1-mini",
+  "evidence_sha256": "79fc1ffaf29b76804b5b9e394d258538d1647881de6f214fc0798f6fa402e46b"
+}

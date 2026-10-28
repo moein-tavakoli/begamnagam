@@ -28,7 +28,15 @@ Keep MASTER colors, illustration, local font and pill actions.
   and respectful-writing tips in a separate inline warning below it, associated with
   the textarea. Use note semantics for persistent guidance, not an interrupting alert.
 - Remove the draft rewrite-mode strip and the old recipient-stage teaser sentence.
+- Keep provider names and AI-generation wording out of composer copy; preserve the
+  privacy tip and final-text review. While preparing a custom rewrite, show the
+  modal loading state with «ممکن است تا ۲۰ ثانیه طول بکشد». Close on completion or
+  failure, retain error focus and prevent duplicate preview submissions.
 - Identify demo checkout in the send button and receipt; omit the separate demo explanation box on final review as requested. Keep the OTP disclosure.
 - Preserve browser Back/hash deep links, focus, reduced motion and pinch zoom.
+- Desktop at1024px and above reserves two compact badge slots below the hero
+  illustration for eNAMAD and Zarinpal. Until official domain-specific badges are
+  supplied, label both as logo placeholders; do not imply an issued certificate
+  or active payment gateway. Keep them out of the composer and mobile intro.
 - No automatic slide advance or new carousel dependency. Touch gestures are supplemental
   to the visible buttons; physical-device gesture testing remains pending.

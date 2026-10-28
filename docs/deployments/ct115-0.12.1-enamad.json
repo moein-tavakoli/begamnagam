@@ -1,0 +1,152 @@
+{
+  "version": "0.12.1-enamad",
+  "base_application_version": "0.12.1",
+  "current": "/opt/begamnagam/releases/0.12.1-enamad",
+  "checked_at_utc": "2026-10-28T12:22:58.889927+00:00",
+  "status": "PASS",
+  "scope": [
+    "Homepage eNAMAD verification meta5251197"
+  ],
+  "tag": "<meta name=\"enamad\" content=\"5251197\" />",
+  "runtime_source_changes": [
+    "frontend/app/page.tsx"
+  ],
+  "source_page_sha256": "efab875990d33b2e41d46fa7216f1f82b67df2e6b15b2e0587aa0b94024a3c68",
+  "frontend_image_id": "sha256:3bfafbc596b8c1e49adc75d3dc1500826f46a3b3a32af30b72176d49c4ab121e",
+  "base_frontend_image_id": "sha256:7bd223b86496487de9991af2c94aca2222645c9cf0cdb343ea273c222b3bd866",
+  "frontend_replicas": 6,
+  "frontend_tests": 45,
+  "frontend_typecheck": "PASS",
+  "production_build": "PASS",
+  "candidate_image_html_and_assets": "PASS",
+  "replica_checks": [
+    {
+      "service": "frontend",
+      "enamad_in_head": true,
+      "assets": 11,
+      "status": "PASS",
+      "phase": "metatag"
+    },
+    {
+      "service": "frontend2",
+      "enamad_in_head": true,
+      "assets": 11,
+      "status": "PASS",
+      "phase": "metatag"
+    },
+    {
+      "service": "frontend3",
+      "enamad_in_head": true,
+      "assets": 11,
+      "status": "PASS",
+      "phase": "metatag"
+    },
+    {
+      "service": "frontend4",
+      "enamad_in_head": true,
+      "assets": 11,
+      "status": "PASS",
+      "phase": "metatag"
+    },
+    {
+      "service": "frontend5",
+      "enamad_in_head": true,
+      "assets": 11,
+      "status": "PASS",
+      "phase": "metatag"
+    },
+    {
+      "service": "frontend6",
+      "enamad_in_head": true,
+      "assets": 11,
+      "status": "PASS",
+      "phase": "metatag"
+    }
+  ],
+  "public_https": {
+    "checked_at_utc": "2026-10-28T12:22:54.979214+00:00",
+    "domain": "begamnagam.ir",
+    "tls_verification": true,
+    "resolved_addresses": [
+      "37.114.253.18"
+    ],
+    "transport": "domain_https_via_internal_nginx",
+    "connect_ip": "192.168.1.6",
+    "public_internet_route": "unavailable_from_operator_network_after_LAN_connection: connection_refused",
+    "checks": [
+      {
+        "url": "https://begamnagam.ir/",
+        "user_agent": "Mozilla/5.0",
+        "http_status": 200,
+        "enamad": [
+          {
+            "content": "5251197",
+            "in_head": true
+          }
+        ],
+        "canonical": [
+          "https://begamnagam.ir"
+        ],
+        "status": "PASS"
+      },
+      {
+        "url": "https://begamnagam.ir/",
+        "user_agent": "enamad-verification",
+        "http_status": 200,
+        "enamad": [
+          {
+            "content": "5251197",
+            "in_head": true
+          }
+        ],
+        "canonical": [
+          "https://begamnagam.ir"
+        ],
+        "status": "PASS"
+      },
+      {
+        "url": "https://begamnagam.ir/",
+        "user_agent": "Googlebot",
+        "http_status": 200,
+        "enamad": [
+          {
+            "content": "5251197",
+            "in_head": true
+          }
+        ],
+        "canonical": [
+          "https://begamnagam.ir"
+        ],
+        "status": "PASS"
+      }
+    ],
+    "status": "PASS"
+  },
+  "services": {
+    "frontend": "healthy",
+    "frontend2": "healthy",
+    "frontend3": "healthy",
+    "frontend4": "healthy",
+    "frontend5": "healthy",
+    "frontend6": "healthy",
+    "backend": "healthy",
+    "worker": "running",
+    "beat": "running",
+    "proxy": "healthy",
+    "postgres": "healthy",
+    "redis": "healthy",
+    "rabbitmq": "healthy"
+  },
+  "stable_container_ids_unchanged": true,
+  "css_unchanged": true,
+  "configuration_unchanged_except_frontend_image": true,
+  "backend_database_queue_redis_not_changed_by_deployment": true,
+  "provider_calls_from_deployment": 0,
+  "excluded": [
+    "user-select change",
+    "hide-scrollbar change",
+    "other working-tree changes"
+  ],
+  "previous_release": "/opt/begamnagam/releases/0.12.1",
+  "rollback_image_id": "sha256:3ce904bfcdbc559a1ff3d185f202866718a49d73445259b80cf677555f4bb59f"
+}

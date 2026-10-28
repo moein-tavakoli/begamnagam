@@ -60,11 +60,7 @@ export function Preferences() {
 
   return (
     <div className="account-page wrap">
-      <Link href="/" className="back-link">
-        بازگشت به خانه <Icon name="arrow" size={16} />
-      </Link>
       <div className="account-heading">
-        <span className="eyebrow">انتخاب با توست</span>
         <h1>حقت هست که نشنوی.</h1>
         <p>
           اگر نمی‌خوای از بگم نگم پیام دریافت کنی، شماره خودت رو تأیید کن و
@@ -181,11 +177,7 @@ export function History() {
 
   return (
     <div className="account-page history-page wrap">
-      <Link href="/" className="back-link">
-        بازگشت به خانه <Icon name="arrow" size={16} />
-      </Link>
       <div className="account-heading">
-        <span className="eyebrow">پیگیری بدون ابهام</span>
         <h1>پیام‌های من.</h1>
         <FreeSendsBalance />
         <p>
@@ -231,7 +223,7 @@ export function History() {
                     </div>
                     <p>{message.text || "متن این پیام طبق سیاست نگهداری حذف شده است."}</p>
                     <DeliveryReason order={message} />
-                    <p className="small muted">مالی: {message.financial_status === "free_credit_returned" ? "رایگان؛ سهمیه برگشت داده شد" : message.is_free ? "رایگان؛ بدون پرداخت" : message.financial_status === "refund_pending" ? "بازپرداخت در حال پیگیری است" : message.financial_status === "refunded" ? "مسترد شد" : message.financial_status === "verified" ? "تأیید شد" : message.financial_status === "unknown" ? "نیازمند بررسی؛ دوباره پرداخت نکن" : "در انتظار"}</p>
+                    <p className="small muted">مالی: {message.financial_status === "wallet_returned" ? "مبلغ به کیف پول برگشت داده شد" : message.financial_status === "wallet_paid" ? "پرداخت از کیف پول" : message.financial_status === "credit_returned" ? "اعتبار بسته برگشت داده شد" : message.uses_purchased_credit ? "یک اعتبار از بسته" : message.financial_status === "free_credit_returned" ? "رایگان؛ سهمیه برگشت داده شد" : message.is_free ? "رایگان؛ بدون پرداخت" : message.financial_status === "refund_pending" ? "بازپرداخت در حال پیگیری است" : message.financial_status === "refunded" ? "مسترد شد" : message.financial_status === "verified" ? "تأیید شد" : message.financial_status === "unknown" ? "نیازمند بررسی؛ دوباره پرداخت نکن" : "در انتظار"}</p>
                     <div className="history-message-bottom">
                       <time dateTime={message.created_at}>
                         {new Intl.DateTimeFormat("fa-IR", {

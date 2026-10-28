@@ -26,7 +26,11 @@ def order_status_reason(order, delivery, event):
             return {'code': code, 'message': PUBLIC_REASONS[code]}
         return {'code': 'send_unavailable', 'message': 'ارسال این پیام انجام نشد؛ بعداً دوباره تلاش کن.'}
     if order.status == 'queued' and event and event.available_at > timezone.now() and event.last_error_code == 'outside_sending_window':
-        return {'code': 'sending_window', 'message': f'ارسال پیام‌ها از ساعت {settings.SENDING_START_HOUR} تا {settings.SENDING_END_HOUR} انجام می‌شود؛ پیام شما برای شروع بازهٔ بعدی در صف است.'}
+        from .limits import policy
+        limits = policy()
+        return {'code': 'sending_window', 'message': f'ارسال پیام‌ها از ساعت {limits.sending_start_hour} تا {limits.sending_end_hour} انجام می‌شود؛ پیام شما برای شروع بازهٔ بعدی در صف است.'}
+    if order.status == 'queued' and event and event.last_error_code == 'recipient_cooldown':
+        return {'code': 'recipient_unavailable', 'message': RECIPIENT_LIMIT}
     if order.status == 'unknown':
         return {'code': 'result_pending', 'message': 'نتیجهٔ ارسال هنوز مشخص نیست؛ وضعیت همین پیام را به‌روزرسانی کن و دوباره ارسال نکن.'}
     return None

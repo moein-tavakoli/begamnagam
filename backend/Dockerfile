@@ -9,7 +9,10 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --no-index --find-links=/app/wheels --disable-pip-version-check -r requirements.lock.txt \
     || pip install --find-links=/app/wheels --disable-pip-version-check --timeout 120 --retries 5 -r requirements.lock.txt
 COPY --chown=app:app . /app
-RUN python manage.py collectstatic --noinput && chown -R app:app /app/staticfiles
+# Build-only random environment keys expire with this process. Runtime secrets
+# are supplied by env_file; no real key is passed as an ARG or baked in the image.
+RUN python -c "import os; os.environ['DJANGO_SETTINGS_MODULE']='config.settings'; from config.ephemeral_environment import prepare_ephemeral_secrets; prepare_ephemeral_secrets(); from django.core.management import execute_from_command_line; execute_from_command_line(['manage.py','collectstatic','--noinput'])" \
+    && chown -R app:app /app/staticfiles
 USER app
 EXPOSE 8000
 CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "2", "--timeout", "30", "--access-logfile", "-", "--access-logformat", "%(m)s %(U)s %(s)s %(L)s"]

@@ -51,6 +51,8 @@ def human_results(path=None):
 def collect(path=None):
     executor = MigrationExecutor(connection)
     schema_ready = not executor.migration_plan(executor.loader.graph.leaf_nodes())
+    from core.limits import policy, defaults
+    limits = policy() if schema_ready else defaults()
     human = human_results(path)
     checks = {
         'postgresql': connection.vendor == 'postgresql',
@@ -65,8 +67,8 @@ def collect(path=None):
         'provider_contract': settings.PROVIDER_CONTRACT_APPROVED,
         'refund_process': settings.REFUND_PROCESS_APPROVED,
         'operations_contact': bool(settings.OPERATIONS_OWNER and settings.SUPPORT_CONTACT),
-        'bounded_pilot': bool(not settings.PROVIDER_DAILY_BUDGET_UNLIMITED and settings.PILOT_RECIPIENT_HASHES and min(settings.PROVIDER_DAILY_BUDGET_RIAL, settings.SMS_MAX_COST_RIAL, settings.OTP_MAX_COST_RIAL) > 0),
-        'pilot_sending_window': settings.PILOT_POSITIVE_ONLY and settings.SENDING_WINDOW_ENABLED,
+        'bounded_pilot': bool(not limits.provider_budget_unlimited and settings.PILOT_RECIPIENT_HASHES and min(limits.provider_daily_budget_rial, limits.sms_max_cost_rial, limits.otp_max_cost_rial) > 0),
+        'pilot_sending_window': settings.PILOT_POSITIVE_ONLY and limits.sending_window_enabled,
         'reviewed_terms': bool(settings.TERMS_VERSION.strip()) and not settings.TERMS_VERSION.startswith('draft') and all(os.getenv(k, '').lower() in {'true', 'yes', '1'} for k in ['TERMS_APPROVED', 'PRIVACY_POLICY_APPROVED']),
     }
     aggregates = {}

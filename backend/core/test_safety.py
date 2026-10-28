@@ -201,9 +201,21 @@ class RecipientSafetyTests(TestCase):
         self.assertTrue(SafetyControl.objects.get().halted)
         with self.assertRaises(ProviderDisabled): reserve_cost('synthetic-after-halt','otp',100)
 
+    def historical_paid_shape(self):
+        # Finance reconciliation remains supported for pre-bundle orders.
+        from .models import MessageDelivery
+        Order.objects.filter(pk=self.o['id']).update(uses_purchased_credit=False, amount_toman=2000,
+            payment_mode='demo', paid_at=timezone.now(), status='queued')
+        payment = PaymentAttempt.objects.create(order_id=self.o['id'], amount_toman=2000, status='verified',
+            applied_to_order=True, provider_reference='historical-demo-capture')
+        FinancialEvent.objects.create(payment=payment, kind='payment', amount_toman=2000)
+        MessageDelivery.objects.create(order_id=self.o['id'], provider='demo', environment='demo', status='queued')
+        Outbox.objects.create(order_id=self.o['id'], available_at=timezone.now())
+
     def test_manual_refund_requires_finance_permission_and_reference(self):
         from .provider_services import request_refund
-        self.deliver()
+        self.historical_paid_shape()
+        deliver_message(Outbox.objects.get().pk)
         refund = request_refund(PaymentAttempt.objects.get(), 'synthetic_manual_case')
         call_command('bootstrap_roles', stdout=io.StringIO())
         from django.contrib.auth.models import Group
@@ -236,6 +248,7 @@ class RecipientSafetyTests(TestCase):
         self.assertFalse(Refund.objects.exists())
 
     def test_paid_unsubmitted_queue_expiry_compensates_without_dispatch(self):
+        self.historical_paid_shape()
         from .tasks import expire_unpaid_orders
         with self.captureOnCommitCallbacks(execute=False): self.post('/orders/'+self.o['id']+'/pay-demo')
         Order.objects.update(paid_at=timezone.now()-timedelta(hours=25))

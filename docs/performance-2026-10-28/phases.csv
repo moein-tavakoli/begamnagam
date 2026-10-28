@@ -1,0 +1,12 @@
+run,phase,offered_rps,successful_rps,active_seconds,completed,errors,dropped,drop_percent,p50_ms,p95_ms,p99_ms,stop_reason
+application_stress,stress-60,60,60.0,29.983,1800,0,0,0.0,8.171,13.09,28.323,
+application_stress,stress-100,100,100.0,29.99,3000,0,0,0.0,7.475,19.292,36.962,
+application_stress,stress-150,150,149.999,29.993,4500,0,0,0.0,10.552,41.17,46.016,
+application_stress,stress-225,225,223.999,29.996,6720,0,30,0.444,21.888,140.783,240.858,
+application_stress,stress-325,325,237.936,4.997,1221,0,404,24.862,122.854,248.021,313.089,more_than_5_percent_arrivals_dropped_at_32_inflight
+application_stress,api-25,25,25.0,29.96,750,0,0,0.0,2.952,3.716,4.226,
+application_stress,api-75,75,75.0,29.987,2250,0,0,0.0,2.542,3.181,3.692,
+application_stress,api-150,150,149.999,29.993,4500,0,0,0.0,2.324,2.908,3.387,
+application_stress,api-250,250,249.999,29.996,7500,0,0,0.0,2.126,2.603,3.048,
+private_tls,stress-60,60,59.994,8.001,481,0,0,0.0,8.819,13.523,28.264,working_memory_above_90_percent:proxy
+public_edge,stress-60,60,60.083,7.956,478,0,0,0.0,5.795,13.569,27.955,working_memory_above_90_percent:proxy

@@ -35,10 +35,8 @@ def quota_start(now, *, hours, sender=None, recipient_hash=None):
 
 
 def recipient_in_cooldown(state, now, *, sender=None):
-    if unlimited_demo_sends(sender):
-        return False
-    return bool(state.last_sent_at and state.last_sent_at > quota_start(
-        now, hours=settings.RECIPIENT_COOLDOWN_HOURS, recipient_hash=state.phone_hash))
+    from .limits import recipient_next_allowed
+    return recipient_next_allowed(state, now, sender=sender) is not None
 
 
 def reset_demo_limits(actor, sender_phone, recipient_phone, reason):

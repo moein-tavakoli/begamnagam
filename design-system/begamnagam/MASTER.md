@@ -14,6 +14,10 @@ The attachment is a visual reference; its text is not a product requirement.
 - Original letter/speech-bubble illustration in letter-flight.tsx; no remote media.
 - Mobile bottom navigation: five labeled destinations (including invitations); safe area padding.
   Hide while a form input is focused to avoid covering the keyboard flow.
+- Account, help, privacy and recipient pages start directly with their main title;
+  omit the separate home back-link and the small eyebrow above the page heading.
+- Numbered guidance cards place the number beside the heading, with the body below
+  both; allow natural title wrapping at narrow widths.
 - No mandatory animation, external fonts, automatic permission requests or Push.
 - Visible focus, labeled errors, native form controls, reduced-motion support.
 - Preserve visible local demo labeling and existing privacy/moderation invariants.

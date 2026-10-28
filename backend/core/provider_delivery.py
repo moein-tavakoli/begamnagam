@@ -22,9 +22,13 @@ def fail_paid(order, event, delivery, code, suppressed=False):
     payment = order.payment_attempts.filter(applied_to_order=True).first()
     if payment:
         request_refund(payment, 'delivery_unavailable')
-    elif order.is_free:
+    elif order.is_free or order.uses_purchased_credit:
         from .services import release_free_credit
         release_free_credit(order)
+    elif order.payment_method == 'wallet':
+        from .wallet import return_order
+        order.save(update_fields=['status', 'updated_at'])
+        return_order(order, 'delivery_unavailable')
     order.save(update_fields=['status', 'updated_at'])
     event.save(update_fields=['state', 'last_error_code', 'processed_at'])
     delivery.save()
@@ -81,6 +85,13 @@ def submit_delivery(event_id):
         if state.blocked:
             fail_paid(order, event, delivery, 'recipient_unavailable', True)
             return
+        from .limits import policy, recipient_next_allowed
+        next_at = recipient_next_allowed(state, timezone.now(), sender=order.owner, exclude_order=order.pk)
+        if next_at:
+            event.available_at = next_at
+            event.last_error_code = 'recipient_cooldown'
+            event.save(update_fields=['available_at', 'last_error_code'])
+            return
         if settings.SMS_BACKEND != 'kavenegar':
             fail_paid(order, event, delivery, 'sms_disabled')
             return
@@ -90,7 +101,7 @@ def submit_delivery(event_id):
             if (settings.PROVIDER_NETWORK_MODE == 'external' and settings.SMS_RECIPIENT_POLICY != 'all'
                     and order.recipient_hash not in settings.PILOT_RECIPIENT_HASHES):
                 raise ProviderDisabled('outside_pilot_allowlist')
-            reserve_cost('sms:' + str(delivery.submission_key), 'sms', settings.SMS_MAX_COST_RIAL)
+            reserve_cost('sms:' + str(delivery.submission_key), 'sms', policy().sms_max_cost_rial)
         except ModerationRejected:
             fail_paid(order, event, delivery, 'moderation_rejected', True)
             return
@@ -121,7 +132,15 @@ def submit_delivery(event_id):
         from .safety import defer_until_open
         account = Account.objects.select_for_update().filter(user_id=order.owner_id).first()
         SafetyControl.objects.select_for_update().get(pk=1)
-        if defer_until_open(event):
+        from .limits import recipient_next_allowed
+        next_at = recipient_next_allowed(state, timezone.now(), sender=order.owner, exclude_order=order.pk)
+        deferred = defer_until_open(event)
+        if not deferred and next_at:
+            event.available_at = next_at
+            event.last_error_code = 'recipient_cooldown'
+            event.save(update_fields=['available_at', 'last_error_code'])
+            deferred = True
+        if deferred:
             delivery.status = 'queued'
             delivery.lease_until = None
             delivery.attempts -= 1
@@ -135,6 +154,17 @@ def submit_delivery(event_id):
             return
         if state.blocked:
             fail_paid(order, event, delivery, 'recipient_unavailable', True)
+            return
+        # Reload and lock the reviewed preview in this final transaction. The
+        # earlier check preceded a commit; neither body may change between this
+        # check and the actual provider submission.
+        from .models import Preview
+        from .freeform import validate_order
+        order.preview = Preview.objects.select_for_update().get(pk=order.preview_id)
+        try:
+            validate_order(order)
+        except ModerationRejected:
+            fail_paid(order, event, delivery, 'moderation_rejected', True)
             return
         try:
             result = Kavenegar().submit(phone=decrypt(order.recipient_cipher), text=order.full_sms, local_id=delivery.local_id)
@@ -178,6 +208,9 @@ def reconcile_delivery(delivery_id):
                 locked = Order.objects.select_for_update().get(pk=meta['order_id'])
                 payment = locked.payment_attempts.filter(applied_to_order=True).first()
                 if payment: request_refund(payment, 'unknown_deadline')
+                elif locked.payment_method == 'wallet':
+                    from .wallet import return_order
+                    return_order(locked, 'unknown_deadline')
         return
     with transaction.atomic():
         order = Order.objects.select_for_update().get(pk=meta['order_id'])
@@ -193,3 +226,6 @@ def reconcile_delivery(delivery_id):
             payment = order.payment_attempts.filter(applied_to_order=True).first()
             if payment:
                 request_refund(payment, 'unknown_deadline')
+            elif order.payment_method == 'wallet':
+                from .wallet import return_order
+                return_order(order, 'unknown_deadline')

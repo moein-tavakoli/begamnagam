@@ -1,0 +1,118 @@
+{
+  "version": "0.11.0",
+  "status": "live",
+  "at_utc": "2026-10-27T19:43:22.386122+00:00",
+  "current": "/opt/begamnagam/releases/0.11.0",
+  "containers": [
+    {
+      "name": "begamnagam-internal-proxy-1",
+      "image": "traefik:v3.7.13",
+      "image_id": "sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-beat-1",
+      "image": "begamnagam-internal/backend:0.11.0",
+      "image_id": "sha256:836f19f96431cd919fd37b0893ccf90f573e548813670eb93e883f0a357cc6a1",
+      "health": null,
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-worker-1",
+      "image": "begamnagam-internal/backend:0.11.0",
+      "image_id": "sha256:836f19f96431cd919fd37b0893ccf90f573e548813670eb93e883f0a357cc6a1",
+      "health": null,
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-frontend-1",
+      "image": "begamnagam-internal/frontend:0.11.0",
+      "image_id": "sha256:50eadd901ecb4d033d82bd4c6ba87309daddeffe31c4cd5766d7f4a76ffde864",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-backend-1",
+      "image": "begamnagam-internal/backend:0.11.0",
+      "image_id": "sha256:836f19f96431cd919fd37b0893ccf90f573e548813670eb93e883f0a357cc6a1",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-redis-1",
+      "image": "redis:7.4-alpine",
+      "image_id": "sha256:1db42ccef14898aa29bae778452d567534b59c107129cbc1163fb552de184d3c",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-postgres-1",
+      "image": "postgres:17-alpine",
+      "image_id": "sha256:e4cb93687b062cd25a0e8f672d85a7708235009d70d31f8a7698d9370092a9c4",
+      "health": "healthy",
+      "restart_count": 0
+    },
+    {
+      "name": "begamnagam-internal-rabbitmq-1",
+      "image": "rabbitmq:4.4-alpine",
+      "image_id": "sha256:2225c65600dbdd89d7d0a8e2ed386b1d0b32817a3c97ab6ef621ac33056bec27",
+      "health": "healthy",
+      "restart_count": 0
+    }
+  ],
+  "backend_postgresql_tests": 299,
+  "frontend_tests": 38,
+  "https_security_checks": 22,
+  "https_seo_checks": 40,
+  "cryptography": "50.0.2",
+  "postgres_runtime_superuser": false,
+  "postgres_runtime_table_owner": false,
+  "postgres_tcp_auth": "scram-sha-256",
+  "postgres_trust_rules": 0,
+  "redis_anonymous_access": false,
+  "redis_application_acl": "command and key allowlist; default user off",
+  "rabbitmq_application_admin": false,
+  "rabbitmq_vhost": "begamnagam",
+  "celery_remote_control": false,
+  "ssh_password_authentication": false,
+  "root_ssh": "existing public key only",
+  "firewall_input_policy": "drop; LAN SSH/TLS and HTTP from192.168.1.6",
+  "application_admin_credentials_removed": true,
+  "encrypted_reviewed_bodies": true,
+  "gift_balances_preserved": true,
+  "provider_budget_ledger_preserved": true,
+  "activation": {
+    "sending_enabled": true,
+    "paid_checkout": "disabled",
+    "real_otp_preserved": true,
+    "real_sms_preserved": true
+  },
+  "migrations": [
+    "0016_runtime_site_limits",
+    "0017_encrypt_reviewed_message_bodies",
+    "0018_management_login_controls"
+  ],
+  "local_unlimited_policy_applied": false,
+  "backup_restore_check": "PASS before and after hardening;136 encrypted fields verified after migration",
+  "backup_schedule": {
+    "daily": "03:15 Asia/Tehran + up to5min jitter",
+    "weekly_restore": "Sunday04:15 Asia/Tehran + up to5min jitter",
+    "offhost_copy": "verified encrypted manual copy; automatic replication not configured"
+  },
+  "persistent_services": {
+    "begamnagam-backup.timer": "active",
+    "begamnagam-restore-check.timer": "active",
+    "begamnagam-firewall.service": "active"
+  },
+  "real_sms_sent_for_verification": false,
+  "production_rows_deleted": false,
+  "data_volumes_preserved": true,
+  "proxy_tls_watcher_matches_current_release": true,
+  "remaining": [
+    "Central Nginx current configuration/internal TLS not independently attested",
+    "Admin web MFA requires operator enrollment",
+    "No independent internet-wide port test or full OS/image CVE scan",
+    "Automatic offhost backup replication/retention policy not configured"
+  ]
+}

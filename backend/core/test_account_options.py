@@ -165,17 +165,24 @@ class AccountOptionTests(TestCase):
             self.assertContains(invalid, "این گزینه فقط")
 
     @override_settings(APP_BASE_URL="https://begamnagam.ir")
-    def test_direct_tone_is_per_sender_and_frozen_through_delivery(self):
+    def test_global_tone_replaces_account_flag_and_is_frozen_through_delivery(self):
+        from .models import AIConfiguration
         self.options(direct_message_tone=True)
+        AIConfiguration.objects.create(tone_polite_enabled=False, tone_firm_enabled=True)
         for category in DIRECT_TEMPLATES:
+            cache.clear()  # This case verifies tone snapshots, not request quotas.
             preview = self.post("/messages/preview", {"category": category, "text": "یک پیام محترمانه",
                 "recipient_phone": "09901234567", "message_tone": "gentle"})
+            self.assertEqual(preview.status_code, 422)
+            preview = self.post("/messages/preview", {"category": category, "text": "یک پیام محترمانه",
+                "recipient_phone": "09901234567"})
             self.assertEqual(preview.status_code, 200, preview.content)
-            self.assertEqual(preview.json()["message_tone"], "direct")
+            self.assertEqual(preview.json()["message_tone"], "firm")
             self.assertIn(preview.json()["rewritten_text"], DIRECT_TEMPLATES[category])
             self.assertLessEqual(preview.json()["sms_segments"], 3)
         quote = self.preview()
         self.options(direct_message_tone=False)
+        AIConfiguration.objects.update(tone_polite_enabled=True, tone_firm_enabled=False)
         order = self.order(preview=quote).json()
         with self.captureOnCommitCallbacks(execute=True):
             self.assertEqual(self.post(f"/orders/{order['id']}/pay-demo").status_code, 200)
@@ -184,7 +191,9 @@ class AccountOptionTests(TestCase):
         self.assertEqual(saved.text, quote["rewritten_text"])
         self.assertEqual(saved.full_sms, Preview.objects.get(pk=quote["preview_id"]).full_sms)
         gentle = self.post("/messages/preview", {"category": "body", "text": "بوی بدن", "direct_message_tone": True})
-        self.assertEqual(gentle.json()["message_tone"], "gentle")
+        self.assertEqual(gentle.status_code, 422)
+        gentle = self.post("/messages/preview", {"category": "body", "text": "بوی بدن"})
+        self.assertEqual(gentle.json()["message_tone"], "polite")
         self.assertIn(gentle.json()["rewritten_text"], TEMPLATES["body"])
 
 

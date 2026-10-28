@@ -1,3 +1,4 @@
+import type { MessageTone, MessageToneOption } from './message-tones';
 export type Category = {
   id: string;
   label: string;
@@ -5,6 +6,13 @@ export type Category = {
   example: string;
 };
 export type Bootstrap = {
+  message_tones?: MessageToneOption[];
+  default_message_tone?: MessageTone;
+  wallet_balance_toman?: string;
+  payment_options?: { wallet_enabled: boolean; gateway_enabled: boolean; gateway_configured: boolean; wallet_terms_version: string };
+  purchased_sends_remaining?: number;
+  message_packages?: MessagePackage[];
+  package_checkout_enabled?: boolean;
   demo_mode: boolean;
   otp_is_real?: boolean;
   authenticated: boolean;
@@ -21,6 +29,9 @@ export type Bootstrap = {
   session_identity?: string;
 };
 export type Preview = {
+  message_tone?: MessageTone;
+  payment_method?: 'credit' | 'wallet' | 'gateway';
+  wallet_terms_version?: string;
   is_free?: boolean;
   preview_id: string;
   terms_version?: string;
@@ -32,6 +43,8 @@ export type Preview = {
   moderation_mode: string;
 };
 export type Order = {
+  payment_method?: 'legacy' | 'credit' | 'wallet' | 'gateway';
+  uses_purchased_credit?: boolean;
   is_free?: boolean;
   id: string;
   status: string;
@@ -41,6 +54,8 @@ export type Order = {
   delivery_status?: string;
   status_reason?: { code: string; message: string } | null;
 };
+export type MessagePackage = { id: number; name: string; message_count: number; price_toman: number; active: boolean; sort_order: number; revision: number };
+export type CreditPurchase = { id: string; package_id: number; name: string; message_count: number; amount_toman: number; environment: string; status: string; redirect_url?: string | null; created_at: string };
 export type Message = Order & {
   recipient_masked: string;
   text: string;
@@ -112,7 +127,7 @@ export async function api<T>(
   const timer = setTimeout(() => {
     timedOut = true;
     controller.abort();
-  }, path === '/messages/preview' ? 25000 : 15000);
+  }, path === '/messages/preview' || path === '/manage/ai/test' ? 25000 : 15000);
   const cancel = () => controller.abort();
   if (options.signal?.aborted) cancel();
   options.signal?.addEventListener("abort", cancel, { once: true });
@@ -140,7 +155,12 @@ export async function api<T>(
         "پاسخ سرویس معتبر نیست. دوباره تلاش کنید.",
         "invalid_response",
       );
-    if(["/auth/logout", "/auth/verify-otp"].includes(path) && typeof window !== "undefined") window.dispatchEvent(new Event("privacy-reset"));
+    if (typeof window !== "undefined" && method === "POST" &&
+        ["/auth/logout", "/auth/verify-otp", "/manage/login", "/manage/logout"].includes(path)) {
+      // Both phone and staff authentication replace the shared Django session.
+      // Clear private views in every open tab only after a successful response.
+      window.dispatchEvent(new Event("privacy-reset"));
+    }
     return data as T;
   } catch (error) {
     if (timedOut)
@@ -171,7 +191,8 @@ export function errorMessage(error: unknown): string {
 
 export function approvedPaymentRedirect(value: string, demo: boolean): string {
   const url = new URL(value);
-  if (url.protocol === 'https:' && ['www.zarinpal.com', 'sandbox.zarinpal.com'].includes(url.hostname) && url.pathname.startsWith('/pg/StartPay/')) return url.href;
+  const hosts = demo ? ['www.zarinpal.com', 'sandbox.zarinpal.com'] : ['www.zarinpal.com'];
+  if (url.protocol === 'https:' && hosts.includes(url.hostname) && url.pathname.startsWith('/pg/StartPay/')) return url.href;
   if (demo && url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname) && url.pathname.startsWith('/pg/StartPay/')) return url.href;
   throw new ApiError('نشانی درگاه معتبر نیست؛ از سابقه وضعیت را بررسی کن.', 'invalid_gateway');
 }

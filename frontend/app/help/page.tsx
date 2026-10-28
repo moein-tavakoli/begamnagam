@@ -10,11 +10,7 @@ export default function HelpPage() {
   return (
     <div className="document-page wrap">
       <StructuredData data={pageJsonLd("/help", helpQuestions)} />
-      <Link className="back-link" href="/">
-        بازگشت به خانه <Icon name="arrow" size={16} />
-      </Link>
       <div className="account-heading">
-        <span className="eyebrow">قبل از فرستادن، با هم مرور کنیم</span>
         <h1>یک پیام خوب، از توجه شروع می‌شه.</h1>
         <p>
           بگم نگم برای یادآوری محترمانه و قدردانیه؛ هیچ جمله‌ای تضمین نمی‌کنه که
@@ -62,7 +58,7 @@ export default function HelpPage() {
       <section className="faq-section">
         <h2>سؤال‌هایی که ممکنه داشته باشی</h2>
         {helpQuestions.map(faq => (
-          <details key={faq.question}>
+          <details key={faq.id} id={faq.id}>
             <summary>{faq.question}</summary>
             <p>{faq.answer}{"link" in faq && <> <Link href={faq.link.href} prefetch={false}>{faq.link.label}</Link></>}</p>
           </details>

@@ -1,0 +1,158 @@
+{
+  "checked_at_utc": "2026-10-28T11:28:49.886255+00:00",
+  "version": "0.12.1",
+  "backend_image": "sha256:ac30446386bdcb33cead38b98c542332d2882e040b18740439c7d897495a7123",
+  "frontend_image": "sha256:7bd223b86496487de9991af2c94aca2222645c9cf0cdb343ea273c222b3bd866",
+  "frontends": 6,
+  "services": {
+    "backend": "healthy",
+    "worker": "running",
+    "beat": "running",
+    "frontend": "healthy",
+    "frontend2": "healthy",
+    "frontend3": "healthy",
+    "frontend4": "healthy",
+    "frontend5": "healthy",
+    "frontend6": "healthy",
+    "postgres": "healthy",
+    "redis": "healthy",
+    "rabbitmq": "healthy",
+    "proxy": "healthy"
+  },
+  "replica_checks": {
+    "frontend": {
+      "port": "3000",
+      "links": "PASS",
+      "assets": 9
+    },
+    "frontend2": {
+      "port": "3001",
+      "links": "PASS",
+      "assets": 9
+    },
+    "frontend3": {
+      "port": "3002",
+      "links": "PASS",
+      "assets": 9
+    },
+    "frontend4": {
+      "port": "3003",
+      "links": "PASS",
+      "assets": 9
+    },
+    "frontend5": {
+      "port": "3004",
+      "links": "PASS",
+      "assets": 9
+    },
+    "frontend6": {
+      "port": "3005",
+      "links": "PASS",
+      "assets": 9
+    }
+  },
+  "profile": {
+    "provider": "gapgpt",
+    "model": "gpt-4.1-mini",
+    "site_daily_rewrites": "unlimited",
+    "stored_daily_rewrites": 20,
+    "user_daily_rewrites": 10,
+    "otp_sms": "real",
+    "payment": "disabled",
+    "wallet_gateway": "disabled",
+    "halted": false,
+    "all_other_ai_and_limits_preserved": true,
+    "usage_credits_orders_not_reset": true,
+    "counts": {
+      "accounts": 13,
+      "usage": 2,
+      "reserved": 2,
+      "credits": 0,
+      "wallet": 0,
+      "orders": 19
+    },
+    "migration": "0028_unlimited_site_rewrites"
+  },
+  "data_proxy_ids_unchanged": true,
+  "ollama": "stopped",
+  "frontend_secrets_isolated": true,
+  "private_credentials_preserved": true,
+  "server_model_probe": {
+    "status": "PASS",
+    "source": "بیشعور جلوی در پارک نکن، رفت‌وآمد سخت میشه.",
+    "message": "لطفاً جلوی در پارک نکنید تا رفت‌وآمد به راحتی انجام شود.",
+    "model": "gpt-4.1-mini",
+    "elapsed_seconds": 2.943,
+    "generation_and_independent_review": true,
+    "maximum_api_calls": 2,
+    "sms_sent": 0,
+    "product_records_created": 0,
+    "checked_at_utc": "2026-10-28T11:19:26.972016+00:00"
+  },
+  "pre_migration_backup": {
+    "path": "/opt/begamnagam/backups/release-0.12.1-20261028-112234/before.dump.fernet",
+    "restore_verified": true
+  },
+  "server_postgresql_tests": 409,
+  "current": "/opt/begamnagam/releases/0.12.1",
+  "promoted": true,
+  "post_release_backup": {
+    "encrypted": true,
+    "archive": "/opt/begamnagam/backups/post-0.12.1/database-20261028T112904Z-e9b2cf.dump.fernet",
+    "dump_bytes": 228897,
+    "plaintext_sha256": "7aca471e5242868044add93e43b8ff2ea928965d4b2fd191e63e45bd83c33486",
+    "production_rows_changed": false,
+    "real_sms_sent": false,
+    "restore_check": "PASS",
+    "encrypted_fields_validated": 142,
+    "dispatch_on_restored_database": "halted"
+  },
+  "scheduled_timers": {
+    "begamnagam-backup.timer": "active",
+    "begamnagam-restore-check.timer": "active"
+  },
+  "https": {
+    "https_domain_via_internal_edge": "PASS",
+    "public_internet_route": "unavailable_from_operator_network; curl connect failed before TLS",
+    "provider": "gapgpt",
+    "model": "gpt-4.1-mini",
+    "real_otp_sms_preserved": true,
+    "paid_checkout": "disabled",
+    "wallet_gateway": "disabled",
+    "site_daily_rewrites": "unlimited",
+    "stored_daily_rewrites": 20,
+    "user_daily_rewrites": 10,
+    "active_package_listing_matches_admin": true,
+    "links_six_targets_and_canonical": "PASS",
+    "loader_served_in_homepage_bundle": "PASS",
+    "admin_permissions_csrf": "PASS",
+    "admin_login_not_product_authorization": true,
+    "pages": {
+      "/": 36638,
+      "/links": 36296,
+      "/manage": 12184,
+      "/credits": 16525,
+      "/wallet": 15595,
+      "/profile": 15620
+    },
+    "new_static_assets": "PASS",
+    "model_calls_from_this_check": 0,
+    "sms_sent": 0
+  },
+  "final_checked_at_utc": "2026-10-28T11:29:06.865774+00:00",
+  "frontend_tests": 45,
+  "frontend_typecheck": "PASS",
+  "frontend_production_build": "PASS",
+  "local_quota_reset_replayed": false,
+  "scope": [
+    "GapGPT gpt-4.1-mini and shared20s deadline",
+    "Unlimited site rewrite quota,admin configurable;10per account daily",
+    "Mobile /links page",
+    "Composer copy and waiting dialog"
+  ],
+  "excluded_unreviewed_work": [
+    "Other-chat root globals.css and home eNAMAD changes",
+    "Local-only account quota reset"
+  ],
+  "full_suite_note": "409tests passed on exact candidate image; initial migration rehearsal environment lacked ephemeral secrets, repaired and rerun successfully on a fresh restored backup before production migration."
+}

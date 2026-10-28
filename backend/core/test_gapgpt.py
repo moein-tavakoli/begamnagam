@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch
 
 from django.test import SimpleTestCase, override_settings
 
-from .gapgpt import (APPROVED_BASE_URL, MAX_RESPONSE_BYTES, GapGPTRejected,
+from .gapgpt import (APPROVED_BASE_URL, GENERATION_MAX_TOKENS, REVIEW_MAX_TOKENS, MAX_RESPONSE_BYTES, GapGPTRejected,
                     GapGPTUnavailable, _NoRedirect, rewrite_message)
 
 
@@ -39,7 +39,7 @@ def _completion(value, *, finish_reason='stop', **message_extra):
 
 
 @override_settings(AI_MODE='gapgpt', GAPGPT_API_KEY='synthetic-api-key',
-    GAPGPT_MODEL='gpt-4o-mini', GAPGPT_BASE_URL=APPROVED_BASE_URL,
+    GAPGPT_MODEL='gpt-6-luna', GAPGPT_BASE_URL=APPROVED_BASE_URL,
     GAPGPT_TIMEOUT_SECONDS=5)
 class GapGPTClientTests(SimpleTestCase):
     def setUp(self):
@@ -62,8 +62,11 @@ class GapGPTClientTests(SimpleTestCase):
         self.assertEqual(request.get_header('Authorization'), 'Bearer synthetic-api-key')
         self.assertEqual(request.get_header('Accept-encoding'), 'identity')
         payload = json.loads(request.data)
-        self.assertEqual(payload['model'], 'gpt-4o-mini')
-        self.assertEqual(payload['max_tokens'], 320)
+        self.assertEqual(payload['model'], 'gpt-6-luna')
+        self.assertEqual(payload['max_completion_tokens'], GENERATION_MAX_TOKENS)
+        self.assertNotIn('max_tokens', payload)
+        self.assertEqual(payload['reasoning_effort'], 'none')
+        self.assertEqual(payload['response_format'], {'type': 'json_object'})
         self.assertEqual(payload['temperature'], 0)
         self.assertIs(payload['stream'], False)
         self.assertEqual(payload['n'], 1)
@@ -71,6 +74,10 @@ class GapGPTClientTests(SimpleTestCase):
         self.assertEqual(json.loads(payload['messages'][1]['content']), {
             'text': SOURCE, 'max_utf16_units': 130, 'tone': 'warm_and_respectful'})
         review = json.loads(second.args[0].data)
+        self.assertEqual(review['max_completion_tokens'], REVIEW_MAX_TOKENS)
+        self.assertEqual(review['reasoning_effort'], 'none')
+        self.assertEqual(review['response_format'], {'type': 'json_object'})
+        self.assertEqual(GENERATION_MAX_TOKENS + REVIEW_MAX_TOKENS, 512)
         self.assertNotEqual(payload['messages'][0]['content'], review['messages'][0]['content'])
         self.assertEqual(json.loads(review['messages'][1]['content']), {'source': SOURCE, 'candidate': BODY})
         self.assertLessEqual(second.kwargs['timeout'], first.kwargs['timeout'])
@@ -79,6 +86,15 @@ class GapGPTClientTests(SimpleTestCase):
         self.assertEqual(handlers[0].proxies, {})
         self.assertIsInstance(handlers[1], _NoRedirect)
         self.assertIsNotNone(handlers[2]._context)
+
+    @override_settings(GAPGPT_MODEL='gpt-4.1-mini')
+    def test_legacy_model_keeps_compatible_parameters_with_separate_output_caps(self):
+        self.assertEqual(rewrite_message(SOURCE, max_units=130), BODY)
+        generated, reviewed = [json.loads(call.args[0].data) for call in self.opener.open.call_args_list]
+        self.assertEqual((generated['max_tokens'], reviewed['max_tokens']), (256, 256))
+        for payload in (generated, reviewed):
+            self.assertNotIn('max_completion_tokens', payload)
+            self.assertNotIn('reasoning_effort', payload)
 
     def test_direct_tone_is_an_instruction_only_and_preserves_source(self):
         self.assertEqual(rewrite_message(SOURCE, max_units=130, direct=True), BODY)
@@ -131,15 +147,81 @@ class GapGPTClientTests(SimpleTestCase):
             rewrite_message(SOURCE, max_units=130)
         self.assertEqual(self.opener.open.call_count, 1)
 
+    def test_generation_reasons_are_bounded_and_legacy_rejection_stays_neutral(self):
+        for reason, expected in [(None, 'generation_rejected'), ('unsafe', 'generation_unsafe'),
+                                 ('private', 'generation_private'), ('unclear', 'generation_unclear')]:
+            with self.subTest(reason=reason):
+                self.opener.open.reset_mock()
+                result = {'allowed': False, 'message': ''}
+                if reason is not None: result['reason'] = reason
+                self.opener.open.side_effect = [_Response(_completion(result))]
+                with self.assertLogs('core.gapgpt', level='WARNING') as logs, self.assertRaises(GapGPTRejected) as rejected:
+                    rewrite_message(SOURCE, max_units=130)
+                self.assertEqual(rejected.exception.reason, expected)
+                self.assertIn('stage=generation reason='+expected, '\n'.join(logs.output))
+                self.assertEqual(self.opener.open.call_count, 1)
+
+    def test_generation_reason_cannot_smuggle_free_text_or_approve_a_rejected_body(self):
+        for result in [{'allowed': False, 'message': '', 'reason': SOURCE},
+                       {'allowed': False, 'message': '', 'reason': ['unsafe']},
+                       {'allowed': False, 'message': BODY, 'reason': 'unsafe'},
+                       {'allowed': True, 'message': BODY, 'reason': 'unclear'}]:
+            with self.subTest(result=result):
+                self.opener.open.side_effect = [_Response(_completion(result))]
+                with self.assertRaises(GapGPTUnavailable):
+                    rewrite_message(SOURCE, max_units=130)
+        self.assertEqual(str(GapGPTRejected('private source synthetic-api-key')), 'checks_uncertain')
+
+    def test_friendly_messages_still_need_independent_review_without_template_substitution(self):
+        for source, candidate in [('رفیق پولدار منی', 'تو رفیق پولدار من هستی.'),
+                                  ('تو خیلی باحالی', 'تو خیلی باحال هستی.'),
+                                  ('رفیق خوش شانسمی', 'تو رفیق خوش شانس من هستی.')]:
+            with self.subTest(source=source):
+                self.opener.open.reset_mock()
+                self.opener.open.side_effect = [_Response(_completion({'allowed': True, 'message': candidate})),
+                                               _Response(_completion(VERDICT))]
+                self.assertEqual(rewrite_message(source, max_units=130), candidate)
+                self.assertEqual(self.opener.open.call_count, 2)
+                review_payload = json.loads(self.opener.open.call_args_list[1].args[0].data)
+                self.assertEqual(json.loads(review_payload['messages'][1]['content']), {'source': source, 'candidate': candidate})
+                self.opener.open.side_effect = [_Response(_completion({'allowed': True, 'message': candidate})),
+                                               _Response(_completion({**VERDICT, 'intent_preserved': False}))]
+                with self.assertRaises(GapGPTRejected) as rejected:
+                    rewrite_message(source, max_units=130)
+                self.assertEqual(rejected.exception.reason, 'review_intent')
+
+    def test_locally_unsafe_candidate_never_spends_a_second_review_call(self):
+        for body in ['احمق لطفاً کنار برو.', 'لطفاً به ۰۹۱۲۳۴۵۶۷۸۹ زنگ بزن.', 'حسابت رو می رسم.']:
+            with self.subTest(body=body):
+                self.opener.open.reset_mock()
+                self.opener.open.side_effect = [_Response(_completion({'allowed': True, 'message': body}))]
+                with self.assertRaises(GapGPTRejected):
+                    rewrite_message(SOURCE, max_units=130)
+                self.assertEqual(self.opener.open.call_count, 1)
+
     def test_any_failed_review_check_rejects_candidate(self):
+        reasons = {'safe': 'review_unsafe', 'intent_preserved': 'review_intent',
+                   'no_added_claims': 'review_added_claims', 'no_private_data': 'review_private', 'only_message': 'review_format'}
         for field in VERDICT:
             with self.subTest(field=field):
                 self.opener.open.side_effect = [
                     _Response(_completion({'allowed': True, 'message': BODY})),
                     _Response(_completion({**VERDICT, field: False})),
                 ]
-                with self.assertRaises(GapGPTRejected):
+                with self.assertRaises(GapGPTRejected) as rejected:
                     rewrite_message(SOURCE, max_units=130)
+                self.assertEqual(rejected.exception.reason, reasons[field])
+
+    def test_multiple_failed_checks_log_only_fixed_names_and_prioritize_safety(self):
+        self.opener.open.side_effect = [_Response(_completion({'allowed': True, 'message': BODY})),
+            _Response(_completion({**VERDICT, 'safe': False, 'intent_preserved': False, 'no_private_data': False}))]
+        with self.assertLogs('core.gapgpt', level='WARNING') as captured, self.assertRaises(GapGPTRejected) as rejected:
+            rewrite_message(SOURCE, max_units=130)
+        self.assertEqual(rejected.exception.reason, 'review_unsafe')
+        output = '\n'.join(captured.output)
+        self.assertIn('failed_checks=intent_preserved,no_private_data,safe', output)
+        for private in [SOURCE, BODY, 'synthetic-api-key', 'https://']:
+            self.assertNotIn(private, output)
 
     def test_review_requires_every_exact_boolean_and_no_extra_fields(self):
         for verdict in [{key: value for key, value in VERDICT.items() if key != 'safe'},
@@ -226,11 +308,32 @@ class GapGPTClientTests(SimpleTestCase):
                 with self.assertRaises(GapGPTUnavailable):
                     rewrite_message(SOURCE, max_units=130)
 
-    def test_per_call_deadline_stops_before_review_after_first_call_times_out(self):
-        with patch('core.gapgpt.time.monotonic', side_effect=[0, 0, 0, 0, 5]):
+    def test_total_deadline_stops_before_review_after_generation_uses_entire_budget(self):
+        with patch('core.gapgpt.time.monotonic', side_effect=[0, 0, 0, 0, 10]):
             with self.assertRaises(GapGPTUnavailable):
                 rewrite_message(SOURCE, max_units=130)
         self.assertEqual(self.opener.open.call_count, 1)
+
+    def test_generation_can_use_spare_review_time_without_extending_total_deadline(self):
+        with patch('core.gapgpt.time.monotonic', side_effect=[0, 0, 0, 0, 6, 6, 6, 6, 8]):
+            self.assertEqual(rewrite_message(SOURCE, max_units=130), BODY)
+        first, second = self.opener.open.call_args_list
+        self.assertEqual(first.kwargs['timeout'], 10)
+        self.assertEqual(second.kwargs['timeout'], 4)
+
+    def test_failure_diagnostics_never_include_private_text_credentials_or_provider_body(self):
+        response = _completion({'private': SOURCE}, finish_reason='length')
+        response['usage'] = {'completion_tokens': 256,
+            'completion_tokens_details': {'reasoning_tokens': 240}}
+        self.opener.open.side_effect = [_Response(response)]
+        with self.assertLogs('core.gapgpt', level='WARNING') as captured:
+            with self.assertRaises(GapGPTUnavailable):
+                rewrite_message(SOURCE, max_units=130)
+        output = '\n'.join(captured.output)
+        self.assertIn('stage=generation reason=output_limit status=200', output)
+        self.assertIn('output_tokens=256 reasoning_tokens=240', output)
+        for private in [SOURCE, BODY, 'synthetic-api-key', 'https://', 'private']:
+            self.assertNotIn(private, output)
 
     def test_one_shared_deadline_prevents_new_call_after_total_time_budget(self):
         with patch('core.gapgpt.time.monotonic', side_effect=[0, 0, 0, 0, 4, 11]):

@@ -21,7 +21,9 @@ Local builds use the normal Next server for `npm start`. The Docker builder sets
 
 ## SEO configuration
 
-Public pages (`/`, `/help`, `/privacy`) have Persian metadata, canonical URLs, social previews and JSON-LD. Open Graph and Twitter share the local 1200×630 asset at `/images/social-card.png`. History, recipient settings/token links, admin/API paths and the offline page stay excluded from indexing. JSON-LD contains public descriptive content only; it must never include phone numbers, recipient tokens, private messages or unverified ratings/prices.
+Public pages (`/`, `/help`, `/privacy`) have unique Persian metadata, canonical URLs, Open Graph and Twitter large-image previews. Their initial HTML includes absolute image URLs, PNG MIME type, dimensions, alt text and an HTTPS secure URL. All use the local 1200×630 asset at `/images/social-card.png`. JSON-LD connects the brand (`Organization`), `WebSite`, logo/social `ImageObject`s and page; the homepage adds `WebApplication` and `Service`, help uses visible shared `FAQPage` answers, and help/privacy include breadcrumbs. No legal business details, contact channels, social accounts, prices or ratings are invented.
+
+Profile, history, invitations, recipient settings/token links, admin/API paths, 404 and offline pages stay excluded from indexing. Private pages have individual generic titles/descriptions and explicitly clear public canonical/social metadata. Root defaults remain safe for unknown routes. JSON-LD must never include phone numbers, recipient tokens or private messages. See [SEO operations and the read-only crawler checker](../docs/seo.md) for the route policy, deployment settings and full verification commands.
 
 `APP_BASE_URL` is the single origin for canonical, social and structured-data URLs and the sitemap; its local fallback is `http://localhost:3000`. `SEO_INDEXABLE=0` is the default for local demo, private CT and staging: pages declare `noindex` and the sitemap contains no URLs. Robots allows HTML crawling so crawlers can observe `noindex`; API/admin paths are disallowed. Only an approved public release with a real public HTTPS origin may use `SEO_INDEXABLE=1`. This setting does not enable real SMS, payments or deployment.
 
@@ -29,7 +31,7 @@ The confirmed public origin is `https://begamnagam.ir` (without `www`), recorded
 
 For native `make dev-ui` / `npm run dev`, copy `.env.example` to `.env.local` **inside `frontend/`**, or export the two variables before starting the process. Next does not automatically load the repository root's Compose `.env` from this app. Restart the development process once after changing environment configuration; source edits continue through Fast Refresh.
 
-**Rebuild after changing `APP_BASE_URL` or `SEO_INDEXABLE`:** this app generates metadata, robots and sitemap during the frontend build. The Docker builder accepts both as build arguments, and `compose.yaml` forwards them from the root `.env`. Prebuilt images in `compose.release.yaml` / `compose.internal.yaml` must already have the correct values baked in: changing their runtime env file or restarting the container is insufficient. See [SEO operations](../docs/seo.md) for image build arguments and validation before publication.
+**Rebuild after changing `APP_BASE_URL` or `SEO_INDEXABLE`:** both public values are fixed in the frontend build; robots and sitemap are generated then. HTML pages render per request with a fresh CSP nonce and `private, no-store`, including nonce-bearing JSON-LD. The Docker builder accepts both values as build arguments, and `compose.yaml` forwards them from the root `.env`. Prebuilt images in `compose.release.yaml` / `compose.internal.yaml` must already have the correct values baked in: changing their runtime env file or restarting the container is insufficient. Never add credentials to `next.config.ts`'s public `env` object. See [SEO operations](../docs/seo.md) and the [security audit](../docs/security-audit-2026-10-27.fa.md) for validation and rendering tradeoffs.
 
 ```sh
 npm test
@@ -62,6 +64,18 @@ Form labels, inline errors, focused error summaries, visible keyboard focus, nat
 No delivery status implies that the recipient opened or read a message. `delivered_demo` is explicitly labelled as a simulation. There is no reply, chat, public profile, or recipient lookup.
 
 ## Validation scope
+
+SMS OTP uses native `autocomplete="one-time-code"` plus an optional, consent-based
+WebOTP listener started before requesting the message. It stops on manual input,
+verification, number changes, page exit, unmount or a 60-second timeout. Autofill
+does not submit the form. The backend adds an origin-bound last SMS line for a
+valid public HTTPS `APP_BASE_URL`; provider lookup templates require the equivalent
+approved template. Codes are never saved to browser storage or logged.
+
+Installed-browser failures in optional Service Worker/BroadcastChannel access
+fall back to the working web UI. This is not evidence that a native Huawei Quick
+App launcher crash has been fixed. See [OTP and Huawei PWA checks](../docs/otp-pwa.fa.md)
+for validation, browser limitations and device recovery steps.
 
 The built-in Node tests cover Persian/Arabic/international phone normalization, rejection of malformed numbers, pending-status handling, CSRF and idempotency headers, API moderation errors, offline/non-JSON proxy failures, and SEO URL/indexing rules. Run the real browser journey against Django in addition to these tests when changing composition or authentication.
 

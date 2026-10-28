@@ -1,0 +1,155 @@
+{
+  "version": "0.12.2",
+  "checked_at_utc": "2026-10-28T13:23:57.830585+00:00",
+  "backend_image": "sha256:77ebc630f120b34ac898a68270d773ff27ad9c0ffe3b9f57f8db83931490bdeb",
+  "frontend_image": "sha256:7baf0e86d47d58f70f33dc2ea759a1f51c151d47dca647d5e2964af836694c4e",
+  "frontends": 6,
+  "services": {
+    "backend": "healthy",
+    "worker": "running",
+    "beat": "running",
+    "frontend": "healthy",
+    "frontend2": "healthy",
+    "frontend3": "healthy",
+    "frontend4": "healthy",
+    "frontend5": "healthy",
+    "frontend6": "healthy",
+    "postgres": "healthy",
+    "redis": "healthy",
+    "rabbitmq": "healthy",
+    "proxy": "healthy"
+  },
+  "replicas": {
+    "frontend": {
+      "port": "3000",
+      "enamad_links_assets": "PASS",
+      "assets": 11
+    },
+    "frontend2": {
+      "port": "3001",
+      "enamad_links_assets": "PASS",
+      "assets": 11
+    },
+    "frontend3": {
+      "port": "3002",
+      "enamad_links_assets": "PASS",
+      "assets": 11
+    },
+    "frontend4": {
+      "port": "3003",
+      "enamad_links_assets": "PASS",
+      "assets": 11
+    },
+    "frontend5": {
+      "port": "3004",
+      "enamad_links_assets": "PASS",
+      "assets": 11
+    },
+    "frontend6": {
+      "port": "3005",
+      "enamad_links_assets": "PASS",
+      "assets": 11
+    }
+  },
+  "profile": {
+    "provider": "gapgpt",
+    "model": "gpt-4.1-mini",
+    "site_daily_rewrites": "unlimited",
+    "user_daily_rewrites": 10,
+    "otp_sms": "real",
+    "otp_mode": "sms",
+    "otp_domain_binding": "begamnagam.ir",
+    "payment": "disabled",
+    "wallet_gateway": "disabled",
+    "hourly_zero_validation_without_save": "PASS",
+    "semantic_error_copy": "PASS",
+    "limits_match_pre_release": true,
+    "ai_match_pre_release": true,
+    "usage_credits_orders_not_reset": true,
+    "migration": "0029_optional_hourly_windows"
+  },
+  "data_proxy_ids_unchanged": true,
+  "frontend_secrets_isolated": true,
+  "credentials_preserved": true,
+  "backend_image_matches_snapshot": true,
+  "postgres_tests": 424,
+  "frontend_tests": 49,
+  "frontend_typecheck": "PASS",
+  "frontend_build": "PASS",
+  "pre_backup": {
+    "encrypted": true,
+    "archive": "/opt/begamnagam/backups/pre-0.12.2/database-20261028T131331Z-516d2c.dump.fernet",
+    "dump_bytes": 241869,
+    "plaintext_sha256": "6d81d91142840df86b6d377963168720d45b4bad044fc86b503fcde3d46bd4ac",
+    "production_rows_changed": false,
+    "real_sms_sent": false,
+    "restore_check": "PASS",
+    "encrypted_fields_validated": 176,
+    "dispatch_on_restored_database": "halted"
+  },
+  "model_calls": 0,
+  "test_sms_sent": 0,
+  "current": "/opt/begamnagam/releases/0.12.2",
+  "promoted": true,
+  "https": {
+    "version": "0.12.2",
+    "https": "PASS",
+    "transport": "domain_https_via_internal_nginx_192.168.1.6",
+    "tls_certificate_verified": true,
+    "admin_login_and_csrf": "PASS",
+    "site_settings_not_mutated": true,
+    "hourly_zero_metadata_and_help": "PASS",
+    "enamad_head": "PASS",
+    "links_six_targets": "PASS",
+    "otp_autofill_bundle": "PASS",
+    "management_zero_guidance": "PASS",
+    "rewrite_loading_bundle": "PASS",
+    "static_assets": 11,
+    "pages": {
+      "/": 36758,
+      "/links": 36296,
+      "/manage": 12184,
+      "/credits": 16536,
+      "/wallet": 15606,
+      "/profile": 15631,
+      "/help": 52521,
+      "/history": 15853,
+      "/preferences": 16421
+    },
+    "real_otp_sms_preserved": true,
+    "provider": "gapgpt",
+    "model": "gpt-4.1-mini",
+    "site_daily_rewrites": "unlimited",
+    "user_daily_rewrites": 10,
+    "wallet_gateway": "disabled",
+    "payment": "disabled",
+    "test_sms_sent": 0,
+    "model_calls": 0
+  },
+  "post_release_backup": {
+    "encrypted": true,
+    "archive": "/opt/begamnagam/backups/post-0.12.2/database-20261028T132518Z-7f7771.dump.fernet",
+    "dump_bytes": 241984,
+    "plaintext_sha256": "116a7d5bd5d3c7bff5e69032a6f2e558bd80a016f51c5cd6e72ffd4c101867b2",
+    "production_rows_changed": false,
+    "real_sms_sent": false,
+    "restore_check": "PASS",
+    "encrypted_fields_validated": 176,
+    "dispatch_on_restored_database": "halted"
+  },
+  "scheduled_timers": {
+    "begamnagam-backup.timer": "active",
+    "begamnagam-restore-check.timer": "active"
+  },
+  "final_checked_at_utc": "2026-10-28T13:25:20.536986+00:00",
+  "settings_reconfigured": false,
+  "local_quota_reset_replayed": false,
+  "paid_model_test_calls": 0,
+  "all_chat_changes_integrated": true,
+  "remaining_device_limitations": [
+    "Physical Huawei launcher and physical SMS autofill not verified"
+  ],
+  "remaining_ai_quality_limitations": [
+    "Previously recorded tea-host/guest role reversal; final prompt guidance has no additional paid retest"
+  ]
+}

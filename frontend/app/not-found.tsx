@@ -1,5 +1,16 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Icon } from "@/components/icons";
+
+export const metadata: Metadata = {
+  title: "صفحه پیدا نشد",
+  description: "این صفحه در بگم نگم پیدا نشد. از صفحهٔ اصلی یا راهنمای استفاده ادامه بده.",
+  robots: { index: false, follow: false },
+  alternates: null,
+  openGraph: null,
+  twitter: null,
+};
+
 export default function NotFound() {
   return (
     <div className="not-found wrap">

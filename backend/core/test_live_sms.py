@@ -97,10 +97,10 @@ class LiveGiftSMSTests(TestCase):
             self.assertEqual(result.status_code, 200, result.content)
         result = self.make_order(recipient='09901234569')
         self.assertEqual(result.status_code, 409)
-        self.assertEqual(result.json()['error']['code'], 'payment_disabled')
+        self.assertEqual(result.json()['error']['code'], 'credit_required')
         order = Order.objects.first()
         self.assertEqual(self.post(f'/orders/{order.pk}/pay-demo').status_code, 503)
-        self.assertEqual(self.post(f'/orders/{order.pk}/payments').status_code, 503)
+        self.assertEqual(self.post(f'/orders/{order.pk}/payments').status_code, 409)
         self.assertFalse(PaymentAttempt.objects.exists())
         self.assertEqual(Order.objects.count(), 3)
         with self.assertRaises(ProviderDisabled):

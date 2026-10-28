@@ -4,6 +4,24 @@ import re
 from urllib.parse import urlparse
 
 
+def web_otp_sms_host(origin):
+    """Bind SMS autofill to a configured public HTTPS host, never request input."""
+    if not isinstance(origin, str) or any(c.isspace() for c in origin):
+        return None
+    try:
+        parsed = urlparse(origin)
+        host = parsed.hostname or ""
+        if (parsed.scheme == "https" and parsed.port in {None, 443}
+                and parsed.username is None and parsed.password is None
+                and not parsed.query and not parsed.fragment and parsed.path in {"", "/"}
+                and len(host) <= 253 and re.fullmatch(
+                    r"(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}", host)):
+            return host
+    except (ValueError, TypeError):
+        pass
+    return None
+
+
 def local_otp_origin_allowed(origin, internal_host, public_host=""):
     parsed = urlparse(origin)
     if parsed.hostname in {"localhost", "127.0.0.1", "::1"}:

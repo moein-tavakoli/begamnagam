@@ -34,9 +34,10 @@ def defer_until_open(event):
         event.save(update_fields=['available_at', 'last_error_code'])
         return True
     now = timezone.localtime()
-    if settings.SENDING_WINDOW_ENABLED and not settings.SENDING_START_HOUR <= now.hour < settings.SENDING_END_HOUR:
-        tomorrow = now + timedelta(days=1) if now.hour >= settings.SENDING_END_HOUR else now
-        event.available_at = tomorrow.replace(hour=settings.SENDING_START_HOUR, minute=0, second=0, microsecond=0)
+    from .limits import next_sending_time
+    next_at = next_sending_time(now)
+    if next_at:
+        event.available_at = next_at
         event.last_error_code = 'outside_sending_window'
         event.save(update_fields=['available_at', 'last_error_code'])
         return True
@@ -60,8 +61,9 @@ def operator_action(actor, action, object_id, reason, reference=''):
             before = {'halted': obj.halted}
             obj.halted = action == 'halt'
             if action == 'resume':
+                from .limits import policy, daily_budget_limit
                 budget = SpendBudget.objects.filter(day=timezone.localdate()).first()
-                if not settings.PROVIDER_DAILY_BUDGET_UNLIMITED and budget and budget.reserved_rial >= min(budget.limit_rial, settings.PROVIDER_DAILY_BUDGET_RIAL):
+                if not policy().provider_budget_unlimited and budget and budget.reserved_rial >= daily_budget_limit(budget):
                     raise APIError('budget_exhausted', 'بودجه مصرف شده؛ ازسرگیری ممکن نیست.', 409)
             obj.save()
             after = {'halted': obj.halted}
@@ -86,6 +88,10 @@ def operator_action(actor, action, object_id, reason, reference=''):
             if not isinstance(reference, str) or not 3 <= len(reference) <= 100:
                 raise APIError('reference_required', 'مرجع مستند بازپرداخت لازم است.')
             meta = Refund.objects.get(pk=object_id)
+            if meta.payment.return_to_wallet:
+                raise APIError('wallet_refund_required', 'برگشت این پرداخت باید در دفتر کیف پول ثبت شود.', 409)
+            if not meta.payment.order_id:
+                raise APIError('package_refund_review_required', 'بازپرداخت بسته به تطبیق اعتبار مصرف‌نشده نیاز دارد.', 409)
             Order.objects.select_for_update().get(pk=meta.payment.order_id)
             payment = PaymentAttempt.objects.select_for_update().get(pk=meta.payment_id)
             obj = Refund.objects.select_for_update().get(pk=object_id)
@@ -115,8 +121,10 @@ def snapshot():
     invite_oldest = InvitationSend.objects.filter(status__in=['pending', 'submitting', 'unknown']).aggregate(value=Min('created_at'))['value']
     oldest = min(filter(None, [oldest, invite_oldest]), default=None)
     budget = SpendBudget.objects.filter(day=timezone.localdate()).first()
-    daily_limit = min(budget.limit_rial, settings.PROVIDER_DAILY_BUDGET_RIAL) if budget else settings.PROVIDER_DAILY_BUDGET_RIAL
-    if settings.PROVIDER_DAILY_BUDGET_UNLIMITED:
+    from .limits import policy, daily_budget_limit
+    limits = policy()
+    daily_limit = daily_budget_limit(budget) if budget else limits.provider_daily_budget_rial
+    if limits.provider_budget_unlimited:
         daily_limit = None
     return {'sending_halted': halted(), 'outbox_pending': Outbox.objects.filter(state='pending').count()+InvitationSend.objects.filter(status='pending').count(),
         'oldest_queue_seconds': max(0, int((now-oldest).total_seconds())) if oldest else 0,
@@ -124,7 +132,7 @@ def snapshot():
         'delivery_unknown': MessageDelivery.objects.filter(status__in=['unknown', 'submitting']).count()+InvitationSend.objects.filter(status__in=['unknown', 'submitting']).count(),
         'refund_open': Refund.objects.exclude(status='refunded').count(), 'reports_open': AbuseReport.objects.filter(status='open').count(),
         'provider_budget_reserved_rial': budget.reserved_rial if budget else 0,
-        'provider_budget_unlimited': settings.PROVIDER_DAILY_BUDGET_UNLIMITED,
+        'provider_budget_unlimited': limits.provider_budget_unlimited,
         'provider_budget_limit_rial': daily_limit}
 
 

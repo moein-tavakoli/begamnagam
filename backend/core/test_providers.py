@@ -42,13 +42,25 @@ class ProviderContracts(TestCase):
         self.config.enable()
         self.user = self.authenticate()
         self.o = self.order(recipient='09901234567').json()
+        # Historical per-message receipts must still reconcile after migration.
+        Order.objects.filter(pk=self.o['id']).update(uses_purchased_credit=False, amount_toman=2000, payment_mode='demo')
 
     def tearDown(self):
         self.config.disable()
         self.fixture.__exit__()
 
+    def historical_attempt(self):
+        """Seed an already-issued legacy authority; no new product checkout."""
+        attempt = PaymentAttempt.objects.filter(order_id=self.o['id']).first()
+        if not attempt:
+            result = Zarinpal().request(amount_toman=2000, callback_url=settings.APP_BASE_URL+'/api/v1/payments/return/zarinpal')
+            attempt = PaymentAttempt.objects.create(order_id=self.o['id'], amount_toman=2000,
+                provider='zarinpal', environment='sandbox', authority=result.authority,
+                redirect_url=result.redirect_url, status='pending')
+        return {'attempt_id': str(attempt.pk), 'redirect_url': attempt.redirect_url}
+
     def pay(self):
-        result = begin_payment(self.user, self.o['id'], uuid.uuid4())
+        result = self.historical_attempt()
         attempt = PaymentAttempt.objects.get(pk=result['attempt_id'])
         self.fixture.payments[attempt.authority]['status'] = 'PAID'
         with self.captureOnCommitCallbacks(execute=False):
@@ -56,15 +68,14 @@ class ProviderContracts(TestCase):
         return attempt
 
     def test_payment_request_integer_rial_redirect_and_repeated_attempt(self):
-        result = begin_payment(self.user, self.o['id'], uuid.uuid4())
-        repeated = begin_payment(self.user, self.o['id'], uuid.uuid4())
-        self.assertEqual(result, repeated)
+        result = self.historical_attempt()
+        self.assertEqual(begin_payment(self.user, self.o['id'], uuid.uuid4()), result)
         a = PaymentAttempt.objects.get()
         self.assertEqual(self.fixture.payments[a.authority]['amount'], 20000)
         self.assertEqual(self.fixture.calls.count('request'), 1)
 
     def test_forged_callback_does_not_prove_payment(self):
-        result = begin_payment(self.user, self.o['id'], uuid.uuid4())
+        result = self.historical_attempt()
         with self.captureOnCommitCallbacks(execute=False):
             verify_payment(result['attempt_id'])
         self.assertFalse(FinancialEvent.objects.exists())
@@ -81,7 +92,7 @@ class ProviderContracts(TestCase):
         self.assertEqual(MessageDelivery.objects.get().status, 'queued')
 
     def test_wrong_amount_never_captures_or_queues(self):
-        r = begin_payment(self.user, self.o['id'], uuid.uuid4())
+        r = self.historical_attempt()
         a = PaymentAttempt.objects.get(pk=r['attempt_id'])
         self.fixture.payments[a.authority]['status'] = 'PAID'
         self.fixture.modes['verify'] = 'wrong_amount'
@@ -91,14 +102,23 @@ class ProviderContracts(TestCase):
         self.assertFalse(Outbox.objects.exists())
 
     def test_request_lost_after_accept_not_retried(self):
+        from .models import MessagePackage, SiteLimits
+        from .packages import begin_purchase
+        from .payment_options import WALLET_TERMS_VERSION
+        SiteLimits.objects.update_or_create(pk=1, defaults={'wallet_enabled': True, 'gateway_enabled': True})
+        package = MessagePackage.objects.create(name='Contract bundle', message_count=3, price_toman=10000, active=True)
+        data = {'package_id': package.pk, 'package_revision': 0, 'wallet_consent': True, 'wallet_terms_version': WALLET_TERMS_VERSION}
         self.fixture.modes['request'] = 'drop_after_accept'
-        for _ in range(2):
-            with self.assertRaises(APIError): begin_payment(self.user, self.o['id'], uuid.uuid4())
+        key = str(uuid.uuid4())
+        with patch('core.payment_options.gateway_problem', return_value=''):
+            self.assertEqual(begin_purchase(self.user, data, key)['status'], 'unknown')
+            self.assertEqual(begin_purchase(self.user, data, key)['status'], 'unknown')
+            with self.assertRaises(APIError): begin_purchase(self.user, data, str(uuid.uuid4()))
         self.assertEqual(self.fixture.calls.count('request'), 1)
         self.assertEqual(PaymentAttempt.objects.get().status, 'unknown')
 
     def test_verify_lost_after_accept_can_be_reconciled(self):
-        r = begin_payment(self.user, self.o['id'], uuid.uuid4())
+        r = self.historical_attempt()
         a = PaymentAttempt.objects.get(pk=r['attempt_id'])
         self.fixture.payments[a.authority]['status'] = 'PAID'
         self.fixture.modes['verify'] = 'drop_after_accept'
@@ -110,7 +130,7 @@ class ProviderContracts(TestCase):
         self.assertEqual(Outbox.objects.count(), 1)
 
     def test_late_success_records_refund_without_sms(self):
-        r = begin_payment(self.user, self.o['id'], uuid.uuid4())
+        r = self.historical_attempt()
         a = PaymentAttempt.objects.get(pk=r['attempt_id'])
         self.fixture.payments[a.authority]['status'] = 'PAID'
         Order.objects.filter(pk=self.o['id']).update(created_at=timezone.now()-timedelta(hours=1))
@@ -191,6 +211,19 @@ class ProviderContracts(TestCase):
         verified = self.post('/auth/verify-otp', {'challenge_id':response.json()['challenge_id'], 'code':code})
         self.assertEqual(verified.status_code, 200)
 
+    @override_settings(OTP_BACKEND='kavenegar', APP_BASE_URL='https://begamnagam.ir')
+    def test_public_otp_sms_binds_autofill_to_site_without_changing_verification(self):
+        response = self.post('/auth/request-otp', {'phone': '09911234567'})
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn('debug_code', response.json())
+        code = self.fixture.codes['09911234567']
+        message = self.fixture.otp_requests[0]['message']
+        self.assertEqual(message.splitlines()[-1], f'@begamnagam.ir #{code}')
+        self.assertEqual(self.fixture.calls.count('send'), 1)
+        self.assertLessEqual(len(message), 134)  # Stays within two Unicode SMS parts.
+        verified = self.post('/auth/verify-otp', {'challenge_id': response.json()['challenge_id'], 'code': code})
+        self.assertEqual(verified.status_code, 200)
+
     @override_settings(KAVENEGAR_OTP_MODE='lookup', KAVENEGAR_OTP_TEMPLATE='approved-login')
     def test_lookup_remains_explicit_and_uses_approved_template(self):
         result = Kavenegar().otp(phone='09911234567', code='012345')
@@ -265,7 +298,7 @@ class ProviderContracts(TestCase):
         self.assertFalse(FinancialEvent.objects.filter(kind='refund').exists())
 
     def test_very_late_receipt_after_private_redaction_is_still_captured_and_refunded(self):
-        r = begin_payment(self.user, self.o['id'], uuid.uuid4())
+        r = self.historical_attempt()
         a = PaymentAttempt.objects.get(pk=r['attempt_id'])
         self.fixture.payments[a.authority]['status'] = 'PAID'
         Order.objects.filter(pk=self.o['id']).update(status='cancelled', recipient_hash='', recipient_cipher='', created_at=timezone.now()-timedelta(days=32))

@@ -9,11 +9,7 @@ export default function PrivacyPage() {
   return (
     <div className="document-page policy-page wrap">
       <StructuredData data={pageJsonLd("/privacy")} />
-      <Link className="back-link" href="/">
-        بازگشت به خانه <Icon name="arrow" size={16} />
-      </Link>
       <div className="account-heading">
-        <span className="eyebrow">اعتماد، با شفافیت</span>
         <h1>حریم خصوصی و مرزهای استفاده.</h1>
         <p>
           پیش از تأیید ارسال، متن نهایی و این شرایط رو بررسی کن. شمارهٔ

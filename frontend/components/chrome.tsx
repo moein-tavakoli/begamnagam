@@ -22,7 +22,7 @@ export function Brand() {
 
 export function Header() {
   const path = usePathname();
-  if (path === "/") return null;
+  if (path === "/" || path === "/links" || path.startsWith("/manage")) return null;
   return (
     <header className="site-header wrap">
       <Brand />
@@ -40,6 +40,8 @@ export function Header() {
 
 export function Footer() {
   const { data } = useApp();
+  const path = usePathname();
+  if (path === "/links" || path.startsWith("/manage")) return null;
   return (
     <footer className="site-footer">
       <div className="wrap footer-top">
@@ -57,7 +59,8 @@ export function Footer() {
           <Link href="/preferences" prefetch={false}>قطع دریافت پیام</Link>
           <Link href="/privacy">حریم خصوصی و قوانین</Link>
           <Link href="/help">راهنمای استفاده</Link>
-          <a href="/admin/" rel="nofollow">ورود مدیر سیستم</a>
+          <Link href="/links">شبکه‌های اجتماعی</Link>
+          <Link href="/manage" prefetch={false} rel="nofollow">ورود مدیر سیستم</Link>
         </nav>
       </div>
       <div className="wrap footer-bottom">
@@ -70,7 +73,7 @@ export function Footer() {
 
 export function MobileNav() {
   const path = usePathname();
-  if (path === "/") return null;
+  if (path === "/" || path === "/links" || path.startsWith("/manage")) return null;
   const links = [
     {href:"/", label:"خونه", icon:"space" as const},
     {href:"/#compose", label:"نوشتن پیام", icon:"chat" as const},

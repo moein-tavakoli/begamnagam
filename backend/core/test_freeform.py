@@ -8,7 +8,7 @@ from django.test import Client, TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 from . import tests as legacy
 from .freeform import reserve, validate_preview, validate_order
-from .models import Account, Preview, Order, Outbox, RewriteBudget, RewriteUsage, SafetyControl
+from .models import Account, Preview, Order, Outbox, RewriteBudget, RewriteUsage, SafetyControl, ModerationAudit
 from .moderation import ModerationRejected
 from .gapgpt import GapGPTRejected, GapGPTUnavailable
 from .privacy import digest, encrypt, mask
@@ -35,7 +35,7 @@ class FreeformTests(TestCase):
         return self.post('/orders', {'preview_id':quote['preview_id'], 'recipient_phone':'09901234567',
             'consent':True, 'terms_version':quote['terms_version']}, HTTP_IDEMPOTENCY_KEY=str(uuid.uuid4()))
 
-    def test_freeform_ignores_topic_and_filters_insult_before_api_encrypts_only_approved_body(self):
+    def test_freeform_filters_model_input_and_keeps_approved_sms_separate_from_private_original(self):
         with patch('core.gapgpt.rewrite_message', return_value=BODY) as model:
             result = self.quote(category='parking')
         self.assertEqual(result.status_code, 200, result.content)
@@ -113,6 +113,45 @@ class FreeformTests(TestCase):
             self.assertEqual(self.quote().status_code, 422)
         self.assertFalse(Preview.objects.exists())
         self.assertEqual(RewriteUsage.objects.count(), 3)
+
+    @override_settings(GAPGPT_USER_DAILY_LIMIT=15)
+    def test_rejection_reasons_have_distinct_guidance_and_never_create_sendable_records(self):
+        cases = [('review_intent', 'rewrite_intent_changed', 'منظورت را دقیق'),
+                 ('review_added_claims', 'rewrite_intent_changed', 'منظورت را دقیق'),
+                 ('generation_unclear', 'rewrite_intent_unclear', 'روشن نبود'),
+                 ('review_format', 'rewrite_output_rejected', 'نسخهٔ آماده‌شده'),
+                 ('review_tone', 'rewrite_output_rejected', 'نسخهٔ آماده‌شده'),
+                 ('candidate_rejected', 'rewrite_output_rejected', 'نسخهٔ آماده‌شده'),
+                 ('generation_rejected', 'moderation_rejected', 'تأیید نشد'),
+                 ('generation_unsafe', 'moderation_rejected', 'ضوابط پیام‌رسانی'),
+                 ('review_unsafe', 'moderation_rejected', 'ضوابط پیام‌رسانی'),
+                 ('generation_private', 'moderation_rejected', 'حریم خصوصی'),
+                 ('review_private', 'moderation_rejected', 'حریم خصوصی')]
+        for reason, code, message in cases:
+            with self.subTest(reason=reason), patch('core.gapgpt.rewrite_message', side_effect=GapGPTRejected(reason)):
+                response = self.quote('رفیق پولدار منی')
+                self.assertEqual(response.status_code, 422, response.content)
+                error = response.json()['error']
+                self.assertEqual(error['code'], code)
+                self.assertIn(message, error['message'])
+                if reason not in {'generation_unsafe', 'review_unsafe'}:
+                    self.assertNotIn('تهدید', error['message'])
+                self.assertNotIn('رفیق پولدار منی', error['message'])
+                self.assertEqual(ModerationAudit.objects.latest('created_at').reason_code, reason)
+        self.assertEqual(RewriteUsage.objects.count(), len(cases))
+        self.assertFalse(Preview.objects.exists())
+        self.assertFalse(Order.objects.exists())
+        self.assertFalse(Outbox.objects.exists())
+        self.assertEqual(Account.objects.get(user=self.user).free_sends_remaining, 3)
+
+    def test_unknown_rejection_reason_cannot_escape_into_audit_or_response(self):
+        secret = 'private source synthetic-api-key'
+        with patch('core.gapgpt.rewrite_message', side_effect=GapGPTRejected(secret)):
+            response = self.quote('رفیق پولدار منی')
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(ModerationAudit.objects.get().reason_code, 'checks_uncertain')
+        self.assertNotIn(secret, response.content.decode())
+        self.assertNotIn('تهدید', response.json()['error']['message'])
 
     @override_settings(GAPGPT_USER_DAILY_LIMIT=1)
     def test_user_cap_counts_uncertain_calls_and_does_not_spend_sms_budget(self):

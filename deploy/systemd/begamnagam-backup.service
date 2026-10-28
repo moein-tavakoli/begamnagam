@@ -1,0 +1,24 @@
+[Unit]
+Description=Encrypted BegamNagam database backup
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/begamnagam/current/scripts/backup-hardened.py --key-file /opt/begamnagam/shared/security-current/backup.key --output-dir /opt/begamnagam/backups/scheduled
+User=root
+Environment=DOCKER_CONFIG=/etc/begamnagam/docker-client
+Environment=DOCKER_HOST=unix:///var/run/docker.sock
+UMask=0077
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+CPUQuota=50%
+MemoryMax=768M
+TimeoutStartSec=10min
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/opt/begamnagam/backups
+RestrictAddressFamilies=AF_UNIX

@@ -1,0 +1,39 @@
+{
+  "status": "blocked_by_server_emergency_readonly_filesystem",
+  "backend_tests": 338,
+  "backend_database": "PostgreSQL",
+  "frontend_tests": 40,
+  "typecheck": "PASS",
+  "production_build": "PASS",
+  "migration_consistency": "PASS",
+  "server_candidate": "/opt/begamnagam/releases/0.12.0",
+  "live_release_last_verified": "0.11.0",
+  "local_model_evaluation": "PENDING",
+  "model_activation": "NOT_ACTIVATED",
+  "server_migration": "APPLIED",
+  "real_sms_sent_for_ai_tests": 0,
+  "responsive_checks": [
+    {
+      "width": 375,
+      "horizontal_overflow": false,
+      "smallest_input_height": 48
+    },
+    {
+      "width": 1440,
+      "horizontal_overflow": false,
+      "smallest_input_height": 48
+    }
+  ],
+  "content_boundary_tests": "16 direct-API attack cases across Ollama and GapGPT PASS",
+  "server_boundary_tests": "43 isolated tests PASS",
+  "server_full_postgresql_tests": 327,
+  "migration": "0019 applied",
+  "backup": "Encrypted dump verified",
+  "original_deployment_authorization": "Active; finish model evaluation before public activation",
+  "root_filesystem": "ext4 rw,relatime,stripe=32,emergency_ro",
+  "reported_free_space_gib": 13,
+  "model_evaluation": "NOT_RUN",
+  "runtime_download": "complete; official SHA256 verified",
+  "model_download": "about 89 percent; incomplete",
+  "root_storage_repair": "Requires Proxmox host diagnosis; never force remount/fsck on mounted filesystem"
+}

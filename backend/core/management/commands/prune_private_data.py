@@ -21,7 +21,7 @@ class Command(BaseCommand):
             counts['otp'], counts['unused_preview'] = otp.count(), previews.count()
             # Unresolved records keep identifiers needed for reconciliation; overdue
             # private data is surfaced by operations rather than silently erased.
-            candidates = Order.objects.exclude(status__in=['queued', 'accepted', 'unknown']).filter(updated_at__lt=now-timedelta(days=31)).exclude(recipient_cipher='', full_sms='', text='')
+            candidates = Order.objects.exclude(status__in=['queued', 'accepted', 'unknown']).filter(updated_at__lt=now-timedelta(days=31)).exclude(recipient_cipher='', full_sms='', text='', preview__original_text='')
             for order in candidates.select_for_update().iterator(chunk_size=200):
                 if AbuseReport.objects.filter(grant__preview_id=order.preview_id, hold_until__gt=now).exists():
                     continue
@@ -29,7 +29,7 @@ class Command(BaseCommand):
                 if not options['dry_run']:
                     # Keep amount/status/provider references/date and suppression.
                     Order.objects.filter(pk=order.pk).update(recipient_cipher='', recipient_masked='حذف‌شده', recipient_hash='', text='', full_sms='')
-                    Preview.objects.filter(pk=order.preview_id).update(text='', full_sms='', generated_body='', review_signature='', session_key='', recipient_hash='')
+                    Preview.objects.filter(pk=order.preview_id).update(original_text='', text='', full_sms='', generated_body='', review_signature='', session_key='', recipient_hash='')
             accounts = Account.objects.filter(deletion_requested_at__lt=now-timedelta(days=30)).exclude(phone_cipher='')
             counts['accounts_redacted'] = accounts.count()
             reports = AbuseReport.objects.filter(Q(closed_at__lt=now-timedelta(days=180)) | Q(closed_at__isnull=True, created_at__lt=now-timedelta(days=180))).filter(Q(hold_until__isnull=True) | Q(hold_until__lte=now)).exclude(details='')

@@ -1,0 +1,299 @@
+{
+  "recorded_at_utc": "2026-10-28T12:40:08.888258+00:00",
+  "scope": "local synthetic GapGPT evaluation only; no server deployment",
+  "model": "gpt-4.1-mini",
+  "maximum_authorized_calls": 12,
+  "actual_calls": 12,
+  "sms_sent": 0,
+  "product_rows_created": 0,
+  "server_changed": false,
+  "evaluated_prompt_sha256": "104cd4ac3ad064810662356dd0999af5041ff5b937789b1ccbcd8b55e907affc",
+  "current_prompt_sha256": "874ba2ae663715132cc83ce934fca3ea13826550d2cc115cca7668e058def038",
+  "evaluated_prompt_characters": 2809,
+  "current_prompt_characters": 3095,
+  "current_prompt_live_retested": false,
+  "followup_change": "Added explicit actor/recipient/payer and Persian host/guest role-preservation guidance to generation and review after exhausting the 12-call allowance; no additional API call.",
+  "usage": {
+    "prompt_tokens": 4566,
+    "completion_tokens": 332,
+    "total_tokens": 4898,
+    "reasoning_tokens": 0
+  },
+  "rewrites": [
+    {
+      "id": "wealth-friend",
+      "status": "accepted",
+      "source": "رفیق پولدار منی",
+      "message": "تو رفیق پولدار من هستی.",
+      "seconds": 5.391,
+      "calls": [
+        {
+          "stage": "generation",
+          "finish_reason": "stop",
+          "usage": {
+            "prompt_tokens": 351,
+            "completion_tokens": 19,
+            "total_tokens": 370,
+            "reasoning_tokens": 0
+          },
+          "seconds": 4.065
+        },
+        {
+          "stage": "review",
+          "finish_reason": "stop",
+          "usage": {
+            "prompt_tokens": 384,
+            "completion_tokens": 30,
+            "total_tokens": 414,
+            "reasoning_tokens": 0
+          },
+          "seconds": 1.291
+        }
+      ],
+      "manual_intent_passed": true
+    },
+    {
+      "id": "friendly-praise",
+      "status": "accepted",
+      "source": "تو رفیق باحال منی",
+      "message": "تو رفیق باحال من هستی.",
+      "seconds": 3.846,
+      "calls": [
+        {
+          "stage": "generation",
+          "finish_reason": "stop",
+          "usage": {
+            "prompt_tokens": 352,
+            "completion_tokens": 19,
+            "total_tokens": 371,
+            "reasoning_tokens": 0
+          },
+          "seconds": 2.455
+        },
+        {
+          "stage": "review",
+          "finish_reason": "stop",
+          "usage": {
+            "prompt_tokens": 385,
+            "completion_tokens": 30,
+            "total_tokens": 415,
+            "reasoning_tokens": 0
+          },
+          "seconds": 1.369
+        }
+      ],
+      "manual_intent_passed": true
+    },
+    {
+      "id": "affection",
+      "status": "accepted",
+      "source": "خوشحالم که رفیق منی",
+      "message": "خوشحالم که تو رفیق من هستی.",
+      "seconds": 4.348,
+      "calls": [
+        {
+          "stage": "generation",
+          "finish_reason": "stop",
+          "usage": {
+            "prompt_tokens": 354,
+            "completion_tokens": 22,
+            "total_tokens": 376,
+            "reasoning_tokens": 0
+          },
+          "seconds": 2.867
+        },
+        {
+          "stage": "review",
+          "finish_reason": "stop",
+          "usage": {
+            "prompt_tokens": 390,
+            "completion_tokens": 30,
+            "total_tokens": 420,
+            "reasoning_tokens": 0
+          },
+          "seconds": 1.461
+        }
+      ],
+      "manual_intent_passed": true
+    },
+    {
+      "id": "friendly-humor",
+      "status": "accepted",
+      "source": "رفیق پولدارم، نوبت توئه که چای مهمون کنی.",
+      "message": "تو رفیق پولدار من هستی، نوبت توست که چای مهمان باشی.",
+      "seconds": 10.281,
+      "calls": [
+        {
+          "stage": "generation",
+          "finish_reason": "stop",
+          "usage": {
+            "prompt_tokens": 364,
+            "completion_tokens": 32,
+            "total_tokens": 396,
+            "reasoning_tokens": 0
+          },
+          "seconds": 2.893
+        },
+        {
+          "stage": "review",
+          "finish_reason": "stop",
+          "usage": {
+            "prompt_tokens": 410,
+            "completion_tokens": 30,
+            "total_tokens": 440,
+            "reasoning_tokens": 0
+          },
+          "seconds": 7.361
+        }
+      ],
+      "manual_intent_passed": false,
+      "manual_failure": "Generation changed treating the other person to being a guest; independent review incorrectly accepted this role reversal."
+    }
+  ],
+  "review_controls": [
+    {
+      "id": "review-meaning",
+      "matches": true,
+      "verdict": {
+        "safe": true,
+        "intent_preserved": false,
+        "no_added_claims": true,
+        "no_private_data": true,
+        "only_message": true
+      },
+      "call": {
+        "stage": "review",
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 385,
+          "completion_tokens": 30,
+          "total_tokens": 415,
+          "reasoning_tokens": 0
+        },
+        "seconds": 2.894
+      }
+    },
+    {
+      "id": "review-threat",
+      "matches": true,
+      "verdict": {
+        "safe": false,
+        "intent_preserved": false,
+        "no_added_claims": true,
+        "no_private_data": true,
+        "only_message": true
+      },
+      "call": {
+        "stage": "review",
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 405,
+          "completion_tokens": 30,
+          "total_tokens": 435,
+          "reasoning_tokens": 0
+        },
+        "seconds": 2.07
+      }
+    },
+    {
+      "id": "review-contact",
+      "matches": true,
+      "verdict": {
+        "safe": true,
+        "intent_preserved": false,
+        "no_added_claims": false,
+        "no_private_data": false,
+        "only_message": false
+      },
+      "call": {
+        "stage": "review",
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 402,
+          "completion_tokens": 30,
+          "total_tokens": 432,
+          "reasoning_tokens": 0
+        },
+        "seconds": 3.933
+      }
+    },
+    {
+      "id": "review-good",
+      "matches": true,
+      "verdict": {
+        "safe": true,
+        "intent_preserved": true,
+        "no_added_claims": true,
+        "no_private_data": true,
+        "only_message": true
+      },
+      "call": {
+        "stage": "review",
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 384,
+          "completion_tokens": 30,
+          "total_tokens": 414,
+          "reasoning_tokens": 0
+        },
+        "seconds": 2.024
+      }
+    }
+  ],
+  "assessment": {
+    "manual_meaning_passed": 3,
+    "manual_meaning_failed": 1,
+    "review_controls_matched": 4,
+    "all_quality_cases_passed": false,
+    "limitations": "One run per synthetic case, polite tone only. Model acceptance is not proof of semantic correctness; followup role guidance has not had a paid retest."
+  },
+  "tests": {
+    "postgres_full": 421,
+    "postgres_full_passed": true,
+    "postgres_focused_after_role_guidance": 94,
+    "postgres_focused_passed": true
+  },
+  "source_sha256": {
+    "backend/core/gapgpt.py": "b2289a5b5aec8f5f12e7c0e108e2951275f31ac6ff85f8575beb56bad9706d4f",
+    "backend/core/freeform.py": "97a562ebb9bcdcd7d45c615faddbae77f3baa0f5591d4dd14d4edb34ba5d058b",
+    "backend/core/moderation.py": "337b1be5da337f877754bf8e9d8d22f0b1fe735c9fdd487d3eb898643d103805",
+    "backend/core/message_tones.py": "ad9e8a1855e37f5f7007c9c2c2f1d2678e11b354a0662ca3579ff5238352c072",
+    "backend/core/views.py": "2160005f5ecfa94097c56f712ef4b9bd696e9c7fda9f22c9948c899c912f02ab"
+  },
+  "local_runtime_checks": {
+    "backend": {
+      "launcher_running": true,
+      "children": [
+        27583
+      ]
+    },
+    "worker": {
+      "launcher_running": true,
+      "children": [
+        27610
+      ]
+    },
+    "beat": {
+      "launcher_running": true,
+      "children": [
+        27609
+      ]
+    },
+    "8000": {
+      "https": "ok",
+      "otp_is_real": true,
+      "demo_mode": false,
+      "payment": "disabled",
+      "ai": "gapgpt"
+    },
+    "3000": {
+      "https": "ok",
+      "otp_is_real": true,
+      "demo_mode": false,
+      "payment": "disabled",
+      "ai": "gapgpt"
+    },
+    "frontend_unchanged": true,
+    "server_changed": false
+  }
+}

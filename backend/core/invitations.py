@@ -9,9 +9,6 @@ from .models import Account, Invitation, InvitationSend, RecipientState
 from .privacy import digest, encrypt, mask, normalize_phone
 from .services import APIError, api, limited, recipient_unavailable
 
-MAX_SENDS = 3
-DAILY_LIMIT = 5
-COOLDOWN = timedelta(hours=24)
 CONSENT_VERSION = 'invitations-v1'
 ACTIVE = ['pending', 'submitting', 'unknown', 'accepted']
 INVITE_BODY = 'یکی از آشناهایت به بگم نگم دعوتت کرده. با ثبت‌نام ۳ ارسال رایگان داری:'
@@ -78,20 +75,23 @@ def ensure_account(user):
 
 
 def new_send(invitation, key):
+    from .limits import policy
+    limits = policy()
     now = timezone.now()
     sends = list(invitation.sends.order_by('ordinal'))
     if invitation.registered_at or Account.objects.filter(phone_hash=invitation.phone_hash).exists():
         raise APIError('already_registered', 'این شخص قبلاً عضو سایت شده و امکان افزودن یا دعوت دوباره ندارد.', 409)
-    if now >= invitation.created_at + timedelta(days=30):
-        raise APIError('invitation_expired', 'مهلت ۳۰روزهٔ ارسال این دعوت تمام شده است.', 409)
-    if len(sends) >= MAX_SENDS:
-        raise APIError('invitation_limit', 'برای هر مخاطب حداکثر سه درخواست پیامک دعوت مجاز است.', 409)
+    if limits.invitation_validity_days and now >= invitation.created_at + timedelta(days=limits.invitation_validity_days):
+        raise APIError('invitation_expired', f'مهلت {limits.invitation_validity_days}روزهٔ ارسال این دعوت تمام شده است.', 409)
+    if limits.invitation_max_sends and len(sends) >= limits.invitation_max_sends:
+        raise APIError('invitation_limit', f'برای هر مخاطب حداکثر {limits.invitation_max_sends} درخواست پیامک دعوت مجاز است.', 409)
     if any(s.status in ACTIVE for s in sends if s.status != 'accepted'):
         raise APIError('invitation_pending', 'نتیجهٔ دعوت قبلی هنوز مشخص نیست؛ دوباره ارسال نکن.', 409)
-    if sends and sends[-1].created_at + COOLDOWN > now:
-        raise APIError('invitation_cooldown', 'بین دو درخواست دعوت به همین شماره باید ۲۴ ساعت فاصله باشد.', 409)
-    if InvitationSend.objects.filter(invitation__inviter=invitation.inviter, created_at__gt=now-COOLDOWN).count() >= DAILY_LIMIT:
-        raise APIError('invitation_daily_limit', 'سقف پنج درخواست پیامک دعوت در ۲۴ ساعت تکمیل شده است.', 429)
+    if limits.invitation_cooldown_hours and sends and sends[-1].created_at + timedelta(hours=limits.invitation_cooldown_hours) > now:
+        raise APIError('invitation_cooldown', f'بین دو درخواست دعوت به همین شماره باید {limits.invitation_cooldown_hours} ساعت فاصله باشد.', 409)
+    if limits.invitation_limit and limits.invitation_window_hours and InvitationSend.objects.filter(invitation__inviter=invitation.inviter,
+            created_at__gt=now-timedelta(hours=limits.invitation_window_hours)).count() >= limits.invitation_limit:
+        raise APIError('invitation_daily_limit', f'سقف {limits.invitation_limit} درخواست دعوت در {limits.invitation_window_hours} ساعت تکمیل شده است.', 429)
     from .recipient import issue_grant
     send = InvitationSend.objects.create(invitation=invitation, ordinal=len(sends)+1, idempotency_key=key,
         available_at=now, consent_at=now, consent_version=CONSENT_VERSION,
@@ -149,13 +149,16 @@ def request_invitation(user, phone, key, invitation_id=None):
 
 
 def serialize(invitation):
+    from .limits import policy
+    limits = policy()
     sends = list(invitation.sends.all())
     latest = max(sends, key=lambda s: s.ordinal) if sends else None
     registered = invitation.registered_at is not None
-    expired = timezone.now() >= invitation.created_at + timedelta(days=30)
+    expired = bool(limits.invitation_validity_days and timezone.now() >= invitation.created_at + timedelta(days=limits.invitation_validity_days))
     pending = any(s.status in ['pending', 'submitting', 'unknown'] for s in sends)
-    next_at = max((s.created_at+COOLDOWN for s in sends), default=invitation.created_at)
-    can_resend = not registered and not expired and len(sends) < MAX_SENDS and not pending and timezone.now() >= next_at
+    next_at = (max((s.created_at+timedelta(hours=limits.invitation_cooldown_hours) for s in sends), default=invitation.created_at)
+               if limits.invitation_cooldown_hours else timezone.now())
+    can_resend = not registered and not expired and (not limits.invitation_max_sends or len(sends) < limits.invitation_max_sends) and not pending and timezone.now() >= next_at
     reasons = {'registered': 'این مخاطب ثبت‌نام کرده است؛ دعوت دیگری ارسال نمی‌شود.',
         'account_unavailable': 'ارسال دعوت با این حساب فعلاً محدود شده است.',
         'recipient_unavailable': 'امکان ارسال یا دریافت برای این شماره فعلاً وجود ندارد.',
@@ -172,7 +175,8 @@ def serialize(invitation):
         'status': 'registered' if registered else 'expired' if expired else 'waiting',
         'reward_credits': 3 if invitation.reward_awarded_at else 0,
         'reward_pending': registered and invitation.reward_awarded_at is None,
-        'send_count': len(sends), 'sends_remaining': MAX_SENDS-len(sends), 'can_resend': can_resend,
+        'send_count': len(sends), 'sends_remaining': max(0, limits.invitation_max_sends-len(sends)) if limits.invitation_max_sends else None, 'can_resend': can_resend,
+        'max_sends': limits.invitation_max_sends or None, 'cooldown_hours': limits.invitation_cooldown_hours, 'validity_days': limits.invitation_validity_days or None,
         'next_send_at': next_at.isoformat(), 'delivery_status': latest.status if latest else 'pending',
         'reason': reason, 'sends': [{'number': s.ordinal, 'status': s.status, 'created_at': s.created_at.isoformat()} for s in sends]}
 
@@ -191,13 +195,18 @@ def invitations_view(request):
     except ValueError:
         raise APIError('invalid_input', 'شمارهٔ صفحه معتبر نیست.') from None
     query = Invitation.objects.filter(inviter=request.user)
+    from .limits import policy
+    limits = policy()
     items = list(query.order_by('-created_at', '-id').prefetch_related('sends')[offset:offset+51])
+    window_limit = limits.invitation_limit if limits.invitation_window_hours else 0
     return {'results': [serialize(i) for i in items[:50]], 'next_offset': offset+50 if len(items)>50 else None,
         'total': query.count(), 'registered': query.filter(registered_at__isnull=False).count(),
         'earned_credits': query.filter(reward_awarded_at__isnull=False).count()*3,
-        'daily_remaining': max(0, DAILY_LIMIT-InvitationSend.objects.filter(invitation__inviter=request.user,
-            created_at__gt=timezone.now()-COOLDOWN).count()),
-        'consent_version': CONSENT_VERSION, 'max_sends': MAX_SENDS, 'daily_limit': DAILY_LIMIT}
+        'daily_remaining': max(0, window_limit-InvitationSend.objects.filter(invitation__inviter=request.user,
+            created_at__gt=timezone.now()-timedelta(hours=limits.invitation_window_hours)).count()) if window_limit else None,
+        'consent_version': CONSENT_VERSION, 'max_sends': limits.invitation_max_sends or None, 'daily_limit': window_limit or None,
+        'window_hours': limits.invitation_window_hours, 'cooldown_hours': limits.invitation_cooldown_hours,
+        'validity_days': limits.invitation_validity_days or None}
 
 
 def validate_request(request, data):

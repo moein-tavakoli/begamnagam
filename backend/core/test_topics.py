@@ -4,8 +4,8 @@ from django.core.cache import cache
 from django.test import Client, TestCase, override_settings
 
 from . import tests as legacy
-from .models import Order, Outbox
-from .moderation import CATEGORIES, DIRECT_TEMPLATES, TEMPLATES, moderate, is_reviewed_template
+from .models import AIConfiguration, Order, Outbox
+from .moderation import CATEGORIES, DIRECT_TEMPLATES, ANGRY_TEMPLATES, TEMPLATES, moderate, is_reviewed_template
 from .tasks import deliver_message
 
 
@@ -18,32 +18,33 @@ class MessageTopicTests(TestCase):
         self.user = self.authenticate(free_sends=None)
 
     @override_settings(APP_BASE_URL='https://begamnagam.ir')
-    def test_all_eighteen_topics_offer_safe_gentle_and_direct_sms_snapshots(self):
+    def test_all_eighteen_topics_offer_safe_snapshots_for_all_global_tones(self):
+        AIConfiguration.objects.create(tone_polite_enabled=True, tone_firm_enabled=True, tone_angry_enabled=True)
         ids = [item['id'] for item in CATEGORIES]
         self.assertEqual(len(ids), 18)
         self.assertEqual(len(set(ids)), 18)
         self.assertEqual(set(ids), set(TEMPLATES))
         self.assertEqual(set(ids), set(DIRECT_TEMPLATES))
+        self.assertEqual(set(ids), set(ANGRY_TEMPLATES))
         self.assertTrue({'punctuality','listening','conversation','personal_space','phone_etiquette',
             'neighbor','parking','teamwork','apology','good_wishes','environment'}.issubset(ids))
         for item in CATEGORIES:
             moderate(item['example'])
-            for text in TEMPLATES[item['id']] + DIRECT_TEMPLATES[item['id']]:
+            for text in TEMPLATES[item['id']] + DIRECT_TEMPLATES[item['id']] + ANGRY_TEMPLATES[item['id']]:
                 moderate(text)
                 self.assertTrue(is_reviewed_template(item['id'],text))
                 snapshot = text + '\nبگم نگم | لغو: begamnagam.ir/r/Ab12Cd34'
                 self.assertLessEqual(len(snapshot.encode('utf-16-le'))//2, 201)
-            for direct in [False,True]:
-                self.user.account.direct_message_tone=direct
-                self.user.account.save(update_fields=['direct_message_tone'])
+            for tone, pool in [('polite', TEMPLATES), ('firm', DIRECT_TEMPLATES), ('angry', ANGRY_TEMPLATES)]:
                 # A local synthetic contract covers each topic without weakening
                 # the real per-user or per-session request limits.
                 cache.clear()
                 response=self.post('/messages/preview',{'category':item['id'],'text':item['example'],
-                    'recipient_phone':'09901234567'})
+                    'recipient_phone':'09901234567', 'message_tone': tone})
                 self.assertEqual(response.status_code,200,response.content)
                 data=response.json()
-                self.assertIn(data['rewritten_text'],(DIRECT_TEMPLATES if direct else TEMPLATES)[item['id']])
+                self.assertEqual(data['message_tone'], tone)
+                self.assertIn(data['rewritten_text'],pool[item['id']])
                 self.assertTrue(data['full_sms'].startswith('نمیدونم بهت بگم یا نگم؟\n' + data['rewritten_text'] + '\n'))
                 self.assertLessEqual(len(data['full_sms'].encode('utf-16-le'))//2, 201)
                 self.assertRegex(data['full_sms'].split('لغو: ')[1],r'^begamnagam\.ir/r/[A-Za-z0-9]{8}$')

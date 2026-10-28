@@ -72,7 +72,7 @@ class LocalProviders(AbstractContextManager):
                         result = {'return': {'status': 200}, 'entries': [{'messageid': 700, 'status': 5, 'cost': 100}]}
                     elif method == 'send':
                         if 'localid' not in payload:
-                            match = re.fullmatch(r'بگم نگم\nکد ورود: ([0-9]{6})\nاعتبار: ۵ دقیقه\nکد را در اختیار کسی نگذارید\.', payload['message'])
+                            match = re.fullmatch(r'بگم نگم\nکد ورود: ([0-9]{6})\nاعتبار: ۵ دقیقه\nکد را در اختیار کسی نگذارید\.(?:\n\n@[a-z0-9.-]+ #\1)?', payload['message'])
                             assert match, 'Only the fixed OTP text may use send without localid'
                             fixture.otp_requests.append(payload.copy())
                             fixture.codes[payload['receptor']] = match[1]

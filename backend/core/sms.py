@@ -8,8 +8,12 @@ class SMSTooLong(Exception):
     pass
 
 
-def compose_recipient_sms(category, body, origin, token, *, direct=False):
-    templates = (DIRECT_TEMPLATES if direct else TEMPLATES)[category]
+def compose_recipient_sms(category, body, origin, token, *, direct=False, message_tone=None):
+    if message_tone is None:
+        templates = (DIRECT_TEMPLATES if direct else TEMPLATES)[category]
+    else:
+        from .message_tones import templates as tone_templates
+        templates = tone_templates(category, message_tone)
     if body not in templates:
         raise ModerationRejected('unreviewed_template')
     footer = '\nبگم نگم | لغو: ' + origin + ('/r/' + token if token else '/preferences')

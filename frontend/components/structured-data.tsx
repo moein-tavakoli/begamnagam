@@ -1,5 +1,7 @@
 import { serializeJsonLd } from "@/lib/seo";
+import { headers } from "next/headers";
 
-export function StructuredData({ data }: { data: unknown }) {
-  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }} />;
+export async function StructuredData({ data }: { data: unknown }) {
+  const nonce = (await headers()).get("x-nonce") || undefined;
+  return <script type="application/ld+json" nonce={nonce} dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }} />;
 }

@@ -35,3 +35,8 @@ foundation-check:
 # Backend is already available on localhost:8000. No Docker build or npm install.
 dev-ui:
 	cd frontend && npm run dev
+
+# Explicit real product on loopback; preserves hot reload and isolates its data.
+.PHONY: dev-product
+dev-product:
+	python3 scripts/dev-product.py

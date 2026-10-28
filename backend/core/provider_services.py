@@ -6,69 +6,51 @@ from django.db import transaction
 from django.utils import timezone
 from .models import Order, PaymentAttempt, FinancialEvent, MessageDelivery, Outbox, RecipientState, Refund
 from .providers import Zarinpal, ProviderDisabled, ProviderRejected, ProviderUnknown
-from .services import APIError, PAYMENT_WINDOW, dispatch, recipient_unavailable
+from .services import APIError, PAYMENT_WINDOW, dispatch
 
 
 def request_refund(payment, reason):
     # Full refund only; all reasons converge on the same durable obligation.
     refund, _ = Refund.objects.get_or_create(payment=payment,
         defaults={'amount_toman': payment.amount_toman, 'reason_code': reason})
+    if payment.return_to_wallet:
+        from .wallet import credit_refund
+        credit_refund(refund.pk)
     return refund
 
 
 def begin_payment(user, order_id, key):
-    if settings.PAYMENT_BACKEND != 'zarinpal':
-        raise APIError('payment_disabled', 'درگاه هنوز فعال نشده است.', 503)
-    from .safety import ensure_open
-    ensure_open()
-    try:
-        request_key = uuid.UUID(str(key))
-    except (ValueError, TypeError, AttributeError):
-        raise APIError('invalid_input', 'کلید یکتای پرداخت معتبر نیست.')
+    """Resume an already-issued historical checkout; never create a new one."""
     with transaction.atomic():
-        order = Order.objects.select_for_update().filter(id=order_id, owner=user).first()
+        order = Order.objects.select_for_update().filter(pk=order_id, owner=user).first()
         if not order:
-            raise APIError('not_found', 'درخواست پیدا نشد.', 404)
-        if order.is_free:
-            raise APIError('free_order_requires_no_payment', 'سفارش رایگان به درگاه پرداخت نیاز ندارد.', 409)
+            raise APIError('not_found', 'سفارش پیدا نشد.', 404)
+        if order.is_free or order.uses_purchased_credit:
+            raise APIError('package_required', 'ارسال پیام از هدیه یا اعتبار بسته انجام می‌شود.', 409)
         if order.paid_at:
-            return {'order_id': str(order.id), 'paid': True}
-        attempt = order.payment_attempts.order_by('-created_at').first()
-        if attempt:
-            if attempt.authority and attempt.status == 'pending':
-                return {'attempt_id': str(attempt.id), 'redirect_url': attempt.redirect_url}
-            # A request timeout may have created an authority we did not receive.
-            # Do not create another payment request automatically.
-            raise APIError('payment_reconciliation', 'وضعیت تلاش قبلی در حال بررسی است؛ دوباره پرداخت نکن.', 409)
-        if order.status != 'awaiting_payment' or order.created_at + PAYMENT_WINDOW <= timezone.now():
-            raise APIError('payment_expired', 'مهلت پرداخت تمام شده است.', 409)
-        state = RecipientState.objects.select_for_update().get(phone_hash=order.recipient_hash)
-        if state.blocked:
-            raise recipient_unavailable()
-        if PaymentAttempt.objects.filter(request_key=request_key).exists():
-            raise APIError('idempotency_conflict', 'این کلید برای تلاش دیگری ثبت شده است.', 409)
-        attempt = PaymentAttempt.objects.create(order=order, request_key=request_key,
-            provider='zarinpal', environment=settings.PROVIDER_ENVIRONMENT,
-            amount_toman=order.amount_toman, status='unknown')
-    try:
-        result = Zarinpal().request(amount_toman=attempt.amount_toman,
-            callback_url=settings.APP_BASE_URL + '/api/v1/payments/return/zarinpal')
-    except (ProviderUnknown, ProviderDisabled):
-        raise APIError('payment_reconciliation', 'وضعیت پرداخت نیاز به بررسی دارد؛ دوباره پرداخت نکن.', 503) from None
-    except ProviderRejected:
-        PaymentAttempt.objects.filter(pk=attempt.pk).update(status='failed', checked_at=timezone.now())
-        raise APIError('payment_unavailable', 'درگاه این درخواست را نپذیرفت؛ هزینه‌ای تأیید نشده است.', 503) from None
-    with transaction.atomic():
-        attempt = PaymentAttempt.objects.select_for_update().get(pk=attempt.pk)
-        attempt.authority, attempt.redirect_url, attempt.status = result.authority, result.redirect_url, 'pending'
-        attempt.save(update_fields=['authority', 'redirect_url', 'status', 'updated_at'])
-    return {'attempt_id': str(attempt.id), 'redirect_url': attempt.redirect_url}
+            return {'order_id': str(order.pk), 'paid': True}
+        previous = order.payment_attempts.order_by('-created_at').first()
+        if (previous and previous.environment == settings.PROVIDER_ENVIRONMENT
+                and (settings.DEMO_MODE or previous.environment == 'live')
+                and previous.status == 'pending' and previous.authority):
+            return {'attempt_id': str(previous.pk), 'redirect_url': previous.redirect_url}
+        if previous:
+            raise APIError('payment_reconciliation', 'پرداخت قبلی نیازمند بررسی است؛ دوباره پرداخت نکن.', 409)
+        raise APIError('package_required', 'خرید تکی پیام بسته است؛ ابتدا بستهٔ پیام بخر.', 409)
 
 
 def verify_payment(attempt_id):
-    meta = PaymentAttempt.objects.filter(pk=attempt_id, provider='zarinpal').values('order_id').first()
+    if not settings.DEMO_MODE and settings.PROVIDER_ENVIRONMENT != 'live':
+        return
+    meta = PaymentAttempt.objects.filter(pk=attempt_id, provider='zarinpal', environment=settings.PROVIDER_ENVIRONMENT).values('order_id', 'purchase_id', 'wallet_topup_id').first()
     if not meta:
         return
+    if meta['wallet_topup_id']:
+        from .wallet import verify_topup
+        return verify_topup(attempt_id)
+    if meta['purchase_id']:
+        from .packages import verify_purchase
+        return verify_purchase(attempt_id)
     with transaction.atomic():
         Order.objects.select_for_update().get(pk=meta['order_id'])
         attempt = PaymentAttempt.objects.select_for_update().get(pk=attempt_id)
@@ -99,6 +81,7 @@ def verify_payment(attempt_id):
         attempt.status = 'verified'
         attempt.checked_at = timezone.now()
         attempt.lease_until = None
+        attempt.save(update_fields=['provider_reference', 'status', 'checked_at', 'lease_until', 'updated_at'])
         FinancialEvent.objects.get_or_create(payment=attempt, kind='payment', defaults={'amount_toman': amount})
         valid = not order.paid_at and order.status == 'awaiting_payment' and order.created_at + PAYMENT_WINDOW > timezone.now()
         valid = valid and state is not None and not state.blocked and not order.owner.account.suspended and not order.owner.account.deletion_requested_at
@@ -123,18 +106,26 @@ def verify_payment(attempt_id):
 
 def reconcile_payments():
     due = timezone.now() - timedelta(seconds=30)
-    for attempt in PaymentAttempt.objects.filter(provider='zarinpal', authority__gt='', status__in=['pending', 'unknown']).order_by('created_at')[:100]:
+    for attempt in PaymentAttempt.objects.filter(provider='zarinpal', environment=settings.PROVIDER_ENVIRONMENT, authority__gt='', status__in=['pending', 'unknown']).order_by('created_at')[:100]:
         if not attempt.checked_at or attempt.checked_at < due:
             verify_payment(attempt.id)
 
 
 def process_refund(refund_id):
+    if Refund.objects.filter(pk=refund_id, payment__return_to_wallet=True).exists():
+        from .wallet import credit_refund
+        return credit_refund(refund_id)
     meta = Refund.objects.filter(pk=refund_id).values('payment__order_id').first()
     if not meta:
         return
+    if not meta['payment__order_id']:
+        # Package refunds need a corresponding reversal of unused credits.
+        # Never refund the money while leaving spendable units behind.
+        Refund.objects.filter(pk=refund_id).exclude(status='refunded').update(status='unknown')
+        return
     with transaction.atomic():
         Order.objects.select_for_update().get(pk=meta['payment__order_id'])
-        refund = Refund.objects.select_for_update().select_related('payment__order').get(pk=refund_id)
+        refund = Refund.objects.select_for_update().select_related('payment').get(pk=refund_id)
         if refund.status == 'refunded':
             return
         if refund.payment.provider == 'demo':

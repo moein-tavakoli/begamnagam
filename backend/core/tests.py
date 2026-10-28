@@ -38,9 +38,9 @@ class APITestCase(TestCase):
         response = self.post("/auth/verify-otp", {"challenge_id": response.json()["challenge_id"], "code": response.json()["debug_code"]}, client)
         self.assertEqual(response.status_code, 200, response.content)
         account = Account.objects.get(phone_hash=digest(normalize_phone(phone)))
-        # Legacy fixtures exercise paid checkout; free-credit tests preserve the grant.
+        # Isolated automated fixtures fund simulated package sends; gifts stay separate.
         if free_sends is not None:
-            Account.objects.filter(pk=account.pk).update(free_sends_remaining=free_sends)
+            Account.objects.filter(pk=account.pk).update(free_sends_remaining=free_sends, demo_sends_remaining=100)
         return account.user
 
     def preview(self, category="body", text="تنت بو میده", client=None):
@@ -91,7 +91,7 @@ class APITestCase(TestCase):
         self.authenticate("+۹۸۹۱۲۳۴۵۶۷۸۹")
         response = self.order(preview=preview)
         self.assertEqual(response.status_code, 200, response.content)
-        self.assertEqual(response.json()["amount_toman"], settings.PRICE_TOMAN)
+        self.assertEqual(response.json()["amount_toman"], 0)
         self.assertEqual(self.client.get("/api/v1/bootstrap").json()["phone_masked"], "091•••••789")
         self.assertNotIn("09123456789", response.content.decode())
 
@@ -146,14 +146,17 @@ class APITestCase(TestCase):
         history = self.client.get("/api/v1/messages").json()["results"]
         self.assertEqual(len(history), 1)
         self.assertEqual(history[0]["status"], "delivered_demo")
-        self.assertEqual(history[0]["payment_mode"], "demo")
+        self.assertEqual(history[0]["payment_mode"], "credit_demo")
 
-    def test_client_price_text_and_status_are_ignored(self):
+    def test_client_price_text_and_status_overrides_are_rejected(self):
         self.authenticate()
         preview = self.preview()
         response = self.post("/orders", {"preview_id": preview["preview_id"], "recipient_phone": "09901234567",
             "amount_toman": 1, "text": "unsafe override", "status": "delivered"}, HTTP_IDEMPOTENCY_KEY=str(uuid.uuid4()))
-        self.assertEqual(response.json()["amount_toman"], settings.PRICE_TOMAN)
+        self.assertEqual(response.status_code, 422)
+        self.assertFalse(Order.objects.exists())
+        response = self.order(preview=preview)
+        self.assertEqual(response.json()["amount_toman"], 0)
         self.assertEqual(response.json()["text"], preview["full_sms"])
         self.assertEqual(response.json()["status"], "awaiting_payment")
 
@@ -163,8 +166,8 @@ class APITestCase(TestCase):
             preview = self.preview()
         with override_settings(PRICE_TOMAN=3000):
             response = self.order(preview=preview)
-        self.assertEqual(preview["price_toman"], 1500)
-        self.assertEqual(response.json()["amount_toman"], 1500)
+        self.assertEqual(preview["price_toman"], 0)
+        self.assertEqual(response.json()["amount_toman"], 0)
 
     def test_admin_session_does_not_count_as_verified_sender(self):
         admin = get_user_model().objects.create_superuser(username="admin", password="a-long-test-password")
@@ -366,8 +369,8 @@ class PostgreSQLConcurrencyTests(TransactionTestCase):
             self.skipTest("PostgreSQL row-lock integration test; run CI PostgreSQL job")
         cache.clear()
         self.user = get_user_model().objects.create_user(username="concurrent-user")
-        Account.objects.create(user=self.user, phone_hash=digest("09123456789"), phone_cipher=encrypt("09123456789"), phone_masked=mask("09123456789"))
-        self.preview = Preview.objects.create(owner=self.user, session_key="session", category="body", text=TEMPLATES["body"][0], moderation_mode="template", price_toman=settings.PRICE_TOMAN, expires_at=timezone.now() + timedelta(minutes=15))
+        Account.objects.create(user=self.user, phone_hash=digest("09123456789"), phone_cipher=encrypt("09123456789"), phone_masked=mask("09123456789"), demo_sends_remaining=100)
+        self.preview = Preview.objects.create(owner=self.user, session_key="session", category="body", text=TEMPLATES["body"][0], moderation_mode="template", price_toman=0, expires_at=timezone.now() + timedelta(minutes=15))
 
     def parallel(self, operation):
         barrier = threading.Barrier(2)
@@ -402,7 +405,7 @@ class PostgreSQLConcurrencyTests(TransactionTestCase):
     def test_concurrent_new_orders_cannot_exceed_five_sender_slots(self):
         def quote():
             return Preview.objects.create(owner=self.user, session_key="session", category="body",
-                text=TEMPLATES["body"][0], moderation_mode="template", price_toman=settings.PRICE_TOMAN,
+                text=TEMPLATES["body"][0], moderation_mode="template", price_toman=0,
                 expires_at=timezone.now()+timedelta(minutes=15))
         for index in range(4):
             create_order(self.user, "session", {"preview_id": str(quote().pk),

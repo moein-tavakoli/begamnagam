@@ -82,8 +82,10 @@ def submit(send_id):
         if not check_snapshot(send):
             fail(send, 'snapshot_invalid', 'failed')
             return
-        if state.last_sent_at and state.last_sent_at > timezone.now()-timedelta(hours=24):
-            send.available_at = state.last_sent_at+timedelta(hours=24)
+        from .limits import policy, recipient_next_allowed
+        next_at = recipient_next_allowed(state, timezone.now(), exclude_invitation_send=send.pk)
+        if next_at:
+            send.available_at = next_at
             send.last_error_code = 'recipient_cooldown'
             send.save(update_fields=['available_at', 'last_error_code'])
             return
@@ -100,12 +102,13 @@ def submit(send_id):
             try:
                 if settings.PROVIDER_NETWORK_MODE == 'external' and settings.SMS_RECIPIENT_POLICY != 'all' and invitation.phone_hash not in settings.PILOT_RECIPIENT_HASHES:
                     raise ProviderDisabled('outside_pilot_allowlist')
-                reserve_cost('invite:'+str(send.pk), 'invitation', settings.SMS_MAX_COST_RIAL)
+                reserve_cost('invite:'+str(send.pk), 'invitation', policy().sms_max_cost_rial)
             except ProviderDisabled as error:
                 if str(error) == 'daily_budget_exhausted':
-                    tomorrow = timezone.localtime()+timedelta(days=1)
-                    send.available_at = tomorrow.replace(hour=settings.SENDING_START_HOUR, minute=0, second=0, microsecond=0)
-                    send.last_error_code = 'service_unavailable'
+                    from .limits import next_sending_time
+                    tomorrow = (timezone.localtime()+timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+                    send.available_at = next_sending_time(tomorrow) or tomorrow
+                    send.last_error_code = 'daily_budget_wait'
                     send.save(update_fields=['available_at', 'last_error_code'])
                 else:
                     fail(send, 'policy_unavailable', 'failed')

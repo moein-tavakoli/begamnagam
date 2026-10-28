@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { getServiceWorkerContainer } from "@/lib/browser-capabilities";
 
 function idleForUpdate(){
   const busy=document.querySelector('[aria-busy="true"], [data-update-blocked="true"]');
@@ -16,12 +17,15 @@ export function PWAFoundation() {
   const [notice,setNotice]=useState("");
   const updating=useRef(false);
   useEffect(()=>{
+    let disposed=false;
+    const serviceWorker=process.env.NODE_ENV==='production' && window.isSecureContext ? getServiceWorkerContainer() : null;
+    const cleanups:Array<()=>void>=[];
     const online=()=>setOffline(!navigator.onLine);
     const prompt=(event:Event)=>{event.preventDefault();setInstall(event as InstallEvent);};
     const installed=()=>{setInstall(null);setIos(false);};
     const changed=()=>{
       if(updating.current && idleForUpdate()) location.reload();
-      else {setWaiting(navigator.serviceWorker.controller);setNotice('نسخه تازه فعال است؛ پس از پایان کار فعلی می‌تونی صفحه را تازه کنی.');}
+      else {setWaiting(serviceWorker?.controller??null);setNotice('نسخه تازه فعال است؛ پس از پایان کار فعلی می‌تونی صفحه را تازه کنی.');}
     };
     const message=(event:MessageEvent)=>{
       if(event.data?.type==='CHECK_UPDATE_SAFETY')event.ports[0]?.postMessage({idle:idleForUpdate()});
@@ -32,21 +36,37 @@ export function PWAFoundation() {
     setIos(!standalone && /iPad|iPhone|iPod/.test(navigator.userAgent));
     window.addEventListener('online',online);window.addEventListener('offline',online);
     window.addEventListener('beforeinstallprompt',prompt);window.addEventListener('appinstalled',installed);
-    if(process.env.NODE_ENV==='production' && 'serviceWorker' in navigator && window.isSecureContext){
-      navigator.serviceWorker.addEventListener('controllerchange',changed);
-      navigator.serviceWorker.addEventListener('message',message);
-      void navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'}).then(reg=>{
+    if(serviceWorker){
+      serviceWorker.addEventListener('controllerchange',changed);
+      serviceWorker.addEventListener('message',message);
+      // Some browser wrappers throw synchronously instead of rejecting register().
+      void Promise.resolve().then(()=>disposed?null:serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'})).then(reg=>{
+        if(disposed||!reg)return;
         if(reg.waiting)setWaiting(reg.waiting);
-        reg.addEventListener('updatefound',()=>{ const worker=reg.installing;worker?.addEventListener('statechange',()=>{if(worker.state==='installed' && navigator.serviceWorker.controller)setWaiting(worker);}); });
-      }).catch(()=>setNotice('نصب برنامه فعلاً در دسترس نیست؛ نسخه وب قابل استفاده است.'));
+        const found=()=>{
+          const worker=reg.installing;
+          if(!worker)return;
+          const state=()=>{if(!disposed && worker.state==='installed' && serviceWorker.controller)setWaiting(worker);};
+          worker.addEventListener('statechange',state);
+          cleanups.push(()=>worker.removeEventListener('statechange',state));
+        };
+        reg.addEventListener('updatefound',found);
+        cleanups.push(()=>reg.removeEventListener('updatefound',found));
+      }).catch(()=>{if(!disposed)setNotice('نصب برنامه فعلاً در دسترس نیست؛ نسخه وب قابل استفاده است.');});
     }
-    return ()=>{window.removeEventListener('online',online);window.removeEventListener('offline',online);window.removeEventListener('beforeinstallprompt',prompt);window.removeEventListener('appinstalled',installed);navigator.serviceWorker?.removeEventListener('controllerchange',changed);navigator.serviceWorker?.removeEventListener('message',message);};
+    return ()=>{disposed=true;cleanups.forEach(cleanup=>cleanup());window.removeEventListener('online',online);window.removeEventListener('offline',online);window.removeEventListener('beforeinstallprompt',prompt);window.removeEventListener('appinstalled',installed);serviceWorker?.removeEventListener('controllerchange',changed);serviceWorker?.removeEventListener('message',message);};
   },[]);
-  async function installApp(){if(!install)return;await install.prompt();await install.userChoice;setInstall(null);}
+  async function installApp(){
+    if(!install)return;
+    try{await install.prompt();await install.userChoice;}
+    catch{setNotice('نصب انجام نشد؛ از منوی مرورگر دوباره امتحان کن.');}
+    finally{setInstall(null);}
+  }
   function updateApp(){
     if(!idleForUpdate()){setNotice('اول کار فعلی رو تمام کن؛ برای به‌روزرسانی، فرم باید خالی باشد.');return;}
     if(waiting?.state==='activated'){location.reload();return;}
-    updating.current=true;waiting?.postMessage({type:'ACTIVATE_APPROVED_UPDATE'});
+    try{updating.current=true;waiting?.postMessage({type:'ACTIVATE_APPROVED_UPDATE'});}
+    catch{updating.current=false;setNotice('به‌روزرسانی انجام نشد؛ پس از پایان کار دوباره امتحان کن.');}
   }
   return <>
     {offline && <div className="pwa-connection" role="status">اینترنت قطع شده؛ عملیات به اتصال نیاز دارند و خودکار تکرار نمی‌شوند.</div>}

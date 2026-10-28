@@ -1,0 +1,2591 @@
+{
+  "date_tehran": "2026-10-28",
+  "application_version": "0.11.0",
+  "script_sha256": "37c58808ea9284a5adca19a57d2a72a1e6b66e67991385ea4fe701cfb46a94fd",
+  "runs": {
+    "initial_private_tls": {
+      "metadata": {
+        "started_utc": "2026-10-27T20:20:49.008457+00:00",
+        "version": "/opt/begamnagam/releases/0.11.0",
+        "effective_cpu_affinity": 12,
+        "cpu_max": "max 100000",
+        "memory_max": "max",
+        "proc_memtotal_kib": 24576000,
+        "generator_on_target": true,
+        "network_scope": "private TLS via Traefik on CT local route; excludes internet and central Nginx",
+        "max_inflight": 64,
+        "arrival_model": "open-loop; bounded pool; dropped arrivals reported",
+        "private_tls_verified": true,
+        "provider_endpoints_exercised": false,
+        "authenticated_journey_exercised": false
+      },
+      "stages": [
+        {
+          "phase": "load-5",
+          "offered_rps": 5,
+          "planned_seconds": 40,
+          "active_seconds": 0.0,
+          "offered": 0,
+          "completed": 0,
+          "dropped": 0,
+          "errors": 0,
+          "status_counts": {},
+          "successful_rps_during_window": 0.0,
+          "p50_ms": null,
+          "p95_ms": null,
+          "p99_ms": null,
+          "schedule_lag_p95_ms": null,
+          "response_mbps": 0.0,
+          "stop_reason": "working_memory_above_90_percent:proxy",
+          "containers": {},
+          "generator_observer_peak_cores": 0,
+          "ct_peak_cores": 0,
+          "by_path": {}
+        },
+        {
+          "phase": "api-25",
+          "offered_rps": 25,
+          "planned_seconds": 30,
+          "active_seconds": 8.993,
+          "offered": 225,
+          "completed": 225,
+          "dropped": 0,
+          "errors": 0,
+          "status_counts": {
+            "200": 203,
+            "401": 22
+          },
+          "successful_rps_during_window": 25.02,
+          "p50_ms": 3.188,
+          "p95_ms": 4.728,
+          "p99_ms": 9.811,
+          "schedule_lag_p95_ms": 0.337,
+          "response_mbps": 0.83,
+          "stop_reason": "working_memory_above_90_percent:proxy",
+          "containers": {
+            "proxy": {
+              "mean_cores": 0.02,
+              "peak_cores": 0.0236,
+              "peak_working_mib": 57.82,
+              "limit_mib": 64.0
+            },
+            "beat": {
+              "mean_cores": 0.0,
+              "peak_cores": 0.0,
+              "peak_working_mib": 80.92,
+              "limit_mib": 96.0
+            },
+            "worker": {
+              "mean_cores": 0.0005,
+              "peak_cores": 0.001,
+              "peak_working_mib": 95.38,
+              "limit_mib": 128.0
+            },
+            "frontend": {
+              "mean_cores": 0.0,
+              "peak_cores": 0.0001,
+              "peak_working_mib": 137.91,
+              "limit_mib": 256.0
+            },
+            "backend": {
+              "mean_cores": 0.1023,
+              "peak_cores": 0.3777,
+              "peak_working_mib": 109.11,
+              "limit_mib": 192.0
+            },
+            "redis": {
+              "mean_cores": 0.01,
+              "peak_cores": 0.0456,
+              "peak_working_mib": 15.2,
+              "limit_mib": 32.0
+            },
+            "postgres": {
+              "mean_cores": 0.0131,
+              "peak_cores": 0.0528,
+              "peak_working_mib": 48.4,
+              "limit_mib": 128.0
+            },
+            "rabbitmq": {
+              "mean_cores": 0.3134,
+              "peak_cores": 1.5833,
+              "peak_working_mib": 155.14,
+              "limit_mib": 256.0
+            }
+          },
+          "generator_observer_peak_cores": 0.0246,
+          "ct_peak_cores": 1.7079,
+          "by_path": {
+            "/api/v1/bootstrap": {
+              "completed": 203,
+              "errors": 0,
+              "p50_ms": 3.195,
+              "p95_ms": 4.825
+            },
+            "/api/v1/messages": {
+              "completed": 22,
+              "errors": 0,
+              "p50_ms": 3.02,
+              "p95_ms": 3.558
+            }
+          }
+        }
+      ],
+      "smoke_before": [
+        {
+          "path": "/",
+          "status": 200,
+          "ms": 37.687
+        },
+        {
+          "path": "/help",
+          "status": 200,
+          "ms": 24.999
+        },
+        {
+          "path": "/privacy",
+          "status": 200,
+          "ms": 25.749
+        },
+        {
+          "path": "/profile",
+          "status": 200,
+          "ms": 16.195
+        },
+        {
+          "path": "/manage",
+          "status": 200,
+          "ms": 10.67
+        },
+        {
+          "path": "/r",
+          "status": 200,
+          "ms": 14.608
+        },
+        {
+          "path": "/robots.txt",
+          "status": 200,
+          "ms": 35.741
+        },
+        {
+          "path": "/sitemap.xml",
+          "status": 200,
+          "ms": 14.839
+        },
+        {
+          "path": "/manifest.webmanifest",
+          "status": 200,
+          "ms": 5.685
+        },
+        {
+          "path": "/healthz",
+          "status": 200,
+          "ms": 4.603
+        },
+        {
+          "path": "/api/v1/bootstrap",
+          "status": 200,
+          "ms": 19.085
+        },
+        {
+          "path": "/api/v1/messages",
+          "status": 401,
+          "ms": 9.468
+        },
+        {
+          "path": "/api/v1/operations/status",
+          "status": 403,
+          "ms": 3.845
+        },
+        {
+          "path": "/admin/login/",
+          "status": 200,
+          "ms": 67.735
+        },
+        {
+          "path": "/_next/static/chunks/2zd8f8wx2d434.css",
+          "status": 200,
+          "ms": 4.106
+        }
+      ],
+      "mixed_stop_reason": "working_memory_above_90_percent:proxy",
+      "recovery_after_mixed": [
+        200,
+        200,
+        200
+      ],
+      "api_stop_reason": "working_memory_above_90_percent:proxy",
+      "recovery_after_api": [
+        200,
+        200,
+        200
+      ],
+      "smoke_after": [
+        {
+          "path": "/",
+          "status": 200,
+          "ms": 21.909
+        },
+        {
+          "path": "/help",
+          "status": 200,
+          "ms": 17.484
+        },
+        {
+          "path": "/privacy",
+          "status": 200,
+          "ms": 14.167
+        },
+        {
+          "path": "/profile",
+          "status": 200,
+          "ms": 11.762
+        },
+        {
+          "path": "/manage",
+          "status": 200,
+          "ms": 10.296
+        },
+        {
+          "path": "/r",
+          "status": 200,
+          "ms": 9.747
+        },
+        {
+          "path": "/robots.txt",
+          "status": 200,
+          "ms": 3.059
+        },
+        {
+          "path": "/sitemap.xml",
+          "status": 200,
+          "ms": 2.814
+        },
+        {
+          "path": "/manifest.webmanifest",
+          "status": 200,
+          "ms": 2.303
+        },
+        {
+          "path": "/healthz",
+          "status": 200,
+          "ms": 3.045
+        },
+        {
+          "path": "/api/v1/bootstrap",
+          "status": 200,
+          "ms": 7.649
+        },
+        {
+          "path": "/api/v1/messages",
+          "status": 401,
+          "ms": 3.149
+        },
+        {
+          "path": "/api/v1/operations/status",
+          "status": 403,
+          "ms": 2.556
+        },
+        {
+          "path": "/admin/login/",
+          "status": 200,
+          "ms": 7.523
+        },
+        {
+          "path": "/_next/static/chunks/2zd8f8wx2d434.css",
+          "status": 200,
+          "ms": 3.658
+        }
+      ],
+      "session_cleanup": {
+        "own_anonymous_sessions_removed": 66
+      },
+      "containers_unchanged": true,
+      "restart_delta": 0,
+      "healthy_after": true,
+      "completed_utc": "2026-10-27T20:22:00.406165+00:00"
+    },
+    "baseline_loopback": {
+      "metadata": {
+        "started_utc": "2026-10-27T20:29:45.653286+00:00",
+        "version": "/opt/begamnagam/releases/0.11.0",
+        "effective_cpu_affinity": 12,
+        "cpu_max": "max 100000",
+        "memory_max": "max",
+        "proc_memtotal_kib": 24576000,
+        "generator_on_target": true,
+        "network_scope": "HTTP loopback direct Next/Django; proxy/TLS excluded",
+        "max_inflight": 32,
+        "arrival_model": "open-loop; bounded pool; dropped arrivals reported",
+        "private_tls_verified": false,
+        "provider_endpoints_exercised": false,
+        "authenticated_journey_exercised": false
+      },
+      "stages": [
+        {
+          "phase": "load-5",
+          "offered_rps": 5,
+          "planned_seconds": 40,
+          "active_seconds": 39.8,
+          "offered": 200,
+          "completed": 200,
+          "dropped": 0,
+          "errors": 0,
+          "status_counts": {
+            "200": 180,
+            "401": 20
+          },
+          "successful_rps_during_window": 5.0,
+          "p50_ms": 9.098,
+          "p95_ms": 19.06,
+          "p99_ms": 24.319,
+          "schedule_lag_p95_ms": 0.336,
+          "response_mbps": 0.295,
+          "stop_reason": null,
+          "containers": {
+            "proxy": {
+              "mean_cores": 0.002,
+              "peak_cores": 0.041,
+              "peak_working_mib": 52.81,
+              "limit_mib": 64.0
+            },
+            "beat": {
+              "mean_cores": 0.0007,
+              "peak_cores": 0.0245,
+              "peak_working_mib": 80.96,
+              "limit_mib": 96.0
+            },
+            "worker": {
+              "mean_cores": 0.0019,
+              "peak_cores": 0.0508,
+              "peak_working_mib": 99.54,
+              "limit_mib": 128.0
+            },
+            "frontend": {
+              "mean_cores": 0.0824,
+              "peak_cores": 0.3633,
+              "peak_working_mib": 143.91,
+              "limit_mib": 256.0
+            },
+            "backend": {
+              "mean_cores": 0.0245,
+              "peak_cores": 0.2362,
+              "peak_working_mib": 107.76,
+              "limit_mib": 192.0
+            },
+            "redis": {
+              "mean_cores": 0.01,
+              "peak_cores": 0.0557,
+              "peak_working_mib": 15.2,
+              "limit_mib": 32.0
+            },
+            "postgres": {
+              "mean_cores": 0.0082,
+              "peak_cores": 0.058,
+              "peak_working_mib": 50.85,
+              "limit_mib": 128.0
+            },
+            "rabbitmq": {
+              "mean_cores": 0.116,
+              "peak_cores": 1.9494,
+              "peak_working_mib": 180.42,
+              "limit_mib": 256.0
+            }
+          },
+          "generator_observer_peak_cores": 0.012,
+          "ct_peak_cores": 2.0976,
+          "by_path": {
+            "/": {
+              "completed": 60,
+              "errors": 0,
+              "p50_ms": 15.629,
+              "p95_ms": 22.723
+            },
+            "/_next/static/chunks/2zd8f8wx2d434.css": {
+              "completed": 20,
+              "errors": 0,
+              "p50_ms": 4.01,
+              "p95_ms": 5.354
+            },
+            "/api/v1/bootstrap": {
+              "completed": 60,
+              "errors": 0,
+              "p50_ms": 4.086,
+              "p95_ms": 5.189
+            },
+            "/api/v1/messages": {
+              "completed": 20,
+              "errors": 0,
+              "p50_ms": 2.91,
+              "p95_ms": 4.343
+            },
+            "/help": {
+              "completed": 20,
+              "errors": 0,
+              "p50_ms": 16.073,
+              "p95_ms": 19.14
+            },
+            "/privacy": {
+              "completed": 20,
+              "errors": 0,
+              "p50_ms": 16.488,
+              "p95_ms": 19.68
+            }
+          }
+        },
+        {
+          "phase": "load-15",
+          "offered_rps": 15,
+          "planned_seconds": 40,
+          "active_seconds": 39.933,
+          "offered": 600,
+          "completed": 600,
+          "dropped": 0,
+          "errors": 0,
+          "status_counts": {
+            "200": 540,
+            "401": 60
+          },
+          "successful_rps_during_window": 15.0,
+          "p50_ms": 7.322,
+          "p95_ms": 15.132,
+          "p99_ms": 18.183,
+          "schedule_lag_p95_ms": 0.306,
+          "response_mbps": 0.882,
+          "stop_reason": null,
+          "containers": {
+            "proxy": {
+              "mean_cores": 0.0023,
+              "peak_cores": 0.0484,
+              "peak_working_mib": 52.82,
+              "limit_mib": 64.0
+            },
+            "beat": {
+              "mean_cores": 0.0012,
+              "peak_cores": 0.0242,
+              "peak_working_mib": 80.96,
+              "limit_mib": 96.0
+            },
+            "worker": {
+              "mean_cores": 0.0029,
+              "peak_cores": 0.0514,
+              "peak_working_mib": 99.96,
+              "limit_mib": 128.0
+            },
+            "frontend": {
+              "mean_cores": 0.1708,
+              "peak_cores": 0.5204,
+              "peak_working_mib": 151.93,
+              "limit_mib": 256.0
+            },
+            "backend": {
+              "mean_cores": 0.0349,
+              "peak_cores": 0.2841,
+              "peak_working_mib": 108.7,
+              "limit_mib": 192.0
+            },
+            "redis": {
+              "mean_cores": 0.0099,
+              "peak_cores": 0.0528,
+              "peak_working_mib": 15.23,
+              "limit_mib": 32.0
+            },
+            "postgres": {
+              "mean_cores": 0.0107,
+              "peak_cores": 0.0586,
+              "peak_working_mib": 53.45,
+              "limit_mib": 128.0
+            },
+            "rabbitmq": {
+              "mean_cores": 0.1014,
+              "peak_cores": 1.9422,
+              "peak_working_mib": 153.15,
+              "limit_mib": 256.0
+            }
+          },
+          "generator_observer_peak_cores": 0.0192,
+          "ct_peak_cores": 2.3177,
+          "by_path": {
+            "/": {
+              "completed": 180,
+              "errors": 0,
+              "p50_ms": 12.477,
+              "p95_ms": 16.035
+            },
+            "/_next/static/chunks/2zd8f8wx2d434.css": {
+              "completed": 60,
+              "errors": 0,
+              "p50_ms": 3.263,
+              "p95_ms": 4.253
+            },
+            "/api/v1/bootstrap": {
+              "completed": 180,
+              "errors": 0,
+              "p50_ms": 3.531,
+              "p95_ms": 5.065
+            },
+            "/api/v1/messages": {
+              "completed": 60,
+              "errors": 0,
+              "p50_ms": 2.932,
+              "p95_ms": 3.769
+            },
+            "/help": {
+              "completed": 60,
+              "errors": 0,
+              "p50_ms": 12.472,
+              "p95_ms": 16.259
+            },
+            "/privacy": {
+              "completed": 60,
+              "errors": 0,
+              "p50_ms": 12.23,
+              "p95_ms": 16.117
+            }
+          }
+        },
+        {
+          "phase": "load-30",
+          "offered_rps": 30,
+          "planned_seconds": 60,
+          "active_seconds": 46.673,
+          "offered": 1401,
+          "completed": 1401,
+          "dropped": 0,
+          "errors": 0,
+          "status_counts": {
+            "200": 1261,
+            "401": 140
+          },
+          "successful_rps_during_window": 29.996,
+          "p50_ms": 8.118,
+          "p95_ms": 13.735,
+          "p99_ms": 16.384,
+          "schedule_lag_p95_ms": 0.294,
+          "response_mbps": 1.762,
+          "stop_reason": "container_changed_or_restarted",
+          "containers": {
+            "proxy": {
+              "mean_cores": 0.0017,
+              "peak_cores": 0.0411,
+              "peak_working_mib": 52.71,
+              "limit_mib": 64.0
+            },
+            "beat": {
+              "mean_cores": 0.0005,
+              "peak_cores": 0.0216,
+              "peak_working_mib": 80.96,
+              "limit_mib": 96.0
+            },
+            "worker": {
+              "mean_cores": 0.0015,
+              "peak_cores": 0.0425,
+              "peak_working_mib": 100.37,
+              "limit_mib": 128.0
+            },
+            "frontend": {
+              "mean_cores": 0.2878,
+              "peak_cores": 0.5969,
+              "peak_working_mib": 155.47,
+              "limit_mib": 256.0
+            },
+            "backend": {
+              "mean_cores": 0.051,
+              "peak_cores": 0.3596,
+              "peak_working_mib": 109.46,
+              "limit_mib": 192.0
+            },
+            "redis": {
+              "mean_cores": 0.0105,
+              "peak_cores": 0.0574,
+              "peak_working_mib": 15.22,
+              "limit_mib": 32.0
+            },
+            "postgres": {
+              "mean_cores": 0.0179,
+              "peak_cores": 0.2077,
+              "peak_working_mib": 53.03,
+              "limit_mib": 128.0
+            },
+            "rabbitmq": {
+              "mean_cores": 0.1454,
+              "peak_cores": 2.0622,
+              "peak_working_mib": 180.55,
+              "limit_mib": 256.0
+            }
+          },
+          "generator_observer_peak_cores": 0.0328,
+          "ct_peak_cores": 4.552,
+          "by_path": {
+            "/": {
+              "completed": 421,
+              "errors": 0,
+              "p50_ms": 11.287,
+              "p95_ms": 14.585
+            },
+            "/_next/static/chunks/2zd8f8wx2d434.css": {
+              "completed": 140,
+              "errors": 0,
+              "p50_ms": 3.039,
+              "p95_ms": 3.78
+            },
+            "/api/v1/bootstrap": {
+              "completed": 420,
+              "errors": 0,
+              "p50_ms": 3.242,
+              "p95_ms": 4.792
+            },
+            "/api/v1/messages": {
+              "completed": 140,
+              "errors": 0,
+              "p50_ms": 2.806,
+              "p95_ms": 3.74
+            },
+            "/help": {
+              "completed": 140,
+              "errors": 0,
+              "p50_ms": 11.635,
+              "p95_ms": 13.641
+            },
+            "/privacy": {
+              "completed": 140,
+              "errors": 0,
+              "p50_ms": 11.347,
+              "p95_ms": 14.095
+            }
+          }
+        }
+      ],
+      "smoke_before": [
+        {
+          "path": "/",
+          "status": 200,
+          "ms": 14.802
+        },
+        {
+          "path": "/help",
+          "status": 200,
+          "ms": 13.737
+        },
+        {
+          "path": "/privacy",
+          "status": 200,
+          "ms": 12.304
+        },
+        {
+          "path": "/profile",
+          "status": 200,
+          "ms": 8.858
+        },
+        {
+          "path": "/manage",
+          "status": 200,
+          "ms": 8.181
+        },
+        {
+          "path": "/r",
+          "status": 200,
+          "ms": 9.392
+        },
+        {
+          "path": "/robots.txt",
+          "status": 200,
+          "ms": 2.733
+        },
+        {
+          "path": "/sitemap.xml",
+          "status": 200,
+          "ms": 3.544
+        },
+        {
+          "path": "/manifest.webmanifest",
+          "status": 200,
+          "ms": 1.058
+        },
+        {
+          "path": "/healthz",
+          "status": 200,
+          "ms": 14.9
+        },
+        {
+          "path": "/api/v1/bootstrap",
+          "status": 200,
+          "ms": 9.465
+        },
+        {
+          "path": "/api/v1/messages",
+          "status": 401,
+          "ms": 5.844
+        },
+        {
+          "path": "/api/v1/operations/status",
+          "status": 403,
+          "ms": 2.833
+        },
+        {
+          "path": "/admin/login/",
+          "status": 200,
+          "ms": 6.101
+        },
+        {
+          "path": "/_next/static/chunks/2zd8f8wx2d434.css",
+          "status": 200,
+          "ms": 2.556
+        }
+      ],
+      "mixed_stop_reason": "container_changed_or_restarted",
+      "recovery_after_mixed": [
+        200,
+        200,
+        200
+      ],
+      "smoke_after": [
+        {
+          "path": "/",
+          "status": 200,
+          "ms": 13.006
+        },
+        {
+          "path": "/help",
+          "status": 200,
+          "ms": 23.799
+        },
+        {
+          "path": "/privacy",
+          "status": 200,
+          "ms": 15.146
+        },
+        {
+          "path": "/profile",
+          "status": 200,
+          "ms": 10.463
+        },
+        {
+          "path": "/manage",
+          "status": 200,
+          "ms": 8.876
+        },
+        {
+          "path": "/r",
+          "status": 200,
+          "ms": 9.143
+        },
+        {
+          "path": "/robots.txt",
+          "status": 200,
+          "ms": 6.165
+        },
+        {
+          "path": "/sitemap.xml",
+          "status": 200,
+          "ms": 2.063
+        },
+        {
+          "path": "/manifest.webmanifest",
+          "status": 200,
+          "ms": 1.286
+        },
+        {
+          "path": "/healthz",
+          "status": 200,
+          "ms": 3.139
+        },
+        {
+          "path": "/api/v1/bootstrap",
+          "status": 200,
+          "ms": 8.477
+        },
+        {
+          "path": "/api/v1/messages",
+          "status": 401,
+          "ms": 3.055
+        },
+        {
+          "path": "/api/v1/operations/status",
+          "status": 403,
+          "ms": 2.767
+        },
+        {
+          "path": "/admin/login/",
+          "status": 200,
+          "ms": 8.272
+        },
+        {
+          "path": "/_next/static/chunks/2zd8f8wx2d434.css",
+          "status": 200,
+          "ms": 3.807
+        }
+      ],
+      "session_cleanup": {
+        "own_anonymous_sessions_removed": 34
+      },
+      "containers_unchanged": true,
+      "restart_delta": 0,
+      "healthy_after": true,
+      "completed_utc": "2026-10-27T20:32:40.106851+00:00"
+    },
+    "application_stress": {
+      "metadata": {
+        "started_utc": "2026-10-27T20:37:57.572818+00:00",
+        "version": "/opt/begamnagam/releases/0.11.0",
+        "effective_cpu_affinity": 12,
+        "cpu_max": "max 100000",
+        "memory_max": "max",
+        "proc_memtotal_kib": 24576000,
+        "generator_on_target": true,
+        "network_scope": "HTTP loopback direct Next/Django; proxy/TLS excluded",
+        "max_inflight": 32,
+        "arrival_model": "open-loop; bounded pool; dropped arrivals reported",
+        "private_tls_verified": false,
+        "provider_endpoints_exercised": false,
+        "authenticated_journey_exercised": false,
+        "probe_sha256": "8d3abe45a9c0f8a7e47f6e6f68ab49011818b145ef60509e54cd57003592d70e",
+        "background": "shared live CT; periodic and operator jobs can overlap"
+      },
+      "stages": [
+        {
+          "phase": "stress-60",
+          "offered_rps": 60,
+          "planned_seconds": 30,
+          "active_seconds": 29.983,
+          "offered": 1800,
+          "completed": 1800,
+          "dropped": 0,
+          "errors": 0,
+          "status_counts": {
+            "200": 1620,
+            "401": 180
+          },
+          "successful_rps_during_window": 60.0,
+          "p50_ms": 8.171,
+          "p95_ms": 13.09,
+          "p99_ms": 28.323,
+          "schedule_lag_p95_ms": 0.28,
+          "response_mbps": 3.523,
+          "stop_reason": null,
+          "containers": {
+            "proxy": {
+              "mean_cores": 0.0013,
+              "peak_cores": 0.0368,
+              "peak_working_mib": 52.81,
+              "limit_mib": 64.0
+            },
+            "frontend": {
+              "mean_cores": 0.4985,
+              "peak_cores": 0.8843,
+              "peak_working_mib": 158.66,
+              "limit_mib": 256.0
+            },
+            "backend": {
+              "mean_cores": 0.0731,
+              "peak_cores": 0.3529,
+              "peak_working_mib": 112.33,
+              "limit_mib": 192.0
+            },
+            "worker": {
+              "mean_cores": 0.0023,
+              "peak_cores": 0.051,
+              "peak_working_mib": 103.13,
+              "limit_mib": 128.0
+            },
+            "beat": {
+              "mean_cores": 0.0009,
+              "peak_cores": 0.0245,
+              "peak_working_mib": 80.98,
+              "limit_mib": 96.0
+            },
+            "postgres": {
+              "mean_cores": 0.0149,
+              "peak_cores": 0.0674,
+              "peak_working_mib": 53.14,
+              "limit_mib": 128.0
+            },
+            "redis": {
+              "mean_cores": 0.0099,
+              "peak_cores": 0.0517,
+              "peak_working_mib": 15.2,
+              "limit_mib": 32.0
+            },
+            "rabbitmq": {
+              "mean_cores": 0.0872,
+              "peak_cores": 1.8378,
+              "peak_working_mib": 183.21,
+              "limit_mib": 256.0
+            }
+          },
+          "generator_observer_peak_cores": 0.0555,
+          "ct_peak_cores": 2.6835,
+          "by_path": {
+            "/": {
+              "completed": 540,
+              "errors": 0,
+              "p50_ms": 10.306,
+              "p95_ms": 14.068
+            },
+            "/_next/static/chunks/2zd8f8wx2d434.css": {
+              "completed": 180,
+              "errors": 0,
+              "p50_ms": 2.623,
+              "p95_ms": 3.549
+            },
+            "/api/v1/bootstrap": {
+              "completed": 540,
+              "errors": 0,
+              "p50_ms": 3.034,
+              "p95_ms": 4.321
+            },
+            "/api/v1/messages": {
+              "completed": 180,
+              "errors": 0,
+              "p50_ms": 2.173,
+              "p95_ms": 3.093
+            },
+            "/help": {
+              "completed": 180,
+              "errors": 0,
+              "p50_ms": 10.545,
+              "p95_ms": 16.437
+            },
+            "/privacy": {
+              "completed": 180,
+              "errors": 0,
+              "p50_ms": 10.219,
+              "p95_ms": 14.357
+            }
+          }
+        },
+        {
+          "phase": "stress-100",
+          "offered_rps": 100,
+          "planned_seconds": 30,
+          "active_seconds": 29.99,
+          "offered": 3000,
+          "completed": 3000,
+          "dropped": 0,
+          "errors": 0,
+          "status_counts": {
+            "200": 2700,
+            "401": 300
+          },
+          "successful_rps_during_window": 100.0,
+          "p50_ms": 7.475,
+          "p95_ms": 19.292,
+          "p99_ms": 36.962,
+          "schedule_lag_p95_ms": 0.265,
+          "response_mbps": 5.87,
+          "stop_reason": null,
+          "containers": {
+            "proxy": {
+              "mean_cores": 0.0022,
+              "peak_cores": 0.0668,
+              "peak_working_mib": 53.03,
+              "limit_mib": 64.0
+            },
+            "frontend": {
+              "mean_cores": 0.7147,
+              "peak_cores": 0.939,
+              "peak_working_mib": 164.16,
+              "limit_mib": 256.0
+            },
+            "backend": {
+              "mean_cores": 0.1259,
+              "peak_cores": 0.4803,
+              "peak_working_mib": 112.61,
+              "limit_mib": 192.0
+            },
+            "worker": {
+              "mean_cores": 0.0018,
+              "peak_cores": 0.0214,
+              "peak_working_mib": 103.55,
+              "limit_mib": 128.0
+            },
+            "beat": {
+              "mean_cores": 0.0007,
+              "peak_cores": 0.0216,
+              "peak_working_mib": 80.98,
+              "limit_mib": 96.0
+            },
+            "postgres": {
+              "mean_cores": 0.0193,
+              "peak_cores": 0.0623,
+              "peak_working_mib": 55.34,
+              "limit_mib": 128.0
+            },
+            "redis": {
+              "mean_cores": 0.0097,
+              "peak_cores": 0.0528,
+              "peak_working_mib": 15.2,
+              "limit_mib": 32.0
+            },
+            "rabbitmq": {
+              "mean_cores": 0.0653,
+              "peak_cores": 1.879,
+              "peak_working_mib": 110.22,
+              "limit_mib": 256.0
+            }
+          },
+          "generator_observer_peak_cores": 0.0905,
+          "ct_peak_cores": 3.0208,
+          "by_path": {
+            "/": {
+              "completed": 900,
+              "errors": 0,
+              "p50_ms": 9.137,
+              "p95_ms": 28.543
+            },
+            "/_next/static/chunks/2zd8f8wx2d434.css": {
+              "completed": 300,
+              "errors": 0,
+              "p50_ms": 2.513,
+              "p95_ms": 3.309
+            },
+            "/api/v1/bootstrap": {
+              "completed": 900,
+              "errors": 0,
+              "p50_ms": 2.896,
+              "p95_ms": 4.127
+            },
+            "/api/v1/messages": {
+              "completed": 300,
+              "errors": 0,
+              "p50_ms": 2.366,
+              "p95_ms": 3.003
+            },
+            "/help": {
+              "completed": 300,
+              "errors": 0,
+              "p50_ms": 9.95,
+              "p95_ms": 30.625
+            },
+            "/privacy": {
+              "completed": 300,
+              "errors": 0,
+              "p50_ms": 9.617,
+              "p95_ms": 16.954
+            }
+          }
+        },
+        {
+          "phase": "stress-150",
+          "offered_rps": 150,
+          "planned_seconds": 30,
+          "active_seconds": 29.993,
+          "offered": 4500,
+          "completed": 4500,
+          "dropped": 0,
+          "errors": 0,
+          "status_counts": {
+            "200": 4050,
+            "401": 450
+          },
+          "successful_rps_during_window": 149.999,
+          "p50_ms": 10.552,
+          "p95_ms": 41.17,
+          "p99_ms": 46.016,
+          "schedule_lag_p95_ms": 0.287,
+          "response_mbps": 8.804,
+          "stop_reason": null,
+          "containers": {
+            "proxy": {
+              "mean_cores": 0.0029,
+              "peak_cores": 0.0447,
+              "peak_working_mib": 53.06,
+              "limit_mib": 64.0
+            },
+            "frontend": {
+              "mean_cores": 1.0833,
+              "peak_cores": 1.3153,
+              "peak_working_mib": 164.52,
+              "limit_mib": 256.0
+            },
+            "backend": {
+              "mean_cores": 0.1442,
+              "peak_cores": 0.4729,
+              "peak_working_mib": 112.36,
+              "limit_mib": 192.0
+            },
+            "worker": {
+              "mean_cores": 0.0019,
+              "peak_cores": 0.0424,
+              "peak_working_mib": 103.65,
+              "limit_mib": 128.0
+            },
+            "beat": {
+              "mean_cores": 0.0007,
+              "peak_cores": 0.0215,
+              "peak_working_mib": 80.98,
+              "limit_mib": 96.0
+            },
+            "postgres": {
+              "mean_cores": 0.0231,
+              "peak_cores": 0.0694,
+              "peak_working_mib": 53.13,
+              "limit_mib": 128.0
+            },
+            "redis": {
+              "mean_cores": 0.0096,
+              "peak_cores": 0.0539,
+              "peak_working_mib": 15.2,
+              "limit_mib": 32.0
+            },
+            "rabbitmq": {
+              "mean_cores": 0.1518,
+              "peak_cores": 1.9493,
+              "peak_working_mib": 184.14,
+              "limit_mib": 256.0
+            }
+          },
+          "generator_observer_peak_cores": 0.1278,
+          "ct_peak_cores": 3.4599,
+          "by_path": {
+            "/": {
+              "completed": 1350,
+              "errors": 0,
+              "p50_ms": 34.305,
+              "p95_ms": 44.859
+            },
+            "/_next/static/chunks/2zd8f8wx2d434.css": {
+              "completed": 450,
+              "errors": 0,
+              "p50_ms": 2.396,
+              "p95_ms": 3.049
+            },
+            "/api/v1/bootstrap": {
+              "completed": 1350,
+              "errors": 0,
+              "p50_ms": 2.594,
+              "p95_ms": 3.428
+            },
+            "/api/v1/messages": {
+              "completed": 450,
+              "errors": 0,
+              "p50_ms": 2.315,
+              "p95_ms": 2.851
+            },
+            "/help": {
+              "completed": 450,
+              "errors": 0,
+              "p50_ms": 28.096,
+              "p95_ms": 35.608
+            },
+            "/privacy": {
+              "completed": 450,
+              "errors": 0,
+              "p50_ms": 15.698,
+              "p95_ms": 23.415
+            }
+          }
+        },
+        {
+          "phase": "stress-225",
+          "offered_rps": 225,
+          "planned_seconds": 30,
+          "active_seconds": 29.996,
+          "offered": 6750,
+          "completed": 6720,
+          "dropped": 30,
+          "errors": 0,
+          "status_counts": {
+            "200": 6047,
+            "401": 673
+          },
+          "successful_rps_during_window": 223.999,
+          "p50_ms": 21.888,
+          "p95_ms": 140.783,
+          "p99_ms": 240.858,
+          "schedule_lag_p95_ms": 0.263,
+          "response_mbps": 13.148,
+          "stop_reason": null,
+          "containers": {
+            "proxy": {
+              "mean_cores": 0.0013,
+              "peak_cores": 0.0384,
+              "peak_working_mib": 53.03,
+              "limit_mib": 64.0
+            },
+            "frontend": {
+              "mean_cores": 1.56,
+              "peak_cores": 1.967,
+              "peak_working_mib": 191.73,
+              "limit_mib": 256.0
+            },
+            "backend": {
+              "mean_cores": 0.2033,
+              "peak_cores": 0.4569,
+              "peak_working_mib": 122.62,
+              "limit_mib": 192.0
+            },
+            "worker": {
+              "mean_cores": 0.0022,
+              "peak_cores": 0.0523,
+              "peak_working_mib": 103.88,
+              "limit_mib": 128.0
+            },
+            "beat": {
+              "mean_cores": 0.0008,
+              "peak_cores": 0.0246,
+              "peak_working_mib": 80.98,
+              "limit_mib": 96.0
+            },
+            "postgres": {
+              "mean_cores": 0.0312,
+              "peak_cores": 0.0807,
+              "peak_working_mib": 53.13,
+              "limit_mib": 128.0
+            },
+            "redis": {
+              "mean_cores": 0.0098,
+              "peak_cores": 0.0574,
+              "peak_working_mib": 15.2,
+              "limit_mib": 32.0
+            },
+            "rabbitmq": {
+              "mean_cores": 0.0697,
+              "peak_cores": 1.8169,
+              "peak_working_mib": 152.09,
+              "limit_mib": 256.0
+            }
+          },
+          "generator_observer_peak_cores": 0.181,
+          "ct_peak_cores": 4.0288,
+          "by_path": {
+            "/": {
+              "completed": 2022,
+              "errors": 0,
+              "p50_ms": 38.59,
+              "p95_ms": 191.387
+            },
+            "/_next/static/chunks/2zd8f8wx2d434.css": {
+              "completed": 674,
+              "errors": 0,
+              "p50_ms": 3.488,
+              "p95_ms": 101.28
+            },
+            "/api/v1/bootstrap": {
+              "completed": 2010,
+              "errors": 0,
+              "p50_ms": 2.287,
+              "p95_ms": 3.931
+            },
+            "/api/v1/messages": {
+              "completed": 673,
+              "errors": 0,
+              "p50_ms": 2.174,
+              "p95_ms": 3.162
+            },
+            "/help": {
+              "completed": 671,
+              "errors": 0,
+              "p50_ms": 33.564,
+              "p95_ms": 190.806
+            },
+            "/privacy": {
+              "completed": 670,
+              "errors": 0,
+              "p50_ms": 25.091,
+              "p95_ms": 197.626
+            }
+          }
+        },
+        {
+          "phase": "stress-325",
+          "offered_rps": 325,
+          "planned_seconds": 30,
+          "active_seconds": 4.997,
+          "offered": 1625,
+          "completed": 1221,
+          "dropped": 404,
+          "errors": 0,
+          "status_counts": {
+            "200": 1085,
+            "401": 136
+          },
+          "successful_rps_during_window": 237.936,
+          "p50_ms": 122.854,
+          "p95_ms": 248.021,
+          "p99_ms": 313.089,
+          "schedule_lag_p95_ms": 0.257,
+          "response_mbps": 14.195,
+          "stop_reason": "more_than_5_percent_arrivals_dropped_at_32_inflight",
+          "containers": {
+            "proxy": {
+              "mean_cores": 0,
+              "peak_cores": 0,
+              "peak_working_mib": 53.03,
+              "limit_mib": 64.0
+            },
+            "frontend": {
+              "mean_cores": 1.6123,
+              "peak_cores": 1.6959,
+              "peak_working_mib": 178.6,
+              "limit_mib": 256.0
+            },
+            "backend": {
+              "mean_cores": 0.2175,
+              "peak_cores": 0.2795,
+              "peak_working_mib": 115.31,
+              "limit_mib": 192.0
+            },
+            "worker": {
+              "mean_cores": 0.0004,
+              "peak_cores": 0.0009,
+              "peak_working_mib": 103.91,
+              "limit_mib": 128.0
+            },
+            "beat": {
+              "mean_cores": 0.0,
+              "peak_cores": 0.0,
+              "peak_working_mib": 80.98,
+              "limit_mib": 96.0
+            },
+            "postgres": {
+              "mean_cores": 0.0252,
+              "peak_cores": 0.0287,
+              "peak_working_mib": 53.14,
+              "limit_mib": 128.0
+            },
+            "redis": {
+              "mean_cores": 0.005,
+              "peak_cores": 0.0054,
+              "peak_working_mib": 14.95,
+              "limit_mib": 32.0
+            },
+            "rabbitmq": {
+              "mean_cores": 0.4018,
+              "peak_cores": 1.3847,
+              "peak_working_mib": 180.28,
+              "limit_mib": 256.0
+            }
+          },
+          "generator_observer_peak_cores": 0.1882,
+          "ct_peak_cores": 3.6153,
+          "by_path": {
+            "/": {
+              "completed": 372,
+              "errors": 0,
+              "p50_ms": 209.828,
+              "p95_ms": 287.521
+            },
+            "/_next/static/chunks/2zd8f8wx2d434.css": {
+              "completed": 141,
+              "errors": 0,
+              "p50_ms": 113.296,
+              "p95_ms": 172.899
+            },
+            "/api/v1/bootstrap": {
+              "completed": 345,
+              "errors": 0,
+              "p50_ms": 2.391,
+              "p95_ms": 3.905
+            },
+            "/api/v1/messages": {
+              "completed": 136,
+              "errors": 0,
+              "p50_ms": 2.131,
+              "p95_ms": 3.535
+            },
+            "/help": {
+              "completed": 122,
+              "errors": 0,
+              "p50_ms": 209.142,
+              "p95_ms": 265.886
+            },
+            "/privacy": {
+              "completed": 105,
+              "errors": 0,
+              "p50_ms": 209.048,
+              "p95_ms": 284.66
+            }
+          }
+        },
+        {
+          "phase": "api-25",
+          "offered_rps": 25,
+          "planned_seconds": 30,
+          "active_seconds": 29.96,
+          "offered": 750,
+          "completed": 750,
+          "dropped": 0,
+          "errors": 0,
+          "status_counts": {
+            "200": 675,
+            "401": 75
+          },
+          "successful_rps_during_window": 25.0,
+          "p50_ms": 2.952,
+          "p95_ms": 3.716,
+          "p99_ms": 4.226,
+          "schedule_lag_p95_ms": 0.331,
+          "response_mbps": 0.828,
+          "stop_reason": null,
+          "containers": {
+            "proxy": {
+              "mean_cores": 0.0017,
+              "peak_cores": 0.0487,
+              "peak_working_mib": 53.07,
+              "limit_mib": 64.0
+            },
+            "frontend": {
+              "mean_cores": 0.0202,
+              "peak_cores": 0.2969,
+              "peak_working_mib": 178.02,
+              "limit_mib": 256.0
+            },
+            "backend": {
+              "mean_cores": 0.0927,
+              "peak_cores": 0.4334,
+              "peak_working_mib": 112.66,
+              "limit_mib": 192.0
+            },
+            "worker": {
+              "mean_cores": 0.0022,
+              "peak_cores": 0.0487,
+              "peak_working_mib": 104.39,
+              "limit_mib": 128.0
+            },
+            "beat": {
+              "mean_cores": 0.0008,
+              "peak_cores": 0.0243,
+              "peak_working_mib": 80.99,
+              "limit_mib": 96.0
+            },
+            "postgres": {
+              "mean_cores": 0.0152,
+              "peak_cores": 0.0641,
+              "peak_working_mib": 56.64,
+              "limit_mib": 128.0
+            },
+            "redis": {
+              "mean_cores": 0.0096,
+              "peak_cores": 0.0526,
+              "peak_working_mib": 18.69,
+              "limit_mib": 32.0
+            },
+            "rabbitmq": {
+              "mean_cores": 0.0702,
+              "peak_cores": 1.2178,
+              "peak_working_mib": 176.9,
+              "limit_mib": 256.0
+            }
+          },
+          "generator_observer_peak_cores": 0.028,
+          "ct_peak_cores": 1.435,
+          "by_path": {
+            "/api/v1/bootstrap": {
+              "completed": 675,
+              "errors": 0,
+              "p50_ms": 2.977,
+              "p95_ms": 3.753
+            },
+            "/api/v1/messages": {
+              "completed": 75,
+              "errors": 0,
+              "p50_ms": 2.782,
+              "p95_ms": 3.43
+            }
+          }
+        },
+        {
+          "phase": "api-75",
+          "offered_rps": 75,
+          "planned_seconds": 30,
+          "active_seconds": 29.987,
+          "offered": 2250,
+          "completed": 2250,
+          "dropped": 0,
+          "errors": 0,
+          "status_counts": {
+            "200": 2025,
+            "401": 225
+          },
+          "successful_rps_during_window": 75.0,
+          "p50_ms": 2.542,
+          "p95_ms": 3.181,
+          "p99_ms": 3.692,
+          "schedule_lag_p95_ms": 0.296,
+          "response_mbps": 2.482,
+          "stop_reason": null,
+          "containers": {
+            "proxy": {
+              "mean_cores": 0.0028,
+              "peak_cores": 0.0439,
+              "peak_working_mib": 53.07,
+              "limit_mib": 64.0
+            },
+            "frontend": {
+              "mean_cores": 0.0099,
+              "peak_cores": 0.2957,
+              "peak_working_mib": 178.41,
+              "limit_mib": 256.0
+            },
+            "backend": {
+              "mean_cores": 0.1873,
+              "peak_cores": 0.498,
+              "peak_working_mib": 123.5,
+              "limit_mib": 192.0
+            },
+            "worker": {
+              "mean_cores": 0.0019,
+              "peak_cores": 0.0411,
+              "peak_working_mib": 104.58,
+              "limit_mib": 128.0
+            },
+            "beat": {
+              "mean_cores": 0.0007,
+              "peak_cores": 0.0214,
+              "peak_working_mib": 80.99,
+              "limit_mib": 96.0
+            },
+            "postgres": {
+              "mean_cores": 0.0258,
+              "peak_cores": 0.0715,
+              "peak_working_mib": 53.66,
+              "limit_mib": 128.0
+            },
+            "redis": {
+              "mean_cores": 0.0096,
+              "peak_cores": 0.0554,
+              "peak_working_mib": 15.26,
+              "limit_mib": 32.0
+            },
+            "rabbitmq": {
+              "mean_cores": 0.1508,
+              "peak_cores": 1.9703,
+              "peak_working_mib": 173.55,
+              "limit_mib": 256.0
+            }
+          },
+          "generator_observer_peak_cores": 0.0654,
+          "ct_peak_cores": 2.342,
+          "by_path": {
+            "/api/v1/bootstrap": {
+              "completed": 2025,
+              "errors": 0,
+              "p50_ms": 2.563,
+              "p95_ms": 3.192
+            },
+            "/api/v1/messages": {
+              "completed": 225,
+              "errors": 0,
+              "p50_ms": 2.392,
+              "p95_ms": 3.024
+            }
+          }
+        },
+        {
+          "phase": "api-150",
+          "offered_rps": 150,
+          "planned_seconds": 30,
+          "active_seconds": 29.993,
+          "offered": 4500,
+          "completed": 4500,
+          "dropped": 0,
+          "errors": 0,
+          "status_counts": {
+            "200": 4050,
+            "401": 450
+          },
+          "successful_rps_during_window": 149.999,
+          "p50_ms": 2.324,
+          "p95_ms": 2.908,
+          "p99_ms": 3.387,
+          "schedule_lag_p95_ms": 0.273,
+          "response_mbps": 4.963,
+          "stop_reason": null,
+          "containers": {
+            "proxy": {
+              "mean_cores": 0.0027,
+              "peak_cores": 0.0435,
+              "peak_working_mib": 53.28,
+              "limit_mib": 64.0
+            },
+            "frontend": {
+              "mean_cores": 0.0225,
+              "peak_cores": 0.284,
+              "peak_working_mib": 178.02,
+              "limit_mib": 256.0
+            },
+            "backend": {
+              "mean_cores": 0.3161,
+              "peak_cores": 0.5633,
+              "peak_working_mib": 119.98,
+              "limit_mib": 192.0
+            },
+            "worker": {
+              "mean_cores": 0.0021,
+              "peak_cores": 0.0508,
+              "peak_working_mib": 104.81,
+              "limit_mib": 128.0
+            },
+            "beat": {
+              "mean_cores": 0.0008,
+              "peak_cores": 0.0247,
+              "peak_working_mib": 80.99,
+              "limit_mib": 96.0
+            },
+            "postgres": {
+              "mean_cores": 0.0398,
+              "peak_cores": 0.0893,
+              "peak_working_mib": 53.47,
+              "limit_mib": 128.0
+            },
+            "redis": {
+              "mean_cores": 0.009,
+              "peak_cores": 0.0511,
+              "peak_working_mib": 15.25,
+              "limit_mib": 32.0
+            },
+            "rabbitmq": {
+              "mean_cores": 0.07,
+              "peak_cores": 2.0271,
+              "peak_working_mib": 110.44,
+              "limit_mib": 256.0
+            }
+          },
+          "generator_observer_peak_cores": 0.1086,
+          "ct_peak_cores": 2.6284,
+          "by_path": {
+            "/api/v1/bootstrap": {
+              "completed": 4050,
+              "errors": 0,
+              "p50_ms": 2.334,
+              "p95_ms": 2.922
+            },
+            "/api/v1/messages": {
+              "completed": 450,
+              "errors": 0,
+              "p50_ms": 2.189,
+              "p95_ms": 2.773
+            }
+          }
+        },
+        {
+          "phase": "api-250",
+          "offered_rps": 250,
+          "planned_seconds": 30,
+          "active_seconds": 29.996,
+          "offered": 7500,
+          "completed": 7500,
+          "dropped": 0,
+          "errors": 0,
+          "status_counts": {
+            "200": 6750,
+            "401": 750
+          },
+          "successful_rps_during_window": 249.999,
+          "p50_ms": 2.126,
+          "p95_ms": 2.603,
+          "p99_ms": 3.048,
+          "schedule_lag_p95_ms": 0.232,
+          "response_mbps": 8.272,
+          "stop_reason": null,
+          "containers": {
+            "proxy": {
+              "mean_cores": 0.0014,
+              "peak_cores": 0.0407,
+              "peak_working_mib": 53.28,
+              "limit_mib": 64.0
+            },
+            "frontend": {
+              "mean_cores": 0.0232,
+              "peak_cores": 0.3716,
+              "peak_working_mib": 142.88,
+              "limit_mib": 256.0
+            },
+            "backend": {
+              "mean_cores": 0.4916,
+              "peak_cores": 0.8497,
+              "peak_working_mib": 112.88,
+              "limit_mib": 192.0
+            },
+            "worker": {
+              "mean_cores": 0.0018,
+              "peak_cores": 0.0405,
+              "peak_working_mib": 105.05,
+              "limit_mib": 128.0
+            },
+            "beat": {
+              "mean_cores": 0.0008,
+              "peak_cores": 0.0214,
+              "peak_working_mib": 80.99,
+              "limit_mib": 96.0
+            },
+            "postgres": {
+              "mean_cores": 0.0569,
+              "peak_cores": 0.1006,
+              "peak_working_mib": 53.55,
+              "limit_mib": 128.0
+            },
+            "redis": {
+              "mean_cores": 0.009,
+              "peak_cores": 0.0495,
+              "peak_working_mib": 15.3,
+              "limit_mib": 32.0
+            },
+            "rabbitmq": {
+              "mean_cores": 0.1545,
+              "peak_cores": 2.1138,
+              "peak_working_mib": 182.75,
+              "limit_mib": 256.0
+            }
+          },
+          "generator_observer_peak_cores": 0.1496,
+          "ct_peak_cores": 2.914,
+          "by_path": {
+            "/api/v1/bootstrap": {
+              "completed": 6750,
+              "errors": 0,
+              "p50_ms": 2.138,
+              "p95_ms": 2.622
+            },
+            "/api/v1/messages": {
+              "completed": 750,
+              "errors": 0,
+              "p50_ms": 1.962,
+              "p95_ms": 2.281
+            }
+          }
+        }
+      ],
+      "smoke_before": [
+        {
+          "path": "/",
+          "status": 200,
+          "ms": 18.533
+        },
+        {
+          "path": "/help",
+          "status": 200,
+          "ms": 13.014
+        },
+        {
+          "path": "/privacy",
+          "status": 200,
+          "ms": 14.101
+        },
+        {
+          "path": "/profile",
+          "status": 200,
+          "ms": 11.162
+        },
+        {
+          "path": "/manage",
+          "status": 200,
+          "ms": 9.66
+        },
+        {
+          "path": "/r",
+          "status": 200,
+          "ms": 9.743
+        },
+        {
+          "path": "/robots.txt",
+          "status": 200,
+          "ms": 3.093
+        },
+        {
+          "path": "/sitemap.xml",
+          "status": 200,
+          "ms": 3.011
+        },
+        {
+          "path": "/manifest.webmanifest",
+          "status": 200,
+          "ms": 1.571
+        },
+        {
+          "path": "/healthz",
+          "status": 200,
+          "ms": 14.608
+        },
+        {
+          "path": "/api/v1/bootstrap",
+          "status": 200,
+          "ms": 9.568
+        },
+        {
+          "path": "/api/v1/messages",
+          "status": 401,
+          "ms": 5.458
+        },
+        {
+          "path": "/api/v1/operations/status",
+          "status": 403,
+          "ms": 2.202
+        },
+        {
+          "path": "/admin/login/",
+          "status": 200,
+          "ms": 6.257
+        },
+        {
+          "path": "/_next/static/chunks/2zd8f8wx2d434.css",
+          "status": 200,
+          "ms": 2.822
+        }
+      ],
+      "mixed_stop_reason": "more_than_5_percent_arrivals_dropped_at_32_inflight",
+      "recovery_after_mixed": [
+        200,
+        200,
+        200
+      ],
+      "api_stop_reason": null,
+      "recovery_after_api": [
+        200,
+        200,
+        200
+      ],
+      "smoke_after": [
+        {
+          "path": "/",
+          "status": 200,
+          "ms": 24.426
+        },
+        {
+          "path": "/help",
+          "status": 200,
+          "ms": 19.033
+        },
+        {
+          "path": "/privacy",
+          "status": 200,
+          "ms": 13.966
+        },
+        {
+          "path": "/profile",
+          "status": 200,
+          "ms": 10.102
+        },
+        {
+          "path": "/manage",
+          "status": 200,
+          "ms": 11.67
+        },
+        {
+          "path": "/r",
+          "status": 200,
+          "ms": 10.21
+        },
+        {
+          "path": "/robots.txt",
+          "status": 200,
+          "ms": 4.971
+        },
+        {
+          "path": "/sitemap.xml",
+          "status": 200,
+          "ms": 2.237
+        },
+        {
+          "path": "/manifest.webmanifest",
+          "status": 200,
+          "ms": 2.31
+        },
+        {
+          "path": "/healthz",
+          "status": 200,
+          "ms": 3.024
+        },
+        {
+          "path": "/api/v1/bootstrap",
+          "status": 200,
+          "ms": 12.82
+        },
+        {
+          "path": "/api/v1/messages",
+          "status": 401,
+          "ms": 2.312
+        },
+        {
+          "path": "/api/v1/operations/status",
+          "status": 403,
+          "ms": 2.372
+        },
+        {
+          "path": "/admin/login/",
+          "status": 200,
+          "ms": 5.589
+        },
+        {
+          "path": "/_next/static/chunks/2zd8f8wx2d434.css",
+          "status": 200,
+          "ms": 2.518
+        }
+      ],
+      "session_cleanup": {
+        "own_anonymous_sessions_removed": 34
+      },
+      "containers_unchanged": true,
+      "restart_delta": 0,
+      "healthy_after": true,
+      "completed_utc": "2026-10-27T20:43:28.993205+00:00"
+    },
+    "private_tls": {
+      "metadata": {
+        "started_utc": "2026-10-27T20:44:55.569154+00:00",
+        "version": "/opt/begamnagam/releases/0.11.0",
+        "effective_cpu_affinity": 12,
+        "cpu_max": "max 100000",
+        "memory_max": "max",
+        "proc_memtotal_kib": 24576000,
+        "generator_on_target": true,
+        "network_scope": "private TLS via Traefik",
+        "max_inflight": 8,
+        "arrival_model": "open-loop; bounded pool; dropped arrivals reported",
+        "private_tls_verified": true,
+        "provider_endpoints_exercised": false,
+        "authenticated_journey_exercised": false,
+        "probe_sha256": "8d3abe45a9c0f8a7e47f6e6f68ab49011818b145ef60509e54cd57003592d70e",
+        "background": "shared live CT; periodic and operator jobs can overlap"
+      },
+      "stages": [
+        {
+          "phase": "stress-60",
+          "offered_rps": 60,
+          "planned_seconds": 30,
+          "active_seconds": 8.001,
+          "offered": 481,
+          "completed": 481,
+          "dropped": 0,
+          "errors": 0,
+          "status_counts": {
+            "200": 433,
+            "401": 48
+          },
+          "successful_rps_during_window": 59.994,
+          "p50_ms": 8.819,
+          "p95_ms": 13.523,
+          "p99_ms": 28.264,
+          "schedule_lag_p95_ms": 0.287,
+          "response_mbps": 3.53,
+          "stop_reason": "working_memory_above_90_percent:proxy",
+          "containers": {
+            "proxy": {
+              "mean_cores": 0.053,
+              "peak_cores": 0.0677,
+              "peak_working_mib": 58.89,
+              "limit_mib": 64.0
+            },
+            "frontend": {
+              "mean_cores": 0.5031,
+              "peak_cores": 0.6097,
+              "peak_working_mib": 151.14,
+              "limit_mib": 256.0
+            },
+            "backend": {
+              "mean_cores": 0.0977,
+              "peak_cores": 0.4013,
+              "peak_working_mib": 112.55,
+              "limit_mib": 192.0
+            },
+            "worker": {
+              "mean_cores": 0.007,
+              "peak_cores": 0.0529,
+              "peak_working_mib": 106.15,
+              "limit_mib": 128.0
+            },
+            "beat": {
+              "mean_cores": 0.0031,
+              "peak_cores": 0.0247,
+              "peak_working_mib": 81.0,
+              "limit_mib": 96.0
+            },
+            "postgres": {
+              "mean_cores": 0.0228,
+              "peak_cores": 0.0673,
+              "peak_working_mib": 56.59,
+              "limit_mib": 128.0
+            },
+            "redis": {
+              "mean_cores": 0.0106,
+              "peak_cores": 0.0464,
+              "peak_working_mib": 15.2,
+              "limit_mib": 32.0
+            },
+            "rabbitmq": {
+              "mean_cores": 0.2452,
+              "peak_cores": 1.8838,
+              "peak_working_mib": 120.55,
+              "limit_mib": 256.0
+            }
+          },
+          "generator_observer_peak_cores": 0.0536,
+          "ct_peak_cores": 2.7101,
+          "by_path": {
+            "/": {
+              "completed": 145,
+              "errors": 0,
+              "p50_ms": 11.05,
+              "p95_ms": 14.345
+            },
+            "/_next/static/chunks/2zd8f8wx2d434.css": {
+              "completed": 48,
+              "errors": 0,
+              "p50_ms": 3.129,
+              "p95_ms": 3.628
+            },
+            "/api/v1/bootstrap": {
+              "completed": 144,
+              "errors": 0,
+              "p50_ms": 2.987,
+              "p95_ms": 4.083
+            },
+            "/api/v1/messages": {
+              "completed": 48,
+              "errors": 0,
+              "p50_ms": 2.424,
+              "p95_ms": 3.174
+            },
+            "/help": {
+              "completed": 48,
+              "errors": 0,
+              "p50_ms": 11.278,
+              "p95_ms": 28.264
+            },
+            "/privacy": {
+              "completed": 48,
+              "errors": 0,
+              "p50_ms": 11.15,
+              "p95_ms": 14.075
+            }
+          }
+        }
+      ],
+      "smoke_before": [
+        {
+          "path": "/",
+          "status": 200,
+          "ms": 22.881
+        },
+        {
+          "path": "/help",
+          "status": 200,
+          "ms": 19.615
+        },
+        {
+          "path": "/privacy",
+          "status": 200,
+          "ms": 15.105
+        },
+        {
+          "path": "/profile",
+          "status": 200,
+          "ms": 10.079
+        },
+        {
+          "path": "/manage",
+          "status": 200,
+          "ms": 9.699
+        },
+        {
+          "path": "/r",
+          "status": 200,
+          "ms": 10.261
+        },
+        {
+          "path": "/robots.txt",
+          "status": 200,
+          "ms": 3.219
+        },
+        {
+          "path": "/sitemap.xml",
+          "status": 200,
+          "ms": 2.295
+        },
+        {
+          "path": "/manifest.webmanifest",
+          "status": 200,
+          "ms": 1.757
+        },
+        {
+          "path": "/healthz",
+          "status": 200,
+          "ms": 5.648
+        },
+        {
+          "path": "/api/v1/bootstrap",
+          "status": 200,
+          "ms": 11.275
+        },
+        {
+          "path": "/api/v1/messages",
+          "status": 401,
+          "ms": 6.038
+        },
+        {
+          "path": "/api/v1/operations/status",
+          "status": 403,
+          "ms": 2.731
+        },
+        {
+          "path": "/admin/login/",
+          "status": 200,
+          "ms": 6.123
+        },
+        {
+          "path": "/_next/static/chunks/2zd8f8wx2d434.css",
+          "status": 200,
+          "ms": 3.336
+        }
+      ],
+      "mixed_stop_reason": "working_memory_above_90_percent:proxy",
+      "recovery_after_mixed": [
+        200,
+        200,
+        200
+      ],
+      "smoke_after": [
+        {
+          "path": "/",
+          "status": 200,
+          "ms": 18.787
+        },
+        {
+          "path": "/help",
+          "status": 200,
+          "ms": 13.941
+        },
+        {
+          "path": "/privacy",
+          "status": 200,
+          "ms": 11.308
+        },
+        {
+          "path": "/profile",
+          "status": 200,
+          "ms": 9.856
+        },
+        {
+          "path": "/manage",
+          "status": 200,
+          "ms": 9.855
+        },
+        {
+          "path": "/r",
+          "status": 200,
+          "ms": 9.527
+        },
+        {
+          "path": "/robots.txt",
+          "status": 200,
+          "ms": 4.706
+        },
+        {
+          "path": "/sitemap.xml",
+          "status": 200,
+          "ms": 2.902
+        },
+        {
+          "path": "/manifest.webmanifest",
+          "status": 200,
+          "ms": 1.623
+        },
+        {
+          "path": "/healthz",
+          "status": 200,
+          "ms": 2.98
+        },
+        {
+          "path": "/api/v1/bootstrap",
+          "status": 200,
+          "ms": 10.746
+        },
+        {
+          "path": "/api/v1/messages",
+          "status": 401,
+          "ms": 2.816
+        },
+        {
+          "path": "/api/v1/operations/status",
+          "status": 403,
+          "ms": 2.826
+        },
+        {
+          "path": "/admin/login/",
+          "status": 200,
+          "ms": 6.02
+        },
+        {
+          "path": "/_next/static/chunks/2zd8f8wx2d434.css",
+          "status": 200,
+          "ms": 2.822
+        }
+      ],
+      "session_cleanup": {
+        "own_anonymous_sessions_removed": 10
+      },
+      "containers_unchanged": true,
+      "restart_delta": 0,
+      "healthy_after": true,
+      "completed_utc": "2026-10-27T20:45:45.299069+00:00"
+    },
+    "public_edge": {
+      "metadata": {
+        "started_utc": "2026-10-27T20:55:45.821290+00:00",
+        "version": "/opt/begamnagam/releases/0.11.0",
+        "effective_cpu_affinity": 12,
+        "cpu_max": "max 100000",
+        "memory_max": "max",
+        "proc_memtotal_kib": 24576000,
+        "generator_on_target": true,
+        "network_scope": "verified public-domain TLS via LAN central Nginx then CT; internet uplink excluded",
+        "max_inflight": 8,
+        "arrival_model": "open-loop; bounded pool; dropped arrivals reported",
+        "private_tls_verified": false,
+        "provider_endpoints_exercised": false,
+        "authenticated_journey_exercised": false,
+        "probe_sha256": "37c58808ea9284a5adca19a57d2a72a1e6b66e67991385ea4fe701cfb46a94fd",
+        "background": "shared live CT; periodic and operator jobs can overlap",
+        "tls_verified": true,
+        "edge_cpu_observed": false
+      },
+      "stages": [
+        {
+          "phase": "stress-60",
+          "offered_rps": 60,
+          "planned_seconds": 30,
+          "active_seconds": 7.956,
+          "offered": 478,
+          "completed": 478,
+          "dropped": 0,
+          "errors": 0,
+          "status_counts": {
+            "200": 430,
+            "401": 48
+          },
+          "successful_rps_during_window": 60.083,
+          "p50_ms": 5.795,
+          "p95_ms": 13.569,
+          "p99_ms": 27.955,
+          "schedule_lag_p95_ms": 0.284,
+          "response_mbps": 3.523,
+          "stop_reason": "working_memory_above_90_percent:proxy",
+          "containers": {
+            "proxy": {
+              "mean_cores": 0.0752,
+              "peak_cores": 0.1036,
+              "peak_working_mib": 58.1,
+              "limit_mib": 64.0
+            },
+            "frontend": {
+              "mean_cores": 0.4783,
+              "peak_cores": 0.5342,
+              "peak_working_mib": 151.03,
+              "limit_mib": 256.0
+            },
+            "backend": {
+              "mean_cores": 0.1049,
+              "peak_cores": 0.351,
+              "peak_working_mib": 117.76,
+              "limit_mib": 192.0
+            },
+            "worker": {
+              "mean_cores": 0.0003,
+              "peak_cores": 0.0007,
+              "peak_working_mib": 111.05,
+              "limit_mib": 128.0
+            },
+            "beat": {
+              "mean_cores": 0.0,
+              "peak_cores": 0.0,
+              "peak_working_mib": 81.02,
+              "limit_mib": 96.0
+            },
+            "postgres": {
+              "mean_cores": 0.0134,
+              "peak_cores": 0.054,
+              "peak_working_mib": 53.21,
+              "limit_mib": 128.0
+            },
+            "redis": {
+              "mean_cores": 0.0112,
+              "peak_cores": 0.0475,
+              "peak_working_mib": 14.95,
+              "limit_mib": 32.0
+            },
+            "rabbitmq": {
+              "mean_cores": 0.0023,
+              "peak_cores": 0.0031,
+              "peak_working_mib": 110.27,
+              "limit_mib": 256.0
+            }
+          },
+          "generator_observer_peak_cores": 0.0461,
+          "ct_peak_cores": 1.4061,
+          "by_path": {
+            "/": {
+              "completed": 143,
+              "errors": 0,
+              "p50_ms": 11.008,
+              "p95_ms": 15.263
+            },
+            "/_next/static/chunks/2zd8f8wx2d434.css": {
+              "completed": 47,
+              "errors": 0,
+              "p50_ms": 3.578,
+              "p95_ms": 4.598
+            },
+            "/api/v1/bootstrap": {
+              "completed": 144,
+              "errors": 0,
+              "p50_ms": 3.557,
+              "p95_ms": 4.415
+            },
+            "/api/v1/messages": {
+              "completed": 48,
+              "errors": 0,
+              "p50_ms": 2.916,
+              "p95_ms": 3.425
+            },
+            "/help": {
+              "completed": 48,
+              "errors": 0,
+              "p50_ms": 11.501,
+              "p95_ms": 13.608
+            },
+            "/privacy": {
+              "completed": 48,
+              "errors": 0,
+              "p50_ms": 11.17,
+              "p95_ms": 15.071
+            }
+          }
+        }
+      ],
+      "smoke_before": [
+        {
+          "path": "/",
+          "status": 200,
+          "ms": 23.648
+        },
+        {
+          "path": "/help",
+          "status": 200,
+          "ms": 13.257
+        },
+        {
+          "path": "/privacy",
+          "status": 200,
+          "ms": 11.861
+        },
+        {
+          "path": "/profile",
+          "status": 200,
+          "ms": 9.708
+        },
+        {
+          "path": "/manage",
+          "status": 200,
+          "ms": 9.718
+        },
+        {
+          "path": "/r",
+          "status": 200,
+          "ms": 9.51
+        },
+        {
+          "path": "/robots.txt",
+          "status": 200,
+          "ms": 2.733
+        },
+        {
+          "path": "/sitemap.xml",
+          "status": 200,
+          "ms": 2.898
+        },
+        {
+          "path": "/manifest.webmanifest",
+          "status": 200,
+          "ms": 1.912
+        },
+        {
+          "path": "/healthz",
+          "status": 200,
+          "ms": 21.311
+        },
+        {
+          "path": "/api/v1/bootstrap",
+          "status": 200,
+          "ms": 11.162
+        },
+        {
+          "path": "/api/v1/messages",
+          "status": 401,
+          "ms": 6.754
+        },
+        {
+          "path": "/api/v1/operations/status",
+          "status": 403,
+          "ms": 3.23
+        },
+        {
+          "path": "/admin/login/",
+          "status": 200,
+          "ms": 6.745
+        },
+        {
+          "path": "/_next/static/chunks/2zd8f8wx2d434.css",
+          "status": 200,
+          "ms": 4.103
+        }
+      ],
+      "mixed_stop_reason": "working_memory_above_90_percent:proxy",
+      "recovery_after_mixed": [
+        200,
+        200,
+        200
+      ],
+      "smoke_after": [
+        {
+          "path": "/",
+          "status": 200,
+          "ms": 19.297
+        },
+        {
+          "path": "/help",
+          "status": 200,
+          "ms": 12.017
+        },
+        {
+          "path": "/privacy",
+          "status": 200,
+          "ms": 11.21
+        },
+        {
+          "path": "/profile",
+          "status": 200,
+          "ms": 9.641
+        },
+        {
+          "path": "/manage",
+          "status": 200,
+          "ms": 10.546
+        },
+        {
+          "path": "/r",
+          "status": 200,
+          "ms": 10.228
+        },
+        {
+          "path": "/robots.txt",
+          "status": 200,
+          "ms": 5.433
+        },
+        {
+          "path": "/sitemap.xml",
+          "status": 200,
+          "ms": 2.941
+        },
+        {
+          "path": "/manifest.webmanifest",
+          "status": 200,
+          "ms": 1.773
+        },
+        {
+          "path": "/healthz",
+          "status": 200,
+          "ms": 3.526
+        },
+        {
+          "path": "/api/v1/bootstrap",
+          "status": 200,
+          "ms": 10.535
+        },
+        {
+          "path": "/api/v1/messages",
+          "status": 401,
+          "ms": 3.126
+        },
+        {
+          "path": "/api/v1/operations/status",
+          "status": 403,
+          "ms": 4.254
+        },
+        {
+          "path": "/admin/login/",
+          "status": 200,
+          "ms": 7.038
+        },
+        {
+          "path": "/_next/static/chunks/2zd8f8wx2d434.css",
+          "status": 200,
+          "ms": 3.266
+        }
+      ],
+      "session_cleanup": {
+        "own_anonymous_sessions_removed": 10
+      },
+      "containers_unchanged": true,
+      "restart_delta": 0,
+      "healthy_after": true,
+      "completed_utc": "2026-10-27T20:56:35.581398+00:00"
+    }
+  },
+  "queue_probe": {
+    "task": "celery.accumulate",
+    "published": 300,
+    "target_tasks_per_second": 50,
+    "publish_seconds": 5.982,
+    "publish_p95_ms": 1.728,
+    "observed_max_ready": 0,
+    "end_ready": 0,
+    "consumer_count": 1,
+    "post_publish_drain_seconds": 0.0,
+    "confirm_selected": null,
+    "provider_calls": 0,
+    "application_records_created": 0,
+    "scope": "benign transport/worker task, not SMS throughput"
+  },
+  "memory_peak_working_mib": {
+    "proxy": 61.6796875,
+    "beat": 81.02734375,
+    "worker": 111.32421875,
+    "frontend": 191.7265625,
+    "backend": 125.1640625,
+    "redis": 19.14453125,
+    "postgres": 56.640625,
+    "rabbitmq": 184.14453125
+  },
+  "memory_limits_mib": {
+    "proxy": 64.0,
+    "frontend": 256.0,
+    "backend": 192.0,
+    "worker": 128.0,
+    "beat": 96.0,
+    "postgres": 128.0,
+    "redis": 32.0,
+    "rabbitmq": 256.0
+  },
+  "post_test": {
+    "core_services_healthy": true,
+    "core_service_restart_delta": 0,
+    "oom_kill_observed": false,
+    "application_configuration_changed_by_test": false,
+    "aggregate_database_unchanged": true,
+    "account_order_otp_and_cost_counters_unchanged": true,
+    "anonymous_session_count_restored": true,
+    "dataset_counts": {
+      "accounts": 12,
+      "orders": 18
+    },
+    "queue_ready_after": 0,
+    "queue_unacknowledged_after": 0
+  },
+  "invalid_or_interrupted_runs": [
+    {
+      "run": "20261027-loopback-read-02",
+      "reason": "Client reused idle sockets beyond direct server keepalive;32 RemoteDisconnected failures. Excluded from capacity conclusions. Idle eviction regression passed."
+    },
+    {
+      "run": "20261027-loopback-read-03",
+      "reason": "The30RPS stage was interrupted by a guard checking all Compose containers. No core service restart was observed. Final run watches eight named core services; transient one-off helpers do not invalidate it."
+    }
+  ],
+  "method_limits": [
+    "GET-only anonymous reading; no authenticated write journey, OTP/SMS/payment/AI provider throughput",
+    "Client and observer on CT; Python CPU measured; CLI/daemon observation and background work included in CT CPU",
+    "Public TLS used real hostname and certificate through LAN Nginx; excludes internet uplink and does not observe edge CPU",
+    "Short stages; no long-duration soak or absolute crash capacity test",
+    "Dropped arrivals are not dispatched because the bounded in-flight pool is full; they are not HTTP errors or SMS loss"
+  ]
+}

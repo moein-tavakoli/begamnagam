@@ -34,7 +34,7 @@ export function RecipientActions() {
     } catch(e){setError(errorMessage(e));} finally {setBusy(false);}
   }
   return <div className="account-page wrap" data-update-blocked={!!details || busy}>
-    <div className="account-heading"><span className="eyebrow">انتخاب با توست</span><h1>آرامش تو مهمه.</h1><p>برای توقف دریافت یا گزارش این پیام، لازم نیست حساب بسازی. فرستنده از هویت یا گزارش تو مطلع نمی‌شه.</p></div>
+    <div className="account-heading"><h1>آرامش تو مهمه.</h1><p>برای توقف دریافت یا گزارش این پیام، لازم نیست حساب بسازی. فرستنده از هویت یا گزارش تو مطلع نمی‌شه.</p></div>
     <div className="account-card">
       <ErrorBox message={error}/>
       {!token && <p>لینک داخل پیامک را کامل باز کن. برای مدیریت شماره خودت هم می‌تونی از صفحه قطع دریافت استفاده کنی.</p>}

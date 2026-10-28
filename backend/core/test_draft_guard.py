@@ -6,6 +6,13 @@ from .moderation import ModerationRejected
 
 
 class DraftGuardTests(SimpleTestCase):
+    def test_friendly_praise_passes_but_never_overrides_harmful_context(self):
+        for text in ['رفیق پولدار منی', 'تو خیلی باحالی', 'رفیق خوش شانسمی']:
+            self.assertEqual(sanitize_draft(text), text)
+            for suffix in [' میکشمت', ' عکست رو پخش میکنم', ' شماره کارت من ۱۲۳۴۵']:
+                with self.subTest(text=text, suffix=suffix), self.assertRaises(ModerationRejected):
+                    sanitize_draft(text+suffix)
+
     def test_freeform_different_topics_retain_the_actual_request(self):
         cases = [
             'پولی که قرض گرفتی را لطفاً به موقع برگردان',

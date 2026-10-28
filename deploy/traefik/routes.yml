@@ -72,7 +72,21 @@ http:
         passHostHeader: true
     frontend:
       loadBalancer:
-        servers: [{url: 'http://frontend:3000'}]
+        servers:
+          - url: 'http://frontend:3000'
+{{ if or (eq (env "FRONTEND_REPLICAS") "3") (eq (env "FRONTEND_REPLICAS") "6") }}
+          - url: 'http://frontend:3001'
+          - url: 'http://frontend:3002'
+{{ if eq (env "FRONTEND_REPLICAS") "6" }}
+          - url: 'http://frontend:3003'
+          - url: 'http://frontend:3004'
+          - url: 'http://frontend:3005'
+{{ end }}
+        healthCheck:
+          path: /manifest.webmanifest
+          interval: 10s
+          timeout: 3s
+{{ end }}
         passHostHeader: true
 tls:
   certificates:

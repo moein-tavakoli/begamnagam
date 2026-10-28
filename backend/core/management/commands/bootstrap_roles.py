@@ -11,7 +11,7 @@ class Command(BaseCommand):
         SafetyControl.objects.get_or_create(pk=1, defaults={"halted": not settings.DEMO_MODE})
         roles = {
             'support_observer': ['order', 'moderationaudit', 'messagedelivery'],
-            'finance_observer': ['order', 'paymentattempt', 'refund', 'financialevent'],
+            'finance_observer': ['order', 'paymentattempt', 'refund', 'financialevent', 'creditpurchase', 'creditentry'],
         }
         for name, models in roles.items():
             group, _ = Group.objects.get_or_create(name=name)
@@ -22,7 +22,7 @@ class Command(BaseCommand):
 
         operators = {
             'content_support': ['view_abusereport', 'triage_report', 'view_account', 'suspend_account', 'view_order', 'view_operationalalert', 'view_operations'],
-            'finance_operator': ['view_paymentattempt', 'view_refund', 'view_financialevent', 'view_order', 'view_spendbudget', 'confirm_refund', 'view_operations'],
+            'finance_operator': ['view_creditpurchase', 'view_creditentry', 'view_paymentattempt', 'view_refund', 'view_financialevent', 'view_order', 'view_spendbudget', 'confirm_refund', 'view_operations'],
             'safety_operator': ['view_safetycontrol', 'operate_safety', 'view_operatoraudit', 'view_operationalalert', 'view_operations'],
         }
         for name, codenames in operators.items():

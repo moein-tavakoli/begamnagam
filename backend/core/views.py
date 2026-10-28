@@ -6,6 +6,7 @@ import uuid
 from datetime import timedelta
 
 from django.conf import settings
+from django.core.exceptions import RequestDataTooBig
 from django.contrib.auth import get_user_model, login, logout
 from django.core.cache import cache
 from django.db import connection, transaction
@@ -41,6 +42,8 @@ def body(request):
         raise APIError("invalid_input", "بدنه درخواست باید JSON باشد.", 415)
     try:
         data = json.loads(request.body)
+    except RequestDataTooBig:
+        raise APIError("request_too_large", "حجم درخواست بیش از حد مجاز است.", 413) from None
     except (ValueError, UnicodeDecodeError):
         raise APIError("invalid_input", "ساختار درخواست معتبر نیست.")
     if not isinstance(data, dict):
@@ -74,13 +77,28 @@ def health(request):
 @api(["GET"])
 def bootstrap(request):
     session_key(request)
+    from .payment_options import options as payment_options
     authenticated = is_product_authenticated(request.user)
     from .freeform import available as freeform_available
+    from .ai_config import current as ai_configuration
+    from .limits import policy
+    ai = ai_configuration()
+    from .message_tones import choices as tone_choices, resolve as resolve_tone
+    from .packages import balance_field, package_data, checkout_enabled
+    from .models import MessagePackage
     data = {"demo_mode": settings.DEMO_MODE, "authenticated": authenticated,
-        "price_toman": settings.PRICE_TOMAN, "categories": [c for c in CATEGORIES if not settings.PILOT_POSITIVE_ONLY or c["id"] in {"appreciation", "encouragement", "congratulations"}], "rewrite_mode": settings.AI_MODE if settings.AI_MODE != 'gapgpt' or freeform_available() else 'template', "payment_backend": settings.PAYMENT_BACKEND, "support_contact": settings.SUPPORT_CONTACT,
+        "price_toman": 0, "categories": [c for c in CATEGORIES if not settings.PILOT_POSITIVE_ONLY or c["id"] in {"appreciation", "encouragement", "congratulations"}], "rewrite_mode": ai.provider if freeform_available(ai) else 'template', "payment_backend": settings.PAYMENT_BACKEND, "support_contact": settings.SUPPORT_CONTACT,
         "otp_is_real": otp_is_real()}
+    data['message_packages'] = [package_data(p) for p in MessagePackage.objects.filter(active=True)]
+    data['package_checkout_enabled'] = checkout_enabled()
+    data['payment_options'] = payment_options()
+    data['message_tones'] = tone_choices(ai)
+    data['default_message_tone'] = resolve_tone(None, ai)
     if authenticated:
+        from .wallet import balance_field as wallet_balance_field
+        data['wallet_balance_toman'] = str(getattr(request.user.account, wallet_balance_field()))
         data["free_sends_remaining"] = request.user.account.free_sends_remaining
+        data['purchased_sends_remaining'] = getattr(request.user.account, balance_field())
         data["free_sends_total"] = 3 + request.user.account.free_sends_earned_total
         data["free_sends_earned_total"] = request.user.account.free_sends_earned_total
         data["recent_auth"] = timezone.now().timestamp() - request.session.get("phone_verified_at", 0) <= 300
@@ -103,7 +121,10 @@ def request_otp(request):
     limited("otp-session", session_key(request), 6, 600)
     limited("otp-phone", phone_hash, 3, 600)
     now = timezone.now()
-    if OTPChallenge.objects.filter(phone_hash=phone_hash, created_at__gt=now - timedelta(minutes=10)).count() >= 3:
+    from .limits import policy, request_limit
+    limits, phone_rule = policy(), request_limit("otp-phone")
+    if phone_rule.enabled and OTPChallenge.objects.filter(phone_hash=phone_hash,
+            created_at__gt=now - timedelta(seconds=phone_rule.window_seconds)).count() >= phone_rule.maximum:
         raise APIError("rate_limited", "کمی بعد دوباره برای کد تأیید تلاش کنید.", 429)
     demo_otp = settings.DEMO_MODE and settings.OTP_BACKEND == "demo" and settings.SMS_BACKEND == "console"
     if not demo_otp and settings.OTP_BACKEND != "kavenegar":
@@ -112,14 +133,14 @@ def request_otp(request):
     challenge_id = uuid.uuid4()
     OTPChallenge.objects.create(id=challenge_id, phone_hash=phone_hash, phone_cipher=encrypt(phone),
         code_digest=digest(f"otp:{challenge_id}:{code}"), session_key=session_key(request),
-        expires_at=now + timedelta(minutes=5))
+        expires_at=now + timedelta(seconds=limits.otp_validity_seconds))
     if demo_otp:
-        return {"challenge_id": str(challenge_id), "debug_code": code, "demo_mode": True, "expires_in": 300}
+        return {"challenge_id": str(challenge_id), "debug_code": code, "demo_mode": True, "expires_in": limits.otp_validity_seconds}
     from .providers import Kavenegar, ProviderDisabled, ProviderUnknown, ProviderRejected
     from .budget import reserve_cost
     delivery_status = 'accepted'
     try:
-        reserve_cost('otp:' + str(challenge_id), 'otp', settings.OTP_MAX_COST_RIAL)
+        reserve_cost('otp:' + str(challenge_id), 'otp', limits.otp_max_cost_rial)
         result = Kavenegar().otp(phone=phone, code=code)
         from .budget import observe_cost
         observe_cost("otp:" + str(challenge_id), result.cost_rial)
@@ -140,7 +161,7 @@ def request_otp(request):
         logger.warning('OTP outcome unknown request_id=%s reason=%s', request.public_request_id, otp_failure_reason(error))
     else:
         logger.info('OTP provider accepted request_id=%s reference=%s', request.public_request_id, result.reference)
-    return {"challenge_id": str(challenge_id), "demo_mode": False, "expires_in": 300, "delivery_status": delivery_status}
+    return {"challenge_id": str(challenge_id), "demo_mode": False, "expires_in": limits.otp_validity_seconds, "delivery_status": delivery_status}
 
 
 @api(["POST"])
@@ -155,13 +176,15 @@ def verify_otp(request):
         raise APIError("invalid_otp", "کد تأیید معتبر نیست.")
     code = code.translate(DIGITS).strip()
     limited("otp-verify-session", session_key(request), 30, 600)
+    from .limits import policy
+    max_attempts = policy().otp_max_attempts
     invalid = False
     with transaction.atomic():
         try:
             challenge = OTPChallenge.objects.select_for_update().get(id=challenge_id)
         except OTPChallenge.DoesNotExist:
             raise APIError("invalid_otp", "کد تأیید معتبر نیست.")
-        if challenge.session_key != request.session.session_key or challenge.consumed_at or challenge.expires_at <= timezone.now() or challenge.attempts >= 5:
+        if challenge.session_key != request.session.session_key or challenge.consumed_at or challenge.expires_at <= timezone.now() or challenge.attempts >= max_attempts:
             raise APIError("invalid_otp", "کد تأیید معتبر نیست یا منقضی شده است.")
         challenge.attempts += 1
         if len(code) != 6 or not hmac.compare_digest(challenge.code_digest, digest(f"otp:{challenge.id}:{code}")):
@@ -207,6 +230,8 @@ def logout_view(request):
 @api(["POST"])
 def preview(request):
     data = body(request)
+    if set(data) - {'text', 'category', 'recipient_phone', 'source_mode', 'payment_method', 'message_tone'}:
+        raise APIError('invalid_input', 'فقط متن اولیه و شمارهٔ گیرنده را بفرست؛ نتیجهٔ بررسی در سرور تعیین می‌شود.', 422)
     owner = request.user if is_product_authenticated(request.user) else None
     from .demo_limits import unlimited_demo_sends
     unlimited = unlimited_demo_sends(owner)
@@ -215,11 +240,20 @@ def preview(request):
     limited("preview-ip-flood", request.META.get("REMOTE_ADDR", "unknown"), 10000, 600)
     category = data.get("category", 'custom')
     text = data.get("text", "")
+    payment_method = data.get('payment_method', 'credit')
+    if not isinstance(payment_method, str) or payment_method not in {'credit', 'wallet', 'gateway'}:
+        raise APIError('invalid_input', 'روش پرداخت معتبر نیست.', 422)
+    if payment_method != 'credit':
+        raise APIError('package_required', 'ارسال تازه فقط از هدیه یا اعتبار بسته انجام می‌شود؛ ابتدا بستهٔ پیام بخر.', 409)
     if not isinstance(category, str):
         raise APIError("invalid_input", "دسته‌بندی معتبر را انتخاب کنید.")
     category = category or 'custom'
     from .freeform import available as freeform_available, prepare, signature
-    use_freeform = freeform_available()
+    from .ai_config import current as ai_configuration
+    ai = ai_configuration()
+    from .message_tones import resolve as resolve_tone
+    tone = resolve_tone(data.get('message_tone'), ai)
+    use_freeform = freeform_available(ai)
     source_mode = data.get('source_mode')
     if source_mode is not None and (not isinstance(source_mode, str) or source_mode not in {'suggestion', 'freeform'}):
         raise APIError('invalid_input', 'روش آماده‌سازی متن معتبر نیست.')
@@ -245,7 +279,7 @@ def preview(request):
             'برای آماده‌سازی متن، ابتدا وارد شو و شمارهٔ گیرنده را وارد کن.', 401 if not owner else 422)
     if owner and not unlimited:
         limited("preview-user", str(owner.pk), 20, 600)
-    direct = bool(owner and owner.account.direct_message_tone)
+    direct = tone != 'polite'
     sms_origin = settings.APP_BASE_URL.removeprefix('https://').removeprefix('http://')
     try:
         if use_freeform:
@@ -253,20 +287,26 @@ def preview(request):
             limit = freeform_body_limit(sms_origin)
             if limit < 20:
                 raise RewriteUnavailable()
-            rewritten, mode = prepare(owner, text, max_units=limit, direct=direct), 'gapgpt'
+            rewritten, mode = prepare(owner, text, max_units=limit, message_tone=tone, config=ai), ai.provider
             category = 'custom'
         else:
-            rewritten, mode = rewrite(category, text, direct=direct)
+            rewritten, mode = rewrite(category, text, message_tone=tone, provider_mode='template')
     except ModerationRejected as exc:
         ModerationAudit.objects.create(owner=owner, category=category[:32], outcome="rejected", reason_code=str(exc), content_digest=digest(json.dumps(text, ensure_ascii=True)))
-        raise APIError("moderation_rejected", "منظور این متن به شکل امن و محترمانه قابل آماده‌سازی نیست؛ درخواست مشخصت را بدون تهدید یا اطلاعات شخصی بنویس.", 422)
+        from .moderation import rejection_feedback
+        code, message = rejection_feedback(str(exc))
+        raise APIError(code, message, 422)
     except RewriteUnavailable:
         raise APIError("rewrite_unavailable", "آماده‌سازی متن موقتاً در دسترس نیست؛ کمی بعد تلاش کنید.", 503)
-    expires_at = timezone.now() + timedelta(minutes=15)
+    from .limits import policy
+    expires_at = timezone.now() + timedelta(seconds=policy().preview_validity_seconds)
     is_free = bool(owner and owner.account.free_sends_remaining > 0)
     with transaction.atomic():
         item = Preview.objects.create(owner=owner, session_key=session_key(request), category=category,
-            text='' if use_freeform else rewritten, generated_body=rewritten if use_freeform else '', recipient_hash=recipient_hash, terms_version=settings.TERMS_VERSION, moderation_mode=mode, expires_at=expires_at, is_free=is_free, price_toman=0 if is_free else settings.PRICE_TOMAN)
+            message_tone=tone,
+            payment_method='credit', wallet_policy_version='',
+            original_text=text,
+            text='' if use_freeform else rewritten, generated_body=rewritten if use_freeform else '', recipient_hash=recipient_hash, terms_version=settings.TERMS_VERSION, moderation_mode=mode, expires_at=expires_at, is_free=is_free, price_toman=0)
         token = ""
         if recipient_hash:
             from .recipient import issue_grant
@@ -276,15 +316,16 @@ def preview(request):
                 from .sms import compose_freeform_sms
                 full_sms = compose_freeform_sms(rewritten, sms_origin, token)
             else:
-                item.text, full_sms = compose_recipient_sms(category, rewritten, sms_origin, token, direct=direct)
+                item.text, full_sms = compose_recipient_sms(category, rewritten, sms_origin, token, message_tone=tone)
         except SMSTooLong:
             raise APIError("message_too_long", "متن نهایی بیش از سه بخش پیامک است؛ موضوع دیگری انتخاب کن.", 422)
         item.full_sms = full_sms
         item.review_signature = signature(item) if use_freeform else ''
         item.save(update_fields=["text", "full_sms", 'review_signature'])
-    ModerationAudit.objects.create(owner=owner, category=category, outcome="accepted", reason_code=mode + ("_direct" if direct else ""), content_digest=digest(json.dumps(text, ensure_ascii=True)))
-    return {"preview_id": str(item.id), "rewritten_text": item.generated_body if use_freeform else item.text, "price_toman": item.price_toman, "is_free": item.is_free,
-        "message_tone": "direct" if direct else "gentle",
+    ModerationAudit.objects.create(owner=owner, category=category, outcome="accepted", reason_code=mode + ('_' + tone if direct else ''), content_digest=digest(json.dumps(text, ensure_ascii=True)))
+    return {"preview_id": str(item.id), "payment_method": item.payment_method, "wallet_terms_version": item.wallet_policy_version,
+        "rewritten_text": item.generated_body if use_freeform else item.text, "price_toman": item.price_toman, "is_free": item.is_free,
+        "message_tone": item.message_tone,
         "expires_at": expires_at.isoformat(), "moderation_mode": mode, "terms_version": item.terms_version, "full_sms": item.full_sms, "sms_segments": 1 if len(full_sms.encode("utf-16-le")) // 2 <= 70 else (len(full_sms.encode("utf-16-le")) // 2 + 66) // 67}
 
 
@@ -296,11 +337,15 @@ def create_order(request):
 
 @api(["POST"], authenticated=True)
 def pay_demo(request, order_id):
+    if body(request):
+        raise APIError('server_snapshot_required', 'متن ارسال فقط از سفارش بررسی‌شدهٔ سرور خوانده می‌شود.', 422)
     return services.serialize_order(services.pay_order(request.user, order_id))
 
 
 @api(["POST"], authenticated=True)
 def confirm_free(request, order_id):
+    if body(request):
+        raise APIError('server_snapshot_required', 'متن ارسال فقط از سفارش بررسی‌شدهٔ سرور خوانده می‌شود.', 422)
     return services.serialize_order(services.confirm_free_order(request.user, order_id))
 
 
@@ -362,14 +407,17 @@ def payment_return(request):
     if len(authority) > 128:
         authority = ''
     # Status/query parameters never prove payment, and no session is trusted here.
-    attempt = PaymentAttempt.objects.filter(provider='zarinpal', authority=authority).exclude(authority='').first()
+    attempt = PaymentAttempt.objects.filter(provider='zarinpal', environment=settings.PROVIDER_ENVIRONMENT, authority=authority).exclude(authority='').first()
+    if not settings.DEMO_MODE and settings.PROVIDER_ENVIRONMENT != 'live':
+        attempt = None
     if attempt:
         limited('callback', str(attempt.pk), 10, 60)
         try:
             verify_provider_payment.delay(str(attempt.pk))
         except Exception:
             pass  # Independent reconciler will verify the durable attempt.
-    return HttpResponseRedirect(settings.APP_BASE_URL + '/history?payment_return=1')
+    target = '/wallet?topup=' + str(attempt.wallet_topup_id) if attempt and attempt.wallet_topup_id else '/credits?purchase=' + str(attempt.purchase_id) if attempt and attempt.purchase_id else '/history?payment_return=1'
+    return HttpResponseRedirect(settings.APP_BASE_URL + target)
 
 
 @api(["POST"])

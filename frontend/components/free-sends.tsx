@@ -10,7 +10,7 @@ export function FreeSendsBalance({ compact = false }: { compact?: boolean } = {}
   return (
     <p className={`free-sends-balance small${compact ? " is-compact" : ""}`} role="status">
       {!compact && <Icon name="sparkle" size={17} />}
-      {compact ? "باقیمانده:" : "ارسال رایگان باقی‌مانده:"} {number.format(data.free_sends_remaining)} از {number.format(data.free_sends_total ?? 3)}
+      {compact ? "هدیه:" : "ارسال هدیهٔ باقی‌مانده:"} {number.format(data.free_sends_remaining)} از {number.format(data.free_sends_total ?? 3)} · اعتبار بسته: {number.format(data.purchased_sends_remaining ?? 0)}
     </p>
   );
 }

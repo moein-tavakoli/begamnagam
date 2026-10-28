@@ -82,6 +82,33 @@ test("server moderation errors retain their Persian explanation and field detail
   );
 });
 
+test("logout clears private UI only after a successful CSRF-protected request", async context => {
+  const previousFetch = globalThis.fetch;
+  const previousWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
+  const previousDocument = Object.getOwnPropertyDescriptor(globalThis, "document");
+  context.after(() => {
+    globalThis.fetch = previousFetch;
+    for (const [key, descriptor] of [["window", previousWindow], ["document", previousDocument]] as const) {
+      if (descriptor) Object.defineProperty(globalThis, key, descriptor);
+      else Reflect.deleteProperty(globalThis, key);
+    }
+  });
+  const events: string[] = [];
+  Object.defineProperty(globalThis, "window", {configurable: true, value: {dispatchEvent: (event: Event) => events.push(event.type)}});
+  Object.defineProperty(globalThis, "document", {configurable: true, value: {cookie: "csrftoken=logout-csrf"}});
+  globalThis.fetch = async (input, init) => {
+    assert.equal(input, "/api/v1/auth/logout");
+    assert.equal(init?.method, "POST");
+    assert.equal((init?.headers as Record<string, string>)["X-CSRFToken"], "logout-csrf");
+    return Response.json({error: {message: "دوباره تلاش کن."}}, {status: 503});
+  };
+  await assert.rejects(() => api("/auth/logout", {method: "POST", body: {}}));
+  assert.deepEqual(events, []);
+  globalThis.fetch = async () => Response.json({logged_out: true});
+  await api("/auth/logout", {method: "POST", body: {}});
+  assert.deepEqual(events, ["privacy-reset"]);
+});
+
 test("offline and non-JSON proxy failures become recoverable service errors", async (context) => {
   const previousFetch = globalThis.fetch;
   context.after(() => {
@@ -125,7 +152,9 @@ test("business restrictions remain useful while system and provider credit detai
 
 test('gateway navigation is restricted to documented HTTPS hosts or explicit demo loopback', async () => {
   const {approvedPaymentRedirect}=await import('../lib/api.ts');
-  assert.match(approvedPaymentRedirect('https://sandbox.zarinpal.com/pg/StartPay/S123',false),/^https:/);
+  assert.throws(()=>approvedPaymentRedirect('https://sandbox.zarinpal.com/pg/StartPay/S123',false));
+  assert.match(approvedPaymentRedirect('https://sandbox.zarinpal.com/pg/StartPay/S123',true),/^https:/);
+  assert.match(approvedPaymentRedirect('https://www.zarinpal.com/pg/StartPay/A123',false),/^https:/);
   assert.throws(()=>approvedPaymentRedirect('https://sandbox.zarinpal.com.evil.invalid/pg/StartPay/S123',false));
   assert.throws(()=>approvedPaymentRedirect('http://www.zarinpal.com/pg/StartPay/S123',false));
   assert.throws(()=>approvedPaymentRedirect('javascript:alert(1)',true));

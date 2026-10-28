@@ -9,6 +9,7 @@ import {
   useRef,
 } from "react";
 import { api, errorMessage, type Bootstrap } from "@/lib/api";
+import { openSessionChannel } from "@/lib/browser-capabilities";
 
 type AppContextValue = {
   data: Bootstrap | null;
@@ -47,7 +48,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     void reload();
   }, [reload]);
   useEffect(()=>{
-    const channel=typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('begamnagam-session') : null;
+    const channel=openSessionChannel();
     const clear=()=>{generation.current+=1;identity.current=undefined;setData(null);setPrivacyEpoch(v=>v+1);void reload();};
     const local=()=>{clear();channel?.postMessage('session-changed');};
     const remote=(event:MessageEvent)=>{if(event.data==='session-changed')clear();};

@@ -3,7 +3,7 @@ name: begamnagam-internal
 
 x-app: &app
   image: ${BACKEND_IMAGE:?Set the built backend image}
-  env_file: .env.internal
+  env_file: ${APPLICATION_ENV_FILE:-.env.internal}
   environment:
     DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-config.internal_settings}
     DEBUG: "0"
@@ -137,6 +137,7 @@ services:
     logging: *logging
   migrate:
     <<: *app
+    env_file: ${MIGRATION_ENV_FILE:-.env.internal}
     command: [python, manage.py, migrate, --noinput]
     restart: "no"
     mem_limit: 128m

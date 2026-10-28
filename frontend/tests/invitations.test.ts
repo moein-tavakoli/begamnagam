@@ -12,8 +12,10 @@ test("resend guidance explains registration, exhaustion, uncertainty and cooldow
   const item = { status: "waiting", sends_remaining: 2, delivery_status: "delivered", can_resend: true } as Invitation;
   assert.equal(resendExplanation(item), "");
   assert.match(resendExplanation({...item, status: "registered"}), /ثبت‌نام/);
-  assert.match(resendExplanation({...item, status: "expired"}), /۳۰روزه/);
-  assert.match(resendExplanation({...item, sends_remaining: 0}), /هر سه/);
+  assert.match(resendExplanation({...item, status: "expired"}), /مهلت/);
+  assert.match(resendExplanation({...item, sends_remaining: 0}), /سقف تعداد/);
   assert.match(resendExplanation({...item, delivery_status: "unknown"}), /نتیجه/);
   assert.match(resendExplanation({...item, can_resend: false}), /۲۴ ساعت/);
+  assert.match(resendExplanation({...item, can_resend: false, cooldown_hours: 2}), /۲ ساعت/);
+  assert.equal(resendExplanation({...item, sends_remaining: null, max_sends: null, cooldown_hours: 0}), "");
 });

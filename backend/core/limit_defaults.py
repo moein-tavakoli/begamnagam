@@ -1,0 +1,20 @@
+"""Named request controls, also used as Persian admin labels."""
+REQUEST_LIMITS = {
+    'wallet-topup': ('درخواست شارژ کیف پول', 5, 60, True),
+    "manage-login-ip": ("ورود مدیر از هر IP", 20, 600, True),
+    "manage-login-session": ("ورود مدیر از هر نشست", 8, 600, True),
+    "otp-ip-flood": ("درخواست کد ورود از هر IP", 1000, 600, False),
+    "otp-session": ("درخواست کد ورود از هر نشست", 6, 600, False),
+    "otp-phone": ("درخواست کد ورود برای هر شماره", 3, 600, False),
+    "otp-verify-session": ("تلاش تأیید کد از هر نشست", 30, 600, True),
+    "preview-session": ("آماده‌سازی متن از هر نشست", 20, 600, False),
+    "preview-user": ("آماده‌سازی متن از هر حساب", 20, 600, False),
+    "preview-ip-flood": ("آماده‌سازی متن از هر IP", 10000, 600, False),
+    "orders": ("ثبت سفارش از هر حساب", 10, 60, False),
+    "callback": ("بررسی بازگشت پرداخت", 10, 60, True),
+    "recipient-action-session": ("لینک خصوصی دریافت؛ هر نشست", 30, 600, True),
+    "recipient-action-ip": ("لینک خصوصی دریافت؛ هر IP", 120, 600, True),
+    "recipient-action-token": ("لینک خصوصی دریافت؛ هر کد", 30, 600, True),
+    "invite-account": ("درخواست دعوت از هر حساب", 30, 86400, False),
+    "invite-ip": ("درخواست دعوت از هر IP", 100, 86400, False),
+}

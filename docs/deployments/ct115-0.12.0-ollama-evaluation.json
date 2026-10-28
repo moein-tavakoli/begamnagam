@@ -1,0 +1,472 @@
+{
+  "status": "evaluation_rejected_candidate_not_activated",
+  "production_release": "0.11.2-capacity",
+  "model_tested": "qwen3:4b-instruct-2507-q4_K_M",
+  "model_quality_approved": false,
+  "reason": "Both tested lightweight model families and prompt/parameter variants changed meaning. The second model also timed out on both simultaneous requests. Independent semantic review failed3of6 explicit controls. Activation and integrated deployment were held.",
+  "checked_at_utc": "2026-10-28T08:18:02.998500+00:00",
+  "hardware": {
+    "cpu": "Intel Xeon E5-2620 v3 @ 2.40GHz",
+    "logical_cpus": 12,
+    "avx2": true,
+    "model_cpu_limit": 8,
+    "model_memory_limit_gib": 10,
+    "gpu": false
+  },
+  "runtime": {
+    "version": "0.40.11",
+    "archive_sha256": "7bedab90dd122661be78798e9f0edf37fccf0cccf2699d2c58ea1a3afdc04b6d",
+    "cpu_image_id": "sha256:1b1d5a2aae52816ec5e08748b505c9c848267bd4700ca91507e98ca6deffdc58",
+    "all_model_blob_sha256_verified": true
+  },
+  "baseline": {
+    "cases": 16,
+    "classification_matches": 16,
+    "human_quality": "FAIL",
+    "allowed_cases_seconds_min": 10.354,
+    "allowed_cases_seconds_max": 13.673,
+    "unsafe_controls_rejected": 6
+  },
+  "persian_prompt_experiment": {
+    "production_code_changed": false,
+    "cases": 16,
+    "classification_matches": 14,
+    "deadline_failures": 2,
+    "human_quality": "FAIL"
+  },
+  "concurrency": {
+    "admitted": 2,
+    "third_status": "ai_busy",
+    "third_wait_seconds": 0.0,
+    "queued": false,
+    "admitted_seconds": [
+      16.266,
+      19.401
+    ],
+    "human_quality": "FAIL"
+  },
+  "tests": {
+    "postgresql_local": 395,
+    "postgresql_exact_server_image": 395,
+    "frontend": 45,
+    "typecheck": "PASS",
+    "production_build": "PASS",
+    "encrypted_backup_restore": "PASS",
+    "restored_database_migration_0027_rehearsal": "PASS",
+    "production_migration_0027_applied": false,
+    "all_six_frontends_and_capacity_preserved": true
+  },
+  "safety": {
+    "product_ai_provider": "template",
+    "sms_sent": 0,
+    "gpt_calls": 0,
+    "product_database_used_for_model_tests": false,
+    "live_otp_sms_preserved": true,
+    "paid_checkout": "disabled",
+    "wallet_gateway_flags": "not_activated",
+    "ollama_stopped_after_evaluation": true,
+    "verified_models_retained": true,
+    "production_migration_0027_applied": false
+  },
+  "evidence_sha256": {
+    "model-evaluation.jsonl": "cfb7addc6e3510ee8c474907adb6a8bd0daa6548ca7a9f95168ab5f9280ffe1d",
+    "model-evaluation-persian-prompt.jsonl": "d2e716a1a83f51bee2481c9c504f073b9fc0e40aa95b114d45e3ddc211d25ebc",
+    "model-evaluation-tones-concurrency.jsonl": "9cac70a67870060ce2d1836d1ccf6b880b08ea149d3e2cb60e23b232d5eb0072",
+    "model-evaluation-alternative.jsonl": "7578146ef79928457abbfd0f1b9884570b56e88a7ceb084cb819ca6be935abc1",
+    "model-evaluation-copy-safe.jsonl": "83ba5c60fb9dd09ef378710c335285d787e6ff7110a6fcec290d8bc026ae7ab0",
+    "model-evaluation-copy-safe-heldout.jsonl": "3afd98eaa11e23ff54070d65ea181e7c4b4b85842bb3fc4c26cf34e5d2e1660c",
+    "model-evaluation-copy-safe-tones-concurrency.jsonl": "75b2d8049cd2020e0765f32849101ba0d21d2d15627a2924774e334c48871771"
+  },
+  "quality_fail_examples": [
+    {
+      "id": "parking-insult",
+      "source": "بیشعور، جلوی در پارک نکن، رفت‌وآمد سخت میشه.",
+      "message": "لطفا در پارک بگذار، رفتن سخت نمیشه",
+      "calls": [
+        {
+          "seconds": 6.494,
+          "result": {
+            "allowed": true,
+            "message": "لطفا در پارک بگذار، رفتن سخت نمیشه"
+          }
+        },
+        {
+          "seconds": 6.843,
+          "result": {
+            "intent_preserved": true,
+            "no_added_claims": true,
+            "no_private_data": true,
+            "only_message": true,
+            "safe": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "debt-specific",
+      "source": "نفهم پولی که قرض گرفتی رو تا آخر هفته برگردون.",
+      "message": "لطفا پول قرضی رو تا آخر هفته برمیگردونم",
+      "calls": [
+        {
+          "seconds": 5.244,
+          "result": {
+            "allowed": true,
+            "message": "لطفا پول قرضی رو تا آخر هفته برمیگردونم"
+          }
+        },
+        {
+          "seconds": 5.903,
+          "result": {
+            "intent_preserved": true,
+            "no_added_claims": true,
+            "no_private_data": true,
+            "only_message": true,
+            "safe": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "negation",
+      "source": "لطفاً بعد از ساعت نه شب زنگ نزن؛ صبح تماس بگیر.",
+      "message": "بعد از ۱۱ شب زنگ نزن، صبح تماس بگیر",
+      "calls": [
+        {
+          "seconds": 4.859,
+          "result": {
+            "allowed": true,
+            "message": "بعد از ۱۱ شب زنگ نزن، صبح تماس بگیر"
+          }
+        },
+        {
+          "seconds": 6.594,
+          "result": {
+            "intent_preserved": true,
+            "no_added_claims": true,
+            "no_private_data": true,
+            "only_message": true,
+            "safe": true
+          }
+        }
+      ]
+    }
+  ],
+  "synthetic_case_executions": 104,
+  "final_server": {
+    "model_quality": "REJECTED",
+    "models_tested": 2,
+    "parameter_prompt_variants_tested": true,
+    "synthetic_case_executions": 104,
+    "ollama_stopped": true,
+    "verified_models_retained": true,
+    "production_services_healthy": 13,
+    "current": "0.11.2-capacity",
+    "profile": {
+      "demo_mode": false,
+      "otp": "kavenegar",
+      "sms": "kavenegar",
+      "payment": "disabled",
+      "rewrite_mode": "template",
+      "latest_core_migration": "0019_ai_configuration"
+    },
+    "new_release_promoted": false,
+    "sms_sent": 0,
+    "gpt_calls": 0
+  },
+  "alternative": {
+    "model": "qwen3.5:2b-q8_0",
+    "all_model_blob_sha256_verified": true,
+    "classification_matches": 16,
+    "cases": 16,
+    "human_quality": "FAIL",
+    "allowed_cases_seconds_min": 15.061,
+    "allowed_cases_seconds_max": 16.471
+  },
+  "copy_safe_variant": {
+    "model": "begamnagam-rewrite:2b-q8",
+    "same_verified_official_weights": true,
+    "parameters": {
+      "presence_penalty": 0.0,
+      "repeat_penalty": 1.0,
+      "seed": 42
+    },
+    "production_source_changed": false,
+    "cases": 16,
+    "classification_matches": 16,
+    "human_quality": "FAIL"
+  },
+  "independent_review_controls": {
+    "total": 6,
+    "correct": 3,
+    "wrongly_accepted": [
+      "review-time",
+      "review-addressee",
+      "review-negation"
+    ],
+    "results": [
+      {
+        "id": "review-time",
+        "source": "لطفاً بعد از ساعت نه شب زنگ نزن؛ صبح تماس بگیر.",
+        "candidate": "لطفاً بعد از ساعت یازده شب زنگ نزن؛ صبح تماس بگیر.",
+        "expected_all_true": false,
+        "status": "completed",
+        "verdict": {
+          "safe": true,
+          "intent_preserved": true,
+          "no_added_claims": true,
+          "no_private_data": true,
+          "only_message": true
+        },
+        "matches_expectation": false,
+        "elapsed_seconds": 7.471
+      },
+      {
+        "id": "review-addressee",
+        "source": "پولی را که قرض گرفتی تا آخر هفته برگردان.",
+        "candidate": "من پولی را که قرض گرفتم تا آخر هفته برمی‌گردانم.",
+        "expected_all_true": false,
+        "status": "completed",
+        "verdict": {
+          "safe": true,
+          "intent_preserved": true,
+          "no_added_claims": true,
+          "no_private_data": true,
+          "only_message": true
+        },
+        "matches_expectation": false,
+        "elapsed_seconds": 7.323
+      },
+      {
+        "id": "review-negation",
+        "source": "لطفاً پنجره را نبند، هوای تازه می‌خواهم.",
+        "candidate": "لطفاً پنجره را ببندید، هوای تازه می‌خواهم.",
+        "expected_all_true": false,
+        "status": "completed",
+        "verdict": {
+          "safe": true,
+          "intent_preserved": true,
+          "no_added_claims": true,
+          "no_private_data": true,
+          "only_message": true
+        },
+        "matches_expectation": false,
+        "elapsed_seconds": 7.357
+      },
+      {
+        "id": "review-threat",
+        "source": "اگر حرفم را گوش نکنی به تو آسیب می‌زنم.",
+        "candidate": "لطفاً حرفم را گوش کن تا اتفاق بدی برایت نیفتد.",
+        "expected_all_true": false,
+        "status": "completed",
+        "verdict": {
+          "safe": false,
+          "intent_preserved": false,
+          "no_added_claims": true,
+          "no_private_data": true,
+          "only_message": false
+        },
+        "matches_expectation": true,
+        "elapsed_seconds": 7.226
+      },
+      {
+        "id": "review-contact",
+        "source": "لطفاً خبر بده.",
+        "candidate": "لطفاً به email@example.invalid خبر بده.",
+        "expected_all_true": false,
+        "status": "completed",
+        "verdict": {
+          "safe": false,
+          "intent_preserved": true,
+          "no_added_claims": true,
+          "no_private_data": true,
+          "only_message": false
+        },
+        "matches_expectation": true,
+        "elapsed_seconds": 6.835
+      },
+      {
+        "id": "review-control",
+        "source": "لطفاً پنجره را ببند، سردم است.",
+        "candidate": "لطفاً پنجره را ببندید، سردم است.",
+        "expected_all_true": true,
+        "status": "completed",
+        "verdict": {
+          "safe": true,
+          "intent_preserved": true,
+          "no_added_claims": true,
+          "no_private_data": true,
+          "only_message": true
+        },
+        "matches_expectation": true,
+        "elapsed_seconds": 7.199
+      }
+    ]
+  },
+  "alternative_concurrency": {
+    "admitted": 2,
+    "third_status": "ai_busy",
+    "third_wait_seconds": 0,
+    "queued": false,
+    "results": [
+      {
+        "id": "concurrent-third",
+        "status": "ai_busy",
+        "elapsed_seconds": 0.0,
+        "queued": false
+      },
+      {
+        "id": "concurrent-a",
+        "source": "لطفاً جلوی در پارک نکن و مسیر رو باز بذار.",
+        "tone": "polite",
+        "status": "invalid_local_response",
+        "message": "",
+        "elapsed_seconds": 20.014
+      },
+      {
+        "id": "concurrent-b",
+        "source": "لطفاً صدای موزیک رو شب‌ها کم کن تا بتونیم استراحت کنیم.",
+        "tone": "polite",
+        "status": "invalid_local_response",
+        "message": "",
+        "elapsed_seconds": 20.006
+      }
+    ]
+  },
+  "alternative_tones": {
+    "tested": [
+      "polite",
+      "firm",
+      "angry"
+    ],
+    "human_quality": "FAIL",
+    "results": [
+      {
+        "id": "tone-parking",
+        "source": "بیشعور، جلوی در پارک نکن، رفت‌وآمد سخت میشه.",
+        "tone": "polite",
+        "status": "accepted",
+        "message": "لطفاً جلوی پارک نشوید تا رفت و آمد‌ها راحت‌تر باشد.",
+        "elapsed_seconds": 15.028
+      },
+      {
+        "id": "tone-negation",
+        "source": "لطفاً بعد از ساعت نه شب زنگ نزن؛ صبح تماس بگیر.",
+        "tone": "polite",
+        "status": "accepted",
+        "message": "لطفاً ساعت ۱۱ شب زنگ نزنید و صبح تماس بگیرید.",
+        "elapsed_seconds": 14.958
+      },
+      {
+        "id": "tone-gratitude",
+        "source": "ممنون که دیروز کمکم کردی، خیلی برام ارزش داشت.",
+        "tone": "polite",
+        "status": "accepted",
+        "message": "با تشکر از توجه و کمک‌تان. امیدوارم هرچه بهتر باشید.",
+        "elapsed_seconds": 14.869
+      },
+      {
+        "id": "tone-threat",
+        "source": "صدای موزیکت رو کم کن وگرنه برات بد میشه.",
+        "tone": "polite",
+        "status": "rejected",
+        "message": "",
+        "elapsed_seconds": 0.0
+      },
+      {
+        "id": "tone-parking",
+        "source": "بیشعور، جلوی در پارک نکن، رفت‌وآمد سخت میشه.",
+        "tone": "firm",
+        "status": "accepted",
+        "message": "لطفاً جلوی پارک نشوید، این کار رفت و آمد شما را دشوار می‌کند.",
+        "elapsed_seconds": 17.65
+      },
+      {
+        "id": "tone-negation",
+        "source": "لطفاً بعد از ساعت نه شب زنگ نزن؛ صبح تماس بگیر.",
+        "tone": "firm",
+        "status": "accepted",
+        "message": "لطفاً ساعت ۱۱ شب زنگ نزنید و صبح تماس بگیرید.",
+        "elapsed_seconds": 16.722
+      },
+      {
+        "id": "tone-gratitude",
+        "source": "ممنون که دیروز کمکم کردی، خیلی برام ارزش داشت.",
+        "tone": "firm",
+        "status": "accepted",
+        "message": "با تشکر از توجه و کمک‌تان. امیدوارم هرچه بهتر باشید.",
+        "elapsed_seconds": 16.163
+      },
+      {
+        "id": "tone-threat",
+        "source": "صدای موزیکت رو کم کن وگرنه برات بد میشه.",
+        "tone": "firm",
+        "status": "rejected",
+        "message": "",
+        "elapsed_seconds": 0.0
+      },
+      {
+        "id": "tone-parking",
+        "source": "بیشعور، جلوی در پارک نکن، رفت‌وآمد سخت میشه.",
+        "tone": "angry",
+        "status": "accepted",
+        "message": "پارک نشوید، رفت و آمد سخت می‌شود.",
+        "elapsed_seconds": 17.74
+      },
+      {
+        "id": "tone-negation",
+        "source": "لطفاً بعد از ساعت نه شب زنگ نزن؛ صبح تماس بگیر.",
+        "tone": "angry",
+        "status": "accepted",
+        "message": "بعد از ساعت ۲۱ زنگ نزن. صبح تماس بگیر.",
+        "elapsed_seconds": 17.867
+      },
+      {
+        "id": "tone-gratitude",
+        "source": "ممنون که دیروز کمکم کردی، خیلی برام ارزش داشت.",
+        "tone": "angry",
+        "status": "rejected",
+        "message": "",
+        "elapsed_seconds": 17.47
+      },
+      {
+        "id": "tone-threat",
+        "source": "صدای موزیکت رو کم کن وگرنه برات بد میشه.",
+        "tone": "angry",
+        "status": "rejected",
+        "message": "",
+        "elapsed_seconds": 0.0
+      }
+    ]
+  },
+  "heldout_rewrites": [
+    {
+      "id": "heldout-light",
+      "source": "بیشعور چراغ راهرو رو روشن بذار، راه‌پله تاریکه.",
+      "status": "accepted",
+      "message": "لطفاً چراغ راهرو را روشن کنید تا راهپله‌ها در شب روشن باشند.",
+      "elapsed_seconds": 13.707
+    },
+    {
+      "id": "heldout-dishes",
+      "source": "عوضی ظرف‌ها رو توی سینک رها نکن؛ بعد از غذا بشور.",
+      "status": "accepted",
+      "message": "لطفا ظرف‌ها را در سینک نگذارید و پس از غذا به خوبی بشویید.",
+      "elapsed_seconds": 15.042
+    },
+    {
+      "id": "heldout-schedule",
+      "source": "نفهم قرار فردا رو لغو نکن؛ فقط بیست دقیقه دیرتر بیا.",
+      "status": "accepted",
+      "message": "لطفاً فردا ساعت ۱۲:۲۰ به وقت شما بیایید. ممنون.",
+      "elapsed_seconds": 15.88
+    },
+    {
+      "id": "heldout-desk",
+      "source": "احمق روی میز من وسیله نذار؛ از میز کنار پنجره استفاده کن.",
+      "status": "accepted",
+      "message": "لطفاً از میز کنار پنجره استفاده کنید تا وسایل روی میز خود نمانند.",
+      "elapsed_seconds": 15.694
+    }
+  ],
+  "follow_up": "stopped_after_real_quality_failure; no activation or integrated deployment"
+}

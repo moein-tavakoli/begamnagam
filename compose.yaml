@@ -1,14 +1,14 @@
 name: begamnagam
 
 x-backend-environment: &backend-environment
-  DEBUG: "1"
+  DEBUG: "0"
   DEMO_MODE: "1"
-  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-local-demo-only-change-before-sharing-71684bf2f02d}
-  PHONE_HASH_KEY: ${PHONE_HASH_KEY:-local-demo-phone-hash-change-before-sharing-71684bf2}
-  PHONE_ENCRYPTION_KEY: ${PHONE_ENCRYPTION_KEY:-}
-  DATABASE_URL: postgres://${POSTGRES_USER:-begamnagam}:${POSTGRES_PASSWORD:-local-demo-only}@postgres:5432/${POSTGRES_DB:-begamnagam}
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY in the private .env}
+  PHONE_HASH_KEY: ${PHONE_HASH_KEY:?Set PHONE_HASH_KEY in the private .env}
+  PHONE_ENCRYPTION_KEY: ${PHONE_ENCRYPTION_KEY:?Set PHONE_ENCRYPTION_KEY in the private .env}
+  DATABASE_URL: postgres://${POSTGRES_USER:-begamnagam}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the private .env}@postgres:5432/${POSTGRES_DB:-begamnagam}
   REDIS_URL: redis://redis:6379/0
-  CELERY_BROKER_URL: amqp://${RABBITMQ_USER:-begamnagam}:${RABBITMQ_PASSWORD:-local-demo-only}@rabbitmq:5672//
+  CELERY_BROKER_URL: amqp://${RABBITMQ_USER:-begamnagam}:${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in the private .env}@rabbitmq:5672//
   CELERY_TASK_ALWAYS_EAGER: "0"
   ALLOWED_HOSTS: localhost,127.0.0.1,backend
   CSRF_TRUSTED_ORIGINS: http://localhost:${WEB_PORT:-3000},http://127.0.0.1:${WEB_PORT:-3000},http://localhost:${API_PORT:-8000},http://127.0.0.1:${API_PORT:-8000}
@@ -20,10 +20,11 @@ x-backend-environment: &backend-environment
   DEMO_TEST_TOOLS_ENABLED: ${DEMO_TEST_TOOLS_ENABLED:-0}
   AI_MODE: ${AI_MODE:-template}
   GAPGPT_API_KEY: ${GAPGPT_API_KEY:-}
-  GAPGPT_MODEL: ${GAPGPT_MODEL:-}
+  GAPGPT_MODEL: ${GAPGPT_MODEL:-gpt-4.1-mini}
   GAPGPT_BASE_URL: ${GAPGPT_BASE_URL:-https://api.gapgpt.app/v1}
   GAPGPT_TIMEOUT_SECONDS: ${GAPGPT_TIMEOUT_SECONDS:-5}
   GAPGPT_DAILY_REQUEST_LIMIT: ${GAPGPT_DAILY_REQUEST_LIMIT:-0}
+  GAPGPT_DAILY_REQUEST_UNLIMITED: ${GAPGPT_DAILY_REQUEST_UNLIMITED:-0}
   GAPGPT_USER_DAILY_LIMIT: ${GAPGPT_USER_DAILY_LIMIT:-0}
   # Only OTP may opt into real local testing; order SMS/payments remain simulated.
   SMS_BACKEND: console
@@ -56,7 +57,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-begamnagam}
       POSTGRES_USER: ${POSTGRES_USER:-begamnagam}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-demo-only}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the private .env}
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -82,7 +83,7 @@ services:
     image: rabbitmq:4.4-alpine
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-begamnagam}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-local-demo-only}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in the private .env}
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
     healthcheck:

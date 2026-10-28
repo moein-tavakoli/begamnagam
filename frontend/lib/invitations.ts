@@ -5,7 +5,10 @@ export type Invitation = {
   registered_at: string | null;
   status: "registered" | "expired" | "waiting";
   send_count: number;
-  sends_remaining: number;
+  sends_remaining: number | null;
+  max_sends?: number | null;
+  cooldown_hours?: number;
+  validity_days?: number | null;
   can_resend: boolean;
   next_send_at: string;
   delivery_status: string;
@@ -21,7 +24,12 @@ export type InvitationList = {
   total: number;
   registered: number;
   earned_credits: number;
-  daily_remaining: number;
+  daily_remaining: number | null;
+  daily_limit?: number | null;
+  max_sends?: number | null;
+  window_hours?: number;
+  cooldown_hours?: number;
+  validity_days?: number | null;
   consent_version: string;
 };
 
@@ -33,9 +41,9 @@ export function invitationDeliveryLabel(status: string): string {
 
 export function resendExplanation(item: Invitation): string {
   if (item.status === "registered") return "ثبت‌نام انجام شده؛ دعوت دیگری لازم نیست.";
-  if (item.status === "expired") return "مهلت ۳۰روزهٔ دعوت تمام شده است.";
-  if (item.sends_remaining === 0) return "هر سه نوبت درخواست دعوت استفاده شده است.";
+  if (item.status === "expired") return "مهلت درخواست مجدد این دعوت تمام شده است.";
+  if (item.sends_remaining === 0) return "سقف تعداد درخواست دعوت برای این مخاطب تکمیل شده است.";
   if (["pending", "submitting", "unknown"].includes(item.delivery_status)) return "ابتدا نتیجهٔ درخواست قبلی باید مشخص شود.";
-  if (!item.can_resend) return "درخواست بعدی پس از ۲۴ ساعت از درخواست قبلی فعال می‌شود.";
+  if (!item.can_resend) return `درخواست بعدی پس از ${new Intl.NumberFormat("fa-IR").format(item.cooldown_hours ?? 24)} ساعت از درخواست قبلی فعال می‌شود.`;
   return "";
 }

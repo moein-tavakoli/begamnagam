@@ -1,0 +1,14 @@
+# Apply after compose.internal.yaml. Credentials are created out of the release
+# tree by the operator; application and migration env files must be separate.
+services:
+  redis:
+    command: [redis-server, /etc/redis/redis.conf]
+    volumes:
+      - ${SERVICE_SECURITY_DIR:?Required private service configuration}/redis.conf:/etc/redis/redis.conf:ro
+      - ${SERVICE_SECURITY_DIR:?Required private service configuration}/redis.acl:/etc/redis/users.acl:ro
+      - ${SERVICE_SECURITY_DIR:?Required private service configuration}/redis-health-password:/run/redis-health-password:ro
+    healthcheck:
+      test: [CMD-SHELL, 'REDISCLI_AUTH="$$(cat /run/redis-health-password)" redis-cli --user begamnagam_health ping | grep -qx PONG']
+      interval: 10s
+      timeout: 5s
+      retries: 20

@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import "@fontsource/vazirmatn/400.css";
 import "@fontsource/vazirmatn/500.css";
 import "@fontsource/vazirmatn/600.css";
@@ -8,24 +9,9 @@ import { AppProvider } from "@/components/app-provider";
 import { Header, Footer, MobileNav } from "@/components/chrome";
 
 import { PWAFoundation } from "@/components/pwa-foundation";
-import { getSeoConfig } from "@/lib/seo";
+import { rootMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  metadataBase: getSeoConfig().baseUrl,
-  title: {
-    default: "بگم نگم | حرفت رو مهربون‌تر برسون",
-    template: "%s | بگم نگم",
-  },
-  description:
-    "بازخورد محترمانه با پیامک، بدون نمایش هویت فرستنده به گیرنده. متن نهایی را قبل از ارسال ببین و حق قطع دریافت را به گیرنده بده.",
-  applicationName: "بگم نگم",
-  manifest: "/manifest.webmanifest",
-  icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }, { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }], apple: "/icons/apple-touch-icon.png" },
-  appleWebApp: { capable: true, statusBarStyle: "default", title: "بگم نگم" },
-  referrer: "no-referrer",
-  formatDetection: { telephone: false },
-  robots: { index: false, follow: false },
-};
+export const metadata: Metadata = rootMetadata();
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
@@ -33,9 +19,12 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  // Reading request headers opts every HTML page into dynamic rendering, so
+  // Next applies the current CSP nonce instead of reusing a cached document.
+  await headers();
   return (
     <html lang="fa" dir="rtl">
       <body>

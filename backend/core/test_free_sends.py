@@ -28,7 +28,7 @@ class FreeSendsTests(TestCase):
     def remaining(self):
         return Account.objects.get(user=self.user).free_sends_remaining
 
-    def test_three_previews_and_fourth_paid_after_reserving_three(self):
+    def test_three_gifts_then_bundle_credit_after_reserving_three(self):
         for index in range(3):
             preview = self.preview()
             self.assertEqual(preview["price_toman"], 0)
@@ -39,9 +39,13 @@ class FreeSendsTests(TestCase):
             self.assertEqual(result["amount_toman"], 0)
         next_preview = self.preview()
         self.assertFalse(next_preview["is_free"])
-        self.assertEqual(next_preview["price_toman"], 2000)
+        self.assertEqual(next_preview["price_toman"], 0)
+        from .models import MessagePackage
+        package = MessagePackage.objects.create(name="سه پیام", message_count=3, price_toman=10000, active=True)
+        self.assertEqual(self.post("/credit-purchases", {"package_id": package.pk, "package_revision": 0}, HTTP_IDEMPOTENCY_KEY=str(uuid.uuid4())).status_code, 200)
         fourth = self.order(recipient="09901234567", preview=next_preview).json()
-        self.assertEqual(fourth["amount_toman"], 2000)
+        self.assertEqual(fourth["amount_toman"], 0)
+        self.assertTrue(fourth["uses_purchased_credit"])
         with self.captureOnCommitCallbacks(execute=True):
             self.assertEqual(self.post(f"/orders/{fourth['id']}/pay-demo").status_code, 200)
         self.assertEqual(PaymentAttempt.objects.count(), 1)
@@ -81,7 +85,7 @@ class FreeSendsTests(TestCase):
         self.assertEqual(response.json()["error"]["code"], "free_quota_changed")
         self.assertEqual(Order.objects.count(), 3)
         self.assertEqual(self.remaining(), 0)
-        self.assertEqual(self.preview()["price_toman"], 2000)
+        self.assertEqual(self.preview()["price_toman"], 0)
 
     def test_expired_reservation_returns_credit_once(self):
         order = self.order().json()
@@ -110,18 +114,22 @@ class FreeSendsTests(TestCase):
         expire_unpaid_orders()
         self.assertEqual(self.remaining(), 2)
 
-    def test_paid_quote_is_not_repriced_after_credit_returns_and_fake_free_fields_ignored(self):
+    def test_paid_quote_is_not_repriced_and_fake_free_fields_are_rejected(self):
         orders = [self.order(recipient=f"0990123456{i}").json() for i in range(3)]
+        Account.objects.filter(user=self.user).update(demo_sends_remaining=1)
         paid_quote = self.preview()
         Order.objects.filter(pk=orders[0]["id"]).update(created_at=timezone.now()-timedelta(minutes=16))
         expire_unpaid_orders()
         response = self.post("/orders", {"preview_id":paid_quote["preview_id"], "recipient_phone":"09901234567",
             "is_free":True, "amount_toman":0}, HTTP_IDEMPOTENCY_KEY=str(uuid.uuid4()))
+        self.assertEqual(response.status_code, 422)
+        response = self.post("/orders", {"preview_id":paid_quote["preview_id"], "recipient_phone":"09901234567"},
+            HTTP_IDEMPOTENCY_KEY=str(uuid.uuid4()))
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.json()["is_free"])
-        self.assertEqual(response.json()["amount_toman"], 2000)
+        self.assertEqual(response.json()["amount_toman"], 0)
         self.assertEqual(self.remaining(), 1)
-        self.assertEqual(self.post(f"/orders/{response.json()['id']}/confirm-free").status_code, 409)
+        self.assertEqual(self.post(f"/orders/{response.json()['id']}/confirm-credit").status_code, 200)
 
     def test_free_sends_keep_recipient_rules_and_daily_cap(self):
         RecipientState.objects.create(phone_hash=digest("09901234567"), blocked=True)

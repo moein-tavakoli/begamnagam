@@ -1,0 +1,46 @@
+# CT topology only: apply after compose.internal.yaml and compose.hardened.yaml.
+# Pin OLLAMA_IMAGE to the digest verified during release. Download models explicitly.
+services:
+  ollama:
+    image: ${OLLAMA_IMAGE:-ollama/ollama:latest}
+    network_mode: host
+    dns: [192.168.1.1, 8.8.8.8]
+    environment:
+      OLLAMA_HOST: 127.0.0.1:11434
+      OLLAMA_NO_CLOUD: "1"
+      OLLAMA_NUM_PARALLEL: "2"
+      OLLAMA_MAX_LOADED_MODELS: "1"
+      OLLAMA_MAX_QUEUE: "1"
+      OLLAMA_CONTEXT_LENGTH: "2048"
+      OLLAMA_KEEP_ALIVE: "-1"
+    volumes: [ollama-data:/root/.ollama]
+    tmpfs: [/tmp:size=256m]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    cpus: 8
+    mem_limit: 10g
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, ollama, list]
+      interval: 20s
+      timeout: 5s
+      retries: 6
+    logging:
+      driver: json-file
+      options: {max-size: 2m, max-file: "3"}
+  backend:
+    environment:
+      OLLAMA_URL: http://127.0.0.1:11434
+    # AI has two immediate admission slots; spare HTTP threads serve login and
+    # other requests and return ai_busy without waiting for a model slot.
+    command: [gunicorn, config.wsgi:application, --bind, "127.0.0.1:8000", --workers, "2", --threads, "4", --preload, --timeout, "45", --access-logfile, "-", --access-logformat, "%(m)s %(U)s %(s)s %(L)s"]
+    mem_limit: 512m
+  worker:
+    environment:
+      OLLAMA_URL: http://127.0.0.1:11434
+  beat:
+    environment:
+      OLLAMA_URL: http://127.0.0.1:11434
+volumes:
+  ollama-data:

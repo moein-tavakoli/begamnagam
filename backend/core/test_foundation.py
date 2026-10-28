@@ -14,12 +14,15 @@ class FinancialFoundationTests(TestCase):
         self.order = self.make_order()
 
     def make_order(self):
+        from .moderation import TEMPLATES
+        from .sms import compose_recipient_sms
+        reviewed, sms = compose_recipient_sms('appreciation', TEMPLATES['appreciation'][0], 'example.test', '')
         preview = Preview.objects.create(owner=self.user, session_key='synthetic', category='appreciation',
-            text='متن مصنوعی', moderation_mode='template', price_toman=2000,
+            text=reviewed, full_sms=sms, moderation_mode='template', price_toman=2000,
             expires_at=timezone.now() + timedelta(minutes=15))
         return Order.objects.create(owner=self.user, preview=preview, idempotency_key=uuid.uuid4(),
             recipient_hash='synthetic-hash', recipient_cipher='', recipient_masked='synthetic',
-            text=preview.text, category=preview.category, amount_toman=2000)
+            text=preview.text, full_sms=preview.full_sms, category=preview.category, amount_toman=2000)
 
     def payment(self, **kwargs):
         return PaymentAttempt.objects.create(order=self.order, amount_toman=2000, **kwargs)
@@ -80,6 +83,12 @@ class FinancialFoundationTests(TestCase):
         from .services import pay_order
         from .tasks import deliver_message
         RecipientState.objects.create(phone_hash=self.order.recipient_hash)
+        # A pre-cutover paid receipt, not a new direct checkout.
+        attempt = self.payment(status='verified', applied_to_order=True, provider_reference='historical-demo-capture')
+        FinancialEvent.objects.create(payment=attempt, kind='payment', amount_toman=2000)
+        Order.objects.filter(pk=self.order.pk).update(paid_at=timezone.now(), payment_mode='demo', status='queued')
+        MessageDelivery.objects.create(order=self.order, provider='demo', environment='demo', status='queued')
+        Outbox.objects.create(order=self.order, available_at=timezone.now())
         pay_order(self.user, self.order.id)
         pay_order(self.user, self.order.id)
         self.assertEqual(PaymentAttempt.objects.filter(order=self.order).count(), 1)

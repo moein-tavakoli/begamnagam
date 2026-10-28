@@ -5,6 +5,7 @@ Use backend/.venv/bin/python. Supply BENCH_DATABASE_URL, BENCH_REDIS_URL (DB14),
 BENCH_BROKER_URL via the environment, never CLI credentials. No image build.
 """
 import argparse
+import base64
 import hashlib
 from concurrent.futures import ThreadPoolExecutor
 import json
@@ -12,6 +13,7 @@ import math
 import os
 from pathlib import Path
 import platform
+import secrets
 import socket
 import subprocess
 import sys
@@ -60,7 +62,9 @@ def main():
     parsed=urlparse(dsn)
     runtime=dict(os.environ,DATABASE_URL=urlunparse(parsed._replace(path='/'+db)),REDIS_URL=redis_url,
         CELERY_BROKER_URL=broker,CELERY_TASK_DEFAULT_QUEUE='bench_'+run_id,CACHE_KEY_PREFIX='bench:'+run_id,
-        BENCHMARK_RUN_ID=run_id,DEBUG='1',DEMO_MODE='1',DJANGO_TESTING='0',CELERY_TASK_ALWAYS_EAGER='0',
+        BENCHMARK_RUN_ID=run_id,DEBUG='0',DEMO_MODE='1',DJANGO_TESTING='0',CELERY_TASK_ALWAYS_EAGER='0',
+        DJANGO_SECRET_KEY=secrets.token_urlsafe(48),PHONE_HASH_KEY=secrets.token_urlsafe(48),
+        PHONE_ENCRYPTION_KEY=base64.urlsafe_b64encode(os.urandom(32)).decode(),
         SMS_BACKEND='console',OTP_BACKEND='demo',PAYMENT_BACKEND='demo',AI_MODE='template',
         PROVIDER_NETWORK_MODE='disabled',LIVE_PROVIDERS_ENABLED='0',LOCAL_REAL_OTP_ENABLED='0',PILOT_POSITIVE_ONLY='0',SENDING_WINDOW_ENABLED='0',
         APP_BASE_URL='http://127.0.0.1:'+str(args.port),CSRF_TRUSTED_ORIGINS='http://127.0.0.1:'+str(args.port),

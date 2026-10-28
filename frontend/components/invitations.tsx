@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, createIdempotencyKey, errorMessage } from "@/lib/api";
 import { latinDigits, normalizePhone, validPhone } from "@/lib/format";
@@ -74,9 +73,7 @@ export function Invitations() {
   }
 
   return <div className="account-page invitations-page wrap">
-    <Link href="/" className="back-link">بازگشت به خانه <Icon name="arrow" size={16} /></Link>
     <div className="account-heading">
-      <span className="eyebrow">یک آشنای تازه برای بگم نگم</span>
       <h1>دوستت رو دعوت کن.</h1>
       <p>شماره‌اش رو اضافه کن؛ با اولین ثبت‌نامش، تو ۳ ارسال جایزه می‌گیری و او ۳ ارسال اولیه. هیچ کد معرفی لازم نیست.</p>
       <FreeSendsBalance />
@@ -89,7 +86,7 @@ export function Invitations() {
         <div className="invitation-stats" aria-label="خلاصه دعوت‌ها">
           <div><strong>{number(list?.total ?? 0)}</strong><span>مخاطب دعوت‌شده</span></div>
           <div><strong>{number(list?.registered ?? 0)}</strong><span>ثبت‌نام کرده‌اند</span></div>
-          <div><strong>{list ? number(list.daily_remaining) : "…"}</strong><span>درخواست باقی‌مانده در ۲۴ ساعت</span></div>
+          <div><strong>{list ? list.daily_remaining === null ? "بدون سقف" : number(list.daily_remaining) : "…"}</strong><span>{list?.daily_limit === null ? "تعداد درخواست دعوت" : `درخواست باقی‌مانده در ${number(list?.window_hours ?? 24)} ساعت`}</span></div>
         </div>
         <form className="invitation-form" onSubmit={e => void send(e)} noValidate>
           <h2>افزودن یک آشنا</h2>
@@ -107,7 +104,7 @@ export function Invitations() {
           <details className="invitation-rules"><summary>متن پیامک و قوانین دعوت</summary>
             <p className="invitation-sms">نمیدونم بهت بگم یا نگم؟{"\n"}یکی از آشناهایت به بگم نگم دعوتت کرده. با ثبت‌نام ۳ ارسال رایگان داری: begamnagam.ir{"\n"}لینک لغو دریافت هم به پیام اضافه می‌شود.</p>
             <p>با اولین تأیید شماره و ساخت حساب مخاطب پس از دعوت، ۳ ارسال جایزه یک‌بار به سهمیهٔ تو اضافه می‌شود. ورود دوباره جایزه ندارد و ثبت‌نام از هر مسیر سایت پذیرفته است.</p>
-            <p>حداکثر ۳ درخواست برای هر مخاطب، با فاصلهٔ حداقل ۲۴ ساعت؛ حداکثر ۵ درخواست در هر ۲۴ ساعت برای حساب تو. فرصت ارسال دوباره ۳۰ روز است. دعوت از سهمیهٔ ارسال پیام تو کم نمی‌کند.</p>
+            {list && <p>{list.max_sends === null ? "تعداد درخواست برای هر مخاطب بدون سقف است." : `حداکثر ${number(list.max_sends ?? 3)} درخواست برای هر مخاطب.`} {list.cooldown_hours ? `فاصلهٔ دو درخواست حداقل ${number(list.cooldown_hours)} ساعت است.` : "فاصلهٔ اجباری بین درخواست‌ها وجود ندارد."} {list.daily_limit === null ? "تعداد درخواست‌های حساب بدون سقف است." : `حداکثر ${number(list.daily_limit ?? 5)} درخواست در ${number(list.window_hours ?? 24)} ساعت.`} {list.validity_days ? `فرصت درخواست مجدد ${number(list.validity_days)} روز است.` : "درخواست مجدد مهلت زمانی ندارد."} دعوت از سهمیهٔ ارسال پیام تو کم نمی‌کند.</p>}
             <p>شماره یا نام تو در پیام دعوت نیست. نتیجهٔ ثبت‌نام مخاطب به تو نمایش داده می‌شود. مخاطب می‌تواند دریافت را لغو کند. پیامک در ساعت مجاز ارسال می‌شود و هر درخواست حداکثر ۴۸ ساعت در صف می‌ماند.</p>
           </details>
         </form>
@@ -122,7 +119,7 @@ export function Invitations() {
           {item.reward_credits > 0 && <p className="invitation-reward"><Icon name="sparkle" size={17} /> {number(item.reward_credits)} ارسال جایزه به سهمیه‌ات اضافه شد.</p>}
           {item.reward_pending && <p className="small muted">جایزهٔ ثبت‌نام در حال بررسی و افزودن است.</p>}
           {item.reason && <p className="small muted">{item.reason}</p>}
-          <div className="invitation-progress"><span>{number(item.send_count)} از ۳ نوبت درخواست</span><span>{number(item.sends_remaining)} نوبت باقی‌مانده</span></div>
+          <div className="invitation-progress"><span>{number(item.send_count)}{item.max_sends == null ? " نوبت درخواست" : ` از ${number(item.max_sends)} نوبت درخواست`}</span><span>{item.sends_remaining === null ? "بدون سقف تعداد" : `${number(item.sends_remaining)} نوبت باقی‌مانده`}</span></div>
           <div className="invitation-actions"><BusyButton className="button secondary compact" busy={busy === item.id}
             disabled={!item.can_resend || !!busy || !consent || list.daily_remaining === 0} aria-describedby={`invite-state-${item.id}`} onClick={() => void send(undefined, item)}>دعوت دوباره</BusyButton>
             <p id={`invite-state-${item.id}`} className="small muted">{resendExplanation(item) || (!consent ? "برای دعوت دوباره، تأیید بالای فرم را بزن." : list.daily_remaining === 0 ? "سقف روزانهٔ دعوت تکمیل شده است." : "دعوت دوباره با پیامک ارسال می‌شود.")}</p></div>

@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { Composer } from "./composer";
 import { Icon } from "./icons";
 import { LetterFlight } from "./letter-flight";
+import { HomeTrustMarks } from "./home-trust-marks";
 
 export function HomeFlow() {
   const [composing, setComposing] = useState(false);
@@ -71,6 +72,9 @@ export function HomeFlow() {
             showComposer(true);
         }}
       >
+        <Link href="/profile" prefetch={false} className="home-profile-link">
+          <Icon name="user" size={19} /> پروفایل
+        </Link>
         <div className="hero-copy">
           <span className="hero-eyebrow"><Icon name="sparkle" size={18} /> حرف‌های کوچیک، حالِ بهتر</span>
           <h1 id="welcome-title" tabIndex={-1}>یه حرف خوب،<br />یه <span className="highlight-text">حال خوب‌تر.</span></h1>
@@ -84,7 +88,7 @@ export function HomeFlow() {
             <span className="active" /><span />
           </div>
         </div>
-        <div className="hero-art"><LetterFlight /></div>
+        <div className="hero-art"><LetterFlight /><HomeTrustMarks /></div>
       </section>
       <div className="home-slide compose-slide" hidden={!composing} aria-roledescription="اسلاید" aria-label="نوشتن پیام؛ صفحه دوم">
         <Composer onExit={() => showComposer(false)} />

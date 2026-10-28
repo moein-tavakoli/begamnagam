@@ -7,7 +7,6 @@ import {
   createIdempotencyKey,
   ApiError,
   errorMessage,
-  approvedPaymentRedirect,
   type Order,
   type Preview,
 } from "@/lib/api";
@@ -16,7 +15,6 @@ import {
   latinDigits,
   normalizePhone,
   statusLabel,
-  toman,
   validPhone,
 } from "@/lib/format";
 import { useApp } from "./app-provider";
@@ -25,7 +23,11 @@ import { BusyButton, DeliveryReason, ErrorBox, ServiceState } from "./feedback";
 import { Icon, type IconName } from "./icons";
 import { FreeSendsBalance } from "./free-sends";
 import { TermsDialog } from "./terms-dialog";
+import { CreditPackages } from "./credit-packages";
 import { draftProblem, draftTopicHint } from "@/lib/composer-draft";
+import type { MessageTone } from '@/lib/message-tones';
+import { MessageTonePicker } from './message-tone-picker';
+import { RewriteLoading } from './rewrite-loading';
 
 const categoryIcons: Record<string, IconName> = {
   body: "drop",
@@ -60,15 +62,20 @@ export function Composer({ onExit }: { onExit?: () => void }) {
     showAllCategories || index < 7 || item.id === category) ?? [];
   const hiddenCategoryCount = (data?.categories.length ?? 0) - visibleCategories.length;
   const [text, setText] = useState("");
+  const [messageTone, setMessageTone] = useState<MessageTone>('polite');
+  const toneOptions = data?.message_tones ?? [];
+  const tonesKey = toneOptions.map(item => item.id).join(',');
   const [preview, setPreview] = useState<Preview | null>(null);
   const [recipient, setRecipient] = useState("");
   const [consent, setConsent] = useState(false);
   const [order, setOrder] = useState<Order | null>(null);
   const [busy, setBusy] = useState(false);
+  const [preparingText, setPreparingText] = useState(false);
+  const previewInFlight = useRef(false);
   const [pollingError, setPollingError] = useState("");
   const [error, setError] = useState("");
   const [fields, setFields] = useState<Record<string, string>>({});
-  const freeformRewrite = data?.rewrite_mode === "gapgpt";
+  const freeformRewrite = data?.rewrite_mode === "gapgpt" || data?.rewrite_mode === "ollama";
   const awaitingPayment =
     !!order &&
     ["awaiting_payment", "pending_payment", "created"].includes(order.status);
@@ -79,6 +86,13 @@ export function Composer({ onExit }: { onExit?: () => void }) {
   const idempotencyKey = useRef("");
   const heading = useRef<HTMLHeadingElement>(null);
   const previousStage = useRef(`${step}:${awaitingPayment}:${finished}`);
+
+  useEffect(() => {
+    if (!data || order || toneOptions.some(item => item.id === messageTone)) return;
+    const next = data.default_message_tone ?? 'polite';
+    if (messageTone === next) return;
+    setMessageTone(next); setPreview(null); setConsent(false); idempotencyKey.current = '';
+  }, [tonesKey, data?.default_message_tone, messageTone, order?.id]);
 
   useEffect(() => {
     const stage = `${step}:${awaitingPayment}:${finished}`;
@@ -100,7 +114,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
         if (!cancelled) {
           setOrder(result);
           setPollingError("");
-          if (result.financial_status === "free_credit_returned") void reload();
+          if (["free_credit_returned", "credit_returned", "wallet_returned"].includes(result.financial_status || "")) void reload();
         }
         if (!cancelled && isPending(result.status) && attempts < 20)
           timer = setTimeout(poll, 2000);
@@ -117,6 +131,9 @@ export function Composer({ onExit }: { onExit?: () => void }) {
 
   function handleError(error: unknown) {
     setError(errorMessage(error));
+    if (error instanceof ApiError && error.code === 'tone_unavailable') {
+      setStep(0); setPreview(null); setConsent(false); idempotencyKey.current = ''; void reload();
+    }
     if (error instanceof ApiError && error.code === "free_quota_changed") {
       setPreview(null);
       setConsent(false);
@@ -164,6 +181,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
 
   async function makePreview(event: React.FormEvent) {
     event.preventDefault();
+    if (previewInFlight.current || busy) return;
     setError("");
     setFields({});
     if (!data?.authenticated) { setError("اول شماره خودت رو تأیید کن."); return; }
@@ -179,11 +197,13 @@ export function Composer({ onExit }: { onExit?: () => void }) {
       document.getElementById("message-text")?.focus();
       return;
     }
+    previewInFlight.current = true;
     setBusy(true);
+    setPreparingText(freeformRewrite);
     try {
       const result = await api<Preview>("/messages/preview", {
         method: "POST",
-        body: { category, text: text.trim(), recipient_phone: normalizePhone(recipient), source_mode: freeformRewrite ? 'freeform' : 'suggestion' },
+        body: { category, text: text.trim(), recipient_phone: normalizePhone(recipient), source_mode: freeformRewrite ? 'freeform' : 'suggestion', message_tone: messageTone },
       });
       setPreview(result);
       setConsent(false);
@@ -191,6 +211,8 @@ export function Composer({ onExit }: { onExit?: () => void }) {
     } catch (error) {
       handleError(error);
     } finally {
+      previewInFlight.current = false;
+      setPreparingText(false);
       setBusy(false);
     }
   }
@@ -246,24 +268,12 @@ export function Composer({ onExit }: { onExit?: () => void }) {
   }
 
   async function payOrder(currentOrder: Order) {
-    if (currentOrder.is_free) {
-      setOrder(await api<Order>(`/orders/${currentOrder.id}/confirm-free`, { method: "POST", body: {} }));
+    if (currentOrder.is_free || currentOrder.uses_purchased_credit) {
+      setOrder(await api<Order>(`/orders/${currentOrder.id}/${currentOrder.uses_purchased_credit ? "confirm-credit" : "confirm-free"}`, { method: "POST", body: {} }));
       await reload();
       return;
     }
-    if (data?.payment_backend === 'zarinpal') {
-      const result = await api<{redirect_url?: string}>(`/orders/${currentOrder.id}/payments`, {
-        method: 'POST', body: {}, idempotencyKey: idempotencyKey.current || (idempotencyKey.current = createIdempotencyKey()),
-      });
-      if (result.redirect_url) window.location.assign(approvedPaymentRedirect(result.redirect_url, !!data.demo_mode));
-      else setOrder(await api<Order>(`/orders/${currentOrder.id}`));
-      return;
-    }
-    const result = await api<Pick<Order, "id" | "status">>(
-      `/orders/${currentOrder.id}/pay-demo`,
-      { method: "POST", body: {} },
-    );
-    setOrder({ ...currentOrder, ...result });
+    throw new ApiError("روش خرید به بسته تغییر کرده؛ پیش‌نمایش تازه بساز.");
   }
 
 
@@ -383,7 +393,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
               </div>
               <p className="muted form-intro">
                 {freeformRewrite
-                  ? "منظورت رو با کلمه‌های خودت بنویس؛ هوش مصنوعی کمک می‌کنه محترمانه بیانش کنی."
+                  ? "منظورت رو با کلمه‌های خودت بنویس."
                   : "فعلاً می‌تونی از مثال‌های آماده استفاده کنی."}
               </p>
               <div className="field-label-row">
@@ -413,6 +423,9 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                   {new Intl.NumberFormat("fa-IR").format(text.length)} / ۲۸۰
                 </span>
               </div>
+              <MessageTonePicker options={toneOptions} value={messageTone} disabled={busy || !!order} onChange={tone => {
+                setMessageTone(tone); setPreview(null); setConsent(false); setFields({}); setError(''); idempotencyKey.current = '';
+              }} />
               {fields.text && (
                 <p className="field-error" id="message-error">
                   {fields.text}
@@ -422,7 +435,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                 <Icon name="info" size={19} />
                 <p>
                   {freeformRewrite
-                    ? "نسخهٔ پالایش‌شدهٔ پیش‌نویس برای بازنویسی محترمانه به GapGPT فرستاده می‌شه. اسم، نشانی یا اطلاعات خصوصی ننویس؛ پیش از تأیید، متن نهایی رو بخون."
+                    ? "اسم، نشانی یا اطلاعات خصوصی ننویس؛ پیش از تأیید، متن نهایی رو بخون."
                     : "اسم، نشانی یا اطلاعات خصوصی کسی رو ننویس. دربارهٔ یک رفتار مشخص حرف بزن، نه شخصیت آدم‌ها."}
                 </p>
               </div>
@@ -432,7 +445,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                 <legend>یک مثال برای شروع</legend>
                 <p className="small muted category-guidance">{freeformRewrite
                   ? "هر گزینه یک مثال داخل کادر می‌گذاره؛ متن خودت می‌تونه دربارهٔ موضوع دیگه‌ای باشه."
-                  : "هر گزینه یک مثال داخل کادر می‌گذاره. بازنویسی متن شخصی بعد از فعال‌شدن هوش مصنوعی در دسترسه."}</p>
+                  : "هر گزینه یک مثال داخل کادر می‌گذاره که می‌تونی برای پیامت انتخابش کنی."}</p>
                 <div className="category-grid" id="message-categories">
                   {visibleCategories.map((item) => (
                     <button
@@ -517,10 +530,10 @@ export function Composer({ onExit }: { onExit?: () => void }) {
               <div className="preview-info">
                 <span>
                   <Icon name="sparkle" size={17} />
-                  {preview.moderation_mode === "gapgpt" ? "بازنویسی با GapGPT و بررسی محتوا" : preview.moderation_mode === "ollama_curated" ? "انتخاب با کمک هوش مصنوعی" : "متن آمادهٔ بررسی‌شده"}
+                  {preview.moderation_mode === "gapgpt" || preview.moderation_mode === "ollama" ? "متن بازنویسی و بررسی‌شده" : "متن آمادهٔ بررسی‌شده"}
                 </span>
                 <span>
-                  هزینه: <b>{isFree ? "رایگان؛ از سهمیهٔ هدیه" : toman(order?.amount_toman ?? preview.price_toman)}</b> · {preview.sms_segments || "—"} بخش پیامک
+                  مصرف: <b>{isFree ? "یک ارسال از هدیه" : "یک اعتبار از بسته"}</b> · {preview.sms_segments || "—"} بخش پیامک
                 </span>
               </div>
               <label className="checkbox-label" htmlFor="respect-consent">
@@ -535,25 +548,21 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                 </span>
               </label>
               {fields.consent && <p className="field-error" id="consent-error">{fields.consent}</p>}
-              {!isFree && data && (!data.demo_mode || data.payment_backend === "zarinpal") && (
-                <p className="small muted">
-                  {data?.payment_backend === "zarinpal" ? "برای پرداخت به درگاه امن منتقل می‌شی." : "۳ ارسال هدیه‌ات تمام شده. ارسال پولی فعلاً بسته است؛ تا فعال‌شدن پرداخت نمی‌تونی پیام تازه بفرستی."}
-                </p>
-              )}
+              {!isFree && data?.authenticated && !order && (data.purchased_sends_remaining ?? 0) === 0 && <CreditPackages inline />}
               {awaitingPayment && (
                 <p className="small muted" role="status">سفارش ثبت شده؛ تلاش دوباره همین سفارش رو ادامه می‌ده.</p>
               )}
               {data?.authenticated && renderActions(
                 <BusyButton type="submit" className="button primary" busy={busy}
-                  disabled={!data?.authenticated || (!isFree && !data.demo_mode && data.payment_backend !== "zarinpal")}>
-                  {isFree ? (awaitingPayment ? "تلاش دوباره برای ارسال رایگان" : data?.demo_mode ? "ارسال رایگان آزمایشی" : "تأیید و ارسال رایگان") : !data?.demo_mode && data?.payment_backend === "disabled" ? "ارسال پولی فعلاً بسته است" : awaitingPayment ? "تلاش دوباره برای پرداخت" : data?.payment_backend === "zarinpal" ? "تأیید و پرداخت" : "تأیید و ارسال آزمایشی"}
+                  disabled={!data?.authenticated || (!isFree && !order && (data.purchased_sends_remaining ?? 0) === 0)}>
+                  {isFree ? (awaitingPayment ? "تلاش دوباره برای ارسال رایگان" : data?.demo_mode ? "ارسال رایگان آزمایشی" : "تأیید و ارسال رایگان") : !order && (data?.purchased_sends_remaining ?? 0) === 0 ? "ابتدا بستهٔ پیام بخر" : awaitingPayment ? "تلاش دوباره برای ارسال" : "تأیید و ارسال با یک اعتبار"}
                   <Icon name="arrow" size={18} />
                 </BusyButton>,
               )}
               </> : <>
                 <div className="review-placeholder" role="note">
                   <Icon name="chat" size={24} />
-                  <p>{freeformRewrite ? "شماره رو وارد کن؛ پیش‌نویس پالایش‌شده با GapGPT بازنویسی می‌شه. قبل از ارسال، متن کامل پیامک رو می‌بینی." : "شماره رو وارد کن تا متن نهایی و هزینهٔ همین پیام آماده بشه."}</p>
+                  <p>{freeformRewrite ? "شماره رو وارد کن تا متن نهایی آماده بشه. قبل از ارسال، متن کامل پیامک رو می‌بینی." : "شماره رو وارد کن تا متن نهایی آماده بشه. هر ارسال یک اعتبار مصرف می‌کنه."}</p>
                 </div>
                 {data?.authenticated && renderActions(
                   <BusyButton type="submit" className="button primary" busy={busy} disabled={!data?.authenticated}>
@@ -589,7 +598,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                       ? "آزمایش ارسال ثبت شد."
                       : "وضعیت پیامت ثبت شد."}
               </h2>
-              <p className="small">مالی: {order.financial_status === "free_credit_returned" ? "رایگان؛ سهمیه برگشت داده شد" : order.is_free ? "رایگان؛ بدون پرداخت" : order.financial_status === "refunded" ? "مسترد شد" : order.financial_status === "refund_pending" ? "بازپرداخت در حال پیگیری است" : order.financial_status === "verified" ? "تأیید شد" : "در انتظار"}</p>
+              <p className="small">مالی: {order.financial_status === 'wallet_returned' ? 'مبلغ به کیف پول برگشت داده شد' : order.financial_status === 'wallet_paid' ? 'پرداخت از کیف پول' : order.financial_status === "credit_returned" ? "اعتبار بسته برگشت داده شد" : order.uses_purchased_credit ? "یک اعتبار از بسته" : order.financial_status === "free_credit_returned" ? "رایگان؛ سهمیه برگشت داده شد" : order.is_free ? "رایگان؛ بدون پرداخت" : order.financial_status === "refunded" ? "مسترد شد" : order.financial_status === "refund_pending" ? "بازپرداخت در حال پیگیری است" : order.financial_status === "verified" ? "تأیید شد" : "در انتظار"}</p>
               <FreeSendsBalance />
               <p className="receipt-status" role="status">
                 {statusLabel(order.status)}
@@ -626,6 +635,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
         <Icon name="lock" size={16} /> شماره شما برای گیرنده پنهانه؛ سرویس برای
         جلوگیری از سوءاستفاده، فرستنده رو شناسایی می‌کنه.
       </p>
+      {preparingText && <RewriteLoading />}
     </section>
   );
 }

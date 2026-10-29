@@ -3,7 +3,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
-from core.models import Account, AbuseReport, ModerationAudit, OTPChallenge, Order, Preview, RecipientState, RecipientGrant, OperatorAudit, Invitation, InvitationSend, RewriteUsage
+from core.models import Account, AbuseReport, ModerationAudit, OTPChallenge, Order, Preview, RecipientState, RecipientGrant, OperatorAudit, Invitation, InvitationSend, RewriteUsage, SupportMessage
 
 
 class Command(BaseCommand):
@@ -43,7 +43,10 @@ class Command(BaseCommand):
                 if not options['dry_run']:
                     Invitation.objects.filter(pk=invitation.pk).update(phone_cipher='', phone_masked='حذف‌شده')
                     invitation.sends.update(full_sms='')
+            support = SupportMessage.objects.filter(Q(created_at__lt=now-timedelta(days=90)) | Q(conversation__account__deletion_requested_at__lt=now-timedelta(days=30))).filter(redacted_at__isnull=True)
+            counts['support_redacted'] = support.count()
             if not options['dry_run']:
+                support.update(text='', redacted_at=now)
                 otp.delete()
                 previews.delete()
                 accounts.update(phone_cipher='', phone_masked='حذف‌شده')

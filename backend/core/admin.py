@@ -12,11 +12,11 @@ from .account_options import OPTION_PERMISSIONS, update_account_options
 
 class AccountOptionsForm(forms.ModelForm):
     settings_reason = forms.CharField(label="دلیل تغییر تنظیمات", required=False, max_length=200,
-        help_text="برای تغییر تیک‌ها دلیل کوتاه بنویس؛ شماره، کد ورود یا اطلاعات خصوصی ننویس.")
+        help_text="برای تغییر تنظیمات دلیل کوتاه بنویس؛ شماره، کد ورود یا اطلاعات خصوصی ننویس.")
 
     class Meta:
         model = Account
-        fields = ("unlimited_demo_sends", "direct_message_tone")
+        fields = tuple(OPTION_PERMISSIONS)
 
     def clean(self):
         cleaned = super().clean()
@@ -77,8 +77,8 @@ class OrderAdmin(ReadOnlyAdmin):
 class AccountAdmin(ReadOnlyAdmin):
     form = AccountOptionsForm
     change_list_template = "admin/core/account/change_list.html"
-    list_display = ("id", "phone_masked", "free_sends_remaining", "unlimited_demo_sends", "direct_message_tone", "created_at")
-    list_filter = ("unlimited_demo_sends", "direct_message_tone")
+    list_display = ("id", "phone_masked", "free_sends_remaining", "sender_daily_limit", "rewrite_daily_limit", "unlimited_demo_sends", "direct_message_tone", "created_at")
+    list_filter = ("unlimited_demo_sends", "direct_message_tone", ('sender_daily_limit', admin.EmptyFieldListFilter), ('rewrite_daily_limit', admin.EmptyFieldListFilter))
     search_fields = ("phone_masked",)
     fields = ("id", "phone_masked", "free_sends_remaining", "free_sends_earned_total", "purchased_sends_remaining", "demo_sends_remaining", "created_at")
     readonly_fields = fields

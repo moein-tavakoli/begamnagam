@@ -381,3 +381,20 @@ body:has(input:focus,textarea:focus) .mobile-nav { display: none; }
 .pricing-package-list article p { margin-bottom: 8px; }
 .pricing-package-list article strong, .pricing-package-list article small { display: block; }
 .pricing-package-list article small { color: var(--muted); font-size: 11px; }
+
+.message-alternatives { margin: 16px 0; padding: 16px; border: 1px solid var(--ink); border-radius: 16px; min-width: 0; }
+.message-alternatives legend { padding: 0 8px; font-weight: 700; }
+.message-alternative { display: flex; align-items: flex-start; gap: 12px; margin-top: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; }
+.message-alternative input { flex: 0 0 20px; width: 20px; height: 20px; margin: 4px 0; accent-color: var(--ink); }
+.message-alternative > span { display: grid; gap: 8px; min-width: 0; overflow-wrap: anywhere; }
+.message-alternative:has(input:checked) { border-color: var(--ink); background: var(--yellow); }
+.message-alternative:focus-within { outline: 2px solid var(--ink); outline-offset: 3px; }
+.manage-dialog.manage-account-limits .manage-form > .manage-button:last-child { position: sticky; bottom: 0; z-index: 1; box-shadow: 0 -8px 0 var(--surface); }
+
+.home-credit-link { position:absolute; z-index:3; top:18px; inset-inline-end:20px; display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:44px; padding:7px 16px; border:1px solid #201c2938; border-radius:28px; background:#fff7de; color:var(--ink); font-size:13px; font-weight:500; }
+.home-credit-link:hover { background:white; }
+@media(max-width:699px) { .home-credit-link { top:14px; inset-inline-end:16px; font-size:11px; padding-inline:12px; } }
+
+html:has([data-credit-shop]) { scroll-behavior:auto; }
+
+@media(max-width:699px) { .site-footer.pricing-footer { display:block; } .app-shell:has(.pricing-footer) #main-content { padding-bottom:0; } }

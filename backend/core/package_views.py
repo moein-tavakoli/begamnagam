@@ -14,7 +14,11 @@ def own_purchases(user):
 @api(['GET', 'POST'], authenticated=True)
 def purchases(request):
     if request.method == 'POST':
-        return begin_purchase(request.user, body(request), request.headers.get('Idempotency-Key', ''))
+        data = body(request)
+        if data.get('payment_method') == 'card':
+            from .manual_payments import begin_purchase as begin_card_purchase
+            return purchase_data(begin_card_purchase(request.user, data, request.headers.get('Idempotency-Key', '')))
+        return begin_purchase(request.user, data, request.headers.get('Idempotency-Key', ''))
     return {'purchases': [purchase_data(p) for p in own_purchases(request.user).order_by('-created_at')[:30]]}
 
 

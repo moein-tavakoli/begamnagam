@@ -22,13 +22,18 @@ class Account(models.Model):
         help_text="فقط در محیط آزمایشی: حذف سقف روزانه و فاصلهٔ ارسال برای همین فرستنده؛ قطع دریافت، سفارش باز و OTP حفظ می‌شوند.")
     direct_message_tone = models.BooleanField("لحن صریح‌تر و محترمانه", default=False, db_default=False,
         help_text="پیام‌های این فرستنده واضح‌تر و کم‌تعارف‌تر آماده می‌شوند؛ توهین، تحقیر و تهدید همچنان ممنوع‌اند.")
+    sender_daily_limit = models.PositiveIntegerField('سقف اختصاصی ارسال در ۲۴ ساعت', null=True, blank=True, default=None, db_default=None,
+        validators=[MaxValueValidator(1000000)], help_text='خالی = تنظیم سایت؛ ۰ = تعداد نامحدود؛ مثلاً ۱۰۰۰. اعتبار پیام، فاصله و کنترل گیرنده و محتوا حفظ می‌شوند.')
+    rewrite_daily_limit = models.PositiveIntegerField('سقف اختصاصی بازنویسی روزانه', null=True, blank=True, default=None, db_default=None,
+        validators=[MaxValueValidator(1000000)], help_text='خالی = تنظیم سایت؛ ۰ = تعداد نامحدود برای این حساب. سقف کلی سایت و روشن‌بودن سرویس همچنان لازم‌اند؛ مصرف پاک نمی‌شود.')
     deletion_requested_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         permissions = [('suspend_account', 'Suspend or resume product senders'),
                        ('manage_test_sending', 'Manage unlimited simulated sending for individual accounts'),
-                       ('manage_message_tone', 'Manage respectful direct message tone for individual accounts')]
+                       ('manage_message_tone', 'Manage respectful direct message tone for individual accounts'),
+                       ('manage_account_limits', 'Manage individual sender and rewrite count limits')]
         constraints = [models.CheckConstraint(condition=models.Q(free_sends_remaining__lte=models.F('free_sends_earned_total')+3), name="free_sends_within_grants")]
 
 
@@ -257,7 +262,7 @@ class PaymentAttempt(models.Model):
                 | models.Q(order__isnull=True, purchase__isnull=True, wallet_topup__isnull=False)), name='payment_one_target'),
             models.CheckConstraint(condition=models.Q(amount_toman__gt=0), name="payment_positive_amount"),
             models.CheckConstraint(condition=models.Q(currency="IRT"), name="payment_integer_toman"),
-            models.CheckConstraint(condition=models.Q(environment="demo", provider="demo") | models.Q(environment__in=["sandbox", "live"], provider="zarinpal"), name="payment_provider_environment"),
+            models.CheckConstraint(condition=models.Q(environment="demo", provider="demo") | models.Q(environment__in=["sandbox", "live"], provider="zarinpal") | models.Q(environment__in=['demo', 'live'], provider='manual'), name="payment_provider_environment"),
             models.CheckConstraint(condition=models.Q(status__in=["created", "pending", "verified", "failed", "unknown"]), name="payment_known_status"),
             models.CheckConstraint(condition=models.Q(applied_to_order=False) | models.Q(status="verified"), name="payment_apply_verified_only"),
             models.UniqueConstraint(fields=["order"], condition=models.Q(applied_to_order=True), name="one_applied_payment_per_order"),
@@ -672,3 +677,100 @@ class WalletEntry(models.Model):
                 | models.Q(kind='package_debit', topup__isnull=True, order__isnull=True, purchase__isnull=False, refund__isnull=True)
                 | models.Q(kind='payment_return', topup__isnull=True, order__isnull=True, purchase__isnull=True, refund__isnull=False)
             ), name='wallet_movement_source')]
+
+
+class ManualPaymentSettings(models.Model):
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    enabled = models.BooleanField('کارت‌به‌کارت فعال باشد', default=False)
+    card_number = EncryptedTextField('شمارهٔ کارت مقصد', blank=True, default='', db_default='')
+    card_holder = models.CharField('نام صاحب کارت', max_length=80, blank=True)
+    bank_name = models.CharField('نام بانک', max_length=80, blank=True, default='', db_default='')
+    bale_username = models.CharField('شناسهٔ پشتیبان در بله', max_length=32, blank=True)
+    telegram_username = models.CharField('شناسهٔ پشتیبان در تلگرام', max_length=32, blank=True)
+    revision = models.PositiveIntegerField(default=0, editable=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'تنظیم کارت‌به‌کارت'
+        verbose_name_plural = 'تنظیم کارت‌به‌کارت'
+        permissions = [('manage_manual_payments', 'Configure merchant card and receipt channels')]
+
+
+class ManualPayment(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    purchase = models.OneToOneField(CreditPurchase, on_delete=models.PROTECT, related_name='manual_payment')
+    status = models.CharField('وضعیت', max_length=24, default='awaiting_transfer', choices=[
+        ('awaiting_transfer', 'در انتظار واریز'), ('awaiting_review', 'در انتظار بررسی رسید'),
+        ('approved', 'تأییدشده'), ('rejected', 'تأییدنشده'), ('cancelled', 'لغوشده')])
+    card_number = EncryptedTextField(default='', db_default='', editable=False)
+    card_holder = models.CharField(max_length=80, editable=False)
+    bank_name = models.CharField(max_length=80, blank=True, default="", db_default="", editable=False)
+    bale_username = models.CharField(max_length=32, blank=True, editable=False)
+    telegram_username = models.CharField(max_length=32, blank=True, editable=False)
+    receipt_reference = EncryptedTextField(blank=True, default='', db_default='', editable=False)
+    receipt_submitted_at = models.DateTimeField(null=True, blank=True, editable=False)
+    confirmed_reference = EncryptedTextField(blank=True, default='', db_default='', editable=False)
+    confirmed_reference_digest = models.CharField(max_length=64, unique=True, null=True, blank=True, editable=False)
+    paid_date = models.DateField(null=True, blank=True, editable=False)
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name='reviewed_manual_payments', editable=False)
+    reviewed_at = models.DateTimeField(null=True, blank=True, editable=False)
+    review_note = models.CharField(max_length=200, blank=True, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'رسید کارت‌به‌کارت'
+        verbose_name_plural = 'رسیدهای کارت‌به‌کارت'
+        permissions = [('approve_manual_payments', 'Review bank transfers and grant purchased message packages')]
+        constraints = [models.CheckConstraint(condition=models.Q(status__in=['awaiting_transfer', 'awaiting_review', 'approved', 'rejected', 'cancelled']), name='manual_payment_known_status'),
+            models.CheckConstraint(condition=~models.Q(status='approved') | models.Q(reviewed_by__isnull=False, reviewed_at__isnull=False, confirmed_reference_digest__isnull=False), name='manual_payment_approval_evidence')]
+
+
+class SupportConversation(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    account = models.OneToOneField(Account, on_delete=models.PROTECT, related_name='support_conversation')
+    status = models.CharField(max_length=8, default='open', choices=[('open', 'باز'), ('closed', 'بسته')])
+    last_sequence = models.PositiveIntegerField(default=0)
+    last_customer_sequence = models.PositiveIntegerField(default=0)
+    answered_customer_sequence = models.PositiveIntegerField(default=0)
+    staff_read_sequence = models.PositiveIntegerField(default=0)
+    customer_read_sequence = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'گفت‌وگوی پشتیبانی'
+        verbose_name_plural = 'گفت‌وگوهای پشتیبانی'
+        constraints = [
+            models.CheckConstraint(condition=models.Q(status__in=['open', 'closed']), name='support_known_status'),
+            models.CheckConstraint(condition=models.Q(last_customer_sequence__lte=models.F('last_sequence')), name='support_customer_sequence_bound'),
+            models.CheckConstraint(condition=models.Q(answered_customer_sequence__lte=models.F('last_customer_sequence')), name='support_answer_sequence_bound'),
+            models.CheckConstraint(condition=models.Q(staff_read_sequence__lte=models.F('last_sequence')), name='support_staff_read_bound'),
+            models.CheckConstraint(condition=models.Q(customer_read_sequence__lte=models.F('last_sequence')), name='support_customer_read_bound'),
+            models.CheckConstraint(condition=~models.Q(status='closed') | models.Q(last_customer_sequence__lte=models.F('answered_customer_sequence')), name='support_close_answered_only'),
+        ]
+
+
+class SupportMessage(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    conversation = models.ForeignKey(SupportConversation, on_delete=models.PROTECT, related_name='messages')
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='support_messages')
+    role = models.CharField(max_length=8, choices=[('customer', 'کاربر'), ('staff', 'پشتیبانی')])
+    sequence = models.PositiveIntegerField()
+    client_key = models.UUIDField(editable=False)
+    text = EncryptedTextField(default='', db_default='', editable=False)
+    text_digest = models.CharField(max_length=64, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    redacted_at = models.DateTimeField(null=True, blank=True, editable=False)
+
+    class Meta:
+        verbose_name = 'پیام پشتیبانی'
+        verbose_name_plural = 'پیام‌های پشتیبانی'
+        ordering = ['sequence']
+        constraints = [
+            models.UniqueConstraint(fields=['conversation', 'sequence'], name='support_unique_sequence'),
+            models.UniqueConstraint(fields=['conversation', 'author', 'client_key'], name='support_unique_client_key'),
+            models.CheckConstraint(condition=models.Q(sequence__gt=0), name='support_positive_sequence'),
+            models.CheckConstraint(condition=models.Q(role__in=['customer', 'staff']), name='support_known_role'),
+        ]
+        indexes = [models.Index(fields=['conversation', 'role', 'sequence'], name='support_role_sequence_idx')]

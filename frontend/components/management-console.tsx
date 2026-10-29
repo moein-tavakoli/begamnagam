@@ -8,7 +8,13 @@ import { managementActions, managementDate, managementNumber, managementState,
   type ManagementRecords, type ManagementSession } from "@/lib/management";
 import { Brand } from "./chrome";
 import { Icon } from "./icons";
+import { ProviderBalances } from "./provider-balances";
 import { AISettings } from "./ai-settings";
+import { ManualPaymentSettings } from "./manual-payment-settings";
+import { ManualPaymentDialog } from "./manual-payment-dialog";
+import { SupportInbox, useSupportBadge } from "./support-inbox";
+import type { SupportWorkspaceMemory } from "@/lib/support";
+import supportStyles from "./support-chat.module.css";
 import { PackageSettings } from "./package-settings";
 import { walletToman } from '@/lib/wallet';
 
@@ -26,12 +32,18 @@ export function ManagementConsole() {
   const [epoch, setEpoch] = useState(0);
   const [action, setAction] = useState<ManagementAction | null>(null);
   const sessionGeneration = useRef(0);
+  const supportIdentity = useRef<string|undefined>(undefined);
+  const supportMemory = useRef<SupportWorkspaceMemory>({thread:null,composer:{draft:"",pending:null}});
   const loadSession = useCallback(async () => {
     const generation = ++sessionGeneration.current;
     setSession(null); setAction(null); setError("");
     try {
       const current = await api<ManagementSession>("/manage/session");
-      if (generation === sessionGeneration.current) setSession(current);
+      if (generation === sessionGeneration.current) {
+        if (!current.authenticated || supportIdentity.current !== current.session_identity) supportMemory.current={thread:null,composer:{draft:"",pending:null}};
+        supportIdentity.current=current.session_identity;
+        setSession(current);
+      }
     }
     catch (e) { if (generation === sessionGeneration.current) setError(errorMessage(e)); }
   }, []);
@@ -56,15 +68,19 @@ export function ManagementConsole() {
     catch (e) { setError(errorMessage(e)); }
     finally { setBusy(false); }
   }
+  const supportFailure = useCallback((e:unknown) => { failed(e); if(e instanceof ApiError && e.code === 'forbidden') setSession({authenticated:false}); },[failed]);
+  const supportCount = useSupportBadge(!!session?.authenticated,supportFailure);
   const permissions = session?.permissions || [];
   const navigation = [
     ...(permissions.includes("view_operations") ? [{ key: "dashboard", title: "نمای کلی" }] : []),
+    ...(session?.authenticated ? [{key:"support",title:"پشتیبانی"}] : []),
     ...(session?.resources || []),
     ...(permissions.includes("manage_site_limits") ? [{ key: "limits", title: "تنظیمات سایت" }] : []),
     ...(permissions.includes("manage_message_packages") ? [{ key: "packages", title: "بسته‌های پیام" }] : []),
+    ...(permissions.includes("manage_manual_payments") ? [{ key: "manual-settings", title: "کارت و دریافت رسید" }] : []),
     ...(permissions.includes("manage_ai") ? [{ key: "ai", title: "هوش مصنوعی" }] : []),
   ];
-  const active = navigation.some(item => item.key === tab) ? tab : navigation[0]?.key;
+  const active = navigation.some(item => item.key === tab) ? tab : session?.resources?.[0]?.key || navigation[0]?.key;
   const title = navigation.find(item => item.key === active)?.title || "مدیریت";
   return <div className="manage-app" data-update-blocked="true">
     {!session || !session.authenticated ? <div className="manage-login-wrap"><Brand />
@@ -76,20 +92,22 @@ export function ManagementConsole() {
       </section></div> : <>
       <aside className={`manage-sidebar ${menu ? "is-open" : ""}`}>
         <Brand /><span className="manage-kicker">مدیریت محصول</span>
-        <nav id="manage-navigation" aria-label="بخش‌های مدیریت">{navigation.map(item => <button key={item.key} aria-current={active === item.key ? "page" : undefined} onClick={() => { setTab(item.key); setMenu(false); }}>{item.title}</button>)}</nav>
+        <nav id="manage-navigation" aria-label="بخش‌های مدیریت">{navigation.map(item => <button key={item.key} aria-current={active === item.key ? "page" : undefined} onClick={() => { setTab(item.key); setMenu(false); }}>{item.title}{item.key === "support" && supportCount>0 && <span className={supportStyles.navBadge} aria-label={`${supportCount.toLocaleString("fa-IR")} گفت‌وگوی نیازمند توجه`}>{supportCount.toLocaleString("fa-IR")}</span>}</button>)}</nav>
         <a className="manage-advanced" href="/admin/">مدیریت پیشرفتهٔ جنگو ↗</a>
       </aside>
       <div className="manage-workspace">
         <header className="manage-topbar"><div className="manage-heading"><button className="manage-button secondary manage-menu" aria-expanded={menu} aria-controls="manage-navigation" onClick={() => setMenu(!menu)}>{menu ? "بستن منو" : "بخش‌ها"}</button><h1>{title}</h1></div>
           <div className="manage-session"><span><Icon name="user" size={17} /><bdi>{session.username}</bdi></span><Link href="/" className="manage-button secondary">سایت</Link><button className="manage-button secondary" disabled={busy} onClick={() => void signOut()}>خروج</button></div>
         </header>
+        {permissions.includes("view_operations") && <ProviderBalances onFailure={failed} />}
+        <span className="sr-only" role="status" aria-atomic="true">{supportCount>0 ? `${supportCount.toLocaleString("fa-IR")} گفت‌وگوی پشتیبانی تازه یا بی‌پاسخ داری.` : ""}</span>
         <div className="manage-content">{error && <Failure message={error} />}
           {!active && <section className="manage-card"><p>برای این حساب بخشی مجاز نشده است. مجوزها از مدیریت پیشرفتهٔ جنگو قابل تنظیم‌اند.</p></section>}
-          {active === "dashboard" ? <Dashboard key={`dashboard-${epoch}`} canOperate={permissions.includes("operate_safety")} onAction={setAction} onFailure={failed} /> : active === "limits" ? <Limits onFailure={failed} /> : active === "ai" ? <AISettings onFailure={failed} /> : active === "packages" ? <PackageSettings onFailure={failed} /> : active && <Records key={`${active}-${epoch}`} resource={active} permissions={permissions} onAction={setAction} onFailure={failed} />}
+          {active === "support" ? <SupportInbox onFailure={supportFailure} memory={supportMemory} /> : active === "dashboard" ? <Dashboard key={`dashboard-${epoch}`} canOperate={permissions.includes("operate_safety")} onAction={setAction} onFailure={failed} /> : active === "limits" ? <Limits onFailure={failed} /> : active === "ai" ? <AISettings onFailure={failed} /> : active === "manual-settings" ? <ManualPaymentSettings onFailure={failed} /> : active === "packages" ? <PackageSettings onFailure={failed} /> : active && <Records key={`${active}-${epoch}`} resource={active} permissions={permissions} onAction={setAction} onFailure={failed} />}
           <p className="manage-footnote">زمان‌ها به وقت تهران · تغییرات مدیریتی با دلیل و سابقه ثبت می‌شوند.</p>
         </div>
       </div>
-      {action && <ActionDialog action={action} onClose={() => setAction(null)} onComplete={() => { setAction(null); setEpoch(v => v + 1); }} onFailure={failed} />}
+      {action && (["grant_package","approve_card","reject_card"].includes(action.name) ? <ManualPaymentDialog action={action} onClose={() => setAction(null)} onComplete={() => { setAction(null); setEpoch(v => v + 1); }} onFailure={failed} /> : <ActionDialog action={action} onClose={() => setAction(null)} onComplete={() => { setAction(null); setEpoch(v => v + 1); }} onFailure={failed} />)}
     </>}
   </div>;
 }
@@ -222,18 +240,33 @@ function ActionDialog({ action, onClose, onComplete, onFailure }: { action: Mana
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); const form = new FormData(event.currentTarget); setBusy(true); setError("");
     try {
-      const values = { action: action.name, object_id: action.object_id, value: action.value, reason: form.get("reason"), reference: form.get("reference") || "" };
+      const countValues = Object.fromEntries(['sender_daily_limit', 'rewrite_daily_limit'].map(key => [key,
+        form.get(`${key}_mode`) === 'site' ? null : form.get(`${key}_mode`) === 'unlimited' ? 0 : Number(form.get(key))]));
+      const values = { action: action.name, object_id: action.object_id, value: action.value, reason: form.get("reason"), reference: form.get("reference") || "",
+        ...(action.name === 'account_limits' ? { values: countValues } : {}) };
       if (action.name === "review") setReport(await api(`/manage/reports/${action.object_id}/review`, { method: "POST", body: values }));
       else if (action.name === "message_texts") setTexts(await api(`/manage/orders/${action.object_id}/texts`, { method: "POST", body: values }));
       else { await api("/manage/actions", { method: "POST", body: values }); onComplete(); }
     } catch (e) { setError(errorMessage(e)); onFailure(e); } finally { setBusy(false); }
   }
-  return <dialog ref={ref} className="manage-dialog" aria-labelledby="manage-dialog-title" onCancel={e => { e.preventDefault(); if (!busy) onClose(); }}><div className="manage-section-heading"><h2 id="manage-dialog-title">{action.label}</h2><button className="manage-button secondary" onClick={onClose} disabled={busy} aria-label="بستن پنجره">بستن</button></div><p className="manage-muted">رکورد: <bdi className="manage-dialog-id">{action.object_id}</bdi></p>
+  return <dialog ref={ref} className={`manage-dialog${action.name === 'account_limits' ? ' manage-account-limits' : ''}`} aria-labelledby="manage-dialog-title" onCancel={e => { e.preventDefault(); if (!busy) onClose(); }}><div className="manage-section-heading"><h2 id="manage-dialog-title">{action.label}</h2><button className="manage-button secondary" onClick={onClose} disabled={busy} aria-label="بستن پنجره">بستن</button></div><p className="manage-muted">رکورد: <bdi className="manage-dialog-id">{action.object_id}</bdi></p>
     {error && <Failure message={error} />}
     {texts ? <div className="manage-report"><span className="manage-badge">فقط مدیریت · {texts.mode === "ollama" ? "Ollama" : texts.mode === "gapgpt" ? "GapGPT" : "متن آماده"}</span><h3>متن اولیهٔ کاربر</h3><p>{texts.original_available ? texts.original_text : "متن اولیه برای این سابقه موجود نیست؛ ممکن است قدیمی یا پاک‌سازی‌شده باشد."}</p><h3>متن نهایی بررسی‌شده</h3><p>{texts.final_text || "متن طبق سیاست نگهداری حذف شده است."}</p><p className="manage-muted">مشاهدهٔ متن‌ها در سوابق مدیریت ثبت شد.</p></div> : report ? <div className="manage-report"><span className="manage-badge">{managementState(report.status)}</span><h3>موضوع گزارش</h3><p>{report.reason}</p><h3>توضیحات دریافت‌کننده</h3><p>{report.details || "توضیحی ثبت نشده است."}</p><h3>متن بررسی‌شدهٔ مرتبط</h3><p>{report.reviewed_text}</p><p className="manage-muted">مشاهدهٔ این پرونده در سوابق مدیریت ثبت شد.</p></div> : <form className="manage-form" onSubmit={submit}>
+      {action.name === 'account_limits' && <fieldset disabled={busy} className="manage-fieldset">
+        <p className="manage-notice">تنظیم فقط برای همین حساب است. تعداد نامحدود، اعتبار پیام یا کنترل‌های محتوا، گیرنده و سقف کل بازنویسی را حذف نمی‌کند؛ مصرف قبلی هم پاک نمی‌شود.</p>
+        <AccountLimitInput name="sender_daily_limit" label="ارسال در ۲۴ ساعت" value={action.accountLimits?.sender_daily_limit ?? null} />
+        <AccountLimitInput name="rewrite_daily_limit" label="بازنویسی در روز" value={action.accountLimits?.rewrite_daily_limit ?? null} />
+      </fieldset>}
       {action.name === "confirm_refund" && <><p className="manage-notice">ابتدا بازپرداخت را خارج از سایت انجام دهید؛ این اقدام فقط ثبت سند بازپرداخت است.</p><label>مرجع سند بازپرداخت<input name="reference" minLength={3} maxLength={100} required /></label></>}
       <label>دلیل {action.name === "message_texts" ? "مشاهدهٔ متن‌ها" : action.name === "review" ? "مشاهدهٔ پرونده" : "اقدام"}<textarea name="reason" minLength={3} maxLength={200} rows={3} required placeholder="دلیل کوتاه؛ شماره یا اطلاعات خصوصی ننویسید" autoFocus /></label>
       <button className="manage-button primary" disabled={busy}>{busy ? "در حال ثبت…" : action.name === "message_texts" ? "ثبت مشاهده و نمایش متن‌ها" : action.name === "review" ? "ثبت مشاهده و بازکردن پرونده" : "تأیید و ثبت اقدام"}</button>
     </form>}
   </dialog>;
+}
+
+function AccountLimitInput({ name, label, value }: { name: string; label: string; value: number | null }) {
+  const [mode, setMode] = useState(value === null ? 'site' : value === 0 ? 'unlimited' : 'custom');
+  return <div className="manage-settings-grid"><label>{label}<select name={`${name}_mode`} value={mode} onChange={event => setMode(event.target.value)}>
+    <option value="site">طبق تنظیم سایت</option><option value="custom">عدد اختصاصی</option><option value="unlimited">تعداد نامحدود</option>
+  </select></label>{mode === 'custom' && <label>حداکثر {label}<input name={name} type="number" min={1} max={1000000} step={1} defaultValue={value || 1000} required /></label>}</div>;
 }

@@ -70,6 +70,12 @@ def main():
             failures = run(sqlbase, b"SELECT count(*) FROM core_financialevent e JOIN core_paymentattempt p ON p.id=e.payment_id LEFT JOIN core_refund r ON r.id=e.refund_id WHERE e.amount_toman<>p.amount_toman OR (e.kind='refund' AND (r.status<>'refunded' OR r.amount_toman<>e.amount_toman))")
             assert failures.strip() == b"0"
             fields = [('core_account','phone_cipher'),('core_otpchallenge','phone_cipher'),('core_order','recipient_cipher'),('core_order','full_sms'),('core_preview','full_sms'),('core_preview','generated_body'),('core_preview','original_text'),('core_abusereport','details'),('core_invitation','phone_cipher'),('core_invitationsend','full_sms'),('core_order','text'),('core_preview','text')]
+            # Pre-migration backups must still rehearse against their original schema.
+            optional_tables = set(json.loads(run(sqlbase, b"SELECT coalesce(json_agg(tablename),'[]'::json) FROM pg_tables WHERE schemaname='public' AND tablename IN ('core_manualpaymentsettings','core_manualpayment','core_supportmessage')")))
+            fields.extend((table, field) for table, field in [
+                ('core_manualpaymentsettings', 'card_number'), ('core_manualpayment', 'card_number'),
+                ('core_manualpayment', 'receipt_reference'), ('core_manualpayment', 'confirmed_reference'), ('core_supportmessage', 'text')]
+                if table in optional_tables)
             selects = ["SELECT json_build_array('"+field+"',"+field+") FROM "+table+" WHERE "+field+"<>''" for table,field in fields]
             rows = run(sqlbase, (";\n".join(selects)+";").encode())
             # Only the backend has the application keys. Never grant its runtime

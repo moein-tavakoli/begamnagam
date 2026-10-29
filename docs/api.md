@@ -1,5 +1,13 @@
 # قرارداد API نسخه اول
 
+## پیشنهاد جایگزین و سقف اختصاصی حساب — محلی
+
+خطای محتوایی پیش‌نمایش می‌تواند `error.details.alternatives` داشته باشد: فهرست `{id,label,text,token,message_tone,expires_at}`. این متن‌ها پیشنهادهای مستقل و از قالب‌های بررسی‌شده‌اند؛ خطای۵۰۰/۵۰۳جزئیات یا پیشنهاد جایگزین ندارد. علت رد در صورت شاهد پالایش محلی می‌تواند عبارت کوتاه خود نویسنده را ذکر کند؛ مدلِ بدون شاهد، واژهٔ مشکل‌دار حدس نمی‌زند و اطلاعات تماس تکرار نمی‌شوند.
+
+پس از انتخاب صریح، `POST /messages/preview` با `{source_mode:"reviewed_alternative", alternative_token, recipient_phone, message_tone}` یک پیش‌نمایش معمول می‌سازد. `text`، `category` یا نتیجهٔ بررسی کلاینت در این درخواست پذیرفته نمی‌شوند. مجوز رمز/امضاشده پنج‌دقیقه‌ای و وابسته به حساب، نشست، گیرنده، لحن و بدنهٔ دقیق قالب است؛ نامعتبر/منقضی با۴۰۹و `alternative_expired` رد می‌شود. این مسیر AI را صدا نمی‌زند و اصل متن ردشده را ارسال نمی‌کند. ثبت سفارش و تأیید نهایی قرارداد قبلی را دارند.
+
+`POST /manage/actions` با `action:"account_limits"`, `object_id`, `reason` و `values:{sender_daily_limit, rewrite_daily_limit}`، مجوز `core.manage_account_limits` و CSRF لازم دارد. فقط این دو کلید با نوع `null` یا integer۰تا۱۰۰۰۰۰۰مجازند؛ Boolean و رشته رد می‌شوند. `null` یعنی تنظیم سایت،۰یعنی تعداد نامحدود. فهرست حساب‌ها همین دو فیلد را برمی‌گرداند. ثبت قبل/بعد و قفل فرستنده برقرارند؛ اعتبار و مصرف پاک نمی‌شوند. [شرح و محدودیت‌ها](message-rejection-and-account-limits.fa.md).
+
 ## لحن پیام
 
 bootstrap فهرست `message_tones:[{id,label,description}]` از لحن‌های فعال و `default_message_tone` را می‌دهد. `POST /messages/preview` فیلد اختیاری `message_tone: polite|firm|angry` می‌پذیرد و همان را در پاسخ برمی‌گرداند؛ مقدار نامعتبر422و لحن غیرفعال409با `tone_unavailable` است. انتخاب حذف‌شده از پنل باید با bootstrap تازه به‌روز شود. بدون گزینهٔ فعال، فهرست خالی و پیش‌فرض `polite` است. قیمت/متن/مجوز بررسی همچنان از سرور می‌آیند.
@@ -283,3 +291,18 @@ AI previews bind the exact approved body, full SMS, owner, recipient, price, ter
 The active model since release 0.12.1 is gpt-4.1-mini. It uses Chat Completions with response_format=json_object and max_tokens=256 for each of the two stateless calls. The older Luna preset uses max_completion_tokens and reasoning_effort=none; reported reasoning tokens count within its output bound. Both incomplete choices and any failed/uncertain review are rejected without retry or fallback. No client API keys or provider-selected text overrides are accepted. The local product launcher forwards the private GapGPT environment to Python services only. See [operating guide](ai-gapgpt.fa.md).
 
 تنظیم سراسری GapGPT در `GET/POST /api/v1/manage/limits` فیلد بولی `rewrite_daily_unlimited` دارد (پیش‌فرض `false`). مقدار `true` فقط سقف `rewrite_daily_limit` را کنار می‌گذارد؛ `rewrite_user_limit`، شمارش مصرف، مجوز مدیریت، CSRF، دلیل تغییر و کنترل revision برقرارند. با بازگشت به `false` مصرف قبلی همان روز در سقف عددی لحاظ می‌شود؛ صفر در سقف سایتِ محدود یا سقف هر حساب، بازنویسی را غیرفعال می‌کند.
+
+
+## تعرفه‌ها و کارت‌به‌کارت — تغییر محلی
+
+صفحهٔ `/pricing` و چهار بستهٔ۳/۹/۳۰/۹۰پیامی، کارت مقصد و دریافت رسید در بله/تلگرام، تأیید مستند ادمین و فعال‌سازی دستی بسته اضافه شده‌اند. زرین‌پال پس از verify مستقل خودکار فعال می‌کند. پیش‌فرض کارت خاموش و مقصد خالی است؛ شرایط پرداخت واقعی و مجوز انتشار جدا باقی‌اند. [قرارداد کامل API و راهنمای عملیات](pricing-card-payments.fa.md).
+
+
+## پشتیبانی متنی — محلی
+
+گفت‌وگوی خصوصی حساب واردشده و صندوق مشترک همهٔ ادمین‌های فعال در `/manage` ← «پشتیبانی» اضافه شد؛ نشان قرمزِ بی‌پاسخ مستقل از خواندن است، فایل مجاز نیست، متن رمز‌شده و درخواست‌ها با CSRF/مالکیت/کلید تکرار کنترل می‌شوند. نام بانک هم در تنظیمات و snapshot کارت‌به‌کارت آمده است. [مسیرها، قواعد و نگهداری](support-chat.fa.md).
+
+
+## موجودی سرویس‌ها — محلی
+
+نوار بالای مدیریت با مجوز `core.view_operations`، اعتبار کاوه‌نگار را از API رسمی به تومان و با زمان استعلام نشان می‌دهد. GapGPT تا تأیید API موجودیِ سازگار با کلید، لینک کیف پول رسمی دارد. مقدار نامعلوم صفر نمایش داده نمی‌شود. [قرارداد و محدودیت‌ها](provider-balances.fa.md).

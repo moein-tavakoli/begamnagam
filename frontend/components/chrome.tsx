@@ -27,6 +27,7 @@ export function Header() {
     <header className="site-header wrap">
       <Brand />
       <nav className="main-nav" aria-label="منوی اصلی">
+        <Link href="/pricing">خرید اعتبار</Link>
         <Link href="/help#how-it-works">چطور کار می‌کنه؟</Link>
         <Link href="/help">راهنما و هزینه</Link>
         <Link href="/invitations" prefetch={false}>دعوت دوستان</Link>
@@ -43,7 +44,7 @@ export function Footer() {
   const path = usePathname();
   if (path === "/links" || path.startsWith("/manage")) return null;
   return (
-    <footer className="site-footer">
+    <footer className={`site-footer${path === "/pricing" ? " pricing-footer" : ""}`}>
       <div className="wrap footer-top">
         <div>
           <Brand />
@@ -55,6 +56,8 @@ export function Footer() {
           بیایید با هم مهربون‌تر حرف بزنیم.
         </div>
         <nav aria-label="پیوندهای پایین صفحه">
+          <Link href="/about">دربارهٔ بگم نگم</Link>
+          <Link href="/pricing">تعرفه‌ها و خرید اعتبار</Link>
           <Link href="/invitations" prefetch={false}>دعوت دوستان</Link>
           <Link href="/preferences" prefetch={false}>قطع دریافت پیام</Link>
           <Link href="/privacy">حریم خصوصی و قوانین</Link>

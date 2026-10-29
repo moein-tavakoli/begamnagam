@@ -8,6 +8,7 @@ import "./globals.css";
 import { AppProvider } from "@/components/app-provider";
 import { Header, Footer, MobileNav } from "@/components/chrome";
 
+import { SupportWidget } from "@/components/support-widget";
 import { PWAFoundation } from "@/components/pwa-foundation";
 import { rootMetadata } from "@/lib/seo";
 
@@ -37,6 +38,7 @@ export default async function RootLayout({
           <main id="main-content">{children}</main>
           <Footer />
           <MobileNav />
+          <SupportWidget />
         </AppProvider>
       </body>
     </html>

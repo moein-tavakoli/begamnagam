@@ -14,6 +14,16 @@ export const socialImage = {
 };
 export const siteLogo = { url: "/icons/icon-512.png", width: 512, height: 512 };
 
+// Stable public facts only. Reused in visible HTML and the optional agent index.
+export const serviceFacts = [
+  { id: "what-is-begamnagam", title: "بگم نگم چیست؟", text: `${siteName} یک وب‌اپ فارسی برای شماره‌های همراه ایران است. ${siteDescription}` },
+  { id: "sender-privacy", title: "ناشناس‌بودن برای گیرنده یعنی چه؟", text: "نام و شمارهٔ فرستنده در پیامک گیرنده نمایش داده نمی‌شود. فرستنده با شمارهٔ همراه خود وارد می‌شود و سرویس برای کنترل سوءاستفاده، شمارهٔ تأییدشده و سوابق درخواست را نگه می‌دارد؛ ناشناس‌بودن برای گیرنده به معنی ناشناس‌بودن برای سرویس نیست." },
+  { id: "recipient-choice", title: "گیرنده چه اختیاری دارد؟", text: "گیرنده می‌تواند از لینک خصوصی داخل پیامک، بدون ساخت حساب دریافت را متوقف یا پیام را گزارش کند. بگم نگم چت میان فرستنده و گیرنده، پاسخ مستقیم به پیامک، پروفایل عمومی یا نمایش خوانده‌شدن پیامک ندارد." },
+  { id: "review-and-delivery", title: "متن و نتیجهٔ ارسال چگونه بررسی می‌شوند؟", text: "فرستنده پیش از تأیید، متن کامل پیامک را می‌بیند. بازنویسی متن دلخواه فقط هنگام فعال‌بودن این گزینه در دسترس است و خروجی آن نیز بررسی می‌شود. وضعیت صف یا پذیرش سرویس پیامکی به معنی تحویل قطعی یا خوانده‌شدن پیام نیست." },
+  { id: "credits-and-prices", title: "هزینهٔ استفاده چطور مشخص می‌شود؟", text: "هر شمارهٔ تأییدشده یک‌بار ۳ ارسال هدیه دارد. پس از هدیه، ارسال با اعتبار بسته انجام می‌شود؛ بسته‌ها، قیمت‌ها و روش‌های پرداخت فعال در صفحهٔ تعرفه‌ها و هنگام خرید مشخص می‌شوند. اعتبار سایت قابل برداشت بانکی نیست." },
+  { id: "responsible-use", title: "چه استفاده‌ای مجاز است؟", text: "این سرویس برای تشکر، دلگرمی و یادآوری محترمانه است. تهدید، توهین، افشای اطلاعات خصوصی، مزاحمت و تبلیغ ناخواسته مجاز نیستند. انتخاب گیرنده برای دریافت‌نکردن باید محترم بماند." },
+] as const;
+
 export const publicPages = {
   "/": {
     title: "بگم نگم | ارسال پیامک ناشناس و محترمانه",
@@ -33,6 +43,14 @@ export const publicPages = {
   "/links": {
     title: "سایت و شبکه‌های اجتماعی بگم نگم",
     description: "همهٔ لینک‌های بگم نگم در یک صفحه؛ سایت، اینستاگرام، تلگرام، بله، سروش و گپ.",
+  },
+  "/pricing": {
+    title: "تعرفه‌ها و بسته‌های پیام",
+    description: "بستهٔ پیام بگم نگم را انتخاب کن؛ سه پیام اول هدیه است. تعرفه‌های روشن و خرید اعتبار با روش‌های پرداخت فعال سایت.",
+  },
+  "/about": {
+    title: "بگم نگم چیست؟ معرفی سرویس و شیوهٔ کار",
+    description: "معرفی بگم نگم؛ پیامک محترمانه برای شماره‌های ایران، حدود ناشناس‌بودن فرستنده، اختیار گیرنده، بررسی متن و نحوهٔ استفاده از اعتبار پیام.",
   },
 } as const;
 
@@ -178,9 +196,42 @@ export function robotsRules(env: SeoEnvironment = defaultEnvironment()): Metadat
   const { baseUrl, indexable } = getSeoConfig(env);
   return {
     // Allow HTML crawling so crawlers can read noindex, including on private pages.
-    rules: { userAgent: "*", allow: "/", disallow: ["/api/", "/admin/", "/manage", "/static/admin/"] },
+    rules: [
+      { userAgent: "*", allow: "/", disallow: ["/api/", "/admin/", "/manage", "/static/admin/"] },
+      indexable
+        ? { userAgent: [...aiSearchAgents], allow: "/", disallow: [...aiPrivatePaths] }
+        : { userAgent: [...aiSearchAgents], disallow: "/" },
+      // User-selected policy: search/retrieval allowed; known model-training crawls denied.
+      { userAgent: [...aiTrainingAgents], disallow: "/" },
+    ],
     ...(indexable ? { sitemap: new URL("/sitemap.xml", baseUrl).href } : {}),
   };
+}
+
+export const aiSearchAgents = ["OAI-SearchBot", "ChatGPT-User", "Claude-SearchBot", "Claude-User", "PerplexityBot", "Perplexity-User"] as const;
+export const aiTrainingAgents = ["GPTBot", "ClaudeBot", "Google-Extended", "Applebot-Extended", "CCBot"] as const;
+export const aiPrivatePaths = [
+  "/api/", "/admin/", "/static/admin/", "/manage", "/profile", "/history", "/preferences",
+  "/invitations", "/credits", "/wallet", "/r$", "/r?", "/r/", "/offline.html",
+] as const;
+
+// Supplementary discovery index, not a ranking signal or an access-control system.
+export function llmsText(env: SeoEnvironment = defaultEnvironment()): string | null {
+  const { baseUrl, indexable } = getSeoConfig(env);
+  if (!indexable) return null;
+  const about = new URL("/about", baseUrl).href;
+  return [
+    `# ${siteName} (${siteAlternateName})`, "", `> ${siteDescription}`, "",
+    ...serviceFacts.slice(1).flatMap(fact => [`${fact.title} ${fact.text}`, ""]),
+    "## معرفی و راهنمای عمومی", "",
+    `- [معرفی بگم نگم](${about}): تعریف سرویس، حدود ناشناس‌بودن و اختیار گیرنده.`,
+    `- [راهنمای استفاده و پرسش‌های متداول](${new URL("/help", baseUrl).href}): مراحل استفاده و پاسخ به پرسش‌های رایج.`,
+    `- [قوانین و حریم خصوصی](${new URL("/privacy", baseUrl).href}): پردازش داده، پیام‌های مجاز و حقوق گیرنده.`,
+    `- [تعرفه‌ها و بسته‌های پیام](${new URL("/pricing", baseUrl).href}): بسته‌ها و روش‌های پرداخت فعال؛ مبلغ نهایی هنگام خرید مشخص می‌شود.`,
+    "", "## Optional", "",
+    `- [صفحهٔ اصلی](${baseUrl.href}): ورود به سرویس و شروع نوشتن پیام.`,
+    `- [پیوندهای بگم نگم](${new URL("/links", baseUrl).href}): سایت و پیوندهای شبکه‌های اجتماعی.`, "",
+  ].join("\n");
 }
 
 export function serializeJsonLd(data: unknown) {
@@ -231,7 +282,7 @@ export function pageJsonLd(path: PublicPath, questions: readonly Question[] = []
       image: { "@id": imageId },
     },
     {
-      "@type": faq.length ? "FAQPage" : "WebPage", "@id": pageId,
+      "@type": faq.length ? "FAQPage" : path === "/about" ? "AboutPage" : "WebPage", "@id": pageId,
       url, name: page.title, description: page.description, inLanguage: "fa-IR",
       isPartOf: { "@id": websiteId },
       publisher: { "@id": organizationId },
@@ -242,6 +293,7 @@ export function pageJsonLd(path: PublicPath, questions: readonly Question[] = []
         .filter(otherPath => otherPath !== path).map(otherPath => new URL(otherPath, baseUrl).href),
       ...(path !== "/" ? { breadcrumb: { "@id": breadcrumbId } } : {}),
       ...(path === "/" ? { mainEntity: { "@id": applicationId } } : {}),
+      ...(path === "/about" ? { mainEntity: { "@id": organizationId } } : {}),
       ...(faq.length ? {
         mainEntity: faq.map(({ id, question, answer }) => ({
           "@type": "Question", "@id": `${url}#${id}`, name: question,

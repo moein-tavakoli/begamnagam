@@ -100,6 +100,7 @@ class ManagementTests(TestCase):
         package = m.MessagePackage.objects.create(name='سه پیام', message_count=3, price_toman=10000, active=True)
         purchase = m.CreditPurchase.objects.create(owner=self.member, package=package, idempotency_key=uuid.uuid4(),
             package_name=package.name, message_count=3, amount_toman=10000, environment='demo', credited_at=timezone.now())
+        m.ManualPayment.objects.create(purchase=purchase, card_number='private-card-destination', card_holder='Test receiver', receipt_reference='private-bank-reference')
         m.CreditEntry.objects.create(account=self.account, purchase=purchase, kind='purchase', units=3, environment='demo')
         m.Outbox.objects.create(order=order, available_at=timezone.now())
         m.MessageDelivery.objects.create(order=order)
@@ -125,7 +126,7 @@ class ManagementTests(TestCase):
                 self.assertEqual(response.status_code, 200, response.content)
                 self.assertGreater(response.json()["total"], 0)
                 self.assertTrue(response.json()["rows"][0]["record_id"])
-                for private in ("private-order-body", "private-full-sms", "private-digest", "private-invite-sms", "private-report-details", "private-grant", "09999999999"):
+                for private in ("private-card-destination", "private-bank-reference", "private-order-body", "private-full-sms", "private-digest", "private-invite-sms", "private-report-details", "private-grant", "09999999999"):
                     self.assertNotIn(private, response.content.decode())
 
     def test_pagination_and_input_bounds(self):

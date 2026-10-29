@@ -28,6 +28,7 @@ import { draftProblem, draftTopicHint } from "@/lib/composer-draft";
 import type { MessageTone } from '@/lib/message-tones';
 import { MessageTonePicker } from './message-tone-picker';
 import { RewriteLoading } from './rewrite-loading';
+import { alternativeRequest, messageAlternatives, type MessageAlternative } from '@/lib/message-alternatives';
 
 const categoryIcons: Record<string, IconName> = {
   body: "drop",
@@ -74,6 +75,8 @@ export function Composer({ onExit }: { onExit?: () => void }) {
   const previewInFlight = useRef(false);
   const [pollingError, setPollingError] = useState("");
   const [error, setError] = useState("");
+  const [alternatives, setAlternatives] = useState<MessageAlternative[]>([]);
+  const [selectedAlternative, setSelectedAlternative] = useState<string | null>(null);
   const [fields, setFields] = useState<Record<string, string>>({});
   const freeformRewrite = data?.rewrite_mode === "gapgpt" || data?.rewrite_mode === "ollama";
   const awaitingPayment =
@@ -86,6 +89,15 @@ export function Composer({ onExit }: { onExit?: () => void }) {
   const idempotencyKey = useRef("");
   const heading = useRef<HTMLHeadingElement>(null);
   const previousStage = useRef(`${step}:${awaitingPayment}:${finished}`);
+  const alternativesPanel = useRef<HTMLFieldSetElement>(null);
+
+  useEffect(() => {
+    if (alternatives.length > 0) alternativesPanel.current?.focus();
+  }, [alternatives]);
+
+  useEffect(() => {
+    setAlternatives([]); setSelectedAlternative(null);
+  }, [text, recipient, messageTone, step, data?.session_identity]);
 
   useEffect(() => {
     if (!data || order || toneOptions.some(item => item.id === messageTone)) return;
@@ -131,6 +143,8 @@ export function Composer({ onExit }: { onExit?: () => void }) {
 
   function handleError(error: unknown) {
     setError(errorMessage(error));
+    setAlternatives(messageAlternatives(error instanceof ApiError ? error.details : undefined));
+    setSelectedAlternative(null);
     if (error instanceof ApiError && error.code === 'tone_unavailable') {
       setStep(0); setPreview(null); setConsent(false); idempotencyKey.current = ''; void reload();
     }
@@ -190,7 +204,8 @@ export function Composer({ onExit }: { onExit?: () => void }) {
       document.getElementById("quote-recipient")?.focus();
       return;
     }
-    if (text.trim().length < 3) {
+    const alternative = alternatives.find(item => item.token === selectedAlternative);
+    if (!alternative && text.trim().length < 3) {
       setFields({
         text: "منظورت را در حداقل ۳ حرف بنویس یا از یک مثال کمک بگیر.",
       });
@@ -199,13 +214,14 @@ export function Composer({ onExit }: { onExit?: () => void }) {
     }
     previewInFlight.current = true;
     setBusy(true);
-    setPreparingText(freeformRewrite);
+    setPreparingText(freeformRewrite && !alternative);
     try {
       const result = await api<Preview>("/messages/preview", {
         method: "POST",
-        body: { category, text: text.trim(), recipient_phone: normalizePhone(recipient), source_mode: freeformRewrite ? 'freeform' : 'suggestion', message_tone: messageTone },
+        body: alternative ? alternativeRequest(alternative, normalizePhone(recipient)) : { category, text: text.trim(), recipient_phone: normalizePhone(recipient), source_mode: freeformRewrite ? 'freeform' : 'suggestion', message_tone: messageTone },
       });
       setPreview(result);
+      setAlternatives([]); setSelectedAlternative(null);
       setConsent(false);
       idempotencyKey.current = "";
     } catch (error) {
@@ -382,6 +398,14 @@ export function Composer({ onExit }: { onExit?: () => void }) {
           </div>
           <ServiceState />
           <ErrorBox message={error} />
+          {step === 1 && !preview && alternatives.length > 0 && <fieldset ref={alternativesPanel} tabIndex={-1} className="message-alternatives" disabled={busy}>
+            <legend>به‌جایش می‌توانی یک پیام تازه انتخاب کنی</legend>
+            <p className="small muted">متن اولیه تأیید نشد. این پیشنهادها پیام‌های آمادهٔ جداگانه‌اند؛ فقط اگر منظورت را می‌رسانند انتخابشان کن. پیش از ارسال، متن کامل را دوباره می‌بینی.</p>
+            {alternatives.map(item => <label className="message-alternative" key={item.id}>
+              <input type="radio" name="message-alternative" checked={selectedAlternative === item.token} onChange={() => setSelectedAlternative(item.token)} />
+              <span><strong>{item.label}</strong><span>{item.text}</span></span>
+            </label>)}
+          </fieldset>}
           {step === 0 && !data?.authenticated && <AuthGate renderActions={renderActions} />}
           {step === 0 && data?.authenticated && (
             <form className="draft-form" onSubmit={advanceDraft} noValidate>
@@ -504,6 +528,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                   const value = latinDigits(event.target.value);
                   if (normalizePhone(value) !== normalizePhone(recipient)) {
                     setPreview(null);
+                    setAlternatives([]); setSelectedAlternative(null);
                     setConsent(false);
                     idempotencyKey.current = "";
                   }
@@ -562,11 +587,11 @@ export function Composer({ onExit }: { onExit?: () => void }) {
               </> : <>
                 <div className="review-placeholder" role="note">
                   <Icon name="chat" size={24} />
-                  <p>{freeformRewrite ? "شماره رو وارد کن تا متن نهایی آماده بشه. قبل از ارسال، متن کامل پیامک رو می‌بینی." : "شماره رو وارد کن تا متن نهایی آماده بشه. هر ارسال یک اعتبار مصرف می‌کنه."}</p>
+                  <p>{alternatives.length > 0 ? "یکی از پیشنهادهای بالا را انتخاب کن تا پیش‌نمایش کامل آن را ببینی." : freeformRewrite ? "شماره رو وارد کن تا متن نهایی آماده بشه. قبل از ارسال، متن کامل پیامک رو می‌بینی." : "شماره رو وارد کن تا متن نهایی آماده بشه. هر ارسال یک اعتبار مصرف می‌کنه."}</p>
                 </div>
                 {data?.authenticated && renderActions(
-                  <BusyButton type="submit" className="button primary" busy={busy} disabled={!data?.authenticated}>
-                    آماده‌سازی متن <Icon name="arrow" size={18} />
+                  <BusyButton type="submit" className="button primary" busy={busy} disabled={!data?.authenticated || (alternatives.length > 0 && !selectedAlternative)}>
+                    {selectedAlternative ? 'پیش‌نمایش پیشنهاد انتخاب‌شده' : alternatives.length > 0 ? 'یک پیشنهاد را انتخاب کن' : 'آماده‌سازی متن'} <Icon name="arrow" size={18} />
                   </BusyButton>,
                 )}
               </>}

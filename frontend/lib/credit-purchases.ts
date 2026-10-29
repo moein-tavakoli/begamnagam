@@ -2,7 +2,7 @@ export type PurchaseIntent = { packageId: number; value: string; purchaseId?: st
 export type PurchaseResult = { id: string; package_id: number; status: string };
 
 export function settledPurchase(status: string): boolean {
-  return ['credited', 'failed', 'wallet_returned'].includes(status);
+  return ['credited', 'failed', 'wallet_returned', 'cancelled', 'rejected'].includes(status);
 }
 
 /** Bind only the response to this request; uncertain results keep the same key. */

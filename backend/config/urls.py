@@ -6,11 +6,27 @@ from core import management_api as management
 from core import ai_management
 from core import wallet_views
 from core import package_views
+from core import manual_payment_views, support_views, provider_balances
 
 handler404 = "core.views.not_found"
 handler500 = "core.views.server_error"
 
 urlpatterns = [
+    path("api/v1/manage/provider-balances/<str:provider>", provider_balances.balance),
+    path('api/v1/support/summary', support_views.summary),
+    path('api/v1/support/messages', support_views.messages),
+    path('api/v1/support/read', support_views.read),
+    path('api/v1/manage/support/summary', support_views.staff_summary),
+    path('api/v1/manage/support/inbox', support_views.inbox),
+    path('api/v1/manage/support/<uuid:thread_id>/messages', support_views.staff_messages),
+    path('api/v1/manage/support/<uuid:thread_id>/read', support_views.staff_read),
+    path('api/v1/manage/support/<uuid:thread_id>/close', support_views.close),
+    path('api/v1/manage/manual-payment-settings', manual_payment_views.configuration),
+    path('api/v1/manage/manual-payments/grant', manual_payment_views.manual_grant),
+    path('api/v1/manage/manual-payments/<uuid:manual_id>/approve', manual_payment_views.approve_payment),
+    path('api/v1/manage/manual-payments/<uuid:manual_id>/reject', manual_payment_views.reject_payment),
+    path('api/v1/credit-purchases/<uuid:purchase_id>/receipt', manual_payment_views.receipt),
+    path('api/v1/credit-purchases/<uuid:purchase_id>/cancel-card', manual_payment_views.cancel),
     path('api/v1/wallet', wallet_views.wallet),
     path('api/v1/wallet/topups', wallet_views.topups),
     path('api/v1/wallet/topups/<uuid:topup_id>', wallet_views.topup),

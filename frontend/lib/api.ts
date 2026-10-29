@@ -9,7 +9,7 @@ export type Bootstrap = {
   message_tones?: MessageToneOption[];
   default_message_tone?: MessageTone;
   wallet_balance_toman?: string;
-  payment_options?: { wallet_enabled: boolean; gateway_enabled: boolean; gateway_configured: boolean; wallet_terms_version: string };
+  payment_options?: { wallet_enabled: boolean; gateway_enabled: boolean; gateway_configured: boolean; wallet_terms_version: string; card_enabled?: boolean; receipt_channels?: ReceiptChannel[] };
   purchased_sends_remaining?: number;
   message_packages?: MessagePackage[];
   package_checkout_enabled?: boolean;
@@ -55,7 +55,9 @@ export type Order = {
   status_reason?: { code: string; message: string } | null;
 };
 export type MessagePackage = { id: number; name: string; message_count: number; price_toman: number; active: boolean; sort_order: number; revision: number };
-export type CreditPurchase = { id: string; package_id: number; name: string; message_count: number; amount_toman: number; environment: string; status: string; redirect_url?: string | null; created_at: string };
+export type ReceiptChannel = { name: string; label: string; url: string };
+export type CreditPurchase = { id: string; package_id: number; name: string; message_count: number; amount_toman: number; environment: string; status: string; payment_method?: string; redirect_url?: string | null; created_at: string;
+  manual_payment_id?: string; card?: { number: string; holder: string; bank_name?: string }; receipt_channels?: ReceiptChannel[]; receipt_submitted_at?: string | null; review_note?: string };
 export type Message = Order & {
   recipient_masked: string;
   text: string;
@@ -65,15 +67,18 @@ export type Message = Order & {
 export class ApiError extends Error {
   code: string;
   fields?: Record<string, string | string[]>;
+  details?: unknown;
   constructor(
     message: string,
     code = "network_error",
     fields?: Record<string, string | string[]>,
+    details?: unknown,
   ) {
     super(message);
     this.name = "ApiError";
     this.code = code;
     this.fields = fields;
+    this.details = details;
   }
 }
 
@@ -148,6 +153,7 @@ export async function api<T>(
           "سرویس در دسترس نیست. چند لحظه دیگر دوباره تلاش کنید.",
         data?.error?.code || "service_error",
         response.status >= 500 ? undefined : data?.error?.fields,
+        response.status >= 500 ? undefined : data?.error?.details,
       );
     }
     if (data === null)

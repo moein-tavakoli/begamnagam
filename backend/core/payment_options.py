@@ -32,6 +32,8 @@ def options():
     from .limits import policy
     current = policy()
     problem = gateway_problem()
-    return {'wallet_enabled': current.wallet_enabled,
+    from .manual_payments import available as card_available, channels, current as manual_settings
+    manual = manual_settings()
+    return {'wallet_enabled': current.wallet_enabled, 'card_enabled': card_available(manual), 'receipt_channels': channels(manual),
         'gateway_enabled': current.gateway_enabled and not problem,
         'gateway_configured': not problem, 'wallet_terms_version': WALLET_TERMS_VERSION}

@@ -40,6 +40,12 @@ def staff_api(methods, permission=None):
 # Every exposed field is reviewed explicitly. Phones, message bodies, provider
 # references, recipient hashes, credentials and idempotency keys are excluded.
 RESOURCES = {
+    'manual-payments': (m.ManualPayment, 'رسیدهای کارت‌به‌کارت', 'created_at', 'status', [
+        ('id','شناسهٔ درخواست','id'), ('purchase_id','شناسهٔ خرید','id'),
+        ('purchase__owner__account__id','حساب','id'), ('purchase__owner__account__phone_masked','موبایل','text'),
+        ('purchase__package_name','بسته','text'), ('purchase__message_count','تعداد پیام','number'),
+        ('purchase__amount_toman','مبلغ (تومان)','number'), ('purchase__environment','محیط','text'), ('status','وضعیت','status'),
+        ('receipt_submitted_at','ثبت رسید','date'), ('reviewed_at','بررسی','date'), ('created_at','ثبت','date')]),
     'wallet-entries': (m.WalletEntry, 'گردش کیف پول', 'created_at', 'kind', [
         ('id', 'شناسه', 'id'), ('account_id', 'حساب', 'id'), ('kind', 'نوع', 'status'),
         ('amount_toman', 'مبلغ (تومان)', 'number'), ('balance_after_toman', 'مانده (تومان)', 'money'),
@@ -57,6 +63,8 @@ RESOURCES = {
     "accounts": (m.Account, "حساب‌ها", "created_at", None, [
         ("id", "شناسه", "id"), ("phone_masked", "موبایل", "text"),
         ("wallet_balance_toman", "موجودی کیف پول", "money"),
+        ('sender_daily_limit', 'سقف اختصاصی ارسال / ۲۴ ساعت', 'number'),
+        ('rewrite_daily_limit', 'سقف اختصاصی بازنویسی / روز', 'number'),
         ("suspended", "تعلیق", "bool"), ("free_sends_remaining", "هدیهٔ باقی‌مانده", "number"),
         ("free_sends_earned_total", "جایزهٔ دعوت", "number"), ("purchased_sends_remaining", "اعتبار خریداری‌شده", "number"), ("direct_message_tone", "لحن صریح", "bool"),
         ("deletion_requested_at", "درخواست حذف", "date"), ("created_at", "عضویت", "date")]),
@@ -104,12 +112,14 @@ RESOURCES = {
 
 
 def resource_permission(spec):
+    if spec[0] == m.ManualPayment:
+        return 'core.approve_manual_payments'
     return "core.view_" + spec[0]._meta.model_name
 
 
 def context(user):
-    return {"authenticated": True, "username": "مدیر" if hasattr(user, "account") else user.get_username(),
-        "permissions": [name for name in ("view_operations", "manage_site_limits", "manage_ai", "manage_message_packages", "view_private_message_text", "operate_safety", "suspend_account", "manage_message_tone", "triage_report", "confirm_refund") if user.has_perm("core." + name)],
+    return {"authenticated": True, "session_identity": digest("staff-session-actor:"+str(user.pk)), "username": "مدیر" if hasattr(user, "account") else user.get_username(),
+        "permissions": ["support_chat"] + [name for name in ("view_operations", "manage_site_limits", "manage_account_limits", "manage_manual_payments", "approve_manual_payments", "manage_ai", "manage_message_packages", "view_private_message_text", "operate_safety", "suspend_account", "manage_message_tone", "triage_report", "confirm_refund") if user.has_perm("core." + name)],
         "resources": [{"key": key, "title": spec[1]} for key, spec in RESOURCES.items() if user.has_perm(resource_permission(spec))]}
 
 
@@ -241,7 +251,12 @@ def action(request):
     name, identifier = data.get("action"), data.get("object_id", "")
     if not isinstance(name, str) or not isinstance(identifier, str) or len(identifier) > 100:
         raise APIError("invalid_input", "اقدام معتبر نیست.", 422)
-    if name == "tone":
+    if name == 'account_limits':
+        values = data.get('values')
+        if not isinstance(values, dict) or not values or set(values)-{'sender_daily_limit', 'rewrite_daily_limit'}:
+            raise APIError('invalid_input', 'تنظیمات سقف حساب معتبر نیست.', 422)
+        update_account_options(request.user, identifier, values, data.get('reason'))
+    elif name == "tone":
         value = data.get("value")
         if type(value) is not bool:
             raise APIError("invalid_input", "مقدار لحن معتبر نیست.", 422)

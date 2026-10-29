@@ -10,14 +10,23 @@ from .services import APIError
 OPTION_PERMISSIONS = {
     "unlimited_demo_sends": "core.manage_test_sending",
     "direct_message_tone": "core.manage_message_tone",
+    "sender_daily_limit": "core.manage_account_limits",
+    "rewrite_daily_limit": "core.manage_account_limits",
 }
+COUNT_OPTIONS = frozenset({'sender_daily_limit', 'rewrite_daily_limit'})
 
 
 def update_account_options(actor, account_id, changes, reason):
     if (not actor.is_active or not actor.is_staff or not changes
-            or any(key not in OPTION_PERMISSIONS or type(value) is not bool
+            or any(key not in OPTION_PERMISSIONS
                    or not actor.has_perm(OPTION_PERMISSIONS[key]) for key, value in changes.items())):
         raise APIError("forbidden", "مجوز تغییر این تنظیمات را ندارید.", 403)
+    for key, value in changes.items():
+        if key in COUNT_OPTIONS:
+            if value is not None and (type(value) is not int or not 0 <= value <= 1000000):
+                raise APIError('invalid_settings', 'سقف اختصاصی باید خالی یا عدد صحیح بین ۰ و ۱۰۰۰۰۰۰ باشد.', 422)
+        elif type(value) is not bool:
+            raise APIError('forbidden', 'مجوز تغییر این تنظیمات را ندارید.', 403)
     if not isinstance(reason, str) or not 3 <= len(reason.strip()) <= 200:
         raise APIError("reason_required", "دلیل تغییر باید بین ۳ تا ۲۰۰ نویسه باشد.")
     if changes.get("unlimited_demo_sends") and not test_tools_enabled():

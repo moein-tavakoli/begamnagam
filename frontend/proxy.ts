@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { contentSecurityPolicy } from "@/lib/security";
-import { getSeoConfig } from "@/lib/seo";
+import { getSeoConfig, publicPages } from "@/lib/seo";
 
 export function proxy(request: NextRequest) {
   const nonce = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64");
@@ -13,11 +13,14 @@ export function proxy(request: NextRequest) {
   const response = NextResponse.next({ request: { headers } });
   response.headers.set("Content-Security-Policy", policy);
   response.headers.set("Cache-Control", "private, no-store");
+  if (getSeoConfig().indexable && Object.hasOwn(publicPages, request.nextUrl.pathname)) {
+    response.headers.append("Link", '</llms.txt>; rel="describedby"; type="text/plain"');
+  }
   return response;
 }
 
 export const config = {
   // API/admin have their own Django CSP. Do not apply HTML nonces to public
   // assets, the service worker, sitemap or robots, which remain cacheable.
-  matcher: ["/((?!api(?:/|$)|admin(?:/|$)|static/|_next/|images/|icons/|icon\\.svg$|favicon\\.ico$|manifest\\.webmanifest$|robots\\.txt$|sitemap\\.xml$|sw\\.js$|offline\\.html$).*)"],
+  matcher: ["/((?!api(?:/|$)|admin(?:/|$)|static/|_next/|images/|icons/|icon\\.svg$|favicon\\.ico$|manifest\\.webmanifest$|robots\\.txt$|sitemap\\.xml$|llms\\.txt$|sw\\.js$|offline\\.html$).*)"],
 };

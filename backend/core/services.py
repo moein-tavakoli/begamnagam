@@ -23,8 +23,9 @@ PUBLIC_VALIDATION_MESSAGES = frozenset({
 
 
 class APIError(Exception):
-    def __init__(self, code, message, status=400, fields=None):
+    def __init__(self, code, message, status=400, fields=None, *, details=None):
         self.code, self.message, self.status, self.fields = code, message, status, fields
+        self.details = details
 
 
 def is_product_authenticated(user):
@@ -60,6 +61,8 @@ def error_response(exc):
     error = {"code": exc.code, "message": REQUEST_UNAVAILABLE if exc.status >= 500 else exc.message}
     if exc.fields and exc.status < 500:
         error["fields"] = exc.fields
+    if exc.details and exc.status < 500:
+        error['details'] = exc.details
     response = JsonResponse({"error": error}, status=exc.status, json_dumps_params={"ensure_ascii": False})
     response["Cache-Control"] = "no-store"
     return response
@@ -132,6 +135,9 @@ def create_order(user, session_key, data, idempotency_key):
     with transaction.atomic():
         # Serializes quota/idempotency checks for a sender across all workers.
         get_user_model().objects.select_for_update().get(pk=user.pk)
+        # Refresh after the sender lock; operator count changes take that lock
+        # too. Keep the established recipient-before-balance lock order.
+        user.account = Account.objects.get(user_id=user.pk)
         previous = Order.objects.filter(owner=user, idempotency_key=key).first()
         if previous:
             if previous.preview_id != preview_id or previous.recipient_hash != phone_hash:
@@ -178,13 +184,16 @@ def create_order(user, session_key, data, idempotency_key):
         from .demo_limits import quota_start, recipient_in_cooldown
         from .limits import policy, fa_number
         limits = policy()
-        if not unlimited and limits.sender_limit and limits.sender_window_hours:
-            sender_start = quota_start(now, hours=limits.sender_window_hours, sender=user)
+        sender_maximum, sender_hours = limits.sender_limit, limits.sender_window_hours
+        if user.account.sender_daily_limit is not None:
+            sender_maximum, sender_hours = user.account.sender_daily_limit, 24
+        if not unlimited and sender_maximum and sender_hours:
+            sender_start = quota_start(now, hours=sender_hours, sender=user)
             sender_orders = Order.objects.filter(owner=user, created_at__gte=sender_start)
             if not settings.DEMO_MODE:
                 sender_orders = sender_orders.exclude(status=Order.Status.DELIVERED_DEMO)
-            if sender_orders.count() >= limits.sender_limit:
-                raise APIError("daily_limit", f"سقف {fa_number(limits.sender_limit)} درخواست در {fa_number(limits.sender_window_hours)} ساعت شما تکمیل شده است؛ بعد از گذشت این بازه دوباره تلاش کن.", 429)
+            if sender_orders.count() >= sender_maximum:
+                raise APIError("daily_limit", f"سقف {fa_number(sender_maximum)} درخواست در {fa_number(sender_hours)} ساعت شما تکمیل شده است؛ بعد از گذشت این بازه دوباره تلاش کن.", 429)
         RecipientState.objects.get_or_create(phone_hash=phone_hash)
         state = RecipientState.objects.select_for_update().get(phone_hash=phone_hash)
         busy = Order.objects.filter(recipient_hash=phone_hash).filter(

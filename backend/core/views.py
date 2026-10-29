@@ -230,7 +230,7 @@ def logout_view(request):
 @api(["POST"])
 def preview(request):
     data = body(request)
-    if set(data) - {'text', 'category', 'recipient_phone', 'source_mode', 'payment_method', 'message_tone'}:
+    if set(data) - {'text', 'category', 'recipient_phone', 'source_mode', 'payment_method', 'message_tone', 'alternative_token'}:
         raise APIError('invalid_input', 'فقط متن اولیه و شمارهٔ گیرنده را بفرست؛ نتیجهٔ بررسی در سرور تعیین می‌شود.', 422)
     owner = request.user if is_product_authenticated(request.user) else None
     from .demo_limits import unlimited_demo_sends
@@ -255,17 +255,24 @@ def preview(request):
     tone = resolve_tone(data.get('message_tone'), ai)
     use_freeform = freeform_available(ai)
     source_mode = data.get('source_mode')
-    if source_mode is not None and (not isinstance(source_mode, str) or source_mode not in {'suggestion', 'freeform'}):
+    if source_mode is not None and (not isinstance(source_mode, str) or source_mode not in {'suggestion', 'freeform', 'reviewed_alternative'}):
         raise APIError('invalid_input', 'روش آماده‌سازی متن معتبر نیست.')
+    choosing_alternative = source_mode == 'reviewed_alternative'
+    if 'alternative_token' in data and not choosing_alternative:
+        raise APIError('invalid_input', 'روش انتخاب پیشنهاد معتبر نیست.', 422)
+    if choosing_alternative:
+        if set(data) & {'text', 'category'}:
+            raise APIError('server_snapshot_required', 'متن پیشنهاد جایگزین فقط از سرور خوانده می‌شود.', 422)
+        use_freeform = False
     if source_mode == 'freeform' and not use_freeform:
         raise APIError('freeform_unavailable', 'بازنویسی متن دلخواه فعلاً فعال نیست؛ از پیشنهاد آماده استفاده کن.', 409)
     if source_mode == 'suggestion' and not use_freeform:
         example = next((c['example'] for c in CATEGORIES if c['id'] == category), None)
         if text != example:
             raise APIError('freeform_unavailable', 'متن عوض شده است؛ برای بازنویسی دلخواه باید این قابلیت فعال باشد.', 409)
-    if not use_freeform and category == 'custom':
+    if not use_freeform and category == 'custom' and not choosing_alternative:
         raise APIError('freeform_unavailable', 'بازنویسی متن دلخواه فعلاً فعال نیست؛ از پیشنهاد آماده استفاده کن.', 409)
-    if settings.PILOT_POSITIVE_ONLY and (use_freeform or category not in {"appreciation", "encouragement", "congratulations"}):
+    if settings.PILOT_POSITIVE_ONLY and not choosing_alternative and (use_freeform or category not in {"appreciation", "encouragement", "congratulations"}):
         raise APIError("category_unavailable", "این موضوع فعلاً فعال نیست.", 422)
     recipient_hash = ''
     if data.get('recipient_phone'):
@@ -274,15 +281,25 @@ def preview(request):
         recipient_hash = digest(normalize_phone(data['recipient_phone']))
         if recipient_hash == owner.account.phone_hash:
             raise APIError('self_recipient', 'شمارهٔ گیرنده باید با شمارهٔ خودت متفاوت باشد.', 422)
-    if use_freeform and (not owner or not recipient_hash):
+    if (use_freeform or choosing_alternative) and (not owner or not recipient_hash):
         raise APIError('authentication_required' if not owner else 'recipient_required',
             'برای آماده‌سازی متن، ابتدا وارد شو و شمارهٔ گیرنده را وارد کن.', 401 if not owner else 422)
     if owner and not unlimited:
         limited("preview-user", str(owner.pk), 20, 600)
+    alternative_body = None
+    if choosing_alternative:
+        from .message_alternatives import resolve as resolve_alternative
+        category, alternative_body = resolve_alternative(data.get('alternative_token'), owner=owner,
+            session=session_key(request), recipient_hash=recipient_hash, tone=tone)
+        text = alternative_body
     direct = tone != 'polite'
     sms_origin = settings.APP_BASE_URL.removeprefix('https://').removeprefix('http://')
     try:
-        if use_freeform:
+        if choosing_alternative:
+            from .moderation import moderate
+            moderate(alternative_body)
+            rewritten, mode = alternative_body, 'template'
+        elif use_freeform:
             from .sms import freeform_body_limit
             limit = freeform_body_limit(sms_origin)
             if limit < 20:
@@ -293,9 +310,10 @@ def preview(request):
             rewritten, mode = rewrite(category, text, message_tone=tone, provider_mode='template')
     except ModerationRejected as exc:
         ModerationAudit.objects.create(owner=owner, category=category[:32], outcome="rejected", reason_code=str(exc), content_digest=digest(json.dumps(text, ensure_ascii=True)))
-        from .moderation import rejection_feedback
-        code, message = rejection_feedback(str(exc))
-        raise APIError(code, message, 422)
+        from .message_alternatives import feedback, offers
+        code, message = feedback(text, str(exc))
+        alternatives = offers(owner, session_key(request), recipient_hash, tone) if owner and recipient_hash and isinstance(text, str) and 0 < len(text) <= 280 else []
+        raise APIError(code, message, 422, details={'alternatives': alternatives})
     except RewriteUnavailable:
         raise APIError("rewrite_unavailable", "آماده‌سازی متن موقتاً در دسترس نیست؛ کمی بعد تلاش کنید.", 503)
     from .limits import policy

@@ -72,6 +72,7 @@ export function HomeFlow() {
             showComposer(true);
         }}
       >
+        <Link href="/pricing" className="home-credit-link"><Icon name="receipt" size={17} /> تعرفه‌ها و خرید اعتبار</Link>
         <Link href="/profile" prefetch={false} className="home-profile-link">
           <Icon name="user" size={19} /> پروفایل
         </Link>

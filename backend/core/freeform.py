@@ -40,9 +40,11 @@ def reserve(owner, config=None):
         account = Account.objects.get(user=owner)
         if account.suspended or account.deletion_requested_at or not owner.is_active:
             raise APIError('account_unavailable', 'بازنویسی با این حساب فعلاً مجاز نیست.', 403)
+        if account.rewrite_daily_limit is not None:
+            per_user = account.rewrite_daily_limit
         RewriteBudget.objects.get_or_create(day=day, defaults={'limit_requests': daily})
         budget = RewriteBudget.objects.select_for_update().get(pk=day)
-        if RewriteUsage.objects.filter(owner=owner, budget=budget).count() >= per_user:
+        if (per_user or account.rewrite_daily_limit is None) and RewriteUsage.objects.filter(owner=owner, budget=budget).count() >= per_user:
             raise APIError('rewrite_daily_limit', 'سقف بازنویسی امروز حساب تکمیل شده است؛ فردا دوباره تلاش کن.', 429)
         daily_limit = daily if local or not limits._state.adding else min(budget.limit_requests, daily)
         if not unlimited and budget.reserved_requests >= daily_limit:

@@ -1,0 +1,250 @@
+{
+  "version": "0.13.0",
+  "checked_at_utc": "2026-10-28T17:47:54.982054+00:00",
+  "backend_image": "sha256:33418fb3238ea839069e8623fbaf0ff0a6a010bcdbcd7ed26cdc557970bd0af8",
+  "frontend_image": "sha256:7c44f5c464efa3e7d62cfc131fdfc4716761c34f452b43c47cb7b56bf24d0e92",
+  "frontends": 6,
+  "services": {
+    "backend": "healthy",
+    "worker": "running",
+    "beat": "running",
+    "frontend": "healthy",
+    "frontend2": "healthy",
+    "frontend3": "healthy",
+    "frontend4": "healthy",
+    "frontend5": "healthy",
+    "frontend6": "healthy",
+    "postgres": "healthy",
+    "redis": "healthy",
+    "rabbitmq": "healthy",
+    "proxy": "healthy"
+  },
+  "replicas": {
+    "frontend": {
+      "port": "3000",
+      "enamad_links_assets": "PASS",
+      "assets": 13
+    },
+    "frontend2": {
+      "port": "3001",
+      "enamad_links_assets": "PASS",
+      "assets": 13
+    },
+    "frontend3": {
+      "port": "3002",
+      "enamad_links_assets": "PASS",
+      "assets": 13
+    },
+    "frontend4": {
+      "port": "3003",
+      "enamad_links_assets": "PASS",
+      "assets": 13
+    },
+    "frontend5": {
+      "port": "3004",
+      "enamad_links_assets": "PASS",
+      "assets": 13
+    },
+    "frontend6": {
+      "port": "3005",
+      "enamad_links_assets": "PASS",
+      "assets": 13
+    }
+  },
+  "profile": {
+    "provider": "gapgpt",
+    "model": "gpt-4.1-mini",
+    "site_daily_rewrites": "unlimited",
+    "user_daily_rewrites": 10,
+    "otp_sms": "real",
+    "otp_mode": "sms",
+    "otp_domain_binding": "begamnagam.ir",
+    "payment": "disabled",
+    "wallet_gateway": "disabled",
+    "hourly_zero_validation_without_save": "PASS",
+    "semantic_error_copy": "PASS",
+    "limits_match_pre_release": true,
+    "ai_match_pre_release": true,
+    "usage_credits_orders_not_reset": true,
+    "migration": "0033_support_chat_bank_name"
+  },
+  "data_proxy_ids_unchanged": true,
+  "frontend_secrets_isolated": true,
+  "credentials_preserved": true,
+  "backend_image_matches_snapshot": true,
+  "postgres_tests": 484,
+  "frontend_tests": 66,
+  "frontend_typecheck": "PASS",
+  "frontend_build": "PASS",
+  "pre_backup": {
+    "encrypted": true,
+    "archive": "/opt/begamnagam/backups/pre-0.13.0/database-20261028T173932Z-e7adfe.dump.fernet",
+    "dump_bytes": 249367,
+    "plaintext_sha256": "1fcb0ebb643dafff96496f6c168e4cc672d435bf2b31b8f244b27f894271d8fd",
+    "production_rows_changed": false,
+    "real_sms_sent": false,
+    "restore_check": "PASS",
+    "encrypted_fields_validated": 196,
+    "dispatch_on_restored_database": "halted"
+  },
+  "model_calls": 0,
+  "test_sms_sent": 0,
+  "browser": {
+    "transport": "domain_https_via_internal_nginx_192.168.1.6",
+    "tls_verified": true,
+    "checks": [
+      {
+        "width": 375,
+        "real_staff_login": "PASS",
+        "balance_header": "PASS",
+        "support_inbox_read": "PASS",
+        "card_bank_form_disabled": "PASS",
+        "packages": "PASS",
+        "logout": "PASS",
+        "pricing_public_catalog": "PASS",
+        "about": "PASS",
+        "mobile_overflow": false,
+        "browser_errors": 0,
+        "sms_sent": 0,
+        "model_calls": 0,
+        "payment_calls": 0
+      },
+      {
+        "width": 1440,
+        "real_staff_login": "PASS",
+        "balance_header": "PASS",
+        "support_inbox_read": "PASS",
+        "card_bank_form_disabled": "PASS",
+        "packages": "PASS",
+        "logout": "PASS",
+        "pricing_public_catalog": "PASS",
+        "about": "PASS",
+        "mobile_overflow": false,
+        "browser_errors": 0,
+        "sms_sent": 0,
+        "model_calls": 0,
+        "payment_calls": 0
+      }
+    ]
+  },
+  "seo": {
+    "result": "PASS",
+    "requests": 103,
+    "public_pages": 6,
+    "private_pages": 8,
+    "share_crawlers": 7,
+    "ai_crawlers": 6,
+    "indexable": true,
+    "transport": "domain_https_via_internal_nginx_192.168.1.6",
+    "tls_certificate_verified": true
+  },
+  "pwa_offline_validation": "PASS in isolated Chromium installed-app document",
+  "actual_financial_transactions_tested": false,
+  "current": "/opt/begamnagam/releases/0.13.0",
+  "promoted": true,
+  "https": {
+    "version": "0.13.0",
+    "https": "PASS",
+    "transport": "domain_https_via_internal_nginx_192.168.1.6",
+    "tls_certificate_verified": true,
+    "admin_login_and_csrf": "PASS",
+    "site_settings_not_mutated": true,
+    "hourly_zero_metadata_and_help": "PASS",
+    "enamad_head": "PASS",
+    "links_six_targets": "PASS",
+    "otp_autofill_bundle": "PASS",
+    "management_zero_guidance": "PASS",
+    "rewrite_loading_bundle": "PASS",
+    "static_assets": 12,
+    "pages": {
+      "/": 38540,
+      "/links": 37648,
+      "/manage": 13376,
+      "/credits": 19813,
+      "/wallet": 16956,
+      "/profile": 16981,
+      "/help": 61113,
+      "/history": 17203,
+      "/preferences": 17771,
+      "/pricing": 33753,
+      "/about": 36098
+    },
+    "real_otp_sms_preserved": true,
+    "provider": "gapgpt",
+    "model": "gpt-4.1-mini",
+    "site_daily_rewrites": "unlimited",
+    "user_daily_rewrites": 10,
+    "wallet_gateway": "disabled",
+    "payment": "disabled",
+    "test_sms_sent": 0,
+    "model_calls": 0,
+    "four_catalog_packages": "PASS",
+    "support_staff_api_and_csrf": "PASS",
+    "account_limits_permissions": "PASS",
+    "manual_payment_settings_disabled": "PASS",
+    "kavenegar_read_only_balance": "available",
+    "gapgpt_manual_wallet": "PASS",
+    "new_header_and_support_bundle": "PASS",
+    "public_pricing_about": "PASS"
+  },
+  "post_release_backup": {
+    "encrypted": true,
+    "archive": "/opt/begamnagam/backups/post-0.13.0/database-20261028T175442Z-cd2192.dump.fernet",
+    "dump_bytes": 268354,
+    "plaintext_sha256": "2d754511a2fa780728a7a63a0603508901d27be773d5231fd55fe0c937298220",
+    "production_rows_changed": false,
+    "real_sms_sent": false,
+    "restore_check": "PASS",
+    "encrypted_fields_validated": 196,
+    "dispatch_on_restored_database": "halted"
+  },
+  "scheduled_timers": {
+    "begamnagam-backup.timer": "active",
+    "begamnagam-restore-check.timer": "active"
+  },
+  "final_checked_at_utc": "2026-10-28T17:55:37.361000+00:00",
+  "settings_reconfigured": false,
+  "local_quota_reset_replayed": false,
+  "paid_model_test_calls": 0,
+  "all_chat_changes_integrated": true,
+  "remaining_device_limitations": [
+    "Physical Huawei launcher and physical SMS autofill not verified"
+  ],
+  "remaining_ai_quality_limitations": [
+    "Previously recorded tea-host/guest role reversal; final prompt guidance has no additional paid retest"
+  ],
+  "pwa": {
+    "production_service_worker_install": "PASS",
+    "offline_public_shell": "PASS",
+    "tls_verified": true,
+    "private_api_cache_entries": 0,
+    "cache_paths": [
+      "/offline.html",
+      "/icons/icon-192.png",
+      "/icons/icon-512.png",
+      "/icons/maskable-512.png"
+    ],
+    "new_installed_app_document": {
+      "controlled": true,
+      "state": "activated"
+    },
+    "sms_sent": 0,
+    "model_calls": 0
+  },
+  "pwa_test_harness_note": "Initial combined check expected the first client to become controlled; the successful check explicitly enabled service-worker use, waited for readiness and opened a fresh document. Product code unchanged.",
+  "internet_validation": "Normal public route from operator and external web fetch unavailable; domain TLS validated via central LAN Nginx192.168.1.6",
+  "authorized_catalog_seeds": 4,
+  "source_snapshot_sha256": "f9d0e3d60e484c286a115c005af756fe8dc5c94a66aa89efadc178ec79f8c07b",
+  "features": [
+    "reviewed alternatives and precise local rejection feedback",
+    "per-account sender and rewrite count limits",
+    "pricing and four approved packages",
+    "manual bank transfer and bank-evidence approval code; live paid activation remains disabled",
+    "shared staff text support and badges",
+    "Kavenegar read-only balance and official GapGPT wallet link",
+    "GEO about/help/robots/sitemap/llms"
+  ],
+  "paid_checkout_enabled": false,
+  "release_tests_sent_sms": false,
+  "release_tests_called_paid_models": false
+}

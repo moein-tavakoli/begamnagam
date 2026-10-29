@@ -32,7 +32,7 @@ def credit_environment():
 def checkout_enabled():
     from .payment_options import options
     available = options()
-    return (settings.DEMO_MODE and settings.PAYMENT_BACKEND == 'demo') or available['wallet_enabled'] or available['gateway_enabled']
+    return (settings.DEMO_MODE and settings.PAYMENT_BACKEND == 'demo') or available['wallet_enabled'] or available['gateway_enabled'] or available.get('card_enabled', False)
 
 
 @transaction.atomic
@@ -74,12 +74,27 @@ def save_package(actor, data, package_id=None):
 def purchase_data(purchase):
     attempt = PaymentAttempt.objects.filter(purchase=purchase).first()
     returned = attempt and attempt.return_to_wallet and attempt.refunds.filter(status='refunded').exists()
-    return {'id': str(purchase.pk), 'package_id': purchase.package_id, 'name': purchase.package_name,
+    result = {'id': str(purchase.pk), 'package_id': purchase.package_id, 'name': purchase.package_name,
         'message_count': purchase.message_count, 'amount_toman': purchase.amount_toman,
         'environment': purchase.environment, 'payment_method': purchase.payment_method,
         'status': 'credited' if purchase.credited_at else 'wallet_returned' if returned else attempt.status if attempt else 'created',
         'created_at': purchase.created_at.isoformat(),
         'redirect_url': attempt.redirect_url if attempt and attempt.status == 'pending' else None}
+    from .manual_payments import channels
+    result['receipt_channels'] = channels()
+    if purchase.payment_method == 'card':
+        from .models import ManualPayment
+        manual = ManualPayment.objects.filter(purchase=purchase).first()
+        if manual:
+            result['status'] = 'credited' if purchase.credited_at else manual.status
+            result['manual_payment_id'] = str(manual.pk)
+            result['card'] = {'number':manual.card_number, 'holder':manual.card_holder, 'bank_name':manual.bank_name}
+            result['receipt_channels'] = channels(manual)
+            result['receipt_submitted_at'] = manual.receipt_submitted_at.isoformat() if manual.receipt_submitted_at else None
+            if manual.status == 'rejected':result['review_note'] = manual.review_note
+        else:
+            result['status'] = 'unknown'
+    return result
 
 
 def begin_purchase(user, data, key):
@@ -164,7 +179,7 @@ def begin_purchase(user, data, key):
     return purchase_data(purchase)
 
 
-def _apply_verified(purchase, attempt, reference):
+def _apply_verified(purchase, attempt, reference, *, require_credit=False):
     """Caller locks purchase and attempt; grant, receipt and units commit together."""
     if purchase.credited_at or (attempt.return_to_wallet and attempt.refunds.filter(status='refunded').exists()):
         return
@@ -174,7 +189,7 @@ def _apply_verified(purchase, attempt, reference):
     account = Account.objects.select_for_update().get(user_id=purchase.owner_id)
     field = balance_field(purchase.environment)
     unavailable = account.suspended or account.deletion_requested_at or getattr(account, field) + purchase.message_count > 2147483647
-    if unavailable and not attempt.return_to_wallet:
+    if unavailable and (require_credit or not attempt.return_to_wallet):
         raise APIError('credit_limit', 'موجودی حساب نیاز به بررسی دارد.', 409)
     attempt.status, attempt.provider_reference = 'verified', reference
     attempt.checked_at, attempt.lease_until = timezone.now(), None

@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
-from core.models import Account, OTPChallenge, Order, Preview, AbuseReport, Invitation, InvitationSend
+from core.models import Account, OTPChallenge, Order, Preview, AbuseReport, Invitation, InvitationSend, ManualPaymentSettings, ManualPayment, SupportMessage
 from core.privacy import decrypt, encrypt
 
 
@@ -14,7 +14,7 @@ class Command(BaseCommand):
         count = 0
         try:
             with transaction.atomic():
-                for model, field in [(Account, 'phone_cipher'), (OTPChallenge, 'phone_cipher'), (Order, 'recipient_cipher'), (Order, 'text'), (Order, 'full_sms'), (Preview, 'original_text'), (Preview, 'text'), (Preview, 'full_sms'), (Preview, 'generated_body'), (AbuseReport, 'details'), (Invitation, 'phone_cipher'), (InvitationSend, 'full_sms')]:
+                for model, field in [(Account, 'phone_cipher'), (OTPChallenge, 'phone_cipher'), (Order, 'recipient_cipher'), (Order, 'text'), (Order, 'full_sms'), (Preview, 'original_text'), (Preview, 'text'), (Preview, 'full_sms'), (Preview, 'generated_body'), (AbuseReport, 'details'), (Invitation, 'phone_cipher'), (InvitationSend, 'full_sms'), (ManualPaymentSettings, 'card_number'), (ManualPayment, 'card_number'), (ManualPayment, 'receipt_reference'), (ManualPayment, 'confirmed_reference'), (SupportMessage, 'text')]:
                     for obj in model.objects.select_for_update().iterator(chunk_size=200):
                         value = getattr(obj, field)
                         if not value:

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Icon } from "@/components/icons";
 import { Pricing } from "@/components/pricing";
 import { StructuredData } from "@/components/structured-data";
-import { helpQuestions } from "@/lib/help-content";
+import { helpQuestions, howItWorksSteps } from "@/lib/help-content";
 import { pageJsonLd, publicMetadata } from "@/lib/seo";
 export const metadata = publicMetadata("/help");
 
@@ -19,6 +19,12 @@ export default function HelpPage() {
       </div>
       <Pricing />
       <section className="guidelines" id="how-it-works">
+        <h2>بگم نگم چطور کار می‌کند؟</h2>
+        <ol className="prose-card">
+          {howItWorksSteps.map(step => <li key={step.title}><h3>{step.title}</h3><p>{step.text}</p></li>)}
+        </ol>
+      </section>
+      <section className="guidelines" id="write-respectfully">
         <h2>چطور حرفم رو بهتر برسونم؟</h2>
         <div className="guideline-grid">
           <article>
@@ -60,7 +66,7 @@ export default function HelpPage() {
         {helpQuestions.map(faq => (
           <details key={faq.id} id={faq.id}>
             <summary>{faq.question}</summary>
-            <p>{faq.answer}{"link" in faq && <> <Link href={faq.link.href} prefetch={false}>{faq.link.label}</Link></>}</p>
+            <p id={`${faq.id}-answer`}>{faq.answer}{"link" in faq && <> <Link href={faq.link.href} prefetch={false}>{faq.link.label}</Link></>}</p>
           </details>
         ))}
       </section>

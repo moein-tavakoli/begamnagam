@@ -8,6 +8,7 @@ import argparse
 from collections import defaultdict
 from html.parser import HTMLParser
 import json
+import re
 import ssl
 import struct
 import urllib.error
@@ -16,10 +17,13 @@ import urllib.request
 import xml.etree.ElementTree as ET
 
 
-PUBLIC = ("/", "/help", "/privacy", "/links")
-PRIVATE = ("/profile", "/history", "/invitations", "/preferences", "/r", "/manage")
-CRAWLERS = ("TelegramBot", "WhatsApp/2.24", "facebookexternalhit/1.1", "Twitterbot/1.0",
-            "LinkedInBot/1.0", "Slackbot-LinkExpanding 1.0", "Discordbot/2.0")
+PUBLIC = ("/", "/help", "/privacy", "/links", "/pricing", "/about")
+PRIVATE = ("/profile", "/history", "/invitations", "/preferences", "/r", "/manage", "/credits", "/wallet")
+SHARE_CRAWLERS = ("TelegramBot", "WhatsApp/2.24", "facebookexternalhit/1.1", "Twitterbot/1.0",
+                  "LinkedInBot/1.0", "Slackbot-LinkExpanding 1.0", "Discordbot/2.0")
+AI_CRAWLERS = ("OAI-SearchBot", "ChatGPT-User", "Claude-SearchBot", "Claude-User", "PerplexityBot", "Perplexity-User")
+TRAINING_CRAWLERS = ("GPTBot", "ClaudeBot", "Google-Extended", "Applebot-Extended", "CCBot")
+CRAWLERS = (*SHARE_CRAWLERS, *AI_CRAWLERS)
 
 
 class Page(HTMLParser):
@@ -38,6 +42,8 @@ class Page(HTMLParser):
         self.language = None
         self.direction = None
         self.headings = 0
+        self.in_main = False
+        self.visible_text = []
         self.feed(html)
 
     def handle_starttag(self, tag, attrs):
@@ -46,6 +52,8 @@ class Page(HTMLParser):
             self.language, self.direction = attrs.get("lang"), attrs.get("dir")
         if tag == "head":
             self.head = True
+        if tag == "main":
+            self.in_main = True
         if tag == "title":
             self.in_title = True
         if tag == "h1":
@@ -60,6 +68,8 @@ class Page(HTMLParser):
             self.detail_id = attrs.get("id")
 
     def handle_data(self, data):
+        if self.in_main and self.script_type is None:
+            self.visible_text.append(data)
         if self.in_title:
             self.title += data
         if self.script_type is not None:
@@ -68,6 +78,8 @@ class Page(HTMLParser):
             self.details[self.detail_id] += data
 
     def handle_endtag(self, tag):
+        if tag == "main":
+            self.in_main = False
         if tag == "head":
             self.head = False
         if tag == "title":
@@ -135,6 +147,7 @@ def main():
     titles, descriptions = set(), set()
     for path in PUBLIC:
         expected = args.canonical_origin + path
+        baseline_text, baseline_graph = None, None
         for agent in ("BegamNagam-SEO-Check/1.0", *CRAWLERS):
             page, headers = page_at(path + "?utm_source=seo-check", agent=agent)
             # Next normalizes the root canonical to the bare origin in HTML.
@@ -167,10 +180,24 @@ def main():
             types = {node["@type"] for node in nodes}
             assert {"Organization", "ImageObject", "WebSite"} <= types
             expected_types = {"WebPage", "WebApplication", "Service"} if path == "/" else (
-                {"FAQPage", "BreadcrumbList"} if path == "/help" else {"WebPage", "BreadcrumbList"})
+                {"FAQPage", "BreadcrumbList"} if path == "/help" else
+                {"AboutPage", "BreadcrumbList"} if path == "/about" else {"WebPage", "BreadcrumbList"})
             assert expected_types <= types
             webpage = next(node for node in nodes if node["@id"] == expected + "#webpage")
             assert webpage["url"] == expected
+            visible = " ".join(" ".join(page.visible_text).split())
+            assert visible, (path, agent)
+            if baseline_text is None:
+                baseline_text, baseline_graph = visible, data
+            else:
+                assert visible == baseline_text and data == baseline_graph, (path, agent, "Crawler content differs")
+            if path == "/":
+                assert page.one("enamad") == "5251197"
+            if path == "/about":
+                for fact in ("ناشناس‌بودن برای گیرنده", "گیرنده چه اختیاری دارد", "هزینهٔ استفاده"):
+                    assert fact in visible
+            if args.expect_indexable:
+                assert '</llms.txt>; rel="describedby"' in ",".join(headers.get_all("Link", []))
             if path == "/help":
                 for question in webpage["mainEntity"]:
                     visible = " ".join(page.details[question["@id"].split("#")[1]].split())
@@ -232,8 +259,38 @@ def main():
     robots = robots.decode()
     assert "Allow: /" in robots and "Disallow: /api/" in robots and "Disallow: /admin/" in robots
     assert ("Sitemap: " + args.canonical_origin + "/sitemap.xml" in robots) == args.expect_indexable
+    # Check the actual emitted per-agent blocks, including private directives.
+    groups, current, directives = {}, [], []
+    for line in [*robots.splitlines(), ""]:
+        if not line.strip():
+            for agent in current:
+                groups.setdefault(agent.lower(), []).extend(directives)
+            current, directives = [], []
+        else:
+            name, _, value = line.partition(":")
+            if name.lower() == "user-agent": current.append(value.strip())
+            elif name.lower() in {"allow", "disallow"}: directives.append((name.lower(), value.strip()))
+    for agent in AI_CRAWLERS:
+        rules = groups[agent.lower()]
+        if args.expect_indexable:
+            assert ("allow", "/") in rules
+            for path in (*PRIVATE, "/api/", "/admin/", "/r/"):
+                assert ("disallow", "/r$" if path == "/r" else path) in rules, (agent, path)
+        else:
+            assert ("disallow", "/") in rules and ("allow", "/") not in rules
+    for agent in TRAINING_CRAWLERS:
+        assert groups[agent.lower()] == [("disallow", "/")]
+    text, headers = get("/llms.txt", status=200 if args.expect_indexable else 404)
+    assert headers.get_content_type() == "text/plain" and "noindex" in headers.get("X-Robots-Tag", "")
+    if args.expect_indexable:
+        text = text.decode()
+        links = [urllib.parse.urlsplit(url) for url in re.findall(r"\]\(([^)]+)\)", text)]
+        assert {link.path or "/" for link in links} == set(PUBLIC)
+        assert len(links) == len(PUBLIC)
+        assert all(f"{link.scheme}://{link.netloc}" == args.canonical_origin and not link.query and not link.fragment for link in links)
+        assert "ناشناس‌بودن برای سرویس نیست" in text and "قابل برداشت بانکی نیست" in text
     print(json.dumps({"result": "PASS", "requests": request_count, "public_pages": len(PUBLIC),
-                      "private_pages": len(PRIVATE), "share_crawlers": len(CRAWLERS),
+                      "private_pages": len(PRIVATE), "share_crawlers": len(SHARE_CRAWLERS), "ai_crawlers": len(AI_CRAWLERS),
                       "indexable": args.expect_indexable}, ensure_ascii=False, indent=2))
 
 

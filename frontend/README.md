@@ -63,6 +63,10 @@ Form labels, inline errors, focused error summaries, visible keyboard focus, nat
 
 No delivery status implies that the recipient opened or read a message. `delivered_demo` is explicitly labelled as a simulation. There is no reply, chat, public profile, or recipient lookup.
 
+## AI discovery / GEO
+
+Public about/help content is server-rendered and readable without JavaScript or bootstrap. The brand page uses AboutPage with the existing entity IDs. Public production builds expose a small /llms.txt index of the same facts and canonical public links; non-indexable builds return404. AI search/retrieval agents have private-route exclusions; GPTBot,ClaudeBot,Google-Extended,Applebot-Extended and CCBot are disallowed by the user-selected training policy. Google-Extended also controls some Gemini grounding; Googlebot search access stays unchanged. See [GEO evidence and deployment limits](../docs/geo.fa.md).
+
 ## Validation scope
 
 SMS OTP uses native `autocomplete="one-time-code"` plus an optional, consent-based

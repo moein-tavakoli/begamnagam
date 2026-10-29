@@ -28,6 +28,8 @@ const expectedPublicUrls = [
   "https://begamnagam.ir/help",
   "https://begamnagam.ir/privacy",
   "https://begamnagam.ir/links",
+  "https://begamnagam.ir/pricing",
+  "https://begamnagam.ir/about",
 ];
 
 test("default and internal demo environments cannot advertise indexable pages", () => {
@@ -39,7 +41,7 @@ test("default and internal demo environments cannot advertise indexable pages", 
   ]) {
     assert.equal(getSeoConfig(environment).indexable, false);
     assert.deepEqual(sitemapEntries(environment), []);
-    for (const path of ["/", "/help", "/privacy", "/links"] as const) {
+    for (const path of Object.keys(publicPages) as (keyof typeof publicPages)[]) {
       assert.deepEqual(publicMetadata(path, environment).robots, {
         index: false,
         follow: false,
@@ -51,14 +53,14 @@ test("default and internal demo environments cannot advertise indexable pages", 
   assert.equal(getSeoConfig({ APP_BASE_URL: "https://begamnagam.ir." }).baseUrl.href, "https://begamnagam.ir/");
 });
 
-test("public indexing exposes exactly four clean canonical pages with matching social metadata", () => {
+test("public indexing exposes exactly six clean canonical pages with matching social metadata", () => {
   assert.equal(getSeoConfig(publicEnvironment).indexable, true);
   const entries = sitemapEntries(publicEnvironment);
   assert.deepEqual(entries.map(entry => entry.url), expectedPublicUrls);
-  assert.equal(new Set(entries.map(entry => entry.url)).size, 4);
+  assert.equal(new Set(entries.map(entry => entry.url)).size, 6);
   const titles = new Set();
   const descriptions = new Set();
-  for (const [index, path] of (["/", "/help", "/privacy", "/links"] as const).entries()) {
+  for (const [index, path] of (Object.keys(publicPages) as (keyof typeof publicPages)[]).entries()) {
     const metadata = publicMetadata(path, publicEnvironment);
     assert.equal(metadata.alternates?.canonical, expectedPublicUrls[index]);
     assert.equal(metadata.openGraph?.url, expectedPublicUrls[index]);
@@ -84,8 +86,8 @@ test("public indexing exposes exactly four clean canonical pages with matching s
     titles.add(metadata.title?.absolute);
     descriptions.add(metadata.description);
   }
-  assert.equal(titles.size, 4);
-  assert.equal(descriptions.size, 4);
+  assert.equal(titles.size, 6);
+  assert.equal(descriptions.size, 6);
 });
 
 test("canonical origins reject credentials, non-origin components and unsafe protocols", () => {
@@ -152,11 +154,12 @@ test("private page metadata cannot emit a public canonical or social preview", (
 test("robots allows HTML crawlers to read noindex while excluding administrative and API routes", () => {
   for (const environment of [{}, publicEnvironment]) {
     const robots = robotsRules(environment);
-    assert.equal(robots.rules.userAgent, "*");
-    assert.equal(robots.rules.allow, "/");
-    assert.deepEqual(robots.rules.disallow, ["/api/", "/admin/", "/manage", "/static/admin/"]);
+    assert.ok(Array.isArray(robots.rules));
+    const generic = robots.rules.find(rule => rule.userAgent === "*")!;
+    assert.equal(generic.allow, "/");
+    assert.deepEqual(generic.disallow, ["/api/", "/admin/", "/manage", "/static/admin/"]);
     for (const path of ["/history", "/preferences", "/r"]) {
-      assert.ok(!robots.rules.disallow.some(prefix => path.startsWith(prefix)));
+      assert.ok(!(generic.disallow as string[]).some(prefix => path.startsWith(prefix)));
     }
     assert.equal(
       robots.sitemap,
@@ -260,7 +263,7 @@ test("public graphs connect brand, website, images and page without inventing bu
     assert.equal(ids.size, graph.length);
     const organization = graph.find(node => node["@type"] === "Organization");
     const website = graph.find(node => node["@type"] === "WebSite");
-    const page = graph.find(node => ["WebPage", "FAQPage"].includes(node["@type"] as string));
+    const page = graph.find(node => ["WebPage", "FAQPage", "AboutPage"].includes(node["@type"] as string));
     assert.ok(organization && website && page);
     assert.equal(organization.name, "بگم نگم");
     assert.equal(organization.url, "https://begamnagam.ir/");

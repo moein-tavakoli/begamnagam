@@ -16,7 +16,7 @@ export function Pricing() {
       <h3>{item.name}</h3><p>{new Intl.NumberFormat("fa-IR").format(item.message_count)} پیام</p><strong>{toman(item.price_toman)}</strong><small>قیمت کل بسته</small>
     </article>)}</div>}
     {data && !data.message_packages?.length && <p>فعلاً بستهٔ فعالی تعریف نشده است.</p>}
-    <Link className="button primary" href="/credits" prefetch={false}>مشاهده و خرید بسته</Link>
-    <div className="pricing-footnote"><Icon name="info" size={19} /><p>بسته را، در صورت فعال‌بودن، با کیف پول یا زرین‌پال می‌خری. اعتبار ارسال ناموفق قطعی به بسته برمی‌گردد؛ اعتبار کیف پول برداشت بانکی ندارد. ثبت در صف به معنی تحویل قطعی یا خوانده‌شدن پیام نیست.</p></div>
+    <Link className="button primary" href="/pricing" prefetch={false}>مشاهده و خرید بسته</Link>
+    <div className="pricing-footnote"><Icon name="info" size={19} /><p>بسته را، در صورت فعال‌بودن، با زرین‌پال یا کارت‌به‌کارت می‌خری. اعتبار ارسال ناموفق قطعی به بسته برمی‌گردد؛ اعتبار کیف پول برداشت بانکی ندارد. ثبت در صف به معنی تحویل قطعی یا خوانده‌شدن پیام نیست.</p></div>
   </section>;
 }

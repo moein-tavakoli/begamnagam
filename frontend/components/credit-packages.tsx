@@ -1,79 +1,154 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { api, approvedPaymentRedirect, createIdempotencyKey, errorMessage, type CreditPurchase, type MessagePackage } from "@/lib/api";
-import { toman } from "@/lib/format";
-import { useApp } from "./app-provider";
-import { AuthGate } from "./auth-gate";
-import { ErrorBox, ServiceState } from "./feedback";
-import { walletToman } from '@/lib/wallet';
-import { purchaseIntentAfterResponse, settledPurchase, type PurchaseIntent } from '@/lib/credit-purchases';
+import Link from 'next/link';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { api, approvedPaymentRedirect, createIdempotencyKey, errorMessage, type CreditPurchase } from '@/lib/api';
+import { toman } from '@/lib/format';
+import { purchaseIntentAfterResponse, type PurchaseIntent } from '@/lib/credit-purchases';
+import { openPurchase, receiptText, safeReceiptChannels } from '@/lib/manual-payments';
+import { useApp } from './app-provider';
+import { AuthGate } from './auth-gate';
+import { ErrorBox, ServiceState } from './feedback';
+import { Icon } from './icons';
+import styles from './credit-shop.module.css';
 
-const number = new Intl.NumberFormat("fa-IR");
-const purchaseStatus: Record<string, string> = { credited: "پرداخت تأیید شد و اعتبار اضافه شد", wallet_returned: "بسته تخصیص نیافت؛ مبلغ به کیف پول برگشت", unknown: "پرداخت نیازمند بررسی است؛ دوباره پرداخت نکن", pending: "در انتظار نتیجهٔ پرداخت", created: "خرید ثبت شده", failed: "پرداخت تأیید نشد؛ اعتباری اضافه نشده" };
+const fa = new Intl.NumberFormat('fa-IR');
+const statuses: Record<string,string> = { credited:'بسته‌ات فعال شد', wallet_returned:'مبلغ به کیف پول برگشت؛ بسته فعال نشد', awaiting_transfer:'درخواست آماده است؛ پرداخت و ارسال رسید', awaiting_review:'رسیدت در انتظار بررسی ادمین است', rejected:'این رسید تأیید نشد', cancelled:'درخواست لغو شد', unknown:'نتیجه هنوز مشخص نیست؛ دوباره پرداخت نکن', pending:'در انتظار تأیید پرداخت', created:'درخواست خرید ثبت شد', verified:'در حال تکمیل اعتبار', failed:'پرداخت تأیید نشد؛ اعتباری اضافه نشده' };
 
 export function CreditPackages({ inline = false }: { inline?: boolean }) {
-  const { data, reload } = useApp();
-  const [busy, setBusy] = useState(false), [error, setError] = useState("");
-  const [purchase, setPurchase] = useState<CreditPurchase | null>(null);
-  const key = useRef<PurchaseIntent | null>(null);
-  const [pending, setPending] = useState<CreditPurchase[]>([]);
-  const [method, setMethod] = useState<'wallet'|'gateway'>('gateway'), [walletConsent, setWalletConsent] = useState(false);
-  useEffect(() => { if (data?.payment_options?.wallet_enabled && !data.payment_options.gateway_enabled) setMethod('wallet'); }, [data?.payment_options?.wallet_enabled,data?.payment_options?.gateway_enabled]);
-  const generation = useRef(0);
-  useEffect(() => {
-    if (!data?.authenticated) return;
-    const controller = new AbortController();
-    void api<{ purchases: CreditPurchase[] }>("/credit-purchases", { signal: controller.signal }).then(result => {
-      setPending(result.purchases.filter(p => ["pending", "unknown", "created"].includes(p.status)));
-      const id = new URLSearchParams(window.location.search).get("purchase");
-      const returned = result.purchases.find(p => p.id === id);
-      if (returned) setPurchase(returned);
-    }).catch(e => { if (!controller.signal.aborted) setError(errorMessage(e)); });
-    return () => controller.abort();
-  }, [data?.authenticated]);
+  if (inline) return <section className={styles.inline}><h3>برای ادامه، اعتبار پیام بگیر</h3><p>بسته‌های فعال را ببین و پس از خرید، برای ارسال همین پیام برگرد.</p><Link className="button primary" href="/credits" prefetch={false}>انتخاب بستهٔ پیام <Icon name="arrow" size={18}/></Link></section>;
+  return <CreditCheckout/>;
+}
 
-  async function buy(item: MessagePackage) {
-    setBusy(true); setError("");
-    if (!key.current || key.current.packageId !== item.id) key.current = { packageId: item.id, value: createIdempotencyKey() };
+function CreditCheckout() {
+  const {data,reload} = useApp();
+  const [selected,setSelected]=useState<number|null>(null),[method,setMethod]=useState<'card'|'gateway'>('gateway');
+  const [consent,setConsent]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
+  const [purchases,setPurchases]=useState<CreditPurchase[]>([]),[purchase,setPurchase]=useState<CreditPurchase|null>(null);
+  const [listReady,setListReady]=useState(false),[uncertain,setUncertain]=useState(false);
+  const intent=useRef<PurchaseIntent|null>(null),generation=useRef(0);
+  const options=data?.payment_options;
+  const packages=(data?.message_packages??[]).filter(item=>item.active);
+  const selectedPackage=packages.find(item=>item.id===selected);
+  const pending=purchases.filter(item=>openPurchase(item.status));
+  const gateway=!!options?.gateway_enabled || !!(data?.demo_mode && data.payment_backend==='demo');
+  const enabled=method==='card' ? !!options?.card_enabled : gateway;
+  const load=useCallback(async()=>{
+    const current=++generation.current;
     try {
-      const result = await api<CreditPurchase>("/credit-purchases", { method: "POST", body: { package_id: item.id, package_revision: item.revision, payment_method: method, wallet_consent: walletConsent, wallet_terms_version: data?.payment_options?.wallet_terms_version }, idempotencyKey: key.current.value });
-      setPurchase(result);
-      key.current = purchaseIntentAfterResponse(key.current, result);
-      if (result.redirect_url) window.location.assign(approvedPaymentRedirect(result.redirect_url, !!data?.demo_mode));
-      else if (settledPurchase(result.status)) {
-        setPending(v => v.filter(p => p.id !== result.id)); await reload();
-      }
-      else setPending(v => [result, ...v.filter(p => p.id !== result.id)]);
-    } catch (e) { setError(errorMessage(e)); }
-    finally { setBusy(false); }
+      const result=await api<{purchases:CreditPurchase[]}>('/credit-purchases');
+      if(current!==generation.current)return;
+      setPurchases(result.purchases);setListReady(true);setError('');
+      const id=new URLSearchParams(window.location.search).get('purchase');
+      setPurchase(previous=>result.purchases.find(p=>p.id===previous?.id || p.id===id) || result.purchases.find(p=>openPurchase(p.status)) || null);
+    } catch(e){if(current===generation.current){setError(errorMessage(e));setListReady(false);}}
+  },[]);
+  useEffect(()=>{
+    if(data?.authenticated) void load();
+    return()=>{generation.current+=1;};
+  },[data?.authenticated,data?.session_identity,load]);
+  useEffect(()=>{
+    if(!selected && packages.length){const id=Number(new URLSearchParams(window.location.search).get('package'));setSelected(packages.some(p=>p.id===id)?id:packages[0].id);}
+  },[selected,packages]);
+  useEffect(()=>{if(!gateway && options?.card_enabled)setMethod('card');},[gateway,options?.card_enabled]);
+  function accept(result:CreditPurchase){
+    setPurchase(result);setPurchases(items=>[result,...items.filter(p=>p.id!==result.id)]);
+    if(intent.current) intent.current=purchaseIntentAfterResponse(intent.current,result);
+    setUncertain(false);
   }
-  async function refresh(item: CreditPurchase) {
-    setBusy(true); setError("");
-    const current = ++generation.current;
-    try {
-      const result = await api<CreditPurchase>(`/credit-purchases/${item.id}`);
-      if (current !== generation.current) return;
-      if (key.current?.purchaseId === result.id) key.current = purchaseIntentAfterResponse(key.current, result);
-      setPurchase(result); setPending(v => v.map(p => p.id === result.id ? result : p).filter(p => ["pending", "unknown", "created"].includes(p.status)));
-      await reload();
-    } catch (e) { setError(errorMessage(e)); }
-    finally { setBusy(false); }
+  async function buy(){
+    if(!selectedPackage)return;
+    setBusy(true);setError('');const current=++generation.current;
+    intent.current ??= {packageId:selectedPackage.id,value:createIdempotencyKey()};
+    try{
+      const result=await api<CreditPurchase>('/credit-purchases',{method:'POST',idempotencyKey:intent.current.value,body:{package_id:selectedPackage.id,package_revision:selectedPackage.revision,payment_method:method,wallet_consent:consent,wallet_terms_version:options?.wallet_terms_version}});
+      if(current!==generation.current)return;
+      accept(result);
+      if(result.redirect_url)window.location.assign(approvedPaymentRedirect(result.redirect_url,!!data?.demo_mode));
+      else if(result.status==='credited')await reload();
+    }catch(e){if(current===generation.current){setError(errorMessage(e));setUncertain(true);}}
+    finally{if(current===generation.current)setBusy(false);}
   }
-  const hasPending = pending.some(p => ["pending", "unknown", "created"].includes(p.status));
-  return <section className={inline ? "credit-packages" : "account-card credit-packages"} aria-label="خرید بستهٔ پیام">
-    <h2>خرید بستهٔ پیام</h2>
-    {!inline && <ServiceState />}
-    <p className="small muted">هر پیام یک اعتبار؛ تعداد بخش‌های پیامک از اعتبار بیشتری کم نمی‌کند. ابتدا هدیه‌ها مصرف می‌شوند و اعتبار ارسال ناموفق قطعی برمی‌گردد.</p>
-    {data?.authenticated ? <p className="credit-balance" role="status">هدیه: <b>{number.format(data.free_sends_remaining ?? 0)}</b> · اعتبار بسته: <b>{number.format(data.purchased_sends_remaining ?? 0)} پیام</b>{data.demo_mode && " (آزمایشی)"}</p> : <AuthGate purpose="برای خرید بسته، شمارهٔ خودت را تأیید کن." />}
-    {purchase && <div className="notice" role="status"><strong>{purchaseStatus[purchase.status] || purchase.status}</strong><p>{purchase.name} · {number.format(purchase.message_count)} پیام · {toman(purchase.amount_toman)}</p>{data?.demo_mode && <p>این خرید شبیه‌سازی شده و برداشتی انجام نشده است.</p>}</div>}
-    {pending.map(item => <div className="notice" key={item.id}><p>{item.name} — {purchaseStatus[item.status]}</p>{item.redirect_url && <a className="button ghost" href={approvedPaymentRedirect(item.redirect_url, !!data?.demo_mode)}>ادامهٔ همان پرداخت</a>}<button className="button ghost" type="button" disabled={busy} onClick={() => void refresh(item)}>بررسی وضعیت پرداخت</button></div>)}
-    {!data?.package_checkout_enabled && <p className="small" role="status">خرید بسته فعلاً بسته است؛ بسته‌های فعال را می‌توانی ببینی.</p>}
-    <ErrorBox message={error} />
-    {data?.authenticated && <div className="wallet-package-payment"><label>روش پرداخت<select disabled={busy || hasPending} value={method} onChange={e => {setMethod(e.target.value as 'wallet'|'gateway');setWalletConsent(false);}}><option value="gateway" disabled={!data.payment_options?.gateway_enabled && !data.demo_mode}>زرین‌پال</option><option value="wallet" disabled={!data.payment_options?.wallet_enabled}>کیف پول · {walletToman(data.wallet_balance_toman ?? '0')}</option></select></label><label className="checkbox-label"><input type="checkbox" checked={walletConsent} disabled={busy || hasPending} onChange={e => setWalletConsent(e.target.checked)} /><span>اعتبار خرید برای خدمات سایت است و برداشت بانکی ندارد. برگشت هزینهٔ پرداخت پولی به کیف پول انجام می‌شود؛ اعتبار ارسال ناموفق بسته به بسته برمی‌گردد.</span></label><Link href="/wallet" prefetch={false}>مشاهده و شارژ کیف پول</Link></div>}
-    <div className="credit-package-grid">{(data?.message_packages ?? []).map(item => <article className="credit-package" key={item.id}><h3>{item.name}</h3><p className="credit-units">{number.format(item.message_count)} <small>پیام</small></p><p>{toman(item.price_toman)}</p><button type="button" className="button primary" disabled={busy || hasPending || !data?.authenticated || !data.package_checkout_enabled || !walletConsent || (method === 'gateway' && !data.payment_options?.gateway_enabled && !data.demo_mode) || (method === 'wallet' && !data.payment_options?.wallet_enabled)} onClick={() => void buy(item)}>{busy ? "در حال بررسی…" : data?.demo_mode ? "خرید بستهٔ آزمایشی" : method === 'wallet' ? "خرید از کیف پول" : "خرید با زرین‌پال"}</button></article>)}</div>
-    {data && !data.message_packages?.length && <p>فعلاً بستهٔ فعالی تعریف نشده است.</p>}
-    {!inline && <Link className="button ghost" href="/#compose">نوشتن و ارسال پیام</Link>}
+  async function update(item:CreditPurchase,path='',body?:unknown){
+    setBusy(true);setError('');const current=++generation.current;
+    try{
+      const result=await api<CreditPurchase>(`/credit-purchases/${item.id}${path}`,path?{method:'POST',body}:{ });
+      if(current!==generation.current)return;
+      accept(result);if(result.status==='credited')await reload();
+    }catch(e){if(current===generation.current)setError(errorMessage(e));}
+    finally{if(current===generation.current)setBusy(false);}
+  }
+  return <div className={styles.shop} data-credit-shop="true" aria-busy={busy || undefined}>
+    <div className={styles.stack}>
+      <ServiceState/>
+      <ErrorBox message={error}/>
+      {uncertain && <div className={styles.notice}>نتیجهٔ درخواست قبلی مشخص نیست. ابتدا وضعیت را بررسی کن؛ برای تکرار همان درخواست، بسته و روش را تغییر نده.<button className="text-button" type="button" disabled={busy} onClick={()=>void load()}>بررسی خریدهای من</button></div>}
+      {pending.filter(item=>item.id!==purchase?.id).map(item=><div className={styles.notice} key={item.id}><p>{item.name} · {statuses[item.status]}</p><button className="button ghost" disabled={busy} type="button" onClick={()=>setPurchase(item)}>مشاهده و پیگیری</button></div>)}
+      {purchase && <PurchaseResult key={purchase.id} purchase={purchase} demo={!!data?.demo_mode} busy={busy} onUpdate={update}/>}
+      {!pending.length && <><section className={styles.panel}>
+        <h2 className={styles.step}><span>۱</span> بسته‌ات را انتخاب کن</h2>
+        <fieldset className={styles.choices} disabled={busy || !!pending.length || uncertain} aria-label="انتخاب بسته">
+          {packages.map(item=><label className={`${styles.choice} ${styles.packageChoice}`} key={item.id}><input type="radio" name="credit-package" value={item.id} checked={selected===item.id} onChange={()=>{setSelected(item.id);intent.current=null;}}/><span><strong>{fa.format(item.message_count)} پیام</strong><small>{item.name}</small><small>{toman(item.price_toman)}</small></span></label>)}
+        </fieldset>
+        {!packages.length && data && <p className={styles.muted}>فعلاً بستهٔ فعالی موجود نیست.</p>}
+        <Link href="/pricing" className="text-button">مقایسهٔ تعرفه‌ها و شرایط</Link>
+      </section>
+      <section className={styles.panel}>
+        <h2 className={styles.step}><span>۲</span> روش پرداخت</h2>
+        <fieldset className={styles.choices} disabled={busy || !!pending.length || uncertain} aria-label="انتخاب روش پرداخت">
+          <label className={styles.choice}><input type="radio" name="payment-method" value="gateway" checked={method==='gateway'} disabled={!gateway} onChange={()=>{setMethod('gateway');intent.current=null;setConsent(false);}}/><span><strong>زرین‌پال</strong><small>{gateway?'فعال‌سازی خودکار بسته':'فعلاً غیرفعال'}</small></span></label>
+          <label className={styles.choice}><input type="radio" name="payment-method" value="card" checked={method==='card'} disabled={!options?.card_enabled} onChange={()=>{setMethod('card');intent.current=null;setConsent(false);}}/><span><strong>کارت‌به‌کارت</strong><small>{options?.card_enabled?'پس از تأیید ادمین':'فعلاً غیرفعال'}</small></span></label>
+        </fieldset>
+        {!gateway && !options?.card_enabled && <p className={styles.notice}>خرید فعلاً باز نیست. می‌توانی بسته‌ها را ببینی و از هدیه‌های باقی‌مانده استفاده کنی.</p>}
+        {data?.authenticated ? <><label className={styles.consent}><input type="checkbox" checked={consent} disabled={busy || !!pending.length} onChange={e=>setConsent(e.target.checked)}/><span>اعتبار خرید برای خدمات سایت است و برداشت بانکی ندارد. برگشت هزینهٔ پرداخت پولی به کیف پول انجام می‌شود؛ اعتبار ارسال ناموفق قطعی به بسته برمی‌گردد. <Link href="/privacy">قوانین استفاده</Link> را می‌پذیرم.</span></label>
+          <div className={styles.total}><span>مبلغ نهایی بسته</span><strong>{selectedPackage?toman(selectedPackage.price_toman):'—'}</strong></div>
+          <button className={`button primary ${styles.pay}`} type="button" disabled={busy || !!pending.length || !listReady || !selectedPackage || !consent || !enabled} onClick={()=>void buy()}>{busy?<><span className="spinner"/> در حال ثبت…</>:uncertain?'تکرار همان درخواست':method==='card'?'دریافت شمارهٔ کارت و ثبت خرید':data?.demo_mode?'خرید آزمایشی بسته':'پرداخت با زرین‌پال'}<Icon name="arrow" size={18}/></button>
+          {!listReady && <button className="text-button" type="button" disabled={busy} onClick={()=>void load()}>دریافت وضعیت خریدهای قبلی</button>}
+          <p className={styles.muted}>{method==='card'?'رسید را در بله یا تلگرام برای پشتیبانی می‌فرستی؛ پس از تأیید، اعتبار اضافه می‌شود.':'بعد از تأیید خودِ درگاه، بسته خودکار فعال می‌شود؛ ارسال رسید مانع فعال‌شدن آن نیست.'}</p></> : <AuthGate purpose="برای خرید بسته، شمارهٔ خودت را تأیید کن."/>}
+      </section>
+      </>}
+    </div>
+    <aside className={styles.stack}>
+      {data?.authenticated && <section className={styles.balance}><h2>موجودی پیام‌های تو</h2><div className={styles.balances}><p>هدیه<strong>{fa.format(data.free_sends_remaining??0)}</strong></p><p>اعتبار بسته<strong>{fa.format(data.purchased_sends_remaining??0)}</strong></p></div></section>}
+      <section className={styles.panel}><Icon name="heart" size={27}/><h3>هدیه‌ها سر جای خودشان‌اند</h3><p className={styles.muted}>اول هدیه‌های باقی‌مانده مصرف می‌شوند، بعد اعتبار بسته. هر ارسال، حتی پیامک چندبخشی، یک اعتبار دارد.</p><Link href="/#compose" className="text-button">برگشت به نوشتن پیام <Icon name="arrow" size={16}/></Link></section>
+      {purchases.length>0 && <details className={styles.history}><summary>خریدهای اخیر من</summary>{purchases.slice(0,12).map(item=><button type="button" disabled={busy} key={item.id} onClick={()=>setPurchase(item)}>{item.name} · {fa.format(item.message_count)} پیام<span>{statuses[item.status]||'در حال بررسی'} · {toman(item.amount_toman)}</span></button>)}</details>}
+    </aside>
+  </div>;
+}
+
+function PurchaseResult({purchase,demo,busy,onUpdate}:{purchase:CreditPurchase;demo:boolean;busy:boolean;onUpdate:(p:CreditPurchase,path?:string,body?:unknown)=>Promise<void>}){
+  const [copied,setCopied]=useState('');
+  const resultRef=useRef<HTMLElement>(null);
+  useEffect(()=>{resultRef.current?.focus({preventScroll:true});resultRef.current?.scrollIntoView({block:'start',behavior:'instant'});},[]);
+  const active=purchase.status==='awaiting_transfer',review=purchase.status==='awaiting_review';
+  const channels=safeReceiptChannels(purchase.receipt_channels);
+  async function copy(value:string,label:string){try{await navigator.clipboard.writeText(value);setCopied(label+' کپی شد.');}catch{setCopied('کپی خودکار انجام نشد؛ متن نمایش‌داده‌شده را انتخاب و کپی کن.');}}
+  async function submit(event:FormEvent<HTMLFormElement>){event.preventDefault();const form=new FormData(event.currentTarget);await onUpdate(purchase,'/receipt',{receipt_sent:form.get('receipt_sent')==='on',reference:String(form.get('reference')||'')});}
+  return <section className={`${styles.status} ${purchase.status==='credited'?styles.success:''}`} aria-label="وضعیت خرید" role="status" ref={resultRef} tabIndex={-1}>
+    <h2><Icon name={purchase.status==='credited'?'check':'clock'} size={22}/>{statuses[purchase.status]||'خرید نیازمند بررسی است'}</h2>
+    <p>{purchase.name} · {fa.format(purchase.message_count)} پیام · <strong>{toman(purchase.amount_toman)}</strong></p>
+    <p className={styles.muted}>شناسهٔ خرید: <bdi>{purchase.id}</bdi></p>
+    {demo && <p className={styles.notice}>این خرید آزمایشی است؛ هیچ وجهی منتقل نمی‌شود و اعتبار آن فقط در محیط آزمایشی است.</p>}
+    {purchase.status==='rejected' && <p>دلیل بررسی: {purchase.review_note || 'برای پیگیری با پشتیبانی تماس بگیر.'}</p>}
+    {active && purchase.card && <><p>مبلغ دقیق بسته را به کارت زیر واریز کن، سپس تصویر رسید و شناسهٔ خرید را برای پشتیبانی بفرست.</p><div className={styles.bankCard}><small>{purchase.card.bank_name || "کارت مقصدِ همین درخواست"}</small><bdi dir="ltr">{purchase.card.number.replace(/(.{4})(?=.)/g,'$1 ')}</bdi><p>{purchase.card.holder}</p><button type="button" className={styles.copyButton} onClick={()=>void copy(purchase.card!.number,'شمارهٔ کارت')}>کپی شمارهٔ کارت</button></div></>}
+    {review && <p>ثبت ارسال رسید انجام شد. اعتبار پس از تطبیق و تأیید ادمین اضافه می‌شود؛ دوباره واریز نکن.</p>}
+    {(active || review || purchase.status==='credited') && <div className={styles.receipt}>
+      <h3>{purchase.status==='credited'?'ارسال رسید برای پشتیبانی':'ارسال تصویر رسید'}</h3>
+      <p>{purchase.status==='credited'?'بسته فعال است. در صورت نیاز، تصویر رسید و مشخصات خرید را از راه‌های زیر برای پشتیبانی بفرست.':'متن زیر را همراه تصویر رسید در بله یا تلگرام برای پشتیبانی بفرست.'}</p>
+      <pre>{receiptText(purchase)}</pre><button className="button ghost" type="button" onClick={()=>void copy(receiptText(purchase),'مشخصات خرید')}>کپی مشخصات خرید</button>
+      <div className={styles.receiptLinks}>{channels.map(channel=><a className="button ghost" key={channel.name} href={channel.url} target="_blank" rel="noopener noreferrer">{channel.name==='bale'?'ارسال رسید در بله':'ارسال رسید در تلگرام'} ↗<span className="sr-only">در زبانهٔ جدید</span></a>)}</div>
+      {!channels.length && <p className={styles.muted}>راه ارتباط ارسال رسید هنوز تنظیم نشده است. شناسهٔ خرید را برای پیگیری نگه دار.</p>}
+      {active && <form className={styles.receiptForm} onSubmit={submit}>
+        <label>شمارهٔ پیگیری بانکی (اختیاری)<input type="text" name="reference" minLength={6} maxLength={64} inputMode="numeric" autoComplete="off" dir="ltr" placeholder="شمارهٔ روی رسید" disabled={busy}/></label>
+        <label className={styles.consent}><input type="checkbox" name="receipt_sent" required disabled={busy}/><span>تصویر رسید و شناسهٔ این خرید را برای پشتیبانی فرستادم.</span></label>
+        <button className="button primary" disabled={busy}>{busy?'در حال ثبت…':'رسید را فرستادم؛ ثبت برای بررسی'}</button>
+      </form>}
+    </div>}
+    <p className={styles.muted} aria-live="polite">{copied}</p>
+    <div className={styles.statusActions}>{purchase.redirect_url && purchase.status==='pending' && <a className="button primary" href={approvedPaymentRedirect(purchase.redirect_url,demo)}>ادامهٔ همان پرداخت</a>}
+      <button type="button" className="button ghost" disabled={busy} onClick={()=>void onUpdate(purchase)}>بررسی وضعیت</button>
+      {active && <button type="button" className="button ghost" disabled={busy} onClick={()=>{if(window.confirm('فقط اگر وجهی واریز نکرده‌ای، درخواست را لغو کن. لغو شود؟'))void onUpdate(purchase,'/cancel-card',{});}}>واریز نکردم؛ لغو درخواست</button>}
+      {purchase.status==='credited' && <Link href="/#compose" className="button primary">حالا پیام بنویس <Icon name="arrow" size={17}/></Link>}
+    </div>
   </section>;
 }

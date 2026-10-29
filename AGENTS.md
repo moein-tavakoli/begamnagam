@@ -4,6 +4,19 @@ This repository is a Persian RTL local-demo product. Read `README.md` and the
 relevant document in `docs/` before changing behavior. Current architecture is a
 Django monolith with Next.js, PostgreSQL, Redis, RabbitMQ and Celery.
 
+## Branch and changelog policy
+
+- Do all ongoing development on `dev`, the repository's default branch. Keep
+  `dev` and `prod` as the only long-lived branches; do not create task branches
+  unless the user explicitly asks.
+- Promote reviewed changes from `dev` to `prod` through a pull request after the
+  `backend`, `frontend` and `compose` CI checks pass. Do not push directly to
+  `prod`, force-push it or delete either branch.
+- Record meaningful changes in `CHANGELOG.md` under `Unreleased`. At release,
+  move those entries into the versioned section and link the release evidence.
+- Updating `prod` does not authorize a server deployment. Follow the deployment
+  policy below for each release.
+
 ## Deployment policy
 
 Make changes and run checks locally by default. Deploy to the server only when

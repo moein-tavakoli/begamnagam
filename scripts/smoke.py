@@ -63,7 +63,9 @@ def main():
     bootstrap = sender.call("/bootstrap")
     assert bootstrap["demo_mode"] is True, "Smoke test refuses non-demo instances."
     assert not bootstrap.get("otp_is_real"), "Smoke test refuses real OTP instances before requesting any code."
-    assert bootstrap["price_toman"] > 0
+    assert bootstrap["price_toman"] == 0, "Fresh sends use gift/package credits, not a per-message price."
+    assert bootstrap["message_packages"], "Expected the seeded message package catalogue."
+    assert all(item["price_toman"] > 0 for item in bootstrap["message_packages"])
     assert {"appreciation", "encouragement", "congratulations"}.issubset({item["id"] for item in bootstrap["categories"]})
     # These values exist only in the local demo database. No SMS adapter is live.
     suffix = str(secrets.randbelow(10**7)).zfill(7)

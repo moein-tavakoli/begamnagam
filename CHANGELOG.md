@@ -1,4 +1,84 @@
-# Versions
+# Changelog
+
+Meaningful changes are recorded here, newest first. Add development changes under
+`Unreleased`; move them into a versioned section when releasing from `dev` to
+`prod`. Historical release reports linked below contain validation and limitations.
+
+## Unreleased
+
+### Changed
+
+- Establish `dev` as the default development branch and `prod` as the release
+  branch, preserving all history from `0321acf`; remove `codex/product-mvp` after
+  verifying both replacements on GitHub.
+- Run CI for `dev`/`prod` pushes and pull requests. Require a pull request and
+  successful backend, frontend and Compose checks before merging into `prod`.
+- Keep the manually dispatched local demo on `dev`. Server deployment still
+  requires an explicit request for each release.
+- Document the branch/release workflow and restore the missing release summaries
+  through 0.13.0 in this changelog.
+
+### Fixed
+
+- Align the automated demo smoke check with gift/package credit pricing instead
+  of requiring the removed per-message price to be positive.
+
+## 0.13.0 — Pricing, support and account controls
+
+- Add reviewed alternatives after message rejection and per-account send/rewrite
+  limits while preserving moderation and exact-preview authorization.
+- Add the public pricing page, four message packages and documented bank-transfer
+  approval; keep paid checkout disabled and gateway credit subject to verification.
+- Add private text support, the shared admin inbox and provider balance visibility.
+- Add referenceable product/help content, structured data and crawler policies.
+- [Release report and validation](docs/release-v0.13.0.fa.md).
+
+## 0.12.2 — OTP completion and rewrite handling
+
+- Accept zero in configurable hourly limits and spacing controls.
+- Improve friendly-message rewriting and distinguish meaning changes from content
+  rejection; preserve independent review and final dispatch checks.
+- Add domain-bound OTP/WebOTP support and contain optional browser feature errors.
+- [Deployment evidence and limitations](docs/deployments/ct115-0.12.2.json).
+
+## 0.12.1 — Public links and bounded rewriting
+
+- Add `/links`, simplify composer wording and show rewrite progress.
+- Use `gpt-4.1-mini` with a shared 20-second deadline and ten daily rewrites per
+  account; retain configurable site quotas and the authorized unlimited site mode.
+- Add the homepage Enamad verification tag.
+- [Release evidence](docs/deployments/ct115-0.12.1.json) and
+  [Enamad verification](docs/deployments/ct115-0.12.1-enamad.json).
+
+## 0.12.0 — Message packages and live GapGPT rewriting
+
+- Replace fresh single-message purchases with package credits and retain legacy
+  obligations, transactional reservations and idempotent credit/refund handling.
+- Enable the authorized synchronous GapGPT rewrite/review flow with quotas and
+  sealed previews. Keep paid checkout disabled and real OTP/gifts unchanged.
+- Add provider selection; keep the evaluated, unapproved Ollama models disabled.
+- [Release report and validation](docs/release-v0.12.0/README.fa.md).
+
+## 0.11.2 — Six frontend replicas
+
+- Distribute rendering across six identical frontend replicas and preserve the
+  database, queues and backend images; tune the central proxy connection reuse.
+- [Capacity report and measurement limits](docs/release-v0.11.2-capacity/README.fa.md).
+
+## 0.11.1 — Capacity configuration
+
+- Add a separate capacity profile with three frontend replicas, bounded process
+  memory and backend concurrency, preserving data services and provider settings.
+- [Configuration and rollback](docs/release-v0.11.1-capacity/README.fa.md).
+
+## 0.11.0 — Security hardening
+
+- Separate runtime/migration credentials, restrict PostgreSQL/Redis/RabbitMQ access
+  and encrypt order/preview bodies at rest.
+- Add admin login throttling, security headers and private-response protections.
+- Harden the authorized server access and introduce encrypted scheduled backups
+  with restore rehearsals; preserve real OTP/gifts and closed paid checkout.
+- [Security release and remaining limitations](docs/release-v0.11.0/README.fa.md).
 
 ## 0.10.2 — Compact composer and inline terms
 

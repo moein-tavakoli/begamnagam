@@ -1,0 +1,97 @@
+:root {
+  --soft: #f3eefc;
+  --soft-ink: #605074;
+  --accent-line: #d9cdef;
+  --warm: #fff5d7;
+  --warm-ink: #66552c;
+  --warm-line: #eddea9;
+  --rose: #ffedf0;
+  --success: #28533b;
+  --success-bg: #d9efdf;
+  --success-line: #9bc7b9;
+  --placeholder: #77707e;
+  --footer-bg: #e8e0f5;
+  --on-ink: #fff;
+  --accent-ink: #201c29;
+  --hero: #f7c650;
+  --hero-muted: #47391f;
+  --hero-details: #503c17;
+  --hero-highlight: #fff4d7;
+  --border: var(--line);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #15111d;
+  --surface: #231d2e;
+  --ink: #f4eeff;
+  --muted: #c5bcd4;
+  --green: #f4eeff;
+  --green-hover: #d7c8ee;
+  --pale: #372a4c;
+  --yellow: #55432b;
+  --purple: #b99aef;
+  --coral: #66384b;
+  --line: #493d58;
+  --control-line: #8a7b9b;
+  --error: #ffafc0;
+  --error-bg: #432534;
+  --focus: #d6b8ff;
+  --soft: #2d243b;
+  --soft-ink: #d3c2e6;
+  --accent-line: #68547e;
+  --warm: #382f24;
+  --warm-ink: #efd6a4;
+  --warm-line: #786342;
+  --rose: #3b2637;
+  --success: #a5dfbc;
+  --success-bg: #21392e;
+  --success-line: #56836b;
+  --placeholder: #b3a7c3;
+  --footer-bg: #1d1726;
+  --on-ink: #211b2c;
+  --hero: #2f263d;
+  --hero-muted: #d1c6e0;
+  --hero-details: #d1c0e8;
+  --hero-highlight: #634975;
+}
+
+/* Only the selected button starts the document-wide reveal. Both directions
+   reveal the new theme over the old snapshot, without blending the colors. */
+html[data-theme-transition]::view-transition-old(root),
+html[data-theme-transition]::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+html[data-theme-transition]::view-transition-image-pair(root) { isolation: auto; }
+html[data-theme-transition]::view-transition-old(root) { z-index: 1; }
+html[data-theme-transition]::view-transition-new(root) { z-index: 2; }
+html[data-theme-transition]::view-transition { pointer-events: none; }
+html[data-theme-transition] * { transition-property: transform, opacity !important; }
+
+.home-account-actions { position: absolute; z-index: 3; top: 18px; inset-inline-start: 20px; display: flex; align-items: center; gap: 8px; }
+.home-account-actions .home-profile-link { position: static; }
+.brand-mark { background: var(--lime); color: var(--accent-ink); }
+
+@media (max-width: 699px) {
+  .home-account-actions { top: 14px; inset-inline-start: 16px; }
+}
+/* Keep the two top action groups separate on the narrowest phones. */
+@media (max-width: 399px) {
+  .home-profile-link { padding-inline: 10px; font-size: 11px; }
+  .home-credit-link { max-width: min(130px, calc(100% - 184px)); padding-inline: 8px; font-size: 10px; gap: 4px; }
+}
+
+/* Management retains its own light UI and does not inherit a product user's
+   device preference into its separately styled operational controls. */
+.manage-app {
+  color-scheme: light;
+  --bg: #f2eeff; --surface: #fff; --ink: #201c29; --muted: #625b70;
+  --green: #201c29; --green-hover: #3b314c; --yellow: #f7c650;
+  --purple: #aa91f4; --coral: #ff969c;
+  --pale: #eae2ff; --line: #e7e1ef; --control-line: #9c93a9;
+  --focus: #6942b5; --on-ink: #fff; --soft: #f3eefc; --soft-ink: #605074;
+  --accent-line: #d9cdef; --warm: #fff5d7; --warm-ink: #66552c;
+  --warm-line: #eddea9; --success: #28533b; --success-bg: #d9efdf;
+  --error: #a32640; --error-bg: #fff0f2;
+}

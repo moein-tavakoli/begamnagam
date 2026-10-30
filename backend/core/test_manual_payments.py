@@ -110,9 +110,19 @@ class ManualPaymentTests(ManualFixture,TestCase):
 
     def test_bank_proof_normalized_and_different_receipt_cannot_change_approved_purchase(self):
         purchase=self.create();approve(self.actor,purchase.manual_payment.pk,self.proof(reference='۱۲۳۴-۵۶۷۸'))
+        purchase.manual_payment.refresh_from_db()
+        self.assertEqual(purchase.manual_payment.confirmed_reference,'12345678')
         approve(self.actor,purchase.manual_payment.pk,self.proof(reference='12345678'))
         with self.assertRaises(APIError):approve(self.actor,purchase.manual_payment.pk,self.proof(reference='OTHER123'))
         self.assertEqual(self.balance(),3)
+
+    def test_persian_receipt_reference_is_stored_as_ascii_with_leading_zeroes(self):
+        purchase=self.create()
+        response=self.post(f'/credit-purchases/{purchase.pk}/receipt',{'receipt_sent':True,'reference':'۰۰١۲٣۴۵۶'})
+        self.assertEqual(response.status_code,200,response.content)
+        purchase.manual_payment.refresh_from_db()
+        self.assertEqual(purchase.manual_payment.receipt_reference,'00123456')
+        self.assertEqual(self.balance(),0)
 
     def test_snapshot_survives_package_and_merchant_edits(self):
         purchase=self.create()

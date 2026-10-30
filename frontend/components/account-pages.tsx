@@ -180,10 +180,6 @@ export function History() {
       <div className="account-heading">
         <h1>پیام‌های من.</h1>
         <FreeSendsBalance />
-        <p>
-          درخواست‌های ثبت‌شده و وضعیت پردازش اون‌ها رو اینجا ببین. این وضعیت‌ها
-          نشون نمی‌دن که گیرنده پیام رو خونده یا نه.
-        </p>
       </div>
       <div className="account-card">
         <ServiceState />

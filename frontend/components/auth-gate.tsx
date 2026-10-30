@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { api, ApiError, errorMessage } from "@/lib/api";
 import { latinDigits, normalizePhone, validPhone } from "@/lib/format";
-import { listenForSmsCode } from "@/lib/otp-autofill";
+import { listenForSmsCode, validOtpCode } from "@/lib/otp-autofill";
 import { useApp } from "./app-provider";
 import { BusyButton, ErrorBox } from "./feedback";
 import { Icon } from "./icons";
+import { OtpCodeInput, type OtpPhase } from "./otp-code-input";
 
 export function AuthGate({
   purpose = "برای ادامه، شماره خودت را تأیید کن.",
@@ -26,27 +27,30 @@ export function AuthGate({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [fieldError, setFieldError] = useState("");
-  const confirmation = useRef<HTMLDivElement>(null);
+  const [otpPhase, setOtpPhase] = useState<OtpPhase>("idle");
+  const mounted = useRef(true);
+  const otpForm = useRef<HTMLFormElement>(null);
+  const verificationInFlight = useRef(false);
+  const lastAutoAttempt = useRef("");
   const stopAutofill = useRef<() => void>(() => {});
-  useEffect(() => () => stopAutofill.current(), []);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; stopAutofill.current(); };
+  }, []);
+  useEffect(() => {
+    if (!validOtpCode(latinDigits(code))) { lastAutoAttempt.current = ""; return; }
+    if (!challenge || busy || verificationInFlight.current || (data?.authenticated && !forceReverify)) return;
+    const attempt = `${challenge}:${latinDigits(code)}`;
+    if (lastAutoAttempt.current === attempt || !otpForm.current?.getClientRects().length) return;
+    lastAutoAttempt.current = attempt;
+    otpForm.current.requestSubmit();
+  }, [code, challenge, busy, data?.authenticated, forceReverify]);
   const actionRow = (primary: ReactNode) => renderActions ? renderActions(primary, busy) : primary;
-  if (data?.authenticated && !forceReverify)
-    return (
-      <div
-        className="auth-confirmed"
-        ref={confirmation}
-        tabIndex={-1}
-        role="status"
-      >
-        <Icon name="shield" size={20} />
-        <span>
-          شماره شما تأیید شده: <bdi>{data.phone_masked}</bdi>
-        </span>
-      </div>
-    );
+  if (data?.authenticated && !forceReverify) return null;
 
   async function requestCode(event: React.FormEvent) {
     event.preventDefault();
+    if (busy || verificationInFlight.current) return;
     setError("");
     if (!validPhone(phone)) {
       setFieldError(
@@ -59,6 +63,8 @@ export function AuthGate({
     setBusy(true);
     stopAutofill.current();
     setCode("");
+    lastAutoAttempt.current = "";
+    setOtpPhase("idle");
     // Listen before requesting the SMS, including fast provider responses.
     stopAutofill.current = listenForSmsCode(setCode);
     try {
@@ -81,15 +87,21 @@ export function AuthGate({
 
   async function verify(event: React.FormEvent) {
     event.preventDefault();
+    if (busy || verificationInFlight.current) return;
     setError("");
     setFieldError("");
-    if (!/^\d{6}$/.test(latinDigits(code))) {
-      setFieldError("کد تأیید باید ۶ رقم باشد.");
+    if (!validOtpCode(latinDigits(code))) {
+      setFieldError("کد تأیید باید ۴ رقم باشد.");
       document.getElementById("otp-code")?.focus();
       return;
     }
     stopAutofill.current();
+    verificationInFlight.current = true;
+    lastAutoAttempt.current = `${challenge}:${latinDigits(code)}`;
     setBusy(true);
+    setOtpPhase("verifying");
+    const started = performance.now();
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     try {
       const result = await api<{
         authenticated: boolean;
@@ -97,14 +109,26 @@ export function AuthGate({
       }>("/auth/verify-otp", {
         method: "POST",
         body: { challenge_id: challenge, code: latinDigits(code) },
+        beforeSessionReset: async result => {
+          if (!result.authenticated || !mounted.current) return;
+          // Only the server verdict permits the success animation.
+          if (!reduceMotion) await new Promise(resolve => window.setTimeout(resolve, Math.max(0, 1200 - (performance.now() - started))));
+          if (!mounted.current) return;
+          setOtpPhase("success");
+          if (!reduceMotion) await new Promise(resolve => window.setTimeout(resolve, 1450));
+        },
       });
+      if (!mounted.current) return;
+      if (!result.authenticated) throw new ApiError("تأیید شماره انجام نشد؛ دوباره تلاش کن.", "otp_unverified");
       authenticate(result.phone_masked);
       await reload();
       window.setTimeout(
-        () => confirmation.current?.focus({ preventScroll: true }),
+        () => document.querySelector<HTMLElement>(".header-phone")?.focus({ preventScroll: true }),
         0,
       );
     } catch (error) {
+      if (!mounted.current) return;
+      setOtpPhase("error");
       setError(errorMessage(error));
       if (
         error instanceof ApiError &&
@@ -114,20 +138,17 @@ export function AuthGate({
         setCode("");
       }
     } finally {
-      setBusy(false);
+      verificationInFlight.current = false;
+      if (mounted.current) setBusy(false);
     }
   }
 
-  return (
-    <div className={`auth-card${renderActions ? " has-custom-actions" : ""}`}>
+  const content = (
+    <>
       <div className="auth-title">
         <Icon name="lock" size={20} />
         <h3>{purpose}</h3>
       </div>
-      <p className="muted small">
-        شماره شما به گیرنده نمایش داده نمی‌شود. تأیید شماره برای جلوگیری از
-        سوءاستفاده است.
-      </p>
       <ErrorBox message={error} />
       {data?.otp_is_real && data.demo_mode && (
         <p className="muted small" role="status">
@@ -135,7 +156,7 @@ export function AuthGate({
         </p>
       )}
       {!challenge ? (
-        <form onSubmit={requestCode} noValidate>
+        <form className={renderActions ? "embedded-auth-form" : undefined} onSubmit={requestCode} noValidate>
           <label htmlFor="sender-phone">شماره موبایل خودت</label>
           <div className="inline-form">
             <input
@@ -166,12 +187,12 @@ export function AuthGate({
           )}
         </form>
       ) : (
-        <form onSubmit={verify} noValidate data-update-blocked="true">
+        <form ref={otpForm} className={renderActions ? "embedded-auth-form" : undefined} onSubmit={verify} noValidate data-update-blocked="true">
           <label htmlFor="otp-code">
             کد تأیید شماره <bdi>{normalizePhone(phone)}</bdi>
           </label>
           <p className="muted small" id="otp-code-help">
-            کد پیامک را وارد کن یا از پیشنهاد تکمیل خودکار استفاده کن.
+            کد پیامک را وارد کن؛ با کامل‌شدن ۴ رقم، تأیید خودکار شروع می‌شود.
           </p>
           {deliveryStatus === "unknown" && (
             <p className="muted small" role="status">
@@ -184,26 +205,18 @@ export function AuthGate({
               واقعی ارسال نشده است.
             </p>
           )}
-          <div className="inline-form">
-            <input
-              id="otp-code"
-              name="otp"
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              autoCapitalize="off"
-              spellCheck={false}
-              pattern="[0-9]{6}"
-              maxLength={6}
-              dir="ltr"
-              placeholder="------"
+          <div className="inline-form otp-entry-row">
+            <OtpCodeInput
               value={code}
-              onChange={(e) => {
+              phase={otpPhase}
+              invalid={!!fieldError}
+              onChange={value => {
                 stopAutofill.current();
-                setCode(latinDigits(e.target.value));
+                setCode(value);
+                setOtpPhase("idle");
+                setFieldError("");
+                setError("");
               }}
-              aria-invalid={!!fieldError}
-              aria-describedby={`otp-code-help${fieldError ? " auth-field-error" : ""}`}
             />
             {actionRow(<BusyButton className="button secondary" busy={busy}>
               تأیید و ادامه
@@ -222,6 +235,7 @@ export function AuthGate({
               stopAutofill.current();
               setChallenge("");
               setCode("");
+              setOtpPhase("idle");
               setFieldError("");
               setError("");
             }}
@@ -230,6 +244,7 @@ export function AuthGate({
           </button>
         </form>
       )}
-    </div>
+    </>
   );
+  return renderActions ? content : <div className="auth-card">{content}</div>;
 }

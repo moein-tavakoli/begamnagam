@@ -1,0 +1,30 @@
+{
+  "version": "33.003",
+  "source": "https://github.com/rastikerdar/vazirmatn/tree/v33.003/misc/Farsi-Digits",
+  "files": [
+    {
+      "name": "Vazirmatn-FD-Regular.woff2",
+      "weight": 400,
+      "sha256": "35740bc06643a9c5121011789916894177715148cf0f7524e3579bdd0c09f8a0",
+      "bytes": 49044
+    },
+    {
+      "name": "Vazirmatn-FD-Medium.woff2",
+      "weight": 500,
+      "sha256": "cfecf15186f4bdbdcb4e20fd1478fab4ae7231a7b52c8bf7693500ab2eb742e9",
+      "bytes": 49784
+    },
+    {
+      "name": "Vazirmatn-FD-SemiBold.woff2",
+      "weight": 600,
+      "sha256": "484fad63e9b623ff94104450e643339cb3c6f2bb6cfc40ccd73d4b320d97f849",
+      "bytes": 49608
+    },
+    {
+      "name": "Vazirmatn-FD-Bold.woff2",
+      "weight": 700,
+      "sha256": "59df46afd2ad48ffcd19ab590b20a16a5985db3e9dc252f646814fea6709888e",
+      "bytes": 49868
+    }
+  ]
+}

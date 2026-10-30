@@ -6,12 +6,17 @@ from core import management_api as management
 from core import ai_management
 from core import wallet_views
 from core import package_views
+from core import example_views
 from core import manual_payment_views, support_views, provider_balances
 
 handler404 = "core.views.not_found"
 handler500 = "core.views.server_error"
 
 urlpatterns = [
+    path('api/v1/manage/message-examples', example_views.catalog),
+    path('api/v1/manage/message-examples/<str:kind>', example_views.save),
+    path('api/v1/manage/message-examples/<str:kind>/<int:record_id>', example_views.save),
+    path('api/v1/manage/message-examples/<str:kind>/<int:record_id>/delete', example_views.delete),
     path("api/v1/manage/provider-balances/<str:provider>", provider_balances.balance),
     path('api/v1/support/summary', support_views.summary),
     path('api/v1/support/messages', support_views.messages),

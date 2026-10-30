@@ -86,6 +86,16 @@ do not invent current APIs.
 
 ## UI development workflow
 
+- Display all user-facing digits in Persian using the shared local Farsi-Digits
+  font, including native numeric inputs and both management interfaces. Keep
+  structured numeric values, normalized phone/OTP/bank fields, IDs and API
+  payloads canonical (ASCII digits or JSON numbers); never localize stored data
+  or sealed message snapshots just to change their appearance.
+- Canonicalize digits in newly entered human data before validation, signing
+  and persistence on both client and server. Preserve credentials, opaque IDs,
+  tokens, signatures and already sealed snapshots exactly; never rewrite history
+  to apply a display preference. Numeric editors must accept Persian/Arabic
+  input while preserving required, range, step and date checks.
 - Use `make dev-ui` / `npm run dev` for all UI editing and previews. Next.js
   Fast Refresh must apply source changes while the dev server stays running.
 - Do not rebuild Docker images, run `make up`, or restart the frontend for each

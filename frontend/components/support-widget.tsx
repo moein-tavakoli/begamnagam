@@ -16,6 +16,7 @@ export function SupportWidget(){
 }
 function CustomerSupport(){
   const [open,setOpen]=useState(false),[summary,setSummary]=useState({unread_count:0,staff_online:false}),[bottom,setBottom]=useState(20);
+  const [left,setLeft]=useState(16);
   const wasOpen=useRef(false);
   const dialog=useRef<HTMLDialogElement>(null),trigger=useRef<HTMLButtonElement>(null),revision=useSupportRevision();
   useSupportPolling(async signal=>{const result=await api<typeof summary>('/support/summary',{signal});if(!signal.aborted)setSummary(result);},true,open?10000:30000,revision);
@@ -28,18 +29,25 @@ function CustomerSupport(){
       cancelAnimationFrame(frame);frame=requestAnimationFrame(()=>{
         const button=trigger.current?.getBoundingClientRect();
         if(button){
-          const obstacles=[...document.querySelectorAll('.composer-actions,.mobile-nav,.receipt-actions,.hero-cta')].map(element=>element.getBoundingClientRect()).filter(rect=>rect.width && rect.height && rect.top<innerHeight && rect.bottom>0);
-          setBottom(supportLauncherBottom(innerHeight,button,obstacles));
+          const hero=document.querySelector('.home-flow .hero:not([hidden])')?.getBoundingClientRect();
+          if(hero){
+            setLeft(hero.left+16);
+            setBottom(innerHeight-hero.bottom+16);
+          }else{
+            setLeft(innerWidth<700?12:16);
+            const obstacles=[...document.querySelectorAll('.composer-actions,.mobile-nav,.receipt-actions,.hero-cta')].map(element=>element.getBoundingClientRect()).filter(rect=>rect.width && rect.height && rect.top<innerHeight && rect.bottom>0);
+            setBottom(supportLauncherBottom(innerHeight,button,obstacles));
+          }
         }
         if(dialog.current){dialog.current.style.setProperty('--support-height',`${window.visualViewport?.height??innerHeight}px`);dialog.current.style.setProperty('--support-top',`${window.visualViewport?.offsetTop??0}px`);}
       });
     };
     const observer=new MutationObserver(position);const main=document.querySelector('#main-content');if(main)observer.observe(main,{subtree:true,childList:true,attributes:true,attributeFilter:['class','style','hidden']});
-    position();window.addEventListener('resize',position);window.addEventListener('hashchange',position);window.visualViewport?.addEventListener('resize',position);window.visualViewport?.addEventListener('scroll',position);
-    return()=>{observer.disconnect();cancelAnimationFrame(frame);window.removeEventListener('resize',position);window.removeEventListener('hashchange',position);window.visualViewport?.removeEventListener('resize',position);window.visualViewport?.removeEventListener('scroll',position);};
+    position();window.addEventListener('resize',position);window.addEventListener('scroll',position,{passive:true});window.addEventListener('hashchange',position);window.visualViewport?.addEventListener('resize',position);window.visualViewport?.addEventListener('scroll',position);
+    return()=>{observer.disconnect();cancelAnimationFrame(frame);window.removeEventListener('resize',position);window.removeEventListener('scroll',position);window.removeEventListener('hashchange',position);window.visualViewport?.removeEventListener('resize',position);window.visualViewport?.removeEventListener('scroll',position);};
   },[]);
   return <>
-    <button type="button" ref={trigger} className={`${styles.launcher} support-launcher`} style={{bottom:`max(${bottom}px, calc(12px + env(safe-area-inset-bottom, 0px)))`}} aria-label={`پشتیبانی آنلاین${summary.unread_count?`؛ ${summary.unread_count.toLocaleString('fa-IR')} پاسخ خوانده‌نشده`:''}`} aria-haspopup="dialog" aria-expanded={open} aria-controls="customer-support" onClick={()=>setOpen(true)} title="پشتیبانی آنلاین">
+    <button type="button" ref={trigger} className={`${styles.launcher} support-launcher`} style={{left:`${left}px`,bottom:`max(${bottom}px, calc(12px + env(safe-area-inset-bottom, 0px)))`}} aria-label={`پشتیبانی آنلاین${summary.unread_count?`؛ ${summary.unread_count.toLocaleString('fa-IR')} پاسخ خوانده‌نشده`:''}`} aria-haspopup="dialog" aria-expanded={open} aria-controls="customer-support" onClick={()=>setOpen(true)} title="پشتیبانی آنلاین">
       <Icon name="headset" size={24}/>{summary.unread_count>0 && <span className={styles.badge} aria-hidden="true">{summary.unread_count>99?'۹۹+':summary.unread_count.toLocaleString('fa-IR')}</span>}
     </button>
     <span className="sr-only" role="status" aria-atomic="true">{summary.unread_count?`${summary.unread_count.toLocaleString('fa-IR')} پاسخ خوانده‌نشده از پشتیبانی داری.`:''}</span>

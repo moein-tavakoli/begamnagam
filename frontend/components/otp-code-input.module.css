@@ -1,0 +1,173 @@
+.field {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  max-width: 380px;
+  margin-inline: auto;
+  container-type: inline-size;
+}
+
+.stage {
+  --slot-size: clamp(36px, 17cqi, 52px);
+  --slot-gap: clamp(5px, 2cqi, 12px);
+  --orbit-radius: clamp(57px, 23cqi, 72px);
+  --otp-accent: var(--focus);
+  --otp-success: var(--success, #16845d);
+  position: relative;
+  height: 232px;
+  overflow: hidden;
+  isolation: isolate;
+  border: 0;
+  border-radius: 22px;
+  background: transparent;
+  color: var(--ink);
+  color-scheme: inherit;
+  direction: ltr;
+}
+
+.visuals, .rotor, .celebration { position: absolute; inset: 0; pointer-events: none; }
+.rotor { transform-origin: 50% 46%; }
+
+.slot {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  display: grid;
+  place-items: center;
+  width: var(--slot-size);
+  height: var(--slot-size);
+  margin: calc(var(--slot-size) / -2);
+  border: 1px solid var(--control-line);
+  border-radius: 24%;
+  background: var(--surface);
+  background: linear-gradient(145deg, var(--surface), color-mix(in srgb, var(--surface) 88%, var(--pale)));
+  box-shadow: 0 2px 5px color-mix(in srgb, var(--ink) 7%, transparent);
+  color: var(--ink);
+  font-size: clamp(18px, 5.5cqi, 25px);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  transform: translateX(calc(var(--row) * (var(--slot-size) + var(--slot-gap))));
+  transition: transform 420ms cubic-bezier(.22, 1, .36, 1), border-color 180ms, background 180ms, box-shadow 180ms;
+}
+
+.slot[data-active] {
+  border-color: var(--otp-accent);
+  border-color: color-mix(in srgb, var(--otp-accent) 38%, var(--line));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--otp-accent) 12%, transparent), 0 0 15px color-mix(in srgb, var(--otp-accent) 20%, transparent), inset 0 0 10px color-mix(in srgb, var(--otp-accent) 5%, transparent);
+}
+.focusTrack { position: absolute; inset: -2px; width: calc(100% + 4px); height: calc(100% + 4px); max-width: none; overflow: visible; opacity: 0; color: var(--otp-accent); transition: opacity 120ms; }
+.focusLine { stroke: currentColor; stroke-width: 2.2px; stroke-linecap: round; stroke-dasharray: 30 70; }
+.slot[data-active] .focusTrack { opacity: 1; }
+.slot[data-active] .focusLine { animation: focus-trace 1.6s ease-in-out infinite; }
+.digit { animation: digit-in 160ms ease-out both; }
+.caret { display: none; width: 1.5px; height: 40%; border-radius: 2px; background: var(--otp-accent); }
+.slot[data-active] .caret { display: block; animation: caret-blink 1s steps(1) infinite; }
+
+/* A single native input retains browser autofill, paste, selection and keyboard editing. */
+.field .stage input.capture.capture {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  top: 46%;
+  width: calc(var(--slot-size) * var(--slot-count) + var(--slot-gap) * (var(--slot-count) - 1)) !important;
+  height: max(48px, var(--slot-size));
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  transform: translate(-50%, -50%);
+  color: transparent;
+  caret-color: transparent;
+  background: transparent;
+  -webkit-text-fill-color: transparent;
+  cursor: text;
+  font-size: 20px;
+  border: 0;
+  outline: 0;
+}
+.capture[readonly] { pointer-events: none; }
+.capture::selection { background: transparent; color: transparent; }
+
+.orbit {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: calc(var(--orbit-radius) * 2);
+  height: calc(var(--orbit-radius) * 2);
+  transform: translate(-50%, -50%) scale(.75);
+  opacity: 0;
+  transition: opacity 240ms, transform 420ms cubic-bezier(.22, 1, .36, 1);
+}
+.orbit circle { stroke: var(--control-line); stroke-width: 1; stroke-dasharray: 2 8; }
+.hub { position: absolute; left: 50%; top: 46%; width: 5px; height: 5px; border-radius: 50%; background: var(--otp-accent); opacity: 0; transform: translate(-50%, -50%); transition: opacity 250ms; }
+.stage[data-phase="verifying"] .orbit { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+.stage[data-phase="verifying"] .hub { opacity: 1; }
+.stage[data-phase="verifying"] .slot {
+  transform: translate(calc(var(--orbit-radius) * var(--orbit-x)), calc(var(--orbit-radius) * var(--orbit-y)));
+  border-color: var(--otp-accent);
+  box-shadow: none;
+}
+.stage[data-phase="verifying"] .rotor,
+.stage[data-phase="success"] .rotor { animation: orbit-turn 1s 420ms linear infinite; }
+
+.stage[data-phase="success"] .slot { color: var(--otp-success); border-color: var(--otp-success); background: var(--surface); background: color-mix(in srgb, var(--surface) 88%, var(--otp-success)); animation: slot-collapse 640ms ease-in both; }
+.stage[data-phase="success"] .orbit { opacity: 0; transform: translate(-50%, -50%) scale(.1); }
+.badge {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  border: 1.5px solid var(--otp-success);
+  border-radius: 17px;
+  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 90%, var(--otp-success));
+  color: var(--otp-success);
+  box-shadow: 0 0 28px color-mix(in srgb, var(--otp-success) 10%, transparent);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(.35);
+}
+.badge::before, .badge::after { content: ""; position: absolute; inset: -8px; border: 1px solid var(--otp-success); border-color: color-mix(in srgb, var(--otp-success) 32%, transparent); border-radius: 24px; }
+.badge::after { inset: -15px; border-color: color-mix(in srgb, var(--otp-success) 12%, transparent); border-radius: 30px; }
+.badge svg { width: 29px; height: 29px; }
+.badge path { stroke: currentColor; stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 23; stroke-dashoffset: 23; }
+.stage[data-phase="success"] .badge { animation: badge-in 440ms 560ms cubic-bezier(.16, 1, .3, 1) both; }
+.stage[data-phase="success"] .badge path { animation: check-in 220ms 860ms ease-out both; }
+.spark { position: absolute; left: 50%; top: 46%; width: 3px; height: 3px; border-radius: 50%; background: var(--otp-success); opacity: 0; }
+.spark:nth-child(3n) { background: var(--ink); width: 2px; height: 2px; }
+.stage[data-phase="success"] .spark { animation: spark-out 800ms 650ms ease-out both; }
+
+.status { position: absolute; inset-inline: 10px; bottom: 12px; margin: 0; color: var(--muted); direction: rtl; text-align: center; font-size: 12px; line-height: 1.8; }
+.stage[data-phase="success"] .status { color: var(--otp-success); }
+.stage[data-phase="error"] .rotor { animation: reject-shake 320ms ease-out; }
+.stage[data-phase="error"] .slot, .stage[data-invalid] .slot { border-color: var(--error); }
+.stage[data-phase="error"] .focusTrack, .stage[data-invalid] .focusTrack { color: var(--error); }
+
+@supports (color: color-mix(in srgb, white, black)) {
+  .stage { --otp-success: var(--success, color-mix(in srgb, #16845d 78%, var(--ink))); }
+}
+
+@keyframes focus-trace { to { stroke-dashoffset: -100; } }
+@keyframes caret-blink { 50% { opacity: 0; } }
+@keyframes digit-in { from { opacity: 0; transform: translateY(5px) scale(.88); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes orbit-turn { to { transform: rotate(360deg); } }
+@keyframes slot-collapse {
+  0%, 24% { transform: translate(calc(var(--orbit-radius) * var(--orbit-x)), calc(var(--orbit-radius) * var(--orbit-y))) scale(1); opacity: 1; }
+  100% { transform: translate(0, 0) scale(.12) rotate(90deg); opacity: 0; }
+}
+@keyframes badge-in { to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+@keyframes check-in { to { stroke-dashoffset: 0; } }
+@keyframes spark-out { 0% { opacity: 0; transform: rotate(var(--angle)) translateX(20px); } 25% { opacity: 1; } 100% { opacity: 0; transform: rotate(var(--angle)) translateX(var(--distance)); } }
+@keyframes reject-shake { 20%, 60% { transform: translateX(-4px); } 40%, 80% { transform: translateX(4px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .stage *, .stage *::before, .stage *::after { animation: none !important; transition: none !important; }
+  .slot[data-active] { outline: 2px solid var(--otp-accent); outline-offset: 1px; }
+  .stage[data-phase="verifying"] .slot { transform: translateX(calc(var(--row) * (var(--slot-size) + var(--slot-gap)))); }
+  .stage[data-phase="verifying"] .orbit, .stage[data-phase="verifying"] .hub { opacity: 0; }
+  .stage[data-phase="success"] .slot { opacity: 0; }
+  .stage[data-phase="success"] .badge { opacity: 1; transform: translate(-50%, -50%); }
+  .stage[data-phase="success"] .badge path { stroke-dashoffset: 0; }
+}

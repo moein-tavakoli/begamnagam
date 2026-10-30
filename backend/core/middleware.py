@@ -94,3 +94,15 @@ class AdminLoginThrottle(MiddlewareMixin):
             # Cache failure must not silently remove protection of admin passwords.
             return HttpResponse('ورود موقتاً در دسترس نیست؛ کمی بعد تلاش کنید.',
                                 status=503, content_type='text/plain; charset=utf-8')
+
+
+class CanonicalAdminInput(MiddlewareMixin):
+    def process_view(self, request, view_func, view_args, view_kwargs):
+        match = request.resolver_match
+        if request.method != 'POST' or not match or 'admin' not in match.app_names:
+            return
+        from .input_digits import canonical_input
+        data = request.POST.copy()
+        for key, values in data.lists():
+            data.setlist(key, [canonical_input(value, key) for value in values])
+        request.POST = data

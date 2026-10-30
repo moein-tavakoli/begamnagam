@@ -1,0 +1,31 @@
+.toggle {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--control-line);
+  border-radius:var(--button-radius);
+  color: var(--ink);
+  background: linear-gradient(155deg, var(--surface), var(--soft));
+  box-shadow: inset 0 1px 1px color-mix(in srgb, white 65%, transparent), inset 0 -2px 2px color-mix(in srgb, var(--focus) 10%, transparent), 0 2px 2px #00000014, 0 4px 12px #0000000c;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 160ms ease, border-color 160ms ease;
+}
+.toggle:hover { border-color: var(--focus); }
+.enter { animation: toggle-enter 650ms 120ms cubic-bezier(.16, 1, .3, 1) both; }
+@keyframes toggle-enter { from { opacity: 0; translate: 0 -12px; rotate: -14deg; scale: .65; } to { opacity: 1; translate: 0 0; rotate: 0deg; scale: 1; } }
+.toggle:active { transform: scale(.93); }
+.toggle[aria-disabled="true"] { cursor: progress; }
+.toggle:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.toggle svg { position: absolute; transition: transform 450ms cubic-bezier(.4, 0, .2, 1), opacity 220ms ease; }
+.sun { opacity: 0; transform: rotate(-80deg) scale(.5); }
+.moon { opacity: 1; transform: rotate(0deg) scale(1); }
+:global(html[data-theme="dark"]) .sun { opacity: 1; transform: rotate(0deg) scale(1); }
+:global(html[data-theme="dark"]) .moon { opacity: 0; transform: rotate(70deg) scale(.5); }
+:global(html[data-theme="dark"]) .toggle { box-shadow: inset 0 1px 1px #ffffff26, inset 0 -2px 2px #00000044, 0 2px 2px #00000044, 0 4px 12px #00000022; }
+@media (prefers-reduced-motion: reduce) { .toggle, .toggle svg { transition: none; animation: none; } .toggle:active { transform: none; } }

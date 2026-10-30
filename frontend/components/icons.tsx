@@ -1,6 +1,8 @@
 import type { CSSProperties } from "react";
 
 const paths = {
+  home: <><path d="m3 10 9-7 9 7M5 9v12h14V9M9 21v-7h6v7"/></>,
+  logout: <><path d="M10 4H4v16h6M9 12h12m-4-4 4 4-4 4"/></>,
   headset: <><path d="M4 13v-1a8 8 0 0 1 16 0v1"/><rect x="3" y="11" width="4" height="8" rx="2"/><rect x="17" y="11" width="4" height="8" rx="2"/><path d="M19 19c0 2-3 3-7 3m-2 0h3"/></>,
   close: <path d="m6 6 12 12M6 18 18 6"/>,
   send: <><path d="m21 3-7 18-4-7-7-4L21 3Z"/><path d="m10 14 6-6"/></>,

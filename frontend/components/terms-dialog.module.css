@@ -5,7 +5,7 @@
   border: 0;
   border-radius: 4px;
   background: transparent;
-  color: #63429c;
+  color: var(--focus);
   font: inherit;
   font-weight: 600;
   text-decoration: underline;
@@ -57,7 +57,7 @@
   flex-shrink: 0;
   padding: 8px 14px;
   border: 1px solid var(--control-line);
-  border-radius: 30px;
+  border-radius:var(--button-radius);
   background: var(--surface);
   color: var(--ink);
   font-size: 13px;
@@ -96,7 +96,7 @@
 }
 
 .content a {
-  color: #63429c;
+  color: var(--focus);
   text-decoration: underline;
   text-underline-offset: 4px;
 }

@@ -1,5 +1,8 @@
 import type { MessageTone, MessageToneOption } from './message-tones';
+import { canonicalInput } from './input-digits.ts';
 export type Category = {
+  key?: string;
+  group_id?: number;
   id: string;
   label: string;
   description: string;
@@ -22,6 +25,7 @@ export type Bootstrap = {
   free_sends_earned_total?: number;
   price_toman: number;
   categories: Category[];
+  category_groups?: { id: number; label: string }[];
   rewrite_mode: string;
   payment_backend?: string;
   recent_auth?: boolean;
@@ -117,6 +121,7 @@ export async function api<T>(
     body?: unknown;
     idempotencyKey?: string;
     signal?: AbortSignal;
+    beforeSessionReset?: (result: T) => Promise<void>;
   } = {},
 ): Promise<T> {
   const method = options.method || "GET";
@@ -143,7 +148,7 @@ export async function api<T>(
       cache: "no-store",
       headers,
       body:
-        options.body === undefined ? undefined : JSON.stringify(options.body),
+        options.body === undefined ? undefined : JSON.stringify(canonicalInput(options.body)),
       signal: controller.signal,
     });
     const data = await response.json().catch(() => null);
@@ -165,7 +170,17 @@ export async function api<T>(
         ["/auth/logout", "/auth/verify-otp", "/manage/login", "/manage/logout"].includes(path)) {
       // Both phone and staff authentication replace the shared Django session.
       // Clear private views in every open tab only after a successful response.
-      window.dispatchEvent(new Event("privacy-reset"));
+      // Other tabs reset immediately; the initiating OTP UI may finish bounded
+      // visual feedback before this tab discards its anonymous form state.
+      let resetTimer: ReturnType<typeof setTimeout> | undefined;
+      const settled = path === "/auth/verify-otp" && options.beforeSessionReset
+        ? Promise.race([
+            Promise.resolve().then(() => options.beforeSessionReset!(data as T)).catch(() => {}),
+            new Promise<void>(resolve => { resetTimer = setTimeout(resolve, 3000); }),
+          ]).finally(() => clearTimeout(resetTimer))
+        : undefined;
+      window.dispatchEvent(new CustomEvent("privacy-reset", { detail: { settled } }));
+      if (settled) await settled;
     }
     return data as T;
   } catch (error) {

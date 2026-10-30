@@ -49,16 +49,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [reload]);
   useEffect(()=>{
     const channel=openSessionChannel();
-    const clear=()=>{generation.current+=1;identity.current=undefined;setData(null);setPrivacyEpoch(v=>v+1);void reload();};
-    const local=()=>{clear();channel?.postMessage('session-changed');};
+    let pendingReset: Promise<void> | undefined;
+    const clear=()=>{pendingReset=undefined;generation.current+=1;identity.current=undefined;setData(null);setPrivacyEpoch(v=>v+1);void reload();};
+    const local=(event: Event)=>{
+      channel?.postMessage('session-changed');
+      const settled=(event as CustomEvent<{settled?: Promise<void>}>).detail?.settled;
+      if(!settled){clear();return;}
+      // Keep only this form alive for bounded OTP feedback; peers were notified above.
+      const current=++generation.current;
+      pendingReset=settled;
+      void settled.then(()=>{if(pendingReset===settled && current===generation.current)clear();});
+    };
     const remote=(event:MessageEvent)=>{if(event.data==='session-changed')clear();};
     const restore=(event:PageTransitionEvent)=>{if(event.persisted)clear();};
-    const focus=()=>{void reload();};
+    const focus=()=>{if(!pendingReset)void reload();};
     window.addEventListener('privacy-reset',local);
     window.addEventListener('pageshow',restore);
     window.addEventListener('focus',focus);
     channel?.addEventListener('message',remote);
-    return ()=>{window.removeEventListener('privacy-reset',local);window.removeEventListener('pageshow',restore);window.removeEventListener('focus',focus);channel?.close();};
+    return ()=>{pendingReset=undefined;window.removeEventListener('privacy-reset',local);window.removeEventListener('pageshow',restore);window.removeEventListener('focus',focus);channel?.close();};
   },[reload]);
   const authenticate = (phone: string) =>
     setData((current) =>

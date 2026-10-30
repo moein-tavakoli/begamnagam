@@ -5,8 +5,8 @@ export function MessageTonePicker({ options, value, onChange, disabled = false }
 }) {
   if (!options.length) return null;
   return <fieldset className="message-tone-picker" disabled={disabled} aria-describedby="message-tone-help">
-    <legend>لحن پیام</legend>
-    <div className="message-tone-options">{options.map(option => <label key={option.id} className={value === option.id ? 'is-selected' : ''}>
+    <legend className="sr-only">لحن پیام</legend>
+    <div className="message-tone-options"><span className="message-tone-label" aria-hidden="true">لحن پیام</span>{options.map(option => <label key={option.id} className={value === option.id ? 'is-selected' : ''}>
       <input type="radio" name="message_tone" value={option.id} checked={value === option.id} onChange={() => onChange(option.id)} />
       <span>{option.label}</span>
     </label>)}</div>

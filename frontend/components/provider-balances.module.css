@@ -11,7 +11,7 @@
   align-items: center;
   column-gap: 12px;
   padding: 14px 16px;
-  background: white;
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 20px;
   min-width: 0;
@@ -21,11 +21,11 @@
   grid-row: 1 / 4;
   place-items: center;
   background: #eee7fb;
-  border: 1px solid #e2d7f3;
+  border: 1px solid var(--accent-line);
   border-radius: 14px;
   width: 42px;
   height: 42px;
-  color: #685084;
+  color: var(--focus);
 }
 .copy { display: contents; }
 .card .copy h2 {

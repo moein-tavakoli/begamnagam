@@ -1,5 +1,7 @@
 "use client";
 
+import { DigitInput } from "./digit-input";
+
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { api, errorMessage, type MessagePackage } from "@/lib/api";
 import { managementNumber } from "@/lib/management";
@@ -45,8 +47,8 @@ function PackageForm({ value, onSaved, onFailure }: { value: MessagePackage | nu
   return <section className="manage-card"><h2>{value ? `ویرایش ${value.name}` : "تعریف بستهٔ جدید"}</h2><form className="manage-form" onSubmit={submit}>
     {error && <p role="alert">{error}</p>}
     <label>نام بسته<input name="name" maxLength={80} required defaultValue={value?.name ?? ""} /></label>
-    <div className="manage-two-columns"><label>تعداد پیام<input name="message_count" type="number" inputMode="numeric" min={1} max={1000000} required defaultValue={value?.message_count ?? 3} /></label><label>قیمت کل بسته (تومان)<input name="price_toman" type="number" inputMode="numeric" min={1} max={2147483647} required defaultValue={value?.price_toman ?? 10000} /></label></div>
-    <label>ترتیب نمایش<input name="sort_order" type="number" min={0} max={2147483647} required defaultValue={value?.sort_order ?? 0} /></label>
+    <div className="manage-two-columns"><label>تعداد پیام<DigitInput name="message_count" type="number" inputMode="numeric" min={1} max={1000000} required defaultValue={value?.message_count ?? 3} /></label><label>قیمت کل بسته (تومان)<DigitInput name="price_toman" type="number" inputMode="numeric" min={1} max={2147483647} required defaultValue={value?.price_toman ?? 10000} /></label></div>
+    <label>ترتیب نمایش<DigitInput name="sort_order" type="number" min={0} max={2147483647} required defaultValue={value?.sort_order ?? 0} /></label>
     <label className="checkbox-label"><input name="active" type="checkbox" defaultChecked={value?.active ?? false} />این بسته فعال باشد و به کاربران نمایش داده شود</label>
     <label>دلیل تغییر<input name="reason" minLength={3} maxLength={200} required /></label>
     <button className="manage-button primary" disabled={busy}>{busy ? "در حال ذخیره…" : "ذخیرهٔ بسته"}</button>

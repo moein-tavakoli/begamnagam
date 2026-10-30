@@ -1,0 +1,21 @@
+.button { position: relative; isolation: isolate; }
+.label { display: inline-flex; align-items: center; justify-content: center; gap: 10px; transition: opacity 100ms ease; }
+.feedback { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--ink); }
+.feedback[data-result="accepted"] { color: var(--success); font-weight: 800; animation: feedback-in 220ms ease-out both; }
+.feedback[data-result="accepted"] svg { color: #c08b21; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.feedback[data-result="rejected"] { color: var(--error); }
+.feedback[data-result="uncertain"],.feedback[data-result="waiting"] { color: var(--muted); }
+.viewport { position: fixed; inset: 0; z-index: 80; pointer-events: none; overflow: hidden; contain: strict; }
+.anchor { position: absolute; perspective: 700px; }
+.anchor[data-phase="accepted"],.anchor[data-phase="rejected"],.anchor[data-phase="uncertain"],.anchor[data-phase="waiting"] { visibility: hidden; }
+.paper { overflow: visible; max-width: none; filter: drop-shadow(0 4px 5px #3d251624); }
+.base { fill: var(--lime); }
+.face { opacity: 0; stroke-width: .5; stroke-linejoin: round; }
+.face0 { fill: #ffe5a1; stroke: #ffe5a1; }
+.face1 { fill: #fff2cf; stroke: #fff2cf; }
+.face2 { fill: #e7ae39; stroke: #e7ae39; }
+.face3 { fill: #f9d477; stroke: #f9d477; }
+.trails { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-linecap: round; }
+.trails path { opacity: 0; stroke-dasharray: 1; }
+@keyframes feedback-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@media(prefers-reduced-motion:reduce) { .label { transition: none; } .feedback { animation: none; } }

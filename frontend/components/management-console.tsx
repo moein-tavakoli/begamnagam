@@ -1,5 +1,7 @@
 "use client";
 
+import { DigitInput } from "./digit-input";
+
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError, errorMessage } from "@/lib/api";
@@ -16,6 +18,7 @@ import { SupportInbox, useSupportBadge } from "./support-inbox";
 import type { SupportWorkspaceMemory } from "@/lib/support";
 import supportStyles from "./support-chat.module.css";
 import { PackageSettings } from "./package-settings";
+import { ExampleSettings } from "./example-settings";
 import { walletToman } from '@/lib/wallet';
 
 function Failure({ message, retry }: { message: string; retry?: () => void }) {
@@ -77,6 +80,7 @@ export function ManagementConsole() {
     ...(session?.resources || []),
     ...(permissions.includes("manage_site_limits") ? [{ key: "limits", title: "تنظیمات سایت" }] : []),
     ...(permissions.includes("manage_message_packages") ? [{ key: "packages", title: "بسته‌های پیام" }] : []),
+    ...(permissions.includes("manage_message_examples") ? [{ key: "examples", title: "پیام‌های نمونه" }] : []),
     ...(permissions.includes("manage_manual_payments") ? [{ key: "manual-settings", title: "کارت و دریافت رسید" }] : []),
     ...(permissions.includes("manage_ai") ? [{ key: "ai", title: "هوش مصنوعی" }] : []),
   ];
@@ -103,7 +107,7 @@ export function ManagementConsole() {
         <span className="sr-only" role="status" aria-atomic="true">{supportCount>0 ? `${supportCount.toLocaleString("fa-IR")} گفت‌وگوی پشتیبانی تازه یا بی‌پاسخ داری.` : ""}</span>
         <div className="manage-content">{error && <Failure message={error} />}
           {!active && <section className="manage-card"><p>برای این حساب بخشی مجاز نشده است. مجوزها از مدیریت پیشرفتهٔ جنگو قابل تنظیم‌اند.</p></section>}
-          {active === "support" ? <SupportInbox onFailure={supportFailure} memory={supportMemory} /> : active === "dashboard" ? <Dashboard key={`dashboard-${epoch}`} canOperate={permissions.includes("operate_safety")} onAction={setAction} onFailure={failed} /> : active === "limits" ? <Limits onFailure={failed} /> : active === "ai" ? <AISettings onFailure={failed} /> : active === "manual-settings" ? <ManualPaymentSettings onFailure={failed} /> : active === "packages" ? <PackageSettings onFailure={failed} /> : active && <Records key={`${active}-${epoch}`} resource={active} permissions={permissions} onAction={setAction} onFailure={failed} />}
+          {active === "examples" ? <ExampleSettings onFailure={failed} /> : active === "support" ? <SupportInbox onFailure={supportFailure} memory={supportMemory} /> : active === "dashboard" ? <Dashboard key={`dashboard-${epoch}`} canOperate={permissions.includes("operate_safety")} onAction={setAction} onFailure={failed} /> : active === "limits" ? <Limits onFailure={failed} /> : active === "ai" ? <AISettings onFailure={failed} /> : active === "manual-settings" ? <ManualPaymentSettings onFailure={failed} /> : active === "packages" ? <PackageSettings onFailure={failed} /> : active && <Records key={`${active}-${epoch}`} resource={active} permissions={permissions} onAction={setAction} onFailure={failed} />}
           <p className="manage-footnote">زمان‌ها به وقت تهران · تغییرات مدیریتی با دلیل و سابقه ثبت می‌شوند.</p>
         </div>
       </div>
@@ -207,7 +211,7 @@ function SiteLimits({ data, onSaved, onFailure }: { data: LimitSettings; onSaved
     {error && <Failure message={error} />}{message && <p className="manage-success" role="status">{message}</p>}
     {fields.__all__ && <Failure message={String(fields.__all__)} />}
     <fieldset disabled={busy} className="manage-fieldset">{data.sections.map((section, i) => <details className="manage-settings-section" key={section.title} open={i < 2}><summary>{section.title}</summary><div className="manage-settings-grid">{section.fields.map(field => <label key={field.key} className={field.type === "bool" ? "manage-checkbox" : ""} htmlFor={`limit-${field.key}`}>
-      <span>{field.label}</span>{field.type === "bool" ? <input id={`limit-${field.key}`} name={field.key} type="checkbox" role={["wallet_enabled","gateway_enabled"].includes(field.key) ? "switch" : undefined} defaultChecked={Boolean(data.values[field.key])} aria-invalid={!!fields[field.key]} aria-describedby={field.help || fields[field.key] ? `help-${field.key}` : undefined} /> : <input id={`limit-${field.key}`} name={field.key} type="number" min={field.min ?? 0} step={1} max={field.max ?? Number.MAX_SAFE_INTEGER} defaultValue={Number(data.values[field.key])} required aria-invalid={!!fields[field.key]} aria-describedby={field.help || fields[field.key] ? `help-${field.key}` : undefined} />}
+      <span>{field.label}</span>{field.type === "bool" ? <input id={`limit-${field.key}`} name={field.key} type="checkbox" role={["wallet_enabled","gateway_enabled"].includes(field.key) ? "switch" : undefined} defaultChecked={Boolean(data.values[field.key])} aria-invalid={!!fields[field.key]} aria-describedby={field.help || fields[field.key] ? `help-${field.key}` : undefined} /> : <DigitInput id={`limit-${field.key}`} name={field.key} type="number" min={field.min ?? 0} step={1} max={field.max ?? Number.MAX_SAFE_INTEGER} defaultValue={Number(data.values[field.key])} required aria-invalid={!!fields[field.key]} aria-describedby={field.help || fields[field.key] ? `help-${field.key}` : undefined} />}
       {(field.help || fields[field.key]) && <small id={`help-${field.key}`} className={fields[field.key] ? "manage-field-error" : ""}>{fields[field.key] ? String(fields[field.key]) : field.help}</small>}
     </label>)}</div></details>)}
       <label>دلیل تغییر<input name="reason" required minLength={3} maxLength={200} placeholder="دلیل کوتاه؛ اطلاعات خصوصی ننویسید" /></label>
@@ -228,7 +232,7 @@ function RequestRule({ rule, onSaved, onFailure }: { rule: LimitRule; onSaved: (
     try { onSaved(await api<LimitSettings>(`/manage/request-limits/${rule.scope}`, { method: "POST", body: { revision: rule.revision, reason: form.get("reason"), values: { enabled: rule.protected || form.get("enabled") === "on", maximum: Number(form.get("maximum")), window_seconds: Number(form.get("window_seconds")) } } })); }
     catch (e) { setError(errorMessage(e)); onFailure(e); } finally { setBusy(false); }
   }
-  return <form className="manage-form" onSubmit={save}>{error && <Failure message={error} />}<fieldset className="manage-fieldset" disabled={busy}><label className="manage-checkbox"><span>کنترل فعال باشد</span><input name="enabled" type="checkbox" defaultChecked={rule.enabled} disabled={rule.protected} /></label><div className="manage-settings-grid"><label>حداکثر تعداد<input name="maximum" type="number" min={1} step={1} defaultValue={rule.maximum} required /></label><label>بازه (ثانیه)<input name="window_seconds" type="number" min={1} step={1} defaultValue={rule.window_seconds} required /></label></div><label>دلیل تغییر<input name="reason" minLength={3} maxLength={200} required /></label><button className="manage-button primary">{busy ? "در حال ذخیره…" : "ذخیرهٔ این کنترل"}</button></fieldset></form>;
+  return <form className="manage-form" onSubmit={save}>{error && <Failure message={error} />}<fieldset className="manage-fieldset" disabled={busy}><label className="manage-checkbox"><span>کنترل فعال باشد</span><input name="enabled" type="checkbox" defaultChecked={rule.enabled} disabled={rule.protected} /></label><div className="manage-settings-grid"><label>حداکثر تعداد<DigitInput name="maximum" type="number" min={1} step={1} defaultValue={rule.maximum} required /></label><label>بازه (ثانیه)<DigitInput name="window_seconds" type="number" min={1} step={1} defaultValue={rule.window_seconds} required /></label></div><label>دلیل تغییر<input name="reason" minLength={3} maxLength={200} required /></label><button className="manage-button primary">{busy ? "در حال ذخیره…" : "ذخیرهٔ این کنترل"}</button></fieldset></form>;
 }
 
 function ActionDialog({ action, onClose, onComplete, onFailure }: { action: ManagementAction; onClose: () => void; onComplete: () => void; onFailure: (e: unknown) => void }) {
@@ -268,5 +272,5 @@ function AccountLimitInput({ name, label, value }: { name: string; label: string
   const [mode, setMode] = useState(value === null ? 'site' : value === 0 ? 'unlimited' : 'custom');
   return <div className="manage-settings-grid"><label>{label}<select name={`${name}_mode`} value={mode} onChange={event => setMode(event.target.value)}>
     <option value="site">طبق تنظیم سایت</option><option value="custom">عدد اختصاصی</option><option value="unlimited">تعداد نامحدود</option>
-  </select></label>{mode === 'custom' && <label>حداکثر {label}<input name={name} type="number" min={1} max={1000000} step={1} defaultValue={value || 1000} required /></label>}</div>;
+  </select></label>{mode === 'custom' && <label>حداکثر {label}<DigitInput name={name} type="number" min={1} max={1000000} step={1} defaultValue={value || 1000} required /></label>}</div>;
 }

@@ -1,0 +1,4 @@
+.stage { position: relative; width: 100%; isolation: isolate; }
+.pause { position: absolute; bottom: 8px; inset-inline-end: 4px; width: 44px; height: 44px; display: grid; place-items: center; padding: 0; border: 1px solid color-mix(in srgb, var(--hero-details) 24%, transparent); border-radius: var(--button-radius); background: color-mix(in srgb, var(--hero) 80%, var(--surface)); color: var(--hero-details); transition: background-color 160ms ease; }
+.pause:hover { background: var(--warm); }
+@media(prefers-reduced-motion:reduce) { .pause { display: none; } }

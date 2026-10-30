@@ -9,6 +9,22 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.16.1 — 2026-10-30 — Consistent recipient phone entry
+
+### Fixed
+
+- Align recipient phone entry with login: centered label/digits, 19px text,
+  numeric keyboard and an 11-digit ceiling. Share canonical digit handling and
+  preserve full formatted/international paste and preview invalidation on edits.
+
+Validation: 80 frontend tests and TypeScript passed. Isolated browser checks at
+320px, 375px and 1440px in light/dark confirm matching login/recipient styling,
+Persian/Arabic input, canonical ASCII preview payloads, native/state length
+limits, incomplete-number rejection and clearing consent/preview when the
+recipient changes. No real OTP, SMS or paid provider call was made. This update
+is committed and pushed to dev at the user's request; server release remains
+0.16.0.
+
 ## 0.16.0 — 2026-10-30 — Lightweight homepage entrances
 
 The authorized server release includes all changes since 0.14.0, including

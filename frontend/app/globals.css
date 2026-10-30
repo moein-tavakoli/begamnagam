@@ -351,7 +351,9 @@ input[aria-invalid="true"],textarea[aria-invalid="true"] { border-color: var(--e
 .home-flow .embedded-auth-form #sender-phone { width: 100% !important; }
 .phone-entry-form { width:100%; max-width:440px; margin-inline:auto; text-align:center; }
 .phone-entry-form .inline-form { flex-direction:column; align-items:stretch; }
-.phone-entry-form #sender-phone { width:100% !important; flex:none; font-size:19px; text-align:center; }
+.phone-entry-form #sender-phone { width:100% !important; flex:none; }
+input.phone-number-input[type="tel"] { font-size:19px; text-align:center; }
+.review-form label[for="quote-recipient"] { text-align:center; }
 .auth-card:has(.phone-entry-form) { text-align:center; }
 .auth-card:has(.phone-entry-form) .auth-title { justify-content:center; }
 @media (min-width: 700px) { .home-flow .form-actions.composer-actions { width: min(650px,calc(100% - 32px)); bottom: calc(var(--composer-keyboard-inset,0px) + 16px); padding-inline: 20px; } }

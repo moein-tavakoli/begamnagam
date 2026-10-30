@@ -1,10 +1,31 @@
 # Changelog
 
-Meaningful changes are recorded here, newest first. Add development changes under
-`Unreleased`; move them into a versioned section when releasing from `dev` to
-`prod`. Historical release reports linked below contain validation and limitations.
+Codex chooses MAJOR.MINOR.PATCH for each completed, coherent change and creates
+its local version commit on dev after relevant checks. Keep work in progress
+under Unreleased; move only completed work into its versioned section before
+committing. Local versions do not imply prod promotion or server deployment.
+Push requires an explicit user request. See [versioning policy](docs/versioning.fa.md).
+Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
+
+## 0.14.1 — 2026-10-30 — Codex-managed versioning (local)
+
+### Changed
+
+- Delegate version selection, package-version synchronization, changelog entries
+  and automatic local commits of completed changes to Codex. Require an explicit
+  user request before pushing; retain dev/prod PR/CI and deployment boundaries.
+- Define MAJOR for incompatible public changes, MINOR for compatible features
+  and PATCH for fixes/documentation/maintenance. Keep unrelated pending work out
+  of the commit and under Unreleased. Record the policy in AGENTS, README and
+  the project master, with a shared operating procedure.
+- Align package metadata with the recorded 0.14.0 baseline and bump this
+  documentation-only change to 0.14.1; no dependency update is included.
+
+Validation: reviewed the scoped diff, checked policy links and synchronized
+version fields. This is a local documentation/version commit; no push, tag,
+prod promotion, provider call or server deployment was performed.
 
 ## 0.14.0 — 2026-10-30
 

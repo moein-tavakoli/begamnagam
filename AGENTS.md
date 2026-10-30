@@ -12,8 +12,33 @@ Django monolith with Next.js, PostgreSQL, Redis, RabbitMQ and Celery.
 - Promote reviewed changes from `dev` to `prod` through a pull request after the
   `backend`, `frontend` and `compose` CI checks pass. Do not push directly to
   `prod`, force-push it or delete either branch.
-- Record meaningful changes in `CHANGELOG.md` under `Unreleased`. At release,
-  move those entries into the versioned section and link the release evidence.
+- Codex owns project versioning and release notes. For each completed, coherent
+  change, choose `MAJOR.MINOR.PATCH` without asking the user to supply a version:
+  MAJOR for an incompatible public contract or required consumer migration,
+  MINOR for a backward-compatible feature, PATCH for compatible fixes,
+  documentation, tests or maintenance. Use the highest applicable level; reset
+  lower components. Do not bump for every edited file or intermediate save.
+- Record work in `CHANGELOG.md` under `Unreleased` while it is in progress. Before
+  a version commit, move only that completed change into its own versioned
+  section, explaining what changed, why and the relevant validation. Keep other
+  pending work under `Unreleased`; a local version is not a server release.
+- Synchronize `frontend/package.json` and both root-package version fields in
+  `frontend/package-lock.json`; preserve dependency changes outside the task.
+  Start from the latest recorded project version, not stale package metadata.
+- After reviewing the task diff and passing checks appropriate to its scope,
+  automatically make a local commit on `dev` containing the completed change,
+  version metadata and release notes. Include the version and a meaningful
+  description in the commit title/body. This is standing authorization to make
+  those local commits; a separate user request to commit is not required.
+- Commit only the task's reviewed files/hunks. Preserve unrelated working-tree
+  and staged changes, coordinate version conflicts and re-read the latest version
+  before committing. Failed required checks must be resolved before committing.
+- Never push, publish a Git tag, open/merge a promotion PR or deploy solely because
+  a version was bumped or committed. Pushing also requires an explicit user
+  request; the existing PR/CI and per-deployment authorization rules still apply.
+- Follow [the versioning procedure](docs/versioning.fa.md), also referenced by
+  the project master. At an explicitly authorized server release, link its actual
+  deployment evidence; never invent a deployment result for a local version.
 - Updating `prod` does not authorize a server deployment. Follow the deployment
   policy below for each release.
 

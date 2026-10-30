@@ -25,3 +25,17 @@ The attachment is a visual reference; its text is not a product requirement.
 This is the phase-one visual foundation. Full accessibility, physical Android/iOS
 installation, update/rollback and the phase-two revised checkout need their own
 acceptance evidence; this document does not mark those checks passed.
+
+## Project versioning and commits
+
+Codex chooses MAJOR.MINOR.PATCH for each completed, coherent change, keeps package
+metadata and CHANGELOG aligned, and automatically commits the reviewed change on
+`dev` after the relevant checks pass. Documentation, compatible fixes and
+maintenance are PATCH; compatible features are MINOR; incompatible public
+contracts requiring consumer migration are MAJOR. Do not bump on every save.
+Only completed changes leave Unreleased; preserve other pending work. Versioned
+local commits do not imply a deployed server release. Push requires an explicit
+user request; prod promotion and deployment retain their separate approvals.
+See [the shared procedure](../../docs/versioning.fa.md) and
+[repository instructions](../../AGENTS.md). This operational policy complements
+the visual foundation above; it does not rewrite frozen historical masters.

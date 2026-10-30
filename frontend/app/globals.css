@@ -312,6 +312,11 @@ input[aria-invalid="true"],textarea[aria-invalid="true"] { border-color: var(--e
 .home-flow .embedded-auth-form { width: 100%; min-width: 0; }
 .home-flow .embedded-auth-form .inline-form { display: block; }
 .home-flow .embedded-auth-form #sender-phone { width: 100% !important; }
+.phone-entry-form { width:100%; max-width:440px; margin-inline:auto; text-align:center; }
+.phone-entry-form .inline-form { flex-direction:column; align-items:stretch; }
+.phone-entry-form #sender-phone { width:100% !important; flex:none; font-size:19px; text-align:center; }
+.auth-card:has(.phone-entry-form) { text-align:center; }
+.auth-card:has(.phone-entry-form) .auth-title { justify-content:center; }
 @media (min-width: 700px) { .home-flow .form-actions.composer-actions { width: min(650px,calc(100% - 32px)); bottom: calc(var(--composer-keyboard-inset,0px) + 16px); padding-inline: 20px; } }
 @media (max-width: 359px) { .home-flow .step-list { gap: 8px; } .home-flow .step-item { gap: 7px; } .home-flow .step-item b { font-size: 11px; } .free-sends-balance.is-compact { font-size: 10px; padding-inline: 6px; } }
 

@@ -9,6 +9,18 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.15.1 — 2026-10-30 — Centered phone entry (local)
+
+### Changed
+
+- Center the phone-entry form, label and digits; increase the input text from
+  16px to 19px. Limit entry to 11 canonical digits with a numeric keyboard,
+  preserving Persian/Arabic input and complete formatted/international paste.
+
+Validation: 80 frontend tests and TypeScript passed. Browser checks at 320px,
+375px and 1440px in light/dark themes confirm alignment, font size, the input
+ceiling, normalized paste and no overflow. No OTP was sent; no push/deployment.
+
 ## 0.15.0 — 2026-10-30 — Login, compact receipts and update notices (local)
 
 ### Added

@@ -9,6 +9,8 @@ import { BusyButton, ErrorBox } from "./feedback";
 import { Icon } from "./icons";
 import { OtpCodeInput, type OtpPhase } from "./otp-code-input";
 
+const phoneInput = (value: string) => normalizePhone(value).replace(/[^0-9]/g, "").slice(0, 11);
+
 export function AuthGate({
   purpose = "برای ادامه، شماره خودت را تأیید کن.",
   forceReverify = false,
@@ -146,19 +148,31 @@ export function AuthGate({
         </p>
       )}
       {!challenge ? (
-        <form className={renderActions ? "embedded-auth-form" : undefined} onSubmit={requestCode} noValidate>
+        <form className={`phone-entry-form${renderActions ? " embedded-auth-form" : ""}`} onSubmit={requestCode} noValidate>
           <label htmlFor="sender-phone">شماره موبایل خودت</label>
           <div className="inline-form">
             <input
               id="sender-phone"
               name="tel"
               type="tel"
-              inputMode="tel"
-              autoComplete="tel"
+              inputMode="numeric"
+              autoComplete="tel-national"
+              maxLength={11}
+              minLength={11}
+              pattern="09[0-9]{9}"
               dir="ltr"
-              placeholder="0912 345 6789"
+              placeholder="09123456789"
               value={phone}
-              onChange={(e) => setPhone(latinDigits(e.target.value))}
+              onChange={(e) => setPhone(phoneInput(e.target.value))}
+              onPaste={event => {
+                const input = event.currentTarget;
+                // Normalize a complete pasted number before the native character
+                // limit can truncate spaces or an international country prefix.
+                if(input.selectionStart === 0 && input.selectionEnd === input.value.length){
+                  event.preventDefault();
+                  setPhone(phoneInput(event.clipboardData.getData("text")));
+                }
+              }}
               aria-invalid={!!fieldError}
               aria-describedby={fieldError ? "auth-field-error" : undefined}
             />

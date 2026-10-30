@@ -1,0 +1,210 @@
+[
+  {
+    "filename": "mobile-home.webp",
+    "section": "gallery",
+    "scenario": "shared-home",
+    "width": 780,
+    "height": 1688,
+    "bytes": 37852,
+    "captureDate": "2026-10-30T16:36:36.468Z",
+    "sourceVersion": "0.16.1 (4c1ffceae5b10421b0f2f0fc134f402ead270b8b)",
+    "viewport": {
+      "width": 390,
+      "scrollWidth": 390,
+      "theme": "dark",
+      "fonts": "loaded"
+    }
+  },
+  {
+    "filename": "mobile-reminder-draft.webp",
+    "section": "gallery",
+    "scenario": "reminder-step-1",
+    "width": 780,
+    "height": 1688,
+    "bytes": 56180,
+    "captureDate": "2026-10-30T16:37:20.109Z",
+    "sourceVersion": "0.16.1 (4c1ffceae5b10421b0f2f0fc134f402ead270b8b)",
+    "viewport": {
+      "width": 390,
+      "scrollWidth": 390,
+      "theme": "dark",
+      "fonts": "loaded"
+    }
+  },
+  {
+    "filename": "mobile-reminder-preview.webp",
+    "section": "gallery",
+    "scenario": "reminder-step-2",
+    "width": 780,
+    "height": 1688,
+    "bytes": 66032,
+    "captureDate": "2026-10-30T16:37:35.751Z",
+    "sourceVersion": "0.16.1 (4c1ffceae5b10421b0f2f0fc134f402ead270b8b)",
+    "viewport": {
+      "width": 390,
+      "scrollWidth": 390,
+      "theme": "dark",
+      "fonts": "loaded"
+    }
+  },
+  {
+    "filename": "mobile-reminder-receipt.webp",
+    "section": "gallery",
+    "scenario": "reminder-step-3",
+    "width": 780,
+    "height": 1688,
+    "bytes": 25328,
+    "captureDate": "2026-10-30T16:37:45.472Z",
+    "sourceVersion": "0.16.1 (4c1ffceae5b10421b0f2f0fc134f402ead270b8b)",
+    "viewport": {
+      "width": 390,
+      "scrollWidth": 390,
+      "theme": "dark",
+      "fonts": "loaded"
+    }
+  },
+  {
+    "filename": "mobile-appreciation-preview.webp",
+    "section": "gallery",
+    "scenario": "appreciation-step-2",
+    "width": 780,
+    "height": 1688,
+    "bytes": 62268,
+    "captureDate": "2026-10-30T16:37:56.223Z",
+    "sourceVersion": "0.16.1 (4c1ffceae5b10421b0f2f0fc134f402ead270b8b)",
+    "viewport": {
+      "width": 390,
+      "scrollWidth": 390,
+      "theme": "dark",
+      "fonts": "loaded"
+    }
+  },
+  {
+    "filename": "mobile-recipient-preferences.webp",
+    "section": "gallery",
+    "scenario": "recipient-controls",
+    "width": 780,
+    "height": 1688,
+    "bytes": 60050,
+    "captureDate": "2026-10-30T16:39:05.120Z",
+    "sourceVersion": "0.16.1 (4c1ffceae5b10421b0f2f0fc134f402ead270b8b)",
+    "viewport": {
+      "width": 390,
+      "scrollWidth": 390,
+      "theme": "dark",
+      "fonts": "loaded"
+    }
+  },
+  {
+    "filename": "desktop-hero.webp",
+    "section": "hero",
+    "scenario": "shared-home",
+    "width": 1600,
+    "height": 1000,
+    "bytes": 29198,
+    "captureDate": "2026-10-30T16:39:06.595Z",
+    "sourceVersion": "0.16.1 (4c1ffceae5b10421b0f2f0fc134f402ead270b8b)",
+    "viewport": {
+      "width": 1600,
+      "scrollWidth": 1600,
+      "theme": "dark",
+      "fonts": "loaded"
+    }
+  },
+  {
+    "filename": "desktop-reminder-compose.webp",
+    "section": "hero",
+    "scenario": "reminder-desktop-view",
+    "width": 1600,
+    "height": 1000,
+    "bytes": 29318,
+    "captureDate": "2026-10-30T16:39:52.986Z",
+    "sourceVersion": "0.16.1 (4c1ffceae5b10421b0f2f0fc134f402ead270b8b)",
+    "viewport": {
+      "width": 1600,
+      "scrollWidth": 1600,
+      "theme": "dark",
+      "fonts": "loaded"
+    }
+  },
+  {
+    "filename": "desktop-appreciation-compose.webp",
+    "section": "card",
+    "scenario": "appreciation-desktop-view",
+    "width": 1600,
+    "height": 1000,
+    "bytes": 28764,
+    "captureDate": "2026-10-30T16:39:54.041Z",
+    "sourceVersion": "0.16.1 (4c1ffceae5b10421b0f2f0fc134f402ead270b8b)",
+    "viewport": {
+      "width": 1600,
+      "scrollWidth": 1600,
+      "theme": "dark",
+      "fonts": "loaded"
+    }
+  },
+  {
+    "filename": "desktop-history.webp",
+    "section": "gallery",
+    "scenario": "both-scenarios-history",
+    "width": 1600,
+    "height": 1000,
+    "bytes": 35718,
+    "captureDate": "2026-10-30T16:40:14.819Z",
+    "sourceVersion": "0.16.1 (4c1ffceae5b10421b0f2f0fc134f402ead270b8b)",
+    "viewport": {
+      "width": 1600,
+      "scrollWidth": 1600,
+      "theme": "dark",
+      "fonts": "loaded"
+    }
+  },
+  {
+    "filename": "desktop-pricing.webp",
+    "section": "gallery",
+    "scenario": "demo-catalog",
+    "width": 1600,
+    "height": 1000,
+    "bytes": 43928,
+    "captureDate": "2026-10-30T16:40:16.216Z",
+    "sourceVersion": "0.16.1 (4c1ffceae5b10421b0f2f0fc134f402ead270b8b)",
+    "viewport": {
+      "width": 1600,
+      "scrollWidth": 1600,
+      "theme": "dark",
+      "fonts": "loaded"
+    }
+  },
+  {
+    "filename": "desktop-support.webp",
+    "section": "supplementary",
+    "scenario": "private-support-demo",
+    "width": 1600,
+    "height": 1000,
+    "bytes": 27242,
+    "captureDate": "2026-10-30T16:41:51.211Z",
+    "sourceVersion": "0.16.1 (4c1ffceae5b10421b0f2f0fc134f402ead270b8b)",
+    "viewport": {
+      "width": 1600,
+      "scrollWidth": 1600,
+      "theme": "dark",
+      "fonts": "loaded"
+    }
+  },
+  {
+    "filename": "desktop-demo-credit.webp",
+    "section": "supplementary",
+    "scenario": "demo-purchase",
+    "width": 1600,
+    "height": 1000,
+    "bytes": 43846,
+    "captureDate": "2026-10-30T16:43:18.325Z",
+    "sourceVersion": "0.16.1 (4c1ffceae5b10421b0f2f0fc134f402ead270b8b)",
+    "viewport": {
+      "width": 1600,
+      "scrollWidth": 1600,
+      "theme": "dark",
+      "fonts": "loaded"
+    }
+  }
+]

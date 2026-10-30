@@ -1,0 +1,291 @@
+[
+  {
+    "filename": "mobile-home.webp",
+    "section": "gallery",
+    "scenario": "shared-home",
+    "width": 780,
+    "height": 1688,
+    "bytes": 37852,
+    "captureDate": "2026-10-30T20:06:36.468000+03:30",
+    "sourceVersion": "0.16.1 (4c1ffceae5b10421b0f2f0fc134f402ead270b8b)",
+    "viewport": {
+      "width": 390,
+      "scrollWidth": 390,
+      "theme": "dark",
+      "fonts": "loaded"
+    },
+    "caption": "صفحهٔ اصلی در تم تیرهٔ واقعی محصول؛ نقطهٔ شروع مشترک یادآوری و قدردانی در دموی مستقل.",
+    "alt": "صفحهٔ اصلی موبایل بگم نگم در تم تیره، با تصویر نامه و دکمهٔ «بعدی؛ حرفم رو بگم».",
+    "status": "approved",
+    "path": "images/mobile-home.webp",
+    "sha256": "3ffe19ddd7e0c5115ca4a58f45f565cd459cc078b405546fc92930df8d712a10"
+  },
+  {
+    "filename": "mobile-reminder-draft.webp",
+    "section": "gallery",
+    "scenario": "reminder-step-1",
+    "width": 780,
+    "height": 1688,
+    "bytes": 56180,
+    "captureDate": "2026-10-30T20:07:20.109000+03:30",
+    "sourceVersion": "0.16.1 (4c1ffceae5b10421b0f2f0fc134f402ead270b8b)",
+    "viewport": {
+      "width": 390,
+      "scrollWidth": 390,
+      "theme": "dark",
+      "fonts": "loaded"
+    },
+    "caption": "سناریوی یادآوری، گام اول: انتخاب نمونهٔ «استفاده از تلفن» از دستهٔ «گفت‌وگو و رابطه»؛ متن نمونه در کادر قرار گرفته است.",
+    "alt": "فرم موبایل با نمونهٔ انتخاب‌شده دربارهٔ کم‌کردن صدای تلفن در جمع، لحن مودبانه و دکمهٔ رفتن به متن نهایی.",
+    "status": "approved",
+    "path": "images/mobile-reminder-draft.webp",
+    "sha256": "35f44ef8d9dd210e26d455c67d5deba4896e3bae551aa3c518446daf7c4bd8d0"
+  },
+  {
+    "filename": "mobile-reminder-preview.webp",
+    "section": "gallery",
+    "scenario": "reminder-step-2",
+    "width": 780,
+    "height": 1688,
+    "bytes": 66032,
+    "captureDate": "2026-10-30T20:07:35.751000+03:30",
+    "sourceVersion": "0.16.1 (4c1ffceae5b10421b0f2f0fc134f402ead270b8b)",
+    "viewport": {
+      "width": 390,
+      "scrollWidth": 390,
+      "theme": "dark",
+      "fonts": "loaded"
+    },
+    "caption": "سناریوی یادآوری، گام دوم: شمارهٔ مصنوعی، متن آمادهٔ بررسی‌شده و تأیید فرستنده کنار هم دیده می‌شوند. دامنهٔ داخل پیام مخصوص دمو و غیرقابل استفاده در اینترنت است.",
+    "alt": "پیش‌نمایش موبایل یادآوری استفاده از تلفن، با شمارهٔ مصنوعی، لینک نمایشی demo.invalid، مصرف یک هدیه و دکمهٔ ارسال آزمایشی.",
+    "status": "approved",
+    "path": "images/mobile-reminder-preview.webp",
+    "sha256": "96bca11840788426e06dc1882b495d4df4774f3d69b113af755684b7a6b886f9"
+  },
+  {
+    "filename": "mobile-reminder-receipt.webp",
+    "section": "gallery",
+    "scenario": "reminder-step-3",
+    "width": 780,
+    "height": 1688,
+    "bytes": 25328,
+    "captureDate": "2026-10-30T20:07:45.472000+03:30",
+    "sourceVersion": "0.16.1 (4c1ffceae5b10421b0f2f0fc134f402ead270b8b)",
+    "viewport": {
+      "width": 390,
+      "scrollWidth": 390,
+      "theme": "dark",
+      "fonts": "loaded"
+    },
+    "caption": "سناریوی یادآوری، گام سوم: برنامه ثبت آزمایشی درخواست را اعلام می‌کند و راه پیگیری در «پیام‌های من» را نشان می‌دهد. این تصویر شاهد ارسال واقعی نیست.",
+    "alt": "رسید موبایل با نشان تأیید، عبارت «درخواست آزمایشی ثبت شد» و دکمهٔ «پیام‌های من».",
+    "status": "approved",
+    "path": "images/mobile-reminder-receipt.webp",
+    "sha256": "f2fd813f99aabf19543240ddf438eb64b5a0672db801de7708a8c7c181c5039b"
+  },
+  {
+    "filename": "mobile-appreciation-preview.webp",
+    "section": "gallery",
+    "scenario": "appreciation-step-2",
+    "width": 780,
+    "height": 1688,
+    "bytes": 62268,
+    "captureDate": "2026-10-30T20:07:56.223000+03:30",
+    "sourceVersion": "0.16.1 (4c1ffceae5b10421b0f2f0fc134f402ead270b8b)",
+    "viewport": {
+      "width": 390,
+      "scrollWidth": 390,
+      "theme": "dark",
+      "fonts": "loaded"
+    },
+    "caption": "سناریوی دوم: متن آمادهٔ تشکر از مهربانی و همراهی، پیش از تأیید نهایی مرور می‌شود. شماره و لینک متعلق به محیط مصنوعی‌اند.",
+    "alt": "پیش‌نمایش موبایل پیام قدردانی، با برچسب متن آمادهٔ بررسی‌شده، شمارهٔ مصنوعی و تأیید پیش از ارسال آزمایشی.",
+    "status": "approved",
+    "path": "images/mobile-appreciation-preview.webp",
+    "sha256": "2fbf950555659822750bae9023f5a58ea7ad4c6aad8cdbc806ffbfbb5eb32146"
+  },
+  {
+    "filename": "mobile-recipient-preferences.webp",
+    "section": "gallery",
+    "scenario": "recipient-controls",
+    "width": 780,
+    "height": 1688,
+    "bytes": 60050,
+    "captureDate": "2026-10-30T20:09:05.120000+03:30",
+    "sourceVersion": "0.16.1 (4c1ffceae5b10421b0f2f0fc134f402ead270b8b)",
+    "viewport": {
+      "width": 390,
+      "scrollWidth": 390,
+      "theme": "dark",
+      "fonts": "loaded"
+    },
+    "caption": "در حساب مصنوعی گیرنده، دریافت پیام متوقف شده است. این انتخاب برای همهٔ فرستنده‌ها اعمال می‌شود و هویت هیچ فرستنده‌ای را نشان نمی‌دهد.",
+    "alt": "صفحهٔ موبایل تنظیم دریافت با عنوان «حقت هست که نشنوی»، وضعیت توقف دریافت و دکمهٔ فعال‌سازی دوباره.",
+    "status": "approved",
+    "path": "images/mobile-recipient-preferences.webp",
+    "sha256": "4699e9aeda6f558dfbd5c04e81bd3336b7d9b4998461f95f339a894769bb6a8d"
+  },
+  {
+    "filename": "desktop-hero.webp",
+    "section": "hero",
+    "scenario": "shared-home",
+    "width": 1600,
+    "height": 1000,
+    "bytes": 29198,
+    "captureDate": "2026-10-30T20:09:06.595000+03:30",
+    "sourceVersion": "0.16.1 (4c1ffceae5b10421b0f2f0fc134f402ead270b8b)",
+    "viewport": {
+      "width": 1600,
+      "scrollWidth": 1600,
+      "theme": "dark",
+      "fonts": "loaded"
+    },
+    "caption": "رد برای انتشار: صفحهٔ آغاز دسکتاپ شامل جای‌نگهدار نشان‌های اعتماد است؛ گواهی یا درگاه فعال را اثبات نمی‌کند.",
+    "alt": "صفحهٔ اصلی دسکتاپ با جای‌نگهدار لوگوی اینماد و درگاه بانکی؛ فقط برای بررسی داخلی.",
+    "status": "rejected",
+    "path": "qa/desktop-hero.webp",
+    "sha256": "68366ecdfb02738519cc5dd8402219a9c0d6baeb8434c7334cc9ee9bcd27f2bc"
+  },
+  {
+    "filename": "desktop-reminder-compose.webp",
+    "section": "hero",
+    "scenario": "reminder-desktop-view",
+    "width": 1600,
+    "height": 1000,
+    "bytes": 29318,
+    "captureDate": "2026-10-30T20:09:52.986000+03:30",
+    "sourceVersion": "0.16.1 (4c1ffceae5b10421b0f2f0fc134f402ead270b8b)",
+    "viewport": {
+      "width": 1600,
+      "scrollWidth": 1600,
+      "theme": "dark",
+      "fonts": "loaded"
+    },
+    "caption": "فرم واقعی دسکتاپ برای نمونهٔ یادآوری استفاده از تلفن؛ تم تیره و دادهٔ آزمایشی.",
+    "alt": "فرم دسکتاپ بگم نگم با دستهٔ گفت‌وگو و رابطه و نمونهٔ استفاده از تلفن در کادر پیام.",
+    "status": "approved",
+    "path": "images/desktop-reminder-compose.webp",
+    "sha256": "855a3d39cc506460d01280f7f92eb81c550ad0d37f5101cb714cc04207e42e24"
+  },
+  {
+    "filename": "desktop-appreciation-compose.webp",
+    "section": "card",
+    "scenario": "appreciation-desktop-view",
+    "width": 1600,
+    "height": 1000,
+    "bytes": 28764,
+    "captureDate": "2026-10-30T20:09:54.041000+03:30",
+    "sourceVersion": "0.16.1 (4c1ffceae5b10421b0f2f0fc134f402ead270b8b)",
+    "viewport": {
+      "width": 1600,
+      "scrollWidth": 1600,
+      "theme": "dark",
+      "fonts": "loaded"
+    },
+    "caption": "نمای مستقل کارت محصول: شروع قدردانی از نمونهٔ بررسی‌شده در دموی واقعی.",
+    "alt": "فرم دسکتاپ با دستهٔ حال خوب و نمونهٔ تشکر و قدردانی انتخاب‌شده.",
+    "status": "approved",
+    "path": "images/desktop-appreciation-compose.webp",
+    "sha256": "cde056303848d3984c9cf575135e2225c7dd781b12576fffdaeaef099c4694e3"
+  },
+  {
+    "filename": "desktop-history.webp",
+    "section": "gallery",
+    "scenario": "both-scenarios-history",
+    "width": 1600,
+    "height": 1000,
+    "bytes": 35718,
+    "captureDate": "2026-10-30T20:10:14.819000+03:30",
+    "sourceVersion": "0.16.1 (4c1ffceae5b10421b0f2f0fc134f402ead270b8b)",
+    "viewport": {
+      "width": 1600,
+      "scrollWidth": 1600,
+      "theme": "dark",
+      "fonts": "loaded"
+    },
+    "caption": "قدردانی و یادآوریِ همین دو سناریو با شماره‌های پوشیده و برچسب «ارسال شبیه‌سازی شد · آزمایشی» در سابقه دیده می‌شوند.",
+    "alt": "صفحهٔ دسکتاپ پیام‌های من با دو پیام مصنوعی قدردانی و یادآوری، وضعیت ارسال شبیه‌سازی‌شده و ماندهٔ یک هدیه.",
+    "status": "approved",
+    "path": "images/desktop-history.webp",
+    "sha256": "262613cc13bcc0ec4564a773ba0fde1e3ae6d118bab1d6e7ae83ccbd8f51f921"
+  },
+  {
+    "filename": "desktop-pricing.webp",
+    "section": "gallery",
+    "scenario": "demo-catalog",
+    "width": 1600,
+    "height": 1000,
+    "bytes": 43928,
+    "captureDate": "2026-10-30T20:10:16.216000+03:30",
+    "sourceVersion": "0.16.1 (4c1ffceae5b10421b0f2f0fc134f402ead270b8b)",
+    "viewport": {
+      "width": 1600,
+      "scrollWidth": 1600,
+      "theme": "dark",
+      "fonts": "loaded"
+    },
+    "caption": "فهرست واقعی بسته‌های پایگاه آزمایشی نسخهٔ بررسی‌شده؛ مبالغ تصویر، تعرفهٔ تأییدشدهٔ امروزِ سرویس عملیاتی محسوب نمی‌شوند و خرید واقعی در این بررسی انجام نشده است.",
+    "alt": "تعرفه‌های دسکتاپ در دمو با سه هدیهٔ اولیه و بسته‌های ۳، ۹، ۳۰ و ۹۰ پیامی؛ قیمت‌های نمایشی به تومان هستند.",
+    "status": "approved",
+    "path": "images/desktop-pricing.webp",
+    "sha256": "6492ab3355ea18b7ae2ccd835480bb6d2186c4216dc8c19b2b24b1962aaabf9d"
+  },
+  {
+    "filename": "desktop-support.webp",
+    "section": "supplementary",
+    "scenario": "private-support-demo",
+    "width": 1600,
+    "height": 1000,
+    "bytes": 27242,
+    "captureDate": "2026-10-30T20:11:51.211000+03:30",
+    "sourceVersion": "0.16.1 (4c1ffceae5b10421b0f2f0fc134f402ead270b8b)",
+    "viewport": {
+      "width": 1600,
+      "scrollWidth": 1600,
+      "theme": "dark",
+      "fonts": "loaded"
+    },
+    "caption": "ثبت یک پرسش مصنوعی در پشتیبانی خصوصی؛ پاسخی از کارکنان شبیه‌سازی نشده است.",
+    "alt": "پنجرهٔ پشتیبانی روی رابط دسکتاپ با پرسش مصنوعی دربارهٔ تفاوت ثبت درخواست و تحویل پیام.",
+    "status": "approved",
+    "path": "images/desktop-support.webp",
+    "sha256": "e7a2823ed93066f69661cb81ea8807b6355e3c399b44d306b73cce9be4aa7afb"
+  },
+  {
+    "filename": "desktop-demo-credit.webp",
+    "section": "supplementary",
+    "scenario": "demo-purchase",
+    "width": 1600,
+    "height": 1000,
+    "bytes": 43846,
+    "captureDate": "2026-10-30T20:13:18.325000+03:30",
+    "sourceVersion": "0.16.1 (4c1ffceae5b10421b0f2f0fc134f402ead270b8b)",
+    "viewport": {
+      "width": 1600,
+      "scrollWidth": 1600,
+      "theme": "dark",
+      "fonts": "loaded"
+    },
+    "caption": "خرید آزمایشی بستهٔ سه‌پیامی، پس از پاداش دعوت؛ هیچ وجهی جابه‌جا نشده است.",
+    "alt": "صفحهٔ اعتبار با نتیجهٔ خرید آزمایشی، سه اعتبار آزمایشی و چهار هدیهٔ باقیمانده.",
+    "status": "approved",
+    "path": "images/desktop-demo-credit.webp",
+    "sha256": "20d09fa5b83e93bc21c3a8f65c7b25a5ac9f302cf38b077736af232a52799847"
+  },
+  {
+    "filename": "qa-freeform-unavailable.png",
+    "section": "qa",
+    "caption": "خطای کنترل‌شده با متن خنثی: بازنویسی متن دلخواه در این دمو فعال نیست؛ انتخاب نمونه پیشنهاد می‌شود.",
+    "alt": "فرم موبایل در عرض ۳۷۵ پیکسل با پیام خطای بازنویسی غیرفعال و متن خنثی قدردانی.",
+    "width": 750,
+    "height": 1688,
+    "bytes": 218637,
+    "captureDate": "2026-10-30T20:15:43.758230+03:30",
+    "sourceVersion": "0.16.1 (4c1ffceae5b10421b0f2f0fc134f402ead270b8b)",
+    "scenario": "controlled-freeform-error",
+    "status": "qa-only",
+    "path": "qa/qa-freeform-unavailable.png",
+    "sha256": "9eb7dbe04c4d71924433187183f8b62304a72736e76dcc08e00e16e0d3fb8cb5",
+    "captureDateBasis": "original screenshot file modification time"
+  }
+]

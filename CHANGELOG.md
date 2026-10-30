@@ -9,6 +9,29 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.16.2 — 2026-10-30 — Evidence-backed iTools product introduction
+
+### Documentation
+
+- Deliver the Persian product copy and schema-valid iTools JSON with eight
+  features, eight gallery entries, three signature sections, five workflow steps
+  and eight FAQs. Document 21 capabilities, their implementation status and
+  dependencies, including the boundaries of templates, optional AI, privacy,
+  recipient controls and simulated versus real delivery/payment.
+- Include 12 authentic, reviewed WebP screenshots from an explicitly authorized
+  isolated 0.16.1 demo, the unchanged product icon, capture metadata, reproducible
+  demo/QA scripts and a ZIP with SHA-256. Keep the homepage trust-placeholder
+  screenshot and controlled freeform error outside the public image directory.
+
+Validation: actual company draft-07 schema, exact JSON/readable-copy parity,
+all image references/hashes/dimensions/budgets, source/icon integrity and ZIP CRC
+passed. Two main journeys plus invitation reward, demo credit purchase and
+private support were exercised. Twelve browser checks at 375px and 1600px passed;
+six additional mobile captures use a 390px viewport. Temporary servers and the
+synthetic database/keys were removed. No product behavior or company site was
+changed, and no real OTP/SMS/payment/paid AI call, push or deployment occurred.
+Capture source remains 0.16.1; this is a local documentation release only.
+
 ## 0.16.1 — 2026-10-30 — Consistent recipient phone entry
 
 ### Fixed

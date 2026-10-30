@@ -42,7 +42,11 @@ function CustomerSupport(){
         if(dialog.current){dialog.current.style.setProperty('--support-height',`${window.visualViewport?.height??innerHeight}px`);dialog.current.style.setProperty('--support-top',`${window.visualViewport?.offsetTop??0}px`);}
       });
     };
-    const observer=new MutationObserver(position);const main=document.querySelector('#main-content');if(main)observer.observe(main,{subtree:true,childList:true,attributes:true,attributeFilter:['class','style','hidden']});
+    const observer=new MutationObserver(records=>{
+      // Decorative SVG transforms/opacity do not move the hero's fixed corners.
+      // Do not measure the support launcher for every illustration frame.
+      if(records.some(record=>!(record.target instanceof Element && record.target.closest('.hero-art svg'))))position();
+    });const main=document.querySelector('#main-content');if(main)observer.observe(main,{subtree:true,childList:true,attributes:true,attributeFilter:['class','style','hidden']});
     position();window.addEventListener('resize',position);window.addEventListener('scroll',position,{passive:true});window.addEventListener('hashchange',position);window.visualViewport?.addEventListener('resize',position);window.visualViewport?.addEventListener('scroll',position);
     return()=>{observer.disconnect();cancelAnimationFrame(frame);window.removeEventListener('resize',position);window.removeEventListener('scroll',position);window.removeEventListener('hashchange',position);window.visualViewport?.removeEventListener('resize',position);window.visualViewport?.removeEventListener('scroll',position);};
   },[]);

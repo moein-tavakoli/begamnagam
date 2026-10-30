@@ -9,6 +9,28 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.16.0 — 2026-10-30 — Lightweight homepage entrances (local)
+
+### Added
+
+- Add staggered entrances for homepage utilities, two headline lines,
+  descriptions, primary/help/invitation actions, trust slots, artwork controls,
+  support, logout and version text. Replay on return to Home, honor reduced
+  motion and keep focused actions immediately visible.
+- Use finite compositor animations without new timers, animation libraries,
+  permanent layer hints or text/button loops; release entry styles on completion.
+
+### Changed
+
+- Ignore decorative hero SVG mutations when positioning the support launcher,
+  avoiding repeated geometry reads while the existing illustration loop runs.
+
+Validation: 80 frontend tests and TypeScript passed. Browser checks cover
+320px/375px mobile, 812px landscape and 1440px desktop, light/dark, stagger order,
+finished animations, reduced motion, keyboard focus, theme switching, JavaScript
+fallback, Home replay and draft preservation. No SMS/API mutation was used.
+Local commit only; no push or deployment.
+
 ## 0.15.1 — 2026-10-30 — Centered phone entry (local)
 
 ### Changed

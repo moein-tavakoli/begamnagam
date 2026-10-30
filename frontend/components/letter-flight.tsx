@@ -108,7 +108,7 @@ export function LetterFlight({ active = true }: { active?: boolean }) {
       <g data-enter="spark"><g data-idle="spark"><circle cx="72" cy="145" r="5" fill="#a58aef"/></g></g>
       <g data-enter="spark"><g data-idle="spark"><path d="m373 180 12-5m-17-9 4-12M91 315l-12 7" stroke="#684da1" strokeWidth="3" strokeLinecap="round"/></g></g>
     </svg>
-    <button className={styles.pause} type="button" aria-label="توقف حرکت تصویر" aria-pressed={paused} title={paused ? "ادامهٔ حرکت تصویر" : "توقف حرکت تصویر"} onClick={() => setPaused(value => !value)}>
+    <button className={styles.pause} data-home-enter="pause" type="button" aria-label="توقف حرکت تصویر" aria-pressed={paused} title={paused ? "ادامهٔ حرکت تصویر" : "توقف حرکت تصویر"} onClick={() => setPaused(value => !value)}>
       <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">{paused ? <path d="m5 3 8 5-8 5Z"/> : <><rect x="4" y="3" width="3" height="10" rx="1"/><rect x="10" y="3" width="3" height="10" rx="1"/></>}</svg>
     </button>
   </div>;

@@ -16,10 +16,13 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 
 from . import services
 from .models import Account, ModerationAudit, OTPChallenge, Order, Preview, RecipientState
-from .moderation import CATEGORIES, ModerationRejected, RewriteUnavailable, rewrite
+from .moderation import ModerationRejected, RewriteUnavailable, rewrite
+from .message_examples import public_catalog, is_current_suggestion
 from .privacy import DIGITS, decrypt, digest, encrypt, mask, normalize_phone
 from .services import APIError, api, is_product_authenticated, limited
 from .sms import compose_recipient_sms, SMSTooLong
+from .otp import OTP_LENGTH, valid_otp
+from .input_digits import canonical_input
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +51,7 @@ def body(request):
         raise APIError("invalid_input", "ساختار درخواست معتبر نیست.")
     if not isinstance(data, dict):
         raise APIError("invalid_input", "ساختار درخواست معتبر نیست.")
-    return data
+    return canonical_input(data)
 
 
 def session_key(request):
@@ -87,7 +90,7 @@ def bootstrap(request):
     from .packages import balance_field, package_data, checkout_enabled
     from .models import MessagePackage
     data = {"demo_mode": settings.DEMO_MODE, "authenticated": authenticated,
-        "price_toman": 0, "categories": [c for c in CATEGORIES if not settings.PILOT_POSITIVE_ONLY or c["id"] in {"appreciation", "encouragement", "congratulations"}], "rewrite_mode": ai.provider if freeform_available(ai) else 'template', "payment_backend": settings.PAYMENT_BACKEND, "support_contact": settings.SUPPORT_CONTACT,
+        "price_toman": 0, **public_catalog(freeform=freeform_available(ai)), "rewrite_mode": ai.provider if freeform_available(ai) else 'template', "payment_backend": settings.PAYMENT_BACKEND, "support_contact": settings.SUPPORT_CONTACT,
         "otp_is_real": otp_is_real()}
     data['message_packages'] = [package_data(p) for p in MessagePackage.objects.filter(active=True)]
     data['package_checkout_enabled'] = checkout_enabled()
@@ -129,7 +132,7 @@ def request_otp(request):
     demo_otp = settings.DEMO_MODE and settings.OTP_BACKEND == "demo" and settings.SMS_BACKEND == "console"
     if not demo_otp and settings.OTP_BACKEND != "kavenegar":
         raise APIError("sms_disabled", "ارسال کد فعلاً فعال نیست.", 503)
-    code = f"{secrets.randbelow(1000000):06}"
+    code = f"{secrets.randbelow(10 ** OTP_LENGTH):0{OTP_LENGTH}d}"
     challenge_id = uuid.uuid4()
     OTPChallenge.objects.create(id=challenge_id, phone_hash=phone_hash, phone_cipher=encrypt(phone),
         code_digest=digest(f"otp:{challenge_id}:{code}"), session_key=session_key(request),
@@ -187,7 +190,7 @@ def verify_otp(request):
         if challenge.session_key != request.session.session_key or challenge.consumed_at or challenge.expires_at <= timezone.now() or challenge.attempts >= max_attempts:
             raise APIError("invalid_otp", "کد تأیید معتبر نیست یا منقضی شده است.")
         challenge.attempts += 1
-        if len(code) != 6 or not hmac.compare_digest(challenge.code_digest, digest(f"otp:{challenge.id}:{code}")):
+        if not valid_otp(code) or not hmac.compare_digest(challenge.code_digest, digest(f"otp:{challenge.id}:{code}")):
             challenge.save(update_fields=["attempts"])
             invalid = True
         else:
@@ -267,8 +270,7 @@ def preview(request):
     if source_mode == 'freeform' and not use_freeform:
         raise APIError('freeform_unavailable', 'بازنویسی متن دلخواه فعلاً فعال نیست؛ از پیشنهاد آماده استفاده کن.', 409)
     if source_mode == 'suggestion' and not use_freeform:
-        example = next((c['example'] for c in CATEGORIES if c['id'] == category), None)
-        if text != example:
+        if not is_current_suggestion(category, text):
             raise APIError('freeform_unavailable', 'متن عوض شده است؛ برای بازنویسی دلخواه باید این قابلیت فعال باشد.', 409)
     if not use_freeform and category == 'custom' and not choosing_alternative:
         raise APIError('freeform_unavailable', 'بازنویسی متن دلخواه فعلاً فعال نیست؛ از پیشنهاد آماده استفاده کن.', 409)

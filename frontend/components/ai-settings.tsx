@@ -1,5 +1,7 @@
 "use client";
 
+import { DigitInput } from "./digit-input";
+
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { api, ApiError, errorMessage } from "@/lib/api";
 import { managementNumber } from "@/lib/management";
@@ -74,7 +76,7 @@ function Configuration({ data, onSaved, onFailure }: { data: Settings; onSaved: 
       <div className="manage-settings-grid">
         <label>مدل نصب‌شدهٔ Ollama<input name="ollama_model" dir="ltr" defaultValue={data.values.ollama_model} maxLength={100} required aria-invalid={!!fields.ollama_model} />{fields.ollama_model && <small className="manage-field-error">{String(fields.ollama_model)}</small>}</label>
         <label>مدل GapGPT<input name="gapgpt_model" dir="ltr" defaultValue={data.values.gapgpt_model} maxLength={100} aria-invalid={!!fields.gapgpt_model} /><small>{fields.gapgpt_model ? String(fields.gapgpt_model) : data.gapgpt_credentials_configured ? "کلید روی سرور تنظیم شده است." : "کلید روی سرور تنظیم نشده است."}</small></label>
-        {numbers.map(([key, label, min, max]) => <label key={key}>{label}<input name={key} type="number" min={min} max={max} step={1} defaultValue={data.values[key]} required aria-invalid={!!fields[key]} />{fields[key] && <small className="manage-field-error">{String(fields[key])}</small>}</label>)}
+        {numbers.map(([key, label, min, max]) => <label key={key}>{label}<DigitInput name={key} type="number" min={min} max={max} step={1} defaultValue={data.values[key]} required aria-invalid={!!fields[key]} />{fields[key] && <small className="manage-field-error">{String(fields[key])}</small>}</label>)}
       </div>
       <label>دلیل تغییر<input name="reason" required minLength={3} maxLength={200} placeholder="دلیل کوتاه؛ اطلاعات خصوصی ننویسید" /></label>
       <button className="manage-button primary">{busy ? "در حال ذخیره…" : "ذخیرهٔ تنظیمات هوش مصنوعی"}</button>

@@ -1,4 +1,6 @@
 "use client";
+
+import { DigitInput } from "./digit-input";
 import Link from 'next/link';
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { api, ApiError, approvedPaymentRedirect, createIdempotencyKey, errorMessage } from '@/lib/api';
@@ -44,15 +46,15 @@ export function Wallet() {
     try { window.location.assign(approvedPaymentRedirect(url, false)); }
     catch (e) { setError(errorMessage(e)); }
   }
-  return <div className="account-page wallet-page wrap"><div className="account-heading"><h1>کیف پول من</h1><p>موجودی، شارژ و گردش اعتبار حسابت.</p></div><ServiceState />
+  return <div className="account-page wallet-page wrap"><div className="account-heading"><h1>کیف پول من</h1></div><ServiceState />
     {!data?.authenticated ? <div className="account-card"><AuthGate purpose="برای دیدن کیف پول، شمارهٔ خودت را تأیید کن." /></div> : <>
       <section className="account-card wallet-overview"><span>موجودی قابل استفاده</span><strong>{wallet ? walletToman(wallet.balance_toman) : 'در حال دریافت…'}</strong><p>با موجودی کیف پول بستهٔ پیام می‌خری. این اعتبار برداشت یا انتقال بانکی ندارد؛ برگشت هزینهٔ پرداخت‌های دارای این شرایط به همین کیف پول انجام می‌شود.</p><Link href="/credits" prefetch={false} className="button secondary">خرید بستهٔ پیام</Link></section>
-      <section className="account-card"><h2>شارژ با زرین‌پال</h2><ErrorBox message={error} />
+      <section className="account-card"><h2>شارژ با درگاه بانکی</h2><ErrorBox message={error} />
         {result && <p className="wallet-status" role="status">{topupLabel(result.status)}</p>}
         {!wallet ? <button type="button" className="button secondary" onClick={() => void load()}>دریافت موجودی</button> : !wallet.wallet_enabled || !wallet.gateway_enabled ? <p className="muted">شارژ جدید کیف پول فعلاً فعال نیست. موجودی و سوابق قبلی حفظ شده‌اند.</p> : <form className="wallet-topup-form" onSubmit={topup}>
-          <label htmlFor="wallet-amount">مبلغ شارژ (تومان)</label><input id="wallet-amount" name="amount" type="number" min={1} max={2147483647} step={1} inputMode="numeric" required disabled={busy || !!hasPending} />
+          <label htmlFor="wallet-amount">مبلغ شارژ (تومان)</label><DigitInput id="wallet-amount" name="amount" type="number" min={1} max={2147483647} step={1} inputMode="numeric" required disabled={busy || !!hasPending} />
           <label className="checkbox-label"><input name="consent" type="checkbox" required disabled={busy || !!hasPending} /><span>می‌پذیرم که شارژ برای خرید بستهٔ پیام است، برداشت بانکی ندارد و برگشت هزینهٔ خرید به کیف پول انجام می‌شود.</span></label>
-          <BusyButton className="button primary" busy={busy} disabled={!!hasPending}>شارژ از درگاه زرین‌پال</BusyButton>
+          <BusyButton className="button primary" busy={busy} disabled={!!hasPending}>شارژ از درگاه درگاه بانکی</BusyButton>
         </form>}
         {hasPending && <p className="wallet-status" role="status">یک پرداخت در حال بررسی داری. برای جلوگیری از پرداخت تکراری، درخواست تازه ثبت نکن.</p>}
       </section>

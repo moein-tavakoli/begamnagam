@@ -384,3 +384,4 @@ class InvitationSendAdmin(ReadOnlyAdmin):
 # Bundle settings share the same audited service with the Next management UI.
 from . import package_admin  # noqa: F401,E402
 from . import wallet_admin  # noqa: F401,E402
+from . import example_admin  # noqa: F401,E402

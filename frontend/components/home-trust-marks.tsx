@@ -1,3 +1,5 @@
+import { Icon } from "./icons";
+
 /** Reserved slots. Replace the placeholder with each domain's official badge. */
 export function HomeTrustMarks() {
   return (
@@ -11,9 +13,9 @@ export function HomeTrustMarks() {
       </div>
       <div className="home-trust-slot" data-mark="zarinpal">
         <span className="home-trust-slot-frame" aria-hidden="true">
-          <span className="home-trust-slot-monogram">Z</span>
+          <Icon name="shield" size={24} />
         </span>
-        <strong>زرین‌پال</strong>
+        <strong>درگاه بانکی</strong>
         <span className="home-trust-slot-caption">جایگاه لوگو</span>
       </div>
     </aside>

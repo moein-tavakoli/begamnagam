@@ -1,6 +1,90 @@
-import { test } from "node:test";
+import { test, type TestContext } from "node:test";
 import assert from "node:assert/strict";
 import { api, ApiError, createIdempotencyKey, errorMessage } from "../lib/api.ts";
+
+function otpSessionBrowser(context: TestContext) {
+  const previousFetch = globalThis.fetch;
+  const originals = ["window", "document"].map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)] as const);
+  context.after(() => {
+    globalThis.fetch = previousFetch;
+    for (const [key, descriptor] of originals) {
+      if (descriptor) Object.defineProperty(globalThis, key, descriptor);
+      else Reflect.deleteProperty(globalThis, key);
+    }
+  });
+  const events: CustomEvent<{ settled?: Promise<void> }>[] = [];
+  Object.defineProperty(globalThis, "window", { configurable: true, value: {
+    dispatchEvent(event: CustomEvent<{ settled?: Promise<void> }>) { events.push(event); return true; },
+  } });
+  Object.defineProperty(globalThis, "document", { configurable: true, value: { cookie: "csrftoken=isolated-otp-csrf" } });
+  globalThis.fetch = async () => Response.json({ authenticated: true, phone_masked: "masked-test-number" });
+  return events;
+}
+
+test("API canonicalizes numeric text in the actual request and retains credentials", async t => {
+  otpSessionBrowser(t);
+  let sent: unknown;
+  globalThis.fetch = async (_url, options) => { sent = JSON.parse(String(options?.body)); return Response.json({ ok: true }); };
+  const body = { text: "رسید ۱۲", phone: "۰۹۱۲", values: { reference: "BANK٠٠١" }, amount: 1200, password: "رمز۱۲", alternative_token: "Ab۱۲" };
+  await api("/numeric-input-check", { method: "POST", body });
+  assert.deepEqual(sent, { text: "رسید 12", phone: "0912", values: { reference: "BANK001" }, amount: 1200, password: "رمز۱۲", alternative_token: "Ab۱۲" });
+  assert.equal(body.text, "رسید ۱۲");
+});
+
+test("OTP notifies other tabs immediately while local feedback finishes", async context => {
+  const events = otpSessionBrowser(context);
+  let complete!: () => void;
+  let notified!: () => void;
+  const started = new Promise<void>(resolve => { notified = resolve; });
+  const feedback = new Promise<void>(resolve => { complete = resolve; });
+  let returned = false;
+  const request = api<{ authenticated: boolean }>("/auth/verify-otp", {
+    method: "POST", body: {},
+    beforeSessionReset: async result => { assert.equal(result.authenticated, true); notified(); await feedback; },
+  }).then(result => { returned = true; return result; });
+  await started;
+  assert.equal(events.length, 1);
+  assert.equal(events[0].type, "privacy-reset");
+  assert.ok(events[0].detail.settled instanceof Promise);
+  assert.equal(returned, false);
+  complete();
+  assert.equal((await request).authenticated, true);
+  await events[0].detail.settled;
+});
+
+test("rejected OTP never plays success feedback or resets the session", async context => {
+  const events = otpSessionBrowser(context);
+  globalThis.fetch = async () => Response.json({ error: { code: "invalid_otp", message: "کد درست نیست." } }, { status: 422 });
+  await assert.rejects(() => api("/auth/verify-otp", {
+    method: "POST", body: {}, beforeSessionReset: async () => { assert.fail("Unexpected success feedback"); },
+  }), (error: unknown) => error instanceof ApiError && error.code === "invalid_otp");
+  assert.deepEqual(events, []);
+});
+
+test("broken visual feedback cannot turn verified OTP into an authentication error", async context => {
+  const events = otpSessionBrowser(context);
+  const result = await api<{ authenticated: boolean }>("/auth/verify-otp", {
+    method: "POST", body: {}, beforeSessionReset: async () => { throw new Error("Visual feedback unavailable"); },
+  });
+  assert.equal(result.authenticated, true);
+  assert.equal(events.length, 1);
+  await events[0].detail.settled;
+});
+
+test("unfinished OTP feedback cannot delay local session reset beyond three seconds", async context => {
+  context.mock.timers.enable({ apis: ["setTimeout"] });
+  const events = otpSessionBrowser(context);
+  let started!: () => void;
+  const waiting = new Promise<void>(resolve => { started = resolve; });
+  const request = api<{ authenticated: boolean }>("/auth/verify-otp", {
+    method: "POST", body: {}, beforeSessionReset: async () => { started(); await new Promise(() => {}); },
+  });
+  await waiting;
+  context.mock.timers.tick(3000);
+  assert.equal((await request).authenticated, true);
+  assert.equal(events.length, 1);
+  await events[0].detail.settled;
+});
 
 test("local HTTP mobile browsers get a cryptographic UUID without randomUUID", (context) => {
   const original = Object.getOwnPropertyDescriptor(globalThis, "crypto")!;

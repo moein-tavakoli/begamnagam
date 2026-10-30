@@ -101,11 +101,29 @@ class APITestCase(TestCase):
         attacker.get("/api/v1/bootstrap")
         payload = {"challenge_id": challenge["challenge_id"], "code": challenge["debug_code"]}
         self.assertEqual(self.post("/auth/verify-otp", payload, attacker).status_code, 400)
-        wrong = "000000" if challenge["debug_code"] != "000000" else "111111"
+        wrong = "0000" if challenge["debug_code"] != "0000" else "1111"
         for _ in range(5):
             self.assertEqual(self.post("/auth/verify-otp", {**payload, "code": wrong}).status_code, 400)
         self.assertEqual(OTPChallenge.objects.get(id=challenge["challenge_id"]).attempts, 5)
         self.assertEqual(self.post("/auth/verify-otp", payload).status_code, 400)
+
+    def test_localized_phone_and_otp_keep_ascii_storage_and_leading_zero(self):
+        for entered, canonical, entered_code in [
+            ("۰۹۹۱۲۳۴۵۶۷۱", "09912345671", "۰۱۲۳"),
+            ("٠٩٩١٢٣٤٥٦٧٢", "09912345672", "٠١٢٣"),
+        ]:
+            with patch("core.views.secrets.randbelow", return_value=123):
+                response = self.post("/auth/request-otp", {"phone": entered})
+            self.assertEqual(response.status_code, 200)
+            challenge = response.json()
+            self.assertEqual(challenge["debug_code"], "0123")
+            stored = OTPChallenge.objects.get(pk=challenge["challenge_id"])
+            self.assertEqual(decrypt(stored.phone_cipher), canonical)
+            self.assertEqual(stored.code_digest, digest(f"otp:{stored.pk}:0123"))
+            response = self.post("/auth/verify-otp", {"challenge_id": str(stored.pk), "code": entered_code})
+            self.assertEqual(response.status_code, 200)
+            account = Account.objects.get(phone_hash=digest(canonical))
+            self.assertEqual(decrypt(account.phone_cipher), canonical)
 
     def test_otp_expiry_and_reuse(self):
         challenge = self.post("/auth/request-otp", {"phone": "09123456789"}).json()
@@ -116,6 +134,22 @@ class APITestCase(TestCase):
         payload = {"challenge_id": challenge["challenge_id"], "code": challenge["debug_code"]}
         self.assertEqual(self.post("/auth/verify-otp", payload).status_code, 200)
         self.assertEqual(self.post("/auth/verify-otp", payload).status_code, 400)
+
+    def test_otp_generation_keeps_four_digits_and_the_secure_random_range(self):
+        for index, random_value in enumerate((0, 123, 9999)):
+            with patch("core.views.secrets.randbelow", return_value=random_value) as random:
+                challenge = self.post("/auth/request-otp", {"phone": f"0991234567{index}"}).json()
+            random.assert_called_once_with(10000)
+            self.assertEqual(challenge["debug_code"], f"{random_value:04d}")
+            self.assertRegex(challenge["debug_code"], r"^[0-9]{4}$")
+
+    def test_otp_does_not_truncate_long_codes_or_accept_non_digits(self):
+        with patch("core.views.secrets.randbelow", return_value=1234):
+            challenge = self.post("/auth/request-otp", {"phone": "09912345670"}).json()
+        for wrong in ("123456", "123", "12a4"):
+            self.assertEqual(self.post("/auth/verify-otp", {"challenge_id": challenge["challenge_id"], "code": wrong}).status_code, 400)
+        self.assertEqual(OTPChallenge.objects.get(pk=challenge["challenge_id"]).attempts, 3)
+        self.assertEqual(self.post("/auth/verify-otp", {"challenge_id": challenge["challenge_id"], "code": "1234"}).status_code, 200)
 
     def test_otp_rate_limit(self):
         for _ in range(3):

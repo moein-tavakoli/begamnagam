@@ -1,0 +1,11 @@
+/* Local, unmodified Vazirmatn Farsi-Digits 33.003; see ../fonts/vazirmatn-fd/OFL.txt. */
+@font-face { font-family: "Vazirmatn FD"; font-style: normal; font-weight: 400; font-display: swap; src: url("../fonts/vazirmatn-fd/Vazirmatn-FD-Regular.woff2") format("woff2"); }
+@font-face { font-family: "Vazirmatn FD"; font-style: normal; font-weight: 500; font-display: swap; src: url("../fonts/vazirmatn-fd/Vazirmatn-FD-Medium.woff2") format("woff2"); }
+@font-face { font-family: "Vazirmatn FD"; font-style: normal; font-weight: 600; font-display: swap; src: url("../fonts/vazirmatn-fd/Vazirmatn-FD-SemiBold.woff2") format("woff2"); }
+@font-face { font-family: "Vazirmatn FD"; font-style: normal; font-weight: 700; font-display: swap; src: url("../fonts/vazirmatn-fd/Vazirmatn-FD-Bold.woff2") format("woff2"); }
+:root {
+  --font-family-primary: "Vazirmatn FD", Tahoma, Arial, sans-serif;
+  --font-family-monospace: "Vazirmatn FD", monospace;
+}
+body, input, button, select, textarea { font-family: var(--font-family-primary); }
+pre, code, kbd, samp { font-family: var(--font-family-monospace); }

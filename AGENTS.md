@@ -4,6 +4,19 @@ This repository is a Persian RTL local-demo product. Read `README.md` and the
 relevant document in `docs/` before changing behavior. Current architecture is a
 Django monolith with Next.js, PostgreSQL, Redis, RabbitMQ and Celery.
 
+## Branch and changelog policy
+
+- Do all ongoing development on `dev`, the repository's default branch. Keep
+  `dev` and `prod` as the only long-lived branches; do not create task branches
+  unless the user explicitly asks.
+- Promote reviewed changes from `dev` to `prod` through a pull request after the
+  `backend`, `frontend` and `compose` CI checks pass. Do not push directly to
+  `prod`, force-push it or delete either branch.
+- Record meaningful changes in `CHANGELOG.md` under `Unreleased`. At release,
+  move those entries into the versioned section and link the release evidence.
+- Updating `prod` does not authorize a server deployment. Follow the deployment
+  policy below for each release.
+
 ## Deployment policy
 
 Make changes and run checks locally by default. Deploy to the server only when
@@ -73,6 +86,16 @@ do not invent current APIs.
 
 ## UI development workflow
 
+- Display all user-facing digits in Persian using the shared local Farsi-Digits
+  font, including native numeric inputs and both management interfaces. Keep
+  structured numeric values, normalized phone/OTP/bank fields, IDs and API
+  payloads canonical (ASCII digits or JSON numbers); never localize stored data
+  or sealed message snapshots just to change their appearance.
+- Canonicalize digits in newly entered human data before validation, signing
+  and persistence on both client and server. Preserve credentials, opaque IDs,
+  tokens, signatures and already sealed snapshots exactly; never rewrite history
+  to apply a display preference. Numeric editors must accept Persian/Arabic
+  input while preserving required, range, step and date checks.
 - Use `make dev-ui` / `npm run dev` for all UI editing and previews. Next.js
   Fast Refresh must apply source changes while the dev server stays running.
 - Do not rebuild Docker images, run `make up`, or restart the frontend for each

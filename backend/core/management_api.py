@@ -119,7 +119,7 @@ def resource_permission(spec):
 
 def context(user):
     return {"authenticated": True, "session_identity": digest("staff-session-actor:"+str(user.pk)), "username": "مدیر" if hasattr(user, "account") else user.get_username(),
-        "permissions": ["support_chat"] + [name for name in ("view_operations", "manage_site_limits", "manage_account_limits", "manage_manual_payments", "approve_manual_payments", "manage_ai", "manage_message_packages", "view_private_message_text", "operate_safety", "suspend_account", "manage_message_tone", "triage_report", "confirm_refund") if user.has_perm("core." + name)],
+        "permissions": ["support_chat"] + [name for name in ("view_operations", "manage_site_limits", "manage_account_limits", "manage_manual_payments", "approve_manual_payments", "manage_ai", "manage_message_packages", "manage_message_examples", "view_private_message_text", "operate_safety", "suspend_account", "manage_message_tone", "triage_report", "confirm_refund") if user.has_perm("core." + name)],
         "resources": [{"key": key, "title": spec[1]} for key, spec in RESOURCES.items() if user.has_perm(resource_permission(spec))]}
 
 

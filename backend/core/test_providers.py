@@ -189,9 +189,9 @@ class ProviderContracts(TestCase):
 
     def test_external_network_and_redirects_cannot_escape_local_contract(self):
         with override_settings(KAVENEGAR_BASE_URL='https://api.kavenegar.com'):
-            with self.assertRaises(ProviderDisabled): Kavenegar().otp(phone='09901234567', code='123456')
+            with self.assertRaises(ProviderDisabled): Kavenegar().otp(phone='09901234567', code='1234')
         self.fixture.modes['send'] = 'redirect'
-        with self.assertRaises(ProviderUnknown): Kavenegar().otp(phone='09901234567', code='123456')
+        with self.assertRaises(ProviderUnknown): Kavenegar().otp(phone='09901234567', code='1234')
         self.assertEqual(self.fixture.calls.count('send'), 1)
 
     @override_settings(OTP_BACKEND='kavenegar')
@@ -207,7 +207,8 @@ class ProviderContracts(TestCase):
         self.assertEqual(payload['sender'], '10000000')
         self.assertEqual(payload['hide'], '1')
         self.assertNotIn('template', payload)
-        self.assertEqual(payload['message'], f'بگم نگم\nکد ورود: {code}\nاعتبار: ۵ دقیقه\nکد را در اختیار کسی نگذارید.')
+        self.assertRegex(payload['message'], rf'^بگم نگم\nکد تأیید ورود به سامانه:\nCode: {code}\n[0-9]{{4}}/[0-9]{{2}}/[0-9]{{2}} [0-9]{{2}}:[0-9]{{2}}:[0-9]{{2}}$')
+        self.assertRegex(code, r'^[0-9]{4}$')
         verified = self.post('/auth/verify-otp', {'challenge_id':response.json()['challenge_id'], 'code':code})
         self.assertEqual(verified.status_code, 200)
 
@@ -226,21 +227,21 @@ class ProviderContracts(TestCase):
 
     @override_settings(KAVENEGAR_OTP_MODE='lookup', KAVENEGAR_OTP_TEMPLATE='approved-login')
     def test_lookup_remains_explicit_and_uses_approved_template(self):
-        result = Kavenegar().otp(phone='09911234567', code='012345')
+        result = Kavenegar().otp(phone='09911234567', code='0123')
         self.assertEqual(result.status, 'accepted')
         self.assertEqual(self.fixture.calls.count('lookup'), 1)
         self.assertNotIn('send', self.fixture.calls)
         self.assertEqual(self.fixture.otp_requests[0]['template'], 'approved-login')
-        self.assertEqual(self.fixture.codes['09911234567'], '012345')
+        self.assertEqual(self.fixture.codes['09911234567'], '0123')
 
     def test_invalid_otp_input_or_configuration_does_not_dispatch(self):
-        for code in ('12345', '1234567', '123456\nمتن اضافی', '۱۲۳۴۵۶', None):
+        for code in ('123', '12345', '123456', '1234\nمتن اضافی', '۱۲۳۴', None):
             with self.assertRaises(ProviderRejected):
                 Kavenegar().otp(phone='09911234567', code=code)
         for mode in ('lookup', 'invalid'):
             with override_settings(KAVENEGAR_OTP_MODE=mode, KAVENEGAR_OTP_TEMPLATE=''):
                 with self.assertRaises(ProviderRejected):
-                    Kavenegar().otp(phone='09911234567', code='123456')
+                    Kavenegar().otp(phone='09911234567', code='1234')
         self.assertFalse(self.fixture.calls)
 
     @override_settings(OTP_BACKEND='kavenegar')
@@ -361,7 +362,9 @@ class LocalRealOTPTests(TestCase):
         self.assertEqual(request.full_url, 'https://api.kavenegar.com/v1/synthetic-key/sms/send.json')
         payload = parse_qs(request.data.decode())
         self.assertEqual(payload['receptor'], [phone])
-        code = payload['message'][0].split('\n')[1].split(': ')[1]
+        self.assertEqual(payload['message'][0].splitlines()[2][:6], 'Code: ')
+        code = payload['message'][0].splitlines()[2][6:]
+        self.assertRegex(code, r'^[0-9]{4}$')
         return response.json()['challenge_id'], code
 
     def test_real_otp_login_keeps_checkout_and_delivery_simulated(self):
@@ -432,7 +435,7 @@ class LocalRealOTPTests(TestCase):
             endpoint('https://api.kavenegar.com', '/v1/synthetic-key/sms/status.json', {'api.kavenegar.com'}, otp=True)
         with override_settings(KAVENEGAR_BASE_URL='https://example.invalid'):
             with self.assertRaises(ProviderDisabled):
-                Kavenegar().otp(phone='09911234567', code='123456')
+                Kavenegar().otp(phone='09911234567', code='1234')
         self.wire.assert_not_called()
         from .providers.http import NoRedirect
         self.assertIsNone(NoRedirect().redirect_request(None, None, 302, '', {}, 'https://example.invalid'))

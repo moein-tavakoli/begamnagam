@@ -28,6 +28,9 @@ import { draftProblem, draftTopicHint } from "@/lib/composer-draft";
 import type { MessageTone } from '@/lib/message-tones';
 import { MessageTonePicker } from './message-tone-picker';
 import { RewriteLoading } from './rewrite-loading';
+import { ExampleFilters } from './example-filters';
+import { PaperDartButton, type PaperDartHandle } from './paper-dart-button';
+import { sendFeedback } from '@/lib/send-feedback';
 import { alternativeRequest, messageAlternatives, type MessageAlternative } from '@/lib/message-alternatives';
 
 const categoryIcons: Record<string, IconName> = {
@@ -57,11 +60,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
   const [step, setStep] = useState(0);
   const activeStep = Math.min(step, stepLabels.length - 1);
   const [category, setCategory] = useState("");
-  const [showAllCategories, setShowAllCategories] = useState(false);
-  // Keep the selected topic visible when the extra options are collapsed.
-  const visibleCategories = data?.categories.filter((item, index) =>
-    showAllCategories || index < 7 || item.id === category) ?? [];
-  const hiddenCategoryCount = (data?.categories.length ?? 0) - visibleCategories.length;
+  const [exampleGroup, setExampleGroup] = useState<number | null>(null);
   const [text, setText] = useState("");
   const [messageTone, setMessageTone] = useState<MessageTone>('polite');
   const toneOptions = data?.message_tones ?? [];
@@ -72,6 +71,9 @@ export function Composer({ onExit }: { onExit?: () => void }) {
   const [order, setOrder] = useState<Order | null>(null);
   const [busy, setBusy] = useState(false);
   const [preparingText, setPreparingText] = useState(false);
+  const [sendAnimating, setSendAnimating] = useState(false);
+  const sendButton = useRef<PaperDartHandle>(null);
+  const orderInFlight = useRef(false);
   const previewInFlight = useRef(false);
   const [pollingError, setPollingError] = useState("");
   const [error, setError] = useState("");
@@ -79,10 +81,12 @@ export function Composer({ onExit }: { onExit?: () => void }) {
   const [selectedAlternative, setSelectedAlternative] = useState<string | null>(null);
   const [fields, setFields] = useState<Record<string, string>>({});
   const freeformRewrite = data?.rewrite_mode === "gapgpt" || data?.rewrite_mode === "ollama";
+  const activeGroup = data?.category_groups?.some(group => group.id === exampleGroup) ? exampleGroup : null;
+  const visibleExamples = (data?.categories ?? []).filter(item => activeGroup === null || item.group_id === activeGroup);
   const awaitingPayment =
     !!order &&
     ["awaiting_payment", "pending_payment", "created"].includes(order.status);
-  const finished = !!order && !awaitingPayment;
+  const finished = !!order && !awaitingPayment && !sendAnimating;
   const isFree = order?.is_free ?? preview?.is_free ?? false;
   const unsuccessful =
     !!order && ["failed", "cancelled", "blocked"].includes(order.status);
@@ -235,6 +239,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
 
   async function createOrder(event: React.FormEvent) {
     event.preventDefault();
+    if (busy || orderInFlight.current) return;
     setError("");
     setFields({});
     if (!validPhone(recipient)) {
@@ -256,7 +261,10 @@ export function Composer({ onExit }: { onExit?: () => void }) {
       );
       return;
     }
+    orderInFlight.current = true;
     setBusy(true);
+    setSendAnimating(true);
+    sendButton.current?.start();
     try {
       let currentOrder = order;
       if (!currentOrder) {
@@ -275,19 +283,24 @@ export function Composer({ onExit }: { onExit?: () => void }) {
       }
       // Continue the same reviewed order on a retry, without another confirmation screen.
       if (["awaiting_payment", "pending_payment", "created"].includes(currentOrder.status))
-        await payOrder(currentOrder);
+        currentOrder = await payOrder(currentOrder);
+      await sendButton.current?.settle(sendFeedback(currentOrder.status));
     } catch (error) {
+      await sendButton.current?.settle("uncertain");
       handleError(error);
     } finally {
+      orderInFlight.current = false;
+      setSendAnimating(false);
       setBusy(false);
     }
   }
 
   async function payOrder(currentOrder: Order) {
     if (currentOrder.is_free || currentOrder.uses_purchased_credit) {
-      setOrder(await api<Order>(`/orders/${currentOrder.id}/${currentOrder.uses_purchased_credit ? "confirm-credit" : "confirm-free"}`, { method: "POST", body: {} }));
-      await reload();
-      return;
+      const confirmed = await api<Order>(`/orders/${currentOrder.id}/${currentOrder.uses_purchased_credit ? "confirm-credit" : "confirm-free"}`, { method: "POST", body: {} });
+      setOrder(confirmed);
+      void reload();
+      return confirmed;
     }
     throw new ApiError("روش خرید به بسته تغییر کرده؛ پیش‌نمایش تازه بساز.");
   }
@@ -327,7 +340,11 @@ export function Composer({ onExit }: { onExit?: () => void }) {
   }
   function renderActions(primary: ReactNode, disableBack = busy || !!order) {
     return (
-      <div className="form-actions composer-actions" role="group" aria-label="ادامه یا بازگشت">
+      <div className="form-actions composer-actions" role="group" aria-label="ادامه یا بازگشت"
+        onPointerDown={event => {
+          // Keep the focused input and dock position stable until click submits.
+          if (document.activeElement?.matches("input, textarea")) event.preventDefault();
+        }}>
         <button type="button" className="button ghost composer-back" disabled={busy || disableBack || (!!order && !finished)}
           onClick={() => step === 0 || finished ? onExit?.() : goBack()}>
           <Icon name="arrow" size={18} /><span>قبلی</span>
@@ -348,47 +365,6 @@ export function Composer({ onExit }: { onExit?: () => void }) {
         {finished ? "رسید پیامت" : !data?.authenticated ? "اول شماره خودت رو تأیید کن" : stepLabels[activeStep]}
       </h1>
       <div className="compose-layout">
-        <aside className="compose-aside">
-          <div className="step-list" aria-label="مراحل ارسال">
-            {stepLabels.map((label, index) => (
-              <div
-                className={`step-item ${activeStep === index ? "active" : ""} ${activeStep > index ? "complete" : ""}`}
-                aria-current={activeStep === index ? "step" : undefined}
-                key={label}
-              >
-                <span className="step-number">
-                  {activeStep > index ? (
-                    <Icon name="check" size={18} />
-                  ) : (
-                    new Intl.NumberFormat("fa-IR").format(index + 1)
-                  )}
-                </span>
-                <div>
-                  <b>{label}</b>
-                  <small>
-                    {
-                      [
-                        "منظور خودت، با مثال‌های اختیاری",
-                        "گیرنده، متن، هزینه و تأیید ارسال",
-                      ][index]
-                    }
-                  </small>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="aside-note">
-            <Icon name="leaf" size={28} />
-            <h3>نیت خوب، کلمه‌های خوب.</h3>
-            <p>
-              درباره یک رفتار مشخص بنویس، نه شخصیت آدم‌ها. تعریف و قدردانی هم
-              همیشه جا داره.
-            </p>
-            <Link href="/help">
-              راهنمای پیام خوب <Icon name="arrow" size={15} />
-            </Link>
-          </div>
-        </aside>
         <div className="compose-panel">
           <div className="panel-top">
             <span>یک پیام، یک فرصت برای حال بهتر</span>
@@ -410,7 +386,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
           {step === 0 && data?.authenticated && (
             <form className="draft-form" onSubmit={advanceDraft} noValidate>
               <div className="draft-heading-row">
-                <h2 className="form-heading" tabIndex={-1}>
+                <h2 id="draft-message-title" className="form-heading" tabIndex={-1}>
                   چه حرفی توی دلت مونده؟
                 </h2>
                 <FreeSendsBalance compact />
@@ -420,11 +396,9 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                   ? "منظورت رو با کلمه‌های خودت بنویس."
                   : "فعلاً می‌تونی از مثال‌های آماده استفاده کنی."}
               </p>
-              <div className="field-label-row">
-                <label htmlFor="message-text">حرفی که می‌خوای برسونی</label>
-              </div>
               <textarea
                 id="message-text"
+                aria-labelledby="draft-message-title"
                 value={text}
                 onChange={(event) => {
                   const value = event.target.value;
@@ -442,7 +416,12 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                 aria-invalid={!!fields.text}
                 disabled={!data || busy}
               />
-              <div className="textarea-meta">
+              <div className="textarea-meta message-input-meta">
+                <p className="message-helper" id="message-hint">
+                  {freeformRewrite
+                    ? "اسم، نشانی یا اطلاعات خصوصی ننویس؛ پیش از تأیید، متن نهایی رو بخون."
+                    : "اسم، نشانی یا اطلاعات خصوصی کسی رو ننویس. دربارهٔ یک رفتار مشخص حرف بزن، نه شخصیت آدم‌ها."}
+                </p>
                 <span id="message-count">
                   {new Intl.NumberFormat("fa-IR").format(text.length)} / ۲۸۰
                 </span>
@@ -455,27 +434,15 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                   {fields.text}
                 </p>
               )}
-              <div className="message-guidance" id="message-hint" role="note">
-                <Icon name="info" size={19} />
-                <p>
-                  {freeformRewrite
-                    ? "اسم، نشانی یا اطلاعات خصوصی ننویس؛ پیش از تأیید، متن نهایی رو بخون."
-                    : "اسم، نشانی یا اطلاعات خصوصی کسی رو ننویس. دربارهٔ یک رفتار مشخص حرف بزن، نه شخصیت آدم‌ها."}
-                </p>
-              </div>
-              {data.categories.length > 0 && <details className="suggestion-disclosure" open={!freeformRewrite || undefined}>
-                <summary>{freeformRewrite ? <>از مثال‌های پیشنهادی کمک بگیر <span className="muted">(اختیاری)</span></> : "مثال‌های آماده برای ارسال"}</summary>
-                <fieldset className="category-fieldset suggested-topics">
-                <legend>یک مثال برای شروع</legend>
-                <p className="small muted category-guidance">{freeformRewrite
-                  ? "هر گزینه یک مثال داخل کادر می‌گذاره؛ متن خودت می‌تونه دربارهٔ موضوع دیگه‌ای باشه."
-                  : "هر گزینه یک مثال داخل کادر می‌گذاره که می‌تونی برای پیامت انتخابش کنی."}</p>
+              {data.categories.length > 0 && <fieldset className="category-fieldset suggested-topics">
+                <legend className="sr-only">مثال‌های پیشنهادی برای شروع</legend>
+                {!!data.category_groups?.length && <ExampleFilters groups={data.category_groups} value={activeGroup} onChange={setExampleGroup} />}
                 <div className="category-grid" id="message-categories">
-                  {visibleCategories.map((item) => (
+                  {visibleExamples.map((item) => (
                     <button
                       data-category={item.id}
-                      className={`category-card ${category === item.id ? "selected" : ""}`}
-                      key={item.id}
+                      className={`category-card ${category === item.id && text === item.example ? "selected" : ""}`}
+                      key={item.key ?? item.id}
                       type="button"
                       disabled={busy}
                       onClick={() => {
@@ -485,11 +452,11 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                         setError("");
                         document.getElementById("message-text")?.focus();
                       }}
-                      aria-pressed={category === item.id}
+                      aria-pressed={category === item.id && text === item.example}
                     >
                       <Icon name={categoryIcons[item.id] || "chat"} />
                       <span>{item.label}</span>
-                      {category === item.id && (
+                      {category === item.id && text === item.example && (
                         <span className="category-check">
                           <Icon name="check" size={11} />
                         </span>
@@ -497,19 +464,11 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                     </button>
                   ))}
                 </div>
-                {data.categories.length > 7 && (
-                  <button type="button" className="button secondary category-toggle"
-                    aria-expanded={showAllCategories} aria-controls="message-categories"
-                    disabled={busy} onClick={() => setShowAllCategories(value => !value)}>
-                    {showAllCategories ? "مثال‌های کمتر" : `${new Intl.NumberFormat("fa-IR").format(hiddenCategoryCount)} مثال بیشتر`}
-                  </button>
-                )}
-                </fieldset>
-              </details>}
+              </fieldset>}
               {renderActions(
                 <BusyButton
                   busy={busy}
-                  className="button primary"
+                  className="button primary composer-next"
                   disabled={!data?.authenticated}
                 >
                   بعدی؛ متن نهایی و ارسال <Icon name="arrow" size={19} />
@@ -578,11 +537,11 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                 <p className="small muted" role="status">سفارش ثبت شده؛ تلاش دوباره همین سفارش رو ادامه می‌ده.</p>
               )}
               {data?.authenticated && renderActions(
-                <BusyButton type="submit" className="button primary" busy={busy}
-                  disabled={!data?.authenticated || (!isFree && !order && (data.purchased_sends_remaining ?? 0) === 0)}>
+                <PaperDartButton ref={sendButton} type="submit" className="button primary composer-next"
+                  disabled={busy || !data?.authenticated || (!isFree && !order && (data.purchased_sends_remaining ?? 0) === 0)}>
                   {isFree ? (awaitingPayment ? "تلاش دوباره برای ارسال رایگان" : data?.demo_mode ? "ارسال رایگان آزمایشی" : "تأیید و ارسال رایگان") : !order && (data?.purchased_sends_remaining ?? 0) === 0 ? "ابتدا بستهٔ پیام بخر" : awaitingPayment ? "تلاش دوباره برای ارسال" : "تأیید و ارسال با یک اعتبار"}
                   <Icon name="arrow" size={18} />
-                </BusyButton>,
+                </PaperDartButton>,
               )}
               </> : <>
                 <div className="review-placeholder" role="note">
@@ -590,7 +549,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                   <p>{alternatives.length > 0 ? "یکی از پیشنهادهای بالا را انتخاب کن تا پیش‌نمایش کامل آن را ببینی." : freeformRewrite ? "شماره رو وارد کن تا متن نهایی آماده بشه. قبل از ارسال، متن کامل پیامک رو می‌بینی." : "شماره رو وارد کن تا متن نهایی آماده بشه. هر ارسال یک اعتبار مصرف می‌کنه."}</p>
                 </div>
                 {data?.authenticated && renderActions(
-                  <BusyButton type="submit" className="button primary" busy={busy} disabled={!data?.authenticated || (alternatives.length > 0 && !selectedAlternative)}>
+                  <BusyButton type="submit" className="button primary composer-next" busy={busy} disabled={!data?.authenticated || (alternatives.length > 0 && !selectedAlternative)}>
                     {selectedAlternative ? 'پیش‌نمایش پیشنهاد انتخاب‌شده' : alternatives.length > 0 ? 'یک پیشنهاد را انتخاب کن' : 'آماده‌سازی متن'} <Icon name="arrow" size={18} />
                   </BusyButton>,
                 )}

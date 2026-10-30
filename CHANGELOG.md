@@ -1,4 +1,188 @@
-# Versions
+# Changelog
+
+Meaningful changes are recorded here, newest first. Add development changes under
+`Unreleased`; move them into a versioned section when releasing from `dev` to
+`prod`. Historical release reports linked below contain validation and limitations.
+
+## Unreleased
+
+## 0.14.0 — 2026-10-30
+
+[Release verification](docs/release-v0.14.0.fa.md) ·
+[Deployment evidence](https://github.com/moein-tavakoli/begamnagam/releases/tag/v0.14.0)
+
+### Added
+
+- Recreate the reference Paper Dart motion on the final confirmation button:
+  continuous paper folds, shaded wings, a perspective turn, anticipation and
+  accelerated takeoff with two trails. Wait for the real order outcome before
+  showing registration feedback and the receipt; preserve retry idempotency,
+  block concurrent submissions, support reduced motion and clean up on navigation.
+- Show a small, Persian-digit version line below the application and mobile
+  dock, respecting keyboard/safe-area space and marking native development runs.
+- Animate the homepage theme control into view with a short, eased entrance,
+  including on return from composition; respect reduced motion.
+- Add an authenticated-only square logout action at the homepage's lower right,
+  with an entrance animation, pending feedback and a recoverable failure state.
+- Add editable message-example categories and prompts in both management UIs,
+  with sorting, activation, moving/deleting, permission checks, audited changes
+  and revision conflicts. Seed the existing 18 prompts into five categories;
+  filter them in the composer without changing the draft or sending a message.
+- Animate the homepage illustration with GSAP: sequenced entrances, banking
+  envelope, floating/pulsing heart, springing/blinking character and offset
+  cloud/star loops. Pause offscreen/in background, provide a pause control and
+  respect reduced motion, with complete cleanup on navigation.
+- Add a raised moon/sun theme toggle beside Profile on the homepage and the brand in
+  the public header. Reveal either theme in a circle from the pressed button, persist
+  device preference, follow the system until explicitly chosen, and synchronize
+  tabs. Apply shared light/dark tokens to product cards, forms, OTP, messages,
+  pricing and support; preserve keyboard focus and reduced-motion/API fallbacks.
+  Initialize before paint under the existing CSP nonce and keep one dynamic
+  browser theme-color through client navigation.
+- Add a shared floating navigation for mobile and desktop, with subtly raised
+  edges and application theme colors. A spring-driven crest stretches and leans
+  with speed; after arrival a small droplet rises before the selected icon fills.
+  Preserve real links, RTL layout, keyboard focus and immediate reduced-motion
+  selection; keep the support launcher clear of the mobile dock.
+- Display Persian digit glyphs throughout the product and both management UIs
+  with self-hosted Vazirmatn Farsi-Digits, retaining canonical input/API/storage
+  values, native number validation, copy actions and signed snapshots.
+- Replace the OTP text field with four theme-aware slots, an orbiting
+  verification state and a green collapse/check animation after server approval.
+  Preserve native typing, digit selection, Persian-digit paste and SMS autofill;
+  respect reduced motion and automatically verify a complete code through the API.
+
+### Changed
+
+- Make the final send button's registration success label bold and green,
+  using the shared success color for light and dark themes.
+- Use the shared brand-orange action styling for the Prepare text button.
+- Render composition's phone/OTP forms directly inside the main panel, removing
+  the nested authentication card while preserving autofill and automatic verification.
+- Align the frontend package and lockfile version with the recorded 0.13.0
+  release; keep subsequent local development work under Unreleased.
+- Automatically verify a complete four-digit OTP from typing, paste or SMS
+  autofill through the existing API. Guard concurrent requests and repeated
+  automatic attempts after failures; retain explicit retry and server-approved
+  success feedback. Blend the OTP stage into its parent and remove repeated
+  authentication guidance.
+- Keep mobile navigation visible during input focus and OTP, moving it above
+  the keyboard alongside the composer actions. Add soft, theme-aware gradient
+  edges beneath overlaid example-category arrows.
+- Place the homepage support action inside the hero frame, aligned with Logout,
+  and remove the short eyebrow above the hero headline.
+- Remove the visible composer step strip, reduce category-arrow visuals while
+  preserving their touch targets, and use a red homepage logout action.
+- Preserve navigation instances across the homepage/compose boundary and retain
+  in-flight crest motion through remeasurement, so Compose receives the full
+  spring, rising-droplet and icon-fill sequence.
+- Move the public navigation theme toggle beside the header brand and show the
+  masked signed-in number in place of the redundant history shortcut. Remove
+  repeated verified-phone banners and the history/wallet introduction copy.
+- Show crest navigation during composition, including the active Compose link;
+  keep the fixed action row above the mobile dock and use a conventional home icon.
+- Make example-category filters a swipeable, snapping row with visible arrows,
+  move the tone caption inline before its choices, and use the brand orange for
+  the draft's Next button. Preserve drafts while changing filters.
+- Label customer-facing payment methods consistently as a bank gateway.
+- Use a shared 16px button radius across primary/secondary actions, profile,
+  theme, support, sample filters/cards and management controls.
+- Remove the homepage's bottom dot/bar pagination indicator.
+- Simplify the draft composer: remove the repeated visible textarea label,
+  place privacy guidance directly below the field as helper text, and show all
+  active example cards immediately. Remove the disclosure/more controls while
+  retaining an accessible field name, helper/error associations and character count.
+- Canonicalize digits in new human-entered JSON and admin form data before
+  validation, hashing and persistence, with an independent server check. Keep
+  credentials, opaque identifiers and signed capabilities exact. Normalize the
+  outgoing frontend payload without mutating its displayed form state.
+- Accept Persian/Arabic digits in amount, limit, package and date editors in
+  both management UIs; retain required, range, step and date validation through
+  the browser's native numeric/date validator. Keep the shared Persian glyph font.
+- Change login OTPs to four cryptographically random ASCII digits, preserving
+  leading zeros across generation, verification, provider submission, WebOTP
+  and the animated input. Use a fixed BegamNagam/Code SMS layout with a Jalali
+  timestamp in Tehran time and the final public-domain autofill binding.
+  Keep session binding, attempt limits, expiry, single use and provider cost
+  controls; reject longer codes without truncation.
+- Establish `dev` as the default development branch and `prod` as the release
+  branch, preserving all history from `0321acf`; remove `codex/product-mvp` after
+  verifying both replacements on GitHub.
+- Run CI for `dev`/`prod` pushes and pull requests. Require a pull request and
+  successful backend, frontend and Compose checks before merging into `prod`.
+- Keep the manually dispatched local demo on `dev`. Server deployment still
+  requires an explicit request for each release.
+- Document the branch/release workflow and restore the missing release summaries
+  through 0.13.0 in this changelog.
+
+### Fixed
+- Keep the mobile dock hidden throughout OTP entry so it cannot appear under
+  the confirmation button between pointer down and pointer up after input blur.
+- Match OTP surfaces, digits and feedback to the application theme. Trace an
+  ease-in-out line around the focused slot alongside the restored theme-aware glow.
+- Restore the existing local real-OTP runtime after Docker Desktop stopped;
+  document data-service recovery without rebuilding the UI or replacing data.
+- Let the initiating OTP form finish bounded feedback before its local session
+  reset; notify other tabs immediately and keep failed verification retryable.
+- Align the automated demo smoke check with gift/package credit pricing instead
+  of requiring the removed per-message price to be positive.
+
+## 0.13.0 — Pricing, support and account controls
+
+- Add reviewed alternatives after message rejection and per-account send/rewrite
+  limits while preserving moderation and exact-preview authorization.
+- Add the public pricing page, four message packages and documented bank-transfer
+  approval; keep paid checkout disabled and gateway credit subject to verification.
+- Add private text support, the shared admin inbox and provider balance visibility.
+- Add referenceable product/help content, structured data and crawler policies.
+- [Release report and validation](docs/release-v0.13.0.fa.md).
+
+## 0.12.2 — OTP completion and rewrite handling
+
+- Accept zero in configurable hourly limits and spacing controls.
+- Improve friendly-message rewriting and distinguish meaning changes from content
+  rejection; preserve independent review and final dispatch checks.
+- Add domain-bound OTP/WebOTP support and contain optional browser feature errors.
+- [Deployment evidence and limitations](docs/deployments/ct115-0.12.2.json).
+
+## 0.12.1 — Public links and bounded rewriting
+
+- Add `/links`, simplify composer wording and show rewrite progress.
+- Use `gpt-4.1-mini` with a shared 20-second deadline and ten daily rewrites per
+  account; retain configurable site quotas and the authorized unlimited site mode.
+- Add the homepage Enamad verification tag.
+- [Release evidence](docs/deployments/ct115-0.12.1.json) and
+  [Enamad verification](docs/deployments/ct115-0.12.1-enamad.json).
+
+## 0.12.0 — Message packages and live GapGPT rewriting
+
+- Replace fresh single-message purchases with package credits and retain legacy
+  obligations, transactional reservations and idempotent credit/refund handling.
+- Enable the authorized synchronous GapGPT rewrite/review flow with quotas and
+  sealed previews. Keep paid checkout disabled and real OTP/gifts unchanged.
+- Add provider selection; keep the evaluated, unapproved Ollama models disabled.
+- [Release report and validation](docs/release-v0.12.0/README.fa.md).
+
+## 0.11.2 — Six frontend replicas
+
+- Distribute rendering across six identical frontend replicas and preserve the
+  database, queues and backend images; tune the central proxy connection reuse.
+- [Capacity report and measurement limits](docs/release-v0.11.2-capacity/README.fa.md).
+
+## 0.11.1 — Capacity configuration
+
+- Add a separate capacity profile with three frontend replicas, bounded process
+  memory and backend concurrency, preserving data services and provider settings.
+- [Configuration and rollback](docs/release-v0.11.1-capacity/README.fa.md).
+
+## 0.11.0 — Security hardening
+
+- Separate runtime/migration credentials, restrict PostgreSQL/Redis/RabbitMQ access
+  and encrypt order/preview bodies at rest.
+- Add admin login throttling, security headers and private-response protections.
+- Harden the authorized server access and introduce encrypted scheduled backups
+  with restore rehearsals; preserve real OTP/gifts and closed paid checkout.
+- [Security release and remaining limitations](docs/release-v0.11.0/README.fa.md).
 
 ## 0.10.2 — Compact composer and inline terms
 

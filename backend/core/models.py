@@ -2,8 +2,47 @@ import uuid
 
 from django.conf import settings
 from django.db import models
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator, MinLengthValidator
 from .fields import EncryptedTextField
+
+
+class ExampleCategory(models.Model):
+    name = models.CharField('نام دسته', max_length=60, unique=True)
+    active = models.BooleanField('نمایش در سایت', default=True)
+    sort_order = models.PositiveIntegerField('ترتیب نمایش', default=0, validators=[MaxValueValidator(10000)])
+    revision = models.PositiveIntegerField(default=0, editable=False)
+
+    class Meta:
+        ordering = ('sort_order', 'id')
+        verbose_name = 'دستهٔ پیام نمونه'
+        verbose_name_plural = 'دسته‌های پیام نمونه'
+        permissions = [('manage_message_examples', 'مدیریت دسته‌ها و پیام‌های نمونه')]
+
+    def __str__(self):
+        return self.name
+
+
+class MessageExample(models.Model):
+    from .moderation import CATEGORIES
+
+    group = models.ForeignKey(ExampleCategory, verbose_name='دسته', on_delete=models.PROTECT, related_name='examples')
+    label = models.CharField('عنوان نمونه', max_length=60)
+    description = models.CharField('توضیح کوتاه', max_length=160, blank=True)
+    text = models.CharField('متن نمونه', max_length=280, validators=[MinLengthValidator(3)])
+    topic = models.CharField('موضوع متن آماده', max_length=32, blank=True,
+        choices=[(c['id'], c['label']) for c in CATEGORIES],
+        help_text='در حالت متن آماده از قالب بررسی‌شدهٔ این موضوع استفاده می‌شود. خالی = فقط وقتی بازنویسی متن دلخواه فعال است.')
+    active = models.BooleanField('نمایش در سایت', default=True)
+    sort_order = models.PositiveIntegerField('ترتیب نمایش', default=0, validators=[MaxValueValidator(10000)])
+    revision = models.PositiveIntegerField(default=0, editable=False)
+
+    class Meta:
+        ordering = ('sort_order', 'id')
+        verbose_name = 'پیام نمونه'
+        verbose_name_plural = 'پیام‌های نمونه'
+
+    def __str__(self):
+        return self.label
 
 
 class Account(models.Model):

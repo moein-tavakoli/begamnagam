@@ -40,9 +40,9 @@ test("WebOTP fills only a valid received code and releases the listener", async 
   listenForSmsCode(code => codes.push(code));
   assert.equal(options?.signal?.aborted, false);
   assert.deepEqual((options as CredentialRequestOptions & { otp: unknown }).otp, { transport: ["sms"] });
-  receive({ code: "012345" });
+  receive({ code: "0123" });
   await Promise.resolve();
-  assert.deepEqual(codes, ["012345"]);
+  assert.deepEqual(codes, ["0123"]);
   assert.equal(options?.signal?.aborted, true);
   assert.equal(timers.size, 0);
 });
@@ -60,11 +60,20 @@ test("cancelled or expired listeners never overwrite manual input with a late co
     if (cause === "cancel") cancel();
     if (cause === "timeout") timers.get(1)?.();
     if (cause === "pagehide") target.dispatchEvent(new Event("pagehide"));
-    receive({ code: "012345" });
+    receive({ code: "0123" });
     await Promise.resolve();
     assert.equal(signal?.aborted, true, cause);
     assert.equal(value, "manual", cause);
     assert.equal(timers.size, 0, cause);
+  }
+});
+
+test("WebOTP rejects old six-digit codes, short codes and extra characters", async t => {
+  for (const code of ["123456", "123", "12345", "1234\n", "۱۲۳۴", "12a4"]) {
+    const { timers } = browser(t, () => Promise.resolve({ code }));
+    listenForSmsCode(() => assert.fail("Unexpected code"));
+    await Promise.resolve();
+    assert.equal(timers.size, 0);
   }
 });
 

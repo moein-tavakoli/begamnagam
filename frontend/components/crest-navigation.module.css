@@ -1,0 +1,51 @@
+.dock { display: flex; align-items: center; gap: 8px; min-width: 0; flex-shrink: 0; }
+.nav {
+  --crest-background: var(--pale);
+  --crest-color: var(--purple);
+  position: relative;
+  isolation: isolate;
+  flex: 1;
+  height: 76px;
+  min-width: 0;
+  border: 1px solid color-mix(in srgb, var(--purple) 35%, var(--line));
+  border-radius: 999px;
+  background: linear-gradient(170deg, color-mix(in srgb, var(--surface) 28%, transparent), transparent 48%, color-mix(in srgb, var(--purple) 8%, transparent)), var(--crest-background);
+  color: var(--muted);
+  box-shadow:
+    inset 0 2px 1px color-mix(in srgb, var(--surface) 80%, transparent),
+    inset 0 -3px 5px color-mix(in srgb, var(--focus) 12%, transparent),
+    0 2px 1px color-mix(in srgb, var(--focus) 12%, transparent),
+    0 10px 24px color-mix(in srgb, var(--focus) 14%, transparent),
+    0 20px 38px color-mix(in srgb, var(--ink) 6%, transparent);
+}
+.nav::after { content: ""; position: absolute; inset: 1px; border-radius: inherit; pointer-events: none; box-shadow: inset 0 1px 0 color-mix(in srgb, var(--purple) 22%, transparent); }
+.surface { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; border-radius: inherit; overflow: hidden; pointer-events: none; }
+.surface path, .surface circle { fill: var(--crest-color); }
+.links { position: relative; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; height: 100%; padding: 3px 11px 12px; }
+.link { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-width: 0; min-height: 48px; padding: 4px 1px; border-radius:var(--button-radius); color: var(--muted); text-decoration: none; transition: color 160ms ease; -webkit-tap-highlight-color: transparent; }
+.link:hover, .link[aria-current] { color: var(--focus); }
+.link[aria-current] { font-weight: 600; }
+.link:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; background: color-mix(in srgb, var(--surface) 35%, transparent); }
+.icon { position: relative; display: block; width: 23px; height: 23px; flex-shrink: 0; transition: transform 160ms ease; }
+.icon svg { display: block; }
+.flood { position: absolute; inset: 0; color: var(--focus); clip-path: inset(calc((1 - var(--crest-fill-level, 0)) * 100%) 0 0); }
+.flood svg { fill: currentColor; stroke: var(--crest-background); stroke-width: 1.5; }
+.label { font-size: 10px; line-height: 1.7; white-space: nowrap; }
+.link:active .icon { transform: scale(.9); }
+.desktop { width: clamp(420px, 42vw, 512px); }
+.desktop .label { font-size: 11px; }
+.mobile { position: fixed; z-index: 20; bottom: calc(var(--composer-keyboard-inset, 0px) + var(--app-bottom-space)); left: max(12px, env(safe-area-inset-left)); right: max(12px, env(safe-area-inset-right)); width: auto; max-width: 472px; margin-inline: auto; }
+.utilities { display: flex; gap: 16px; align-items: center; font-size: 12px; }
+.utilities a { display: inline-flex; align-items: center; min-height: 44px; }
+.shortcut { display: none; }
+@supports (color: color-mix(in srgb, white, black)) {
+  .nav { --crest-background: color-mix(in srgb, var(--surface) 78%, var(--purple)); }
+}
+@media (max-width: 1099px) { .utilities { display: none; } }
+@media (max-width: 699px) {
+  .desktop { display: none; }
+  .shortcut { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; padding: 7px 15px; border: 1px solid var(--control-line); border-radius: 30px; font-size: 12px; }
+}
+@media (min-width: 700px) { .mobile { display: none; } }
+@media (max-width: 359px) { .label { font-size: 9px; } .links { padding-inline: 7px; } }
+@media (prefers-reduced-motion: reduce) { .link, .icon { transition: none; } .link:active .icon { transform: none; } }

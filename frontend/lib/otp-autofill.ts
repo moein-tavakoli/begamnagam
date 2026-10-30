@@ -1,5 +1,10 @@
 // A convenience only: verification still goes through the session-bound API.
 // Unsupported/denied WebOTP must leave typing, paste and keyboard autofill usable.
+export const OTP_LENGTH = 4;
+export function validOtpCode(code: string): boolean {
+  return code.length === OTP_LENGTH && /^[0-9]{4}$/.test(code);
+}
+
 export function listenForSmsCode(onCode: (code: string) => void): () => void {
   const noop = () => {};
   try {
@@ -22,7 +27,7 @@ export function listenForSmsCode(onCode: (code: string) => void): () => void {
         if (controller.signal.aborted) return;
         const code = (credential as (Credential & { code?: unknown }) | null)?.code;
         stop();
-        if (typeof code === "string" && /^[0-9]{6}$/.test(code)) onCode(code);
+        if (typeof code === "string" && validOtpCode(code)) onCode(code);
       }).catch(stop);
     } catch {
       stop();

@@ -4,6 +4,7 @@ import re
 
 from cryptography.fernet import Fernet, MultiFernet
 from django.conf import settings
+from .input_digits import ascii_digits
 
 
 DIGITS = str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789")
@@ -12,7 +13,7 @@ DIGITS = str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "012345678901
 def normalize_phone(value):
     if not isinstance(value, str) or len(value) > 32:
         raise ValueError("شماره موبایل معتبر ایران را وارد کنید.")
-    value = re.sub(r"[\s()\-]", "", value.translate(DIGITS))
+    value = re.sub(r"[\s()\-]", "", ascii_digits(value))
     if value.startswith("0098"):
         value = "0" + value[4:]
     elif value.startswith("+98"):

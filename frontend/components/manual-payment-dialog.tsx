@@ -1,5 +1,7 @@
 "use client";
 
+import { DigitInput } from "./digit-input";
+
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { api, createIdempotencyKey, errorMessage, type Bootstrap, type MessagePackage } from '@/lib/api';
 import { toman } from '@/lib/format';
@@ -29,9 +31,9 @@ export function ManualPaymentDialog({action,onClose,onComplete,onFailure}:{actio
     <form className="manage-form" onSubmit={submit}>
       {!reject && <><p className="manage-notice">فقط پس از مشاهدهٔ واریز قطعی در حساب بانکی تأیید کن؛ تصویر رسید به‌تنهایی کافی نیست. مبلغ باید دقیقاً با بسته تطبیق داشته باشد. تأیید این فرم، اعتبار بسته را بلافاصله اضافه می‌کند.</p>
         {grant?<label>بستهٔ فعال<select value={selected??''} disabled={busy || submitted} required onChange={e=>setSelected(Number(e.target.value))}>{!packages.length && <option value="">بستهٔ فعالی موجود نیست</option>}{packages.map(p=><option key={p.id} value={p.id}>{p.name} · {p.message_count.toLocaleString('fa-IR')} پیام · {toman(p.price_toman)}</option>)}</select></label>:<p>مبلغ ثبت‌شده: <strong>{toman(action.manualPayment?.amount_toman??0)}</strong></p>}
-        <label>مبلغ واریزِ تأییدشده (تومان)<input name="amount_toman" type="number" inputMode="numeric" min={1} max={2147483647} step={1} required defaultValue={action.manualPayment?.amount_toman}/></label>
+        <label>مبلغ واریزِ تأییدشده (تومان)<DigitInput name="amount_toman" type="number" inputMode="numeric" min={1} max={2147483647} step={1} required defaultValue={action.manualPayment?.amount_toman}/></label>
         <label>مرجع واریز در صورتحساب بانک<input name="bank_reference" dir="ltr" inputMode="numeric" minLength={6} maxLength={64} autoComplete="off" required/></label>
-        <label>تاریخ واریز (میلادی)<input name="paid_date" type="date" dir="ltr" max={today()} defaultValue={today()} required/></label>
+        <label>تاریخ واریز (میلادی)<DigitInput name="paid_date" type="date" dir="ltr" max={today()} defaultValue={today()} required/></label>
         <label className="checkbox-label"><input type="checkbox" name="bank_verified" required/>واریز قطعی، مبلغ و مرجع را در حساب بانک بررسی و با این خرید تطبیق دادم.</label>
       </>}
       {reject && <p className="manage-notice">دلیل برای کاربر نمایش داده می‌شود؛ اطلاعات شخصی یا بانکی در آن ننویس. اگر وجهی دریافت شده، رد درخواست جای بازپرداخت را نمی‌گیرد.</p>}

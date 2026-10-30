@@ -1,8 +1,5 @@
-export function latinDigits(value: string): string {
-  return value
-    .replace(/[۰-۹]/g, (digit) => String(digit.charCodeAt(0) - 1776))
-    .replace(/[٠-٩]/g, (digit) => String(digit.charCodeAt(0) - 1632));
-}
+import { latinInputDigits } from "./input-digits.ts";
+export const latinDigits = latinInputDigits;
 
 export function normalizePhone(value: string): string {
   const digits = latinDigits(value).replace(/[\s()-]/g, "");

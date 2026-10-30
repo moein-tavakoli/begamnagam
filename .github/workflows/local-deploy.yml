@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   demo:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/dev'
     runs-on: [self-hosted, Linux, begamnagam-local]
     timeout-minutes: 20
     steps:

@@ -24,7 +24,7 @@ function worker(fetcher = async (_request: unknown) => new Response('online'), c
 
 test('service worker never intercepts API, RSC, third-party fetches or mutations', () => {
   const {handlers} = worker();
-  for (const [method,path,mode] of [['POST','/api/v1/orders','cors'],['GET','/api/v1/messages','cors'],['GET','/?_rsc=private','cors'],['GET','/admin/','cors'],['GET','/icons/icon-192.png?private=1','cors'],['GET','https://other.test/icons/icon-192.png','cors']]) {
+  for (const [method,path,mode] of [['POST','/api/v1/orders','cors'],['GET','/api/v1/messages','cors'],['GET','/version.json','cors'],['GET','/?_rsc=private','cors'],['GET','/admin/','cors'],['GET','/icons/icon-192.png?private=1','cors'],['GET','https://other.test/icons/icon-192.png','cors']]) {
     let intercepted = false;
     handlers.fetch({request:{method,url:new URL(path,'https://example.test').href,mode},respondWith:()=>{intercepted=true;}});
     assert.equal(intercepted,false,`${method} ${path}`);

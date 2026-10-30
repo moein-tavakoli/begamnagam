@@ -207,7 +207,7 @@ class ProviderContracts(TestCase):
         self.assertEqual(payload['sender'], '10000000')
         self.assertEqual(payload['hide'], '1')
         self.assertNotIn('template', payload)
-        self.assertRegex(payload['message'], rf'^بگم نگم\nکد تأیید ورود به سامانه:\nCode: {code}\n[0-9]{{4}}/[0-9]{{2}}/[0-9]{{2}} [0-9]{{2}}:[0-9]{{2}}:[0-9]{{2}}$')
+        self.assertRegex(payload['message'], rf'^بگم نگم\nCode: {code}$')
         self.assertRegex(code, r'^[0-9]{4}$')
         verified = self.post('/auth/verify-otp', {'challenge_id':response.json()['challenge_id'], 'code':code})
         self.assertEqual(verified.status_code, 200)
@@ -362,8 +362,8 @@ class LocalRealOTPTests(TestCase):
         self.assertEqual(request.full_url, 'https://api.kavenegar.com/v1/synthetic-key/sms/send.json')
         payload = parse_qs(request.data.decode())
         self.assertEqual(payload['receptor'], [phone])
-        self.assertEqual(payload['message'][0].splitlines()[2][:6], 'Code: ')
-        code = payload['message'][0].splitlines()[2][6:]
+        self.assertEqual(payload['message'][0].splitlines()[1][:6], 'Code: ')
+        code = payload['message'][0].splitlines()[1][6:]
         self.assertRegex(code, r'^[0-9]{4}$')
         return response.json()['challenge_id'], code
 

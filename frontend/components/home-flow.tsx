@@ -66,21 +66,27 @@ export function HomeFlow() {
             showComposer(true);
         }}
       >
-        <Link href="/pricing" className="home-credit-link"><Icon name="receipt" size={17} /> تعرفه‌ها و خرید اعتبار</Link>
+        <Link href="/pricing" className="home-credit-link" data-home-enter="pricing"><Icon name="receipt" size={17} /> تعرفه‌ها و خرید اعتبار</Link>
         <div className="home-account-actions">
-          <Link href="/profile" prefetch={false} className="home-profile-link">
+          <Link href="/profile" prefetch={false} className="home-profile-link" data-home-enter="profile">
             <Icon name="user" size={19} /> پروفایل
           </Link>
-          <ThemeToggle enter={!composing} />
+          <span className="home-theme-control" data-home-enter="theme"><ThemeToggle /></span>
         </div>
         <div className="hero-copy">
-          <h1 id="welcome-title" tabIndex={-1}>یه حرف خوب،<br />یه <span className="highlight-text">حال خوب‌تر.</span></h1>
-          <p className="hero-description">تشکر، دلگرمی یا یه یادآوری دوستانه؛<br />حرفت رو با احترام برسون، بدون نمایش اسمت به گیرنده.</p>
-          <button type="button" className="button primary hero-cta" onClick={() => showComposer(true)}>
+          <h1 id="welcome-title" tabIndex={-1}>
+            <span className="hero-text-line" data-home-enter="title-first">یه حرف خوب،</span>
+            <span className="hero-text-line" data-home-enter="title-last">یه <span className="highlight-text">حال خوب‌تر.</span></span>
+          </h1>
+          <p className="hero-description">
+            <span className="hero-text-line" data-home-enter="description-first">تشکر، دلگرمی یا یه یادآوری دوستانه؛</span>
+            <span className="hero-text-line" data-home-enter="description-last">حرفت رو با احترام برسون، بدون نمایش اسمت به گیرنده.</span>
+          </p>
+          <button type="button" className="button primary hero-cta" data-home-enter="primary" onClick={() => showComposer(true)}>
             بعدی؛ حرفم رو بگم <Icon name="arrow" size={20} />
           </button>
-          <Link href="/help" className="hero-help">اول ببینم چطوری کار می‌کنه</Link>
-          <Link href="/invitations" prefetch={false} className="hero-help">دعوت دوستان <Icon name="heart" size={16} /></Link>
+          <Link href="/help" className="hero-help" data-home-enter="help">اول ببینم چطوری کار می‌کنه</Link>
+          <Link href="/invitations" prefetch={false} className="hero-help" data-home-enter="invite">دعوت دوستان <Icon name="heart" size={16} /></Link>
         </div>
         <div className="hero-art"><LetterFlight active={!composing} /><HomeTrustMarks /></div>
         <HomeLogout />

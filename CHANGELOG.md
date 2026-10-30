@@ -1,10 +1,106 @@
 # Changelog
 
-Meaningful changes are recorded here, newest first. Add development changes under
-`Unreleased`; move them into a versioned section when releasing from `dev` to
-`prod`. Historical release reports linked below contain validation and limitations.
+Codex chooses MAJOR.MINOR.PATCH for each completed, coherent change and creates
+its local version commit on dev after relevant checks. Keep work in progress
+under Unreleased; move only completed work into its versioned section before
+committing. Local versions do not imply prod promotion or server deployment.
+Push requires an explicit user request. See [versioning policy](docs/versioning.fa.md).
+Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
+
+## 0.16.0 — 2026-10-30 — Lightweight homepage entrances
+
+The authorized server release includes all changes since 0.14.0, including
+0.14.1, 0.15.0 and 0.15.1 below. Publication requires passing backend, frontend
+and compose CI, a dev-to-prod merge PR, exact-image PostgreSQL tests, restored
+migration rehearsal and HTTPS verification. This note alone does not attest
+deployment success. [Release procedure](docs/release-v0.16.0.fa.md) ·
+[Actual deployment evidence](https://github.com/moein-tavakoli/begamnagam/releases/tag/v0.16.0).
+
+### Added
+
+- Add staggered entrances for homepage utilities, two headline lines,
+  descriptions, primary/help/invitation actions, trust slots, artwork controls,
+  support, logout and version text. Replay on return to Home, honor reduced
+  motion and keep focused actions immediately visible.
+- Use finite compositor animations without new timers, animation libraries,
+  permanent layer hints or text/button loops; release entry styles on completion.
+
+### Changed
+
+- Ignore decorative hero SVG mutations when positioning the support launcher,
+  avoiding repeated geometry reads while the existing illustration loop runs.
+
+Validation: 80 frontend tests and TypeScript passed. Browser checks cover
+320px/375px mobile, 812px landscape and 1440px desktop, light/dark, stagger order,
+finished animations, reduced motion, keyboard focus, theme switching, JavaScript
+fallback, Home replay and draft preservation. No SMS/API mutation was used.
+Local commit only; no push or deployment.
+
+## 0.15.1 — 2026-10-30 — Centered phone entry (local)
+
+### Changed
+
+- Center the phone-entry form, label and digits; increase the input text from
+  16px to 19px. Limit entry to 11 canonical digits with a numeric keyboard,
+  preserving Persian/Arabic input and complete formatted/international paste.
+
+Validation: 80 frontend tests and TypeScript passed. Browser checks at 320px,
+375px and 1440px in light/dark themes confirm alignment, font size, the input
+ceiling, normalized paste and no overflow. No OTP was sent; no push/deployment.
+
+## 0.15.0 — 2026-10-30 — Login, compact receipts and update notices (local)
+
+### Added
+
+- Detect a newer application version through an uncached public version endpoint
+  and show a small dismissible update notice. Preserve open OTP/drafts, require
+  explicit reload, and retain the service-worker agreement across idle tabs.
+
+### Fixed
+
+- Complete OTP login with one fresh authenticated bootstrap before replacing
+  private views. Abort stale bootstrap requests and suspend focus refreshes
+  during verification, preserving SMS autofill and cross-tab privacy resets.
+- Explicitly leave Compose when Home is selected and hide both navigation
+  variants throughout the landing view.
+
+### Changed
+
+- Shorten login SMS to the application name and ASCII Code line, retaining the
+  final public-domain WebOTP binding; remove the subtitle, timestamp and unused
+  Jalali-date dependencies.
+- Show credit and remaining gifts below the masked account phone in the header,
+  remove the draft heading/balance row, and keep an accessible textarea label.
+- Replace the final receipt details with a green verified icon, queue-admission
+  confirmation and a single History action. Keep failed/uncertain/demo outcomes
+  truthful, with operational details available in message history.
+
+Validation: 511 PostgreSQL tests, 80 frontend tests, TypeScript and an isolated
+production build passed. Browser checks cover autofill/session rotation,
+focus/retry, cross-tab logout, landing navigation, compact receipts and safe
+updates/offline behavior. No real SMS, payment or paid model call was made.
+Local development only; no push or deployment.
+[Verification details](docs/login-compose-refinement.fa.md).
+
+## 0.14.1 — 2026-10-30 — Codex-managed versioning (local)
+
+### Changed
+
+- Delegate version selection, package-version synchronization, changelog entries
+  and automatic local commits of completed changes to Codex. Require an explicit
+  user request before pushing; retain dev/prod PR/CI and deployment boundaries.
+- Define MAJOR for incompatible public changes, MINOR for compatible features
+  and PATCH for fixes/documentation/maintenance. Keep unrelated pending work out
+  of the commit and under Unreleased. Record the policy in AGENTS, README and
+  the project master, with a shared operating procedure.
+- Align package metadata with the recorded 0.14.0 baseline and bump this
+  documentation-only change to 0.14.1; no dependency update is included.
+
+Validation: reviewed the scoped diff, checked policy links and synchronized
+version fields. This is a local documentation/version commit; no push, tag,
+prod promotion, provider call or server deployment was performed.
 
 ## 0.14.0 — 2026-10-30
 

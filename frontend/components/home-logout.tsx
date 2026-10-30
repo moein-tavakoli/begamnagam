@@ -21,7 +21,7 @@ export function HomeLogout() {
   }
   return <>
     {error && <div className="home-logout-error"><ErrorBox message={error} /></div>}
-    <button type="button" className="home-logout" onClick={() => void logout()} disabled={busy}
+    <button type="button" className="home-logout" data-home-enter="logout" onClick={() => void logout()} disabled={busy}
       aria-label="خروج از حساب" aria-busy={busy} title="خروج از حساب">
       {busy ? <span className="spinner" aria-hidden="true" /> : <Icon name="logout" size={21} />}
     </button>

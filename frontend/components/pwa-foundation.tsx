@@ -1,10 +1,18 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { getServiceWorkerContainer } from "@/lib/browser-capabilities";
+import { version } from "../package.json";
+import { newerVersion } from "@/lib/app-version";
 
 function idleForUpdate(){
-  const busy=document.querySelector('[aria-busy="true"], [data-update-blocked="true"]');
-  const dirty=Array.from(document.querySelectorAll<HTMLInputElement|HTMLTextAreaElement>('input,textarea')).some(e=>e instanceof HTMLInputElement && e.type==='checkbox'?e.checked:!!e.value);
+  const busy=Array.from(document.querySelectorAll('[aria-busy="true"], [data-update-blocked="true"]')).some(e=>!e.closest('.app-update-notice'));
+  const dirty=Array.from(document.querySelectorAll<HTMLInputElement|HTMLTextAreaElement>('input,textarea')).some(e=>{
+    if(e instanceof HTMLInputElement){
+      if(['hidden','radio','button','submit','reset'].includes(e.type))return false;
+      if(e.type==='checkbox')return e.checked;
+    }
+    return !!e.value;
+  });
   return !busy && !dirty;
 }
 
@@ -15,7 +23,29 @@ export function PWAFoundation() {
   const [ios,setIos]=useState(false);
   const [waiting,setWaiting]=useState<ServiceWorker|null>(null);
   const [notice,setNotice]=useState("");
+  const [availableVersion,setAvailableVersion]=useState("");
+  const [updateMessage,setUpdateMessage]=useState("");
+  const [updateDismissed,setUpdateDismissed]=useState(false);
   const updating=useRef(false);
+  useEffect(()=>{setUpdateDismissed(false);},[availableVersion,waiting]);
+  useEffect(()=>{
+    let disposed=false,request:AbortController|null=null;
+    const check=async()=>{
+      if(document.visibilityState==='hidden'||request)return;
+      request=new AbortController();
+      try{
+        const response=await fetch('/version.json',{cache:'no-store',credentials:'omit',signal:request.signal});
+        if(!response.ok)return;
+        const result=await response.json();
+        if(!disposed&&newerVersion(result?.version,version))setAvailableVersion(result.version);
+      }catch{/* Optional version checks must not interrupt the product. */}
+      finally{request=null;}
+    };
+    void check();
+    const timer=window.setInterval(()=>void check(),60000);
+    window.addEventListener('focus',check);window.addEventListener('online',check);
+    return()=>{disposed=true;request?.abort();window.clearInterval(timer);window.removeEventListener('focus',check);window.removeEventListener('online',check);};
+  },[]);
   useEffect(()=>{
     let disposed=false;
     const serviceWorker=process.env.NODE_ENV==='production' && window.isSecureContext ? getServiceWorkerContainer() : null;
@@ -25,11 +55,11 @@ export function PWAFoundation() {
     const installed=()=>{setInstall(null);setIos(false);};
     const changed=()=>{
       if(updating.current && idleForUpdate()) location.reload();
-      else {setWaiting(serviceWorker?.controller??null);setNotice('نسخه تازه فعال است؛ پس از پایان کار فعلی می‌تونی صفحه را تازه کنی.');}
+      else {setWaiting(serviceWorker?.controller??null);setUpdateMessage('نسخهٔ جدید آماده است.');}
     };
     const message=(event:MessageEvent)=>{
       if(event.data?.type==='CHECK_UPDATE_SAFETY')event.ports[0]?.postMessage({idle:idleForUpdate()});
-      if(event.data?.type==='UPDATE_BLOCKED_BY_CLIENT'){updating.current=false;setNotice('در یکی از تب‌ها کاری باز است؛ اول آن را تمام کن یا تب را ببند.');}
+      if(event.data?.type==='UPDATE_BLOCKED_BY_CLIENT'){updating.current=false;setUpdateMessage('ابتدا کار تب‌های باز را تمام کن.');}
     };
     online();
     const standalone=matchMedia('(display-mode: standalone)').matches || !!(navigator as Navigator & {standalone?:boolean}).standalone;
@@ -63,17 +93,22 @@ export function PWAFoundation() {
     finally{setInstall(null);}
   }
   function updateApp(){
-    if(!idleForUpdate()){setNotice('اول کار فعلی رو تمام کن؛ برای به‌روزرسانی، فرم باید خالی باشد.');return;}
-    if(waiting?.state==='activated'){location.reload();return;}
-    try{updating.current=true;waiting?.postMessage({type:'ACTIVATE_APPROVED_UPDATE'});}
-    catch{updating.current=false;setNotice('به‌روزرسانی انجام نشد؛ پس از پایان کار دوباره امتحان کن.');}
+    if(updating.current)return;
+    if(!idleForUpdate()){setUpdateMessage('اول کار فعلی را تمام کن.');return;}
+    if(!waiting||waiting.state==='activated'){location.reload();return;}
+    try{updating.current=true;setUpdateMessage('در حال به‌روزرسانی…');waiting.postMessage({type:'ACTIVATE_APPROVED_UPDATE'});}
+    catch{updating.current=false;setUpdateMessage('دوباره امتحان کن.');}
   }
   return <>
     {offline && <div className="pwa-connection" role="status">اینترنت قطع شده؛ عملیات به اتصال نیاز دارند و خودکار تکرار نمی‌شوند.</div>}
-    {(install||ios||waiting||notice) && <aside className="pwa-controls" aria-label="نصب و نسخه برنامه">
+    {(waiting||availableVersion)&&!updateDismissed&&<aside className="app-update-notice" aria-label="به‌روزرسانی برنامه">
+      <span role="status">{updateMessage||'نسخهٔ جدید آماده است.'}</span>
+      <button type="button" className="button secondary compact" onClick={updateApp} aria-busy={updating.current||undefined}>به‌روزرسانی</button>
+      <button type="button" className="text-button" onClick={()=>setUpdateDismissed(true)}>بعداً</button>
+    </aside>}
+    {(install||ios||notice) && <aside className="pwa-controls" aria-label="نصب برنامه">
       {install && <button type="button" className="button secondary compact" onClick={()=>void installApp()}>نصب بگم نگم</button>}
       {ios && <details><summary>نصب روی آیفون</summary><p>در Safari، گزینه Share و سپس Add to Home Screen را بزن.</p></details>}
-      {waiting && <><span>نسخه تازه آماده است؛ می‌تونی بعداً نصبش کنی.</span><button type="button" className="button secondary compact" onClick={updateApp}>به‌روزرسانی در زمان مناسب</button></>}
       {notice && <p role="status">{notice}</p>}
     </aside>}
   </>;

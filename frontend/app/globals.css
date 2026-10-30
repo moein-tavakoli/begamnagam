@@ -177,6 +177,10 @@ input[aria-invalid="true"],textarea[aria-invalid="true"] { border-color: var(--e
 }
 .pwa-controls { display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:12px; padding:12px 20px; background:var(--pale); font-size:12px; }
 .pwa-controls p { margin:0; }.pwa-controls summary { min-height:44px; cursor:pointer; display:flex; align-items:center; }
+.app-update-notice { position:fixed; z-index:100; top:calc(10px + env(safe-area-inset-top,0px)); left:50%; transform:translateX(-50%); width:max-content; max-width:calc(100% - 24px); display:flex; align-items:center; gap:8px; padding:6px 10px; border:1px solid var(--accent-line); border-radius:var(--button-radius); background:var(--surface); color:var(--ink); box-shadow:0 6px 24px #0002; font-size:12px; }
+.app-update-notice > span { min-width:0; line-height:1.7; }
+.app-update-notice button { flex-shrink:0; min-height:44px; font-size:12px; padding-inline:10px; }
+.app-update-notice .text-button { min-width:44px; margin:0; }
 
 .recipient-report { margin-block: 1.5rem; border-top: 1px solid var(--line, var(--accent-line)); padding-top: 1rem; }
 .recipient-report summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 600; }
@@ -190,6 +194,43 @@ input[aria-invalid="true"],textarea[aria-invalid="true"] { border-color: var(--e
 .home-flow .hero { height: 100%; width: 100%; max-width: 1120px; justify-content: center; gap: 12px; touch-action: pan-y pinch-zoom; }
 .home-flow .hero-art { min-height: 0; margin: 0; }
 .home-flow .hero h1 { outline: none; }
+.hero-text-line { display:block; }
+.home-theme-control { display:inline-flex; }
+/* Short compositor entrances; backwards fill releases animation styles at rest. */
+@media (prefers-reduced-motion:no-preference) {
+  .home-flow[data-view="welcome"] [data-home-enter],
+  .app-shell:has(.home-flow[data-view="welcome"]) > .support-launcher,
+  .app-shell:has(.home-flow[data-view="welcome"]) > .app-version {
+    animation: home-content-in 520ms cubic-bezier(.16,1,.3,1) var(--home-delay,0ms) backwards;
+  }
+  [data-home-enter="pricing"] { --home-delay:60ms; --home-y:-8px; --home-scale:.98; }
+  [data-home-enter="profile"] { --home-delay:120ms; --home-y:-8px; --home-scale:.98; }
+  [data-home-enter="theme"] { --home-delay:180ms; --home-y:-8px; --home-scale:.98; }
+  [data-home-enter="logout"] { --home-delay:240ms; --home-y:8px; }
+  [data-home-enter="title-first"] { --home-delay:340ms; --home-y:18px; }
+  [data-home-enter="title-last"] { --home-delay:460ms; --home-y:18px; }
+  [data-home-enter="description-first"] { --home-delay:580ms; }
+  [data-home-enter="description-last"] { --home-delay:680ms; }
+  [data-home-enter="primary"] { --home-delay:800ms; --home-scale:.98; }
+  [data-home-enter="trust-first"] { --home-delay:900ms; }
+  [data-home-enter="help"] { --home-delay:940ms; }
+  [data-home-enter="trust-last"] { --home-delay:1020ms; }
+  [data-home-enter="invite"] { --home-delay:1040ms; }
+  [data-home-enter="pause"] { --home-delay:1120ms; --home-y:8px; }
+  .app-shell:has(.home-flow[data-view="welcome"]) > .support-launcher { --home-delay:300ms; --home-y:8px; }
+  .app-shell:has(.home-flow[data-view="welcome"]) > .app-version { --home-delay:1200ms; --home-y:5px; }
+  .home-flow[data-view="welcome"] .highlight-text::after { animation: home-underline-in 480ms cubic-bezier(.16,1,.3,1) 620ms backwards; transform-origin:right center; }
+  .home-flow[data-view="welcome"] [data-home-enter]:focus-within,
+  .app-shell:has(.home-flow[data-view="welcome"]) > .support-launcher:focus-visible { opacity:1 !important; translate:none !important; scale:none !important; }
+}
+@keyframes home-content-in {
+  from { opacity:0; translate:0 var(--home-y,12px); scale:var(--home-scale,1); }
+  to { opacity:1; translate:0 0; scale:1; }
+}
+@keyframes home-underline-in {
+  from { opacity:0; transform:rotate(-3deg) scaleX(.2); }
+  to { opacity:1; transform:rotate(-3deg) scaleX(1); }
+}
 .home-trust-marks { display: none; }
 @media (min-width: 1024px) {
   .home-flow .hero-art { display: flex; flex-direction: column; align-items: center; gap: 20px; }
@@ -308,6 +349,11 @@ input[aria-invalid="true"],textarea[aria-invalid="true"] { border-color: var(--e
 .home-flow .embedded-auth-form { width: 100%; min-width: 0; }
 .home-flow .embedded-auth-form .inline-form { display: block; }
 .home-flow .embedded-auth-form #sender-phone { width: 100% !important; }
+.phone-entry-form { width:100%; max-width:440px; margin-inline:auto; text-align:center; }
+.phone-entry-form .inline-form { flex-direction:column; align-items:stretch; }
+.phone-entry-form #sender-phone { width:100% !important; flex:none; font-size:19px; text-align:center; }
+.auth-card:has(.phone-entry-form) { text-align:center; }
+.auth-card:has(.phone-entry-form) .auth-title { justify-content:center; }
 @media (min-width: 700px) { .home-flow .form-actions.composer-actions { width: min(650px,calc(100% - 32px)); bottom: calc(var(--composer-keyboard-inset,0px) + 16px); padding-inline: 20px; } }
 @media (max-width: 359px) { .home-flow .step-list { gap: 8px; } .home-flow .step-item { gap: 7px; } .home-flow .step-item b { font-size: 11px; } .free-sends-balance.is-compact { font-size: 10px; padding-inline: 6px; } }
 
@@ -394,6 +440,17 @@ html:has([data-credit-shop]) { scroll-behavior:auto; }
 /* Header identity and theme control. */
 .header-brand-actions { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .header-phone { display: inline-flex; align-items: center; min-height: 44px; flex-shrink: 0; color: var(--muted); font-size: 13px; white-space: nowrap; }
+.header-account { display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; min-height: 44px; color: var(--muted); font-size: 13px; line-height: 1.7; }
+.header-account .header-phone { min-height: 0; font-size: inherit; }
+.header-balance { font-size: inherit; white-space: nowrap; }
+.app-shell:has(.home-flow[data-view="welcome"]) [data-app-navigation] { display: none !important; }
+.home-flow .compact-receipt { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: 28px 10px; }
+.home-flow .compose-panel:has(.compact-receipt) { display:flex; flex-direction:column; }
+.home-flow .compact-receipt .receipt-icon { width: 80px; height: 80px; border-radius: 50%; margin: 0; }
+.receipt-icon.has-succeeded { color: var(--success); background: var(--success-bg); }
+.receipt-icon.is-uncertain { color: var(--muted); background: var(--soft); }
+.home-flow .compact-receipt .form-heading { margin: 0; max-width: 27ch; font-size: clamp(18px,4vw,24px); line-height: 1.9; }
+.compact-receipt > .button { width: min(100%,300px); min-height: 52px; }
 .message-tone-options { align-items: center; }
 .message-tone-label { color: var(--muted); font-size: 12px; white-space: nowrap; }
 
@@ -428,20 +485,20 @@ html:has([data-credit-shop]) { scroll-behavior:auto; }
 @keyframes home-logout-in { from { opacity: 0; transform: translateY(12px) rotate(12deg) scale(.7); } to { opacity: 1; transform: translateY(0) rotate(0) scale(1); } }
 @media (min-width:700px) and (max-width:999px) {
   .site-header { flex-wrap: wrap; padding-block: 12px; }
-  .site-header .header-phone { order: 1; }
+  .site-header .header-account { order: 1; }
   .site-header > nav { display: none; }
   .site-header > div[class*="desktop"] { order: 3; flex-basis: 100%; max-width: 512px; margin-inline: auto; }
 }
 @media (max-width:699px) {
   .site-header { min-height: 76px; gap: 8px; flex-shrink: 0; }
   .header-brand-actions { gap: 8px; }
-  .header-phone { font-size: 12px; }
+  .header-account { font-size: 12px; }
   .app-shell:has(.home-flow[data-view="compose"]) { --composer-dock-clearance: 88px; }
 }
 @media (max-width:359px) {
   .header-brand-actions .brand { font-size: 18px; gap: 5px; }
   .header-brand-actions .brand-mark { width: 32px; height: 34px; border-radius: 12px 12px 12px 5px; }
-  .header-phone { font-size: 11px; }
+  .header-account { font-size: 11px; }
 }
 @media (prefers-reduced-motion:reduce) { .home-logout { animation: none; } }
 .app-shell:has(.home-flow[data-view="compose"]) > .site-footer { display: none; }

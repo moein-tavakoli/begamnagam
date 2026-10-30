@@ -5,7 +5,7 @@ import { useLayoutEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { Icon, type IconName } from "./icons";
 import styles from "./crest-navigation.module.css";
-import { useComposeView } from "@/lib/use-compose-view";
+import { changeHomeView, useComposeView } from "@/lib/use-compose-view";
 
 const destinations: { href: string; label: string; icon: IconName }[] = [
   { href: "/", label: "خونه", icon: "home" },
@@ -173,12 +173,17 @@ export function CrestNavigation({ mode, hidden = false }: { mode: "desktop" | "m
   useLayoutEffect(() => { motion.current?.select(selected); }, [selected]);
 
   return (
-    <div hidden={hidden} className={`${styles.dock} ${styles[mode]}${mode === "mobile" ? " mobile-nav" : ""}`}>
+    <div hidden={hidden} data-app-navigation="true" className={`${styles.dock} ${styles[mode]}${mode === "mobile" ? " mobile-nav" : ""}`}>
     <nav ref={nav} className={styles.nav} aria-label={mode === "mobile" ? "دسترسی سریع موبایل" : "منوی اصلی"}>
       <svg className={styles.surface} aria-hidden="true" preserveAspectRatio="none"><path ref={crest} /><circle ref={droplet} r="0" opacity="0" /></svg>
       <div className={styles.links}>
         {destinations.map((item, index) => (
           <Link key={item.href} href={item.href} prefetch={false} className={styles.link} title={item.label}
+            onClick={event=>{
+              if(item.href==="/" && currentPath==="/" && event.button===0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey){
+                event.preventDefault();changeHomeView(false);
+              }
+            }}
             aria-current={selected === index ? (!composing && currentPath === item.href ? "page" : "location") : undefined}>
             <span className={styles.icon} aria-hidden="true">
               <Icon name={item.icon} size={23} />

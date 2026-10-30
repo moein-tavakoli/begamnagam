@@ -9,7 +9,14 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
-## 0.16.0 — 2026-10-30 — Lightweight homepage entrances (local)
+## 0.16.0 — 2026-10-30 — Lightweight homepage entrances
+
+The authorized server release includes all changes since 0.14.0, including
+0.14.1, 0.15.0 and 0.15.1 below. Publication requires passing backend, frontend
+and compose CI, a dev-to-prod merge PR, exact-image PostgreSQL tests, restored
+migration rehearsal and HTTPS verification. This note alone does not attest
+deployment success. [Release procedure](docs/release-v0.16.0.fa.md) ·
+[Actual deployment evidence](https://github.com/moein-tavakoli/begamnagam/releases/tag/v0.16.0).
 
 ### Added
 

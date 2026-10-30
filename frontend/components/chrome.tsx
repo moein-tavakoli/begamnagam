@@ -37,7 +37,10 @@ export function Header() {
         <Link href="/pricing">خرید اعتبار</Link>
         <Link href="/help#how-it-works">راهنمای استفاده</Link>
       </nav>
-      {data?.authenticated && <bdi className="header-phone" dir="ltr" tabIndex={-1} aria-label="شمارهٔ حساب واردشده">{data.phone_masked}</bdi>}
+      {data?.authenticated && <div className="header-account">
+        <bdi className="header-phone" dir="ltr" tabIndex={-1} aria-label="شمارهٔ حساب واردشده">{data.phone_masked}</bdi>
+        <span className="header-balance" role="status">اعتبار: {new Intl.NumberFormat("fa-IR").format(data.purchased_sends_remaining ?? 0)} و {new Intl.NumberFormat("fa-IR").format(data.free_sends_remaining ?? 0)} هدیه</span>
+      </div>}
     </header>
   );
 }

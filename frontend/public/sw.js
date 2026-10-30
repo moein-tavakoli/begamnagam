@@ -2,7 +2,8 @@
  * No private pages, API/RSC responses or requests are ever persisted/replayed.
  * Activation requires an explicit client action; other clients never reload automatically.
  */
-const CACHE = 'begamnagam-public-shell-v3';
+// Install a waiting worker for the compact update-notice protocol as well.
+const CACHE = 'begamnagam-public-shell-v4';
 const PUBLIC = ['/offline.html', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/maskable-512.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(PUBLIC)));

@@ -177,6 +177,10 @@ input[aria-invalid="true"],textarea[aria-invalid="true"] { border-color: var(--e
 }
 .pwa-controls { display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:12px; padding:12px 20px; background:var(--pale); font-size:12px; }
 .pwa-controls p { margin:0; }.pwa-controls summary { min-height:44px; cursor:pointer; display:flex; align-items:center; }
+.app-update-notice { position:fixed; z-index:100; top:calc(10px + env(safe-area-inset-top,0px)); left:50%; transform:translateX(-50%); width:max-content; max-width:calc(100% - 24px); display:flex; align-items:center; gap:8px; padding:6px 10px; border:1px solid var(--accent-line); border-radius:var(--button-radius); background:var(--surface); color:var(--ink); box-shadow:0 6px 24px #0002; font-size:12px; }
+.app-update-notice > span { min-width:0; line-height:1.7; }
+.app-update-notice button { flex-shrink:0; min-height:44px; font-size:12px; padding-inline:10px; }
+.app-update-notice .text-button { min-width:44px; margin:0; }
 
 .recipient-report { margin-block: 1.5rem; border-top: 1px solid var(--line, var(--accent-line)); padding-top: 1rem; }
 .recipient-report summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 600; }
@@ -394,6 +398,17 @@ html:has([data-credit-shop]) { scroll-behavior:auto; }
 /* Header identity and theme control. */
 .header-brand-actions { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .header-phone { display: inline-flex; align-items: center; min-height: 44px; flex-shrink: 0; color: var(--muted); font-size: 13px; white-space: nowrap; }
+.header-account { display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; min-height: 44px; color: var(--muted); font-size: 13px; line-height: 1.7; }
+.header-account .header-phone { min-height: 0; font-size: inherit; }
+.header-balance { font-size: inherit; white-space: nowrap; }
+.app-shell:has(.home-flow[data-view="welcome"]) [data-app-navigation] { display: none !important; }
+.home-flow .compact-receipt { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: 28px 10px; }
+.home-flow .compose-panel:has(.compact-receipt) { display:flex; flex-direction:column; }
+.home-flow .compact-receipt .receipt-icon { width: 80px; height: 80px; border-radius: 50%; margin: 0; }
+.receipt-icon.has-succeeded { color: var(--success); background: var(--success-bg); }
+.receipt-icon.is-uncertain { color: var(--muted); background: var(--soft); }
+.home-flow .compact-receipt .form-heading { margin: 0; max-width: 27ch; font-size: clamp(18px,4vw,24px); line-height: 1.9; }
+.compact-receipt > .button { width: min(100%,300px); min-height: 52px; }
 .message-tone-options { align-items: center; }
 .message-tone-label { color: var(--muted); font-size: 12px; white-space: nowrap; }
 
@@ -428,20 +443,20 @@ html:has([data-credit-shop]) { scroll-behavior:auto; }
 @keyframes home-logout-in { from { opacity: 0; transform: translateY(12px) rotate(12deg) scale(.7); } to { opacity: 1; transform: translateY(0) rotate(0) scale(1); } }
 @media (min-width:700px) and (max-width:999px) {
   .site-header { flex-wrap: wrap; padding-block: 12px; }
-  .site-header .header-phone { order: 1; }
+  .site-header .header-account { order: 1; }
   .site-header > nav { display: none; }
   .site-header > div[class*="desktop"] { order: 3; flex-basis: 100%; max-width: 512px; margin-inline: auto; }
 }
 @media (max-width:699px) {
   .site-header { min-height: 76px; gap: 8px; flex-shrink: 0; }
   .header-brand-actions { gap: 8px; }
-  .header-phone { font-size: 12px; }
+  .header-account { font-size: 12px; }
   .app-shell:has(.home-flow[data-view="compose"]) { --composer-dock-clearance: 88px; }
 }
 @media (max-width:359px) {
   .header-brand-actions .brand { font-size: 18px; gap: 5px; }
   .header-brand-actions .brand-mark { width: 32px; height: 34px; border-radius: 12px 12px 12px 5px; }
-  .header-phone { font-size: 11px; }
+  .header-account { font-size: 11px; }
 }
 @media (prefers-reduced-motion:reduce) { .home-logout { animation: none; } }
 .app-shell:has(.home-flow[data-view="compose"]) > .site-footer { display: none; }

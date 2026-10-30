@@ -18,7 +18,7 @@ export function AuthGate({
   forceReverify?: boolean;
   renderActions?: (primary: ReactNode, busy: boolean) => ReactNode;
 }) {
-  const { data, authenticate, reload } = useApp();
+  const { data, verifyOtp } = useApp();
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [challenge, setChallenge] = useState("");
@@ -103,25 +103,15 @@ export function AuthGate({
     const started = performance.now();
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     try {
-      const result = await api<{
-        authenticated: boolean;
-        phone_masked: string;
-      }>("/auth/verify-otp", {
-        method: "POST",
-        body: { challenge_id: challenge, code: latinDigits(code) },
-        beforeSessionReset: async result => {
+      await verifyOtp(challenge, latinDigits(code), async result => {
           if (!result.authenticated || !mounted.current) return;
           // Only the server verdict permits the success animation.
           if (!reduceMotion) await new Promise(resolve => window.setTimeout(resolve, Math.max(0, 1200 - (performance.now() - started))));
           if (!mounted.current) return;
           setOtpPhase("success");
           if (!reduceMotion) await new Promise(resolve => window.setTimeout(resolve, 1450));
-        },
       });
       if (!mounted.current) return;
-      if (!result.authenticated) throw new ApiError("تأیید شماره انجام نشد؛ دوباره تلاش کن.", "otp_unverified");
-      authenticate(result.phone_masked);
-      await reload();
       window.setTimeout(
         () => document.querySelector<HTMLElement>(".header-phone")?.focus({ preventScroll: true }),
         0,
@@ -132,7 +122,7 @@ export function AuthGate({
       setError(errorMessage(error));
       if (
         error instanceof ApiError &&
-        ["otp_expired", "challenge_expired"].includes(error.code)
+        ["otp_expired", "challenge_expired", "session_unconfirmed"].includes(error.code)
       ) {
         setChallenge("");
         setCode("");

@@ -14,14 +14,12 @@ import {
   isPending,
   latinDigits,
   normalizePhone,
-  statusLabel,
   validPhone,
 } from "@/lib/format";
 import { useApp } from "./app-provider";
 import { AuthGate } from "./auth-gate";
-import { BusyButton, DeliveryReason, ErrorBox, ServiceState } from "./feedback";
+import { BusyButton, ErrorBox, ServiceState } from "./feedback";
 import { Icon, type IconName } from "./icons";
-import { FreeSendsBalance } from "./free-sends";
 import { TermsDialog } from "./terms-dialog";
 import { CreditPackages } from "./credit-packages";
 import { draftProblem, draftTopicHint } from "@/lib/composer-draft";
@@ -75,7 +73,6 @@ export function Composer({ onExit }: { onExit?: () => void }) {
   const sendButton = useRef<PaperDartHandle>(null);
   const orderInFlight = useRef(false);
   const previewInFlight = useRef(false);
-  const [pollingError, setPollingError] = useState("");
   const [error, setError] = useState("");
   const [alternatives, setAlternatives] = useState<MessageAlternative[]>([]);
   const [selectedAlternative, setSelectedAlternative] = useState<string | null>(null);
@@ -89,7 +86,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
   const finished = !!order && !awaitingPayment && !sendAnimating;
   const isFree = order?.is_free ?? preview?.is_free ?? false;
   const unsuccessful =
-    !!order && ["failed", "cancelled", "blocked"].includes(order.status);
+    !!order && sendFeedback(order.status) === "rejected";
   const idempotencyKey = useRef("");
   const heading = useRef<HTMLHeadingElement>(null);
   const previousStage = useRef(`${step}:${awaitingPayment}:${finished}`);
@@ -129,13 +126,12 @@ export function Composer({ onExit }: { onExit?: () => void }) {
         const result = await api<Order>(`/orders/${order!.id}`);
         if (!cancelled) {
           setOrder(result);
-          setPollingError("");
           if (["free_credit_returned", "credit_returned", "wallet_returned"].includes(result.financial_status || "")) void reload();
         }
         if (!cancelled && isPending(result.status) && attempts < 20)
           timer = setTimeout(poll, 2000);
-      } catch (error) {
-        if (!cancelled) setPollingError(errorMessage(error));
+      } catch {
+        // Retain the last confirmed outcome; history exposes refresh/errors.
       }
     }
     timer = setTimeout(poll, 1500);
@@ -306,37 +302,11 @@ export function Composer({ onExit }: { onExit?: () => void }) {
   }
 
 
-  async function refreshOrder() {
-    if (!order) return;
-    setBusy(true);
-    setPollingError("");
-    try {
-      setOrder(await api<Order>(`/orders/${order.id}`));
-      if (order.is_free) await reload();
-    } catch (error) {
-      setPollingError(errorMessage(error));
-    } finally {
-      setBusy(false);
-    }
-  }
-
   function goBack() {
     setStep(0);
     setConsent(false);
     setError("");
     setFields({});
-  }
-  function startOver() {
-    setStep(0);
-    setPreview(null);
-    setCategory("");
-    setText("");
-    setRecipient("");
-    setConsent(false);
-    setOrder(null);
-    setError("");
-    setFields({});
-    idempotencyKey.current = "";
   }
   function renderActions(primary: ReactNode, disableBack = busy || !!order) {
     return (
@@ -355,7 +325,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
   }
   return (
     <section
-      data-update-blocked={!!(step > 0 || text || recipient || order)}
+      data-update-blocked={busy || (!finished && !!(step > 0 || text || recipient || messageTone !== (data?.default_message_tone ?? 'polite')))}
       id="compose"
       className={`compose-section wrap ${!data?.authenticated ? "composer-auth-only" : ""}`}
       data-screen={finished ? "receipt" : step}
@@ -385,12 +355,6 @@ export function Composer({ onExit }: { onExit?: () => void }) {
           {step === 0 && !data?.authenticated && <AuthGate renderActions={renderActions} />}
           {step === 0 && data?.authenticated && (
             <form className="draft-form" onSubmit={advanceDraft} noValidate>
-              <div className="draft-heading-row">
-                <h2 id="draft-message-title" className="form-heading" tabIndex={-1}>
-                  چه حرفی توی دلت مونده؟
-                </h2>
-                <FreeSendsBalance compact />
-              </div>
               <p className="muted form-intro">
                 {freeformRewrite
                   ? "منظورت رو با کلمه‌های خودت بنویس."
@@ -398,7 +362,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
               </p>
               <textarea
                 id="message-text"
-                aria-labelledby="draft-message-title"
+                aria-label="متن پیام"
                 value={text}
                 onChange={(event) => {
                   const value = event.target.value;
@@ -558,59 +522,28 @@ export function Composer({ onExit }: { onExit?: () => void }) {
           )}
 
           {finished && order && (
-            <div className="receipt-panel">
+            <div className="receipt-panel compact-receipt">
               <div
-                className={`receipt-icon ${unsuccessful ? "has-failed" : ""}`}
+                className={`receipt-icon ${sendFeedback(order.status) === "accepted" ? "has-succeeded" : unsuccessful ? "has-failed" : "is-uncertain"}`}
               >
                 <Icon
                   name={
-                    isPending(order.status)
-                      ? "clock"
+                    sendFeedback(order.status) === "accepted"
+                      ? "shield"
                       : unsuccessful
                         ? "info"
-                        : "check"
+                        : "clock"
                   }
                   size={32}
                 />
               </div>
               <h2 className="form-heading" tabIndex={-1}>
-                {isPending(order.status)
-                  ? "پیامت در مسیر پردازشه."
-                  : unsuccessful
-                    ? "ارسال انجام نشد."
-                    : data?.demo_mode
-                      ? "آزمایش ارسال ثبت شد."
-                      : "وضعیت پیامت ثبت شد."}
+                {unsuccessful ? "ارسال پیام انجام نشد." : sendFeedback(order.status) !== "accepted"
+                  ? "نتیجهٔ ارسال در حال بررسی است؛ دوباره ارسال نکن."
+                  : data?.demo_mode ? "درخواست آزمایشی ثبت شد."
+                  : "پیام شما با موفقیت در صف ارسال قرار گرفت."}
               </h2>
-              <p className="small">مالی: {order.financial_status === 'wallet_returned' ? 'مبلغ به کیف پول برگشت داده شد' : order.financial_status === 'wallet_paid' ? 'پرداخت از کیف پول' : order.financial_status === "credit_returned" ? "اعتبار بسته برگشت داده شد" : order.uses_purchased_credit ? "یک اعتبار از بسته" : order.financial_status === "free_credit_returned" ? "رایگان؛ سهمیه برگشت داده شد" : order.is_free ? "رایگان؛ بدون پرداخت" : order.financial_status === "refunded" ? "مسترد شد" : order.financial_status === "refund_pending" ? "بازپرداخت در حال پیگیری است" : order.financial_status === "verified" ? "تأیید شد" : "در انتظار"}</p>
-              <FreeSendsBalance />
-              <p className="receipt-status" role="status">
-                {statusLabel(order.status)}
-              </p>
-              <DeliveryReason order={order} />
-              <p className="muted">
-                {data?.demo_mode
-                  ? "این نتیجه مربوط به محیط آزمایشی است. پیام واقعی به گیرنده ارسال نشده و هزینه‌ای دریافت نشده است."
-                  : "وضعیت ارسال را اینجا یا در پیام‌های من بررسی کن. وضعیت پیام به معنی خوانده‌شدن آن نیست."}
-              </p>
-              <div className="receipt-id">
-                <span>شناسه پیگیری</span>
-                <bdi>{order.id}</bdi>
-              </div>
-              <ErrorBox message={pollingError} focus={false} />
-              <div className="receipt-actions">
-                <BusyButton
-                  className="button secondary"
-                  busy={busy}
-                  onClick={refreshOrder}
-                >
-                  <Icon name="refresh" size={17} /> به‌روزرسانی وضعیت
-                </BusyButton>
-              </div>
-              <button className="text-button" type="button" onClick={startOver}>
-                نوشتن یک پیام دیگر <Icon name="arrow" size={16} />
-              </button>
-              {renderActions(<Link className="button primary" href="/history">پیام‌های من</Link>, busy)}
+              <Link className="button primary composer-next" href="/history">پیام‌های من</Link>
             </div>
           )}
         </div>

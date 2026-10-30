@@ -9,6 +9,40 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.15.0 — 2026-10-30 — Login, compact receipts and update notices (local)
+
+### Added
+
+- Detect a newer application version through an uncached public version endpoint
+  and show a small dismissible update notice. Preserve open OTP/drafts, require
+  explicit reload, and retain the service-worker agreement across idle tabs.
+
+### Fixed
+
+- Complete OTP login with one fresh authenticated bootstrap before replacing
+  private views. Abort stale bootstrap requests and suspend focus refreshes
+  during verification, preserving SMS autofill and cross-tab privacy resets.
+- Explicitly leave Compose when Home is selected and hide both navigation
+  variants throughout the landing view.
+
+### Changed
+
+- Shorten login SMS to the application name and ASCII Code line, retaining the
+  final public-domain WebOTP binding; remove the subtitle, timestamp and unused
+  Jalali-date dependencies.
+- Show credit and remaining gifts below the masked account phone in the header,
+  remove the draft heading/balance row, and keep an accessible textarea label.
+- Replace the final receipt details with a green verified icon, queue-admission
+  confirmation and a single History action. Keep failed/uncertain/demo outcomes
+  truthful, with operational details available in message history.
+
+Validation: 511 PostgreSQL tests, 80 frontend tests, TypeScript and an isolated
+production build passed. Browser checks cover autofill/session rotation,
+focus/retry, cross-tab logout, landing navigation, compact receipts and safe
+updates/offline behavior. No real SMS, payment or paid model call was made.
+Local development only; no push or deployment.
+[Verification details](docs/login-compose-refinement.fa.md).
+
 ## 0.14.1 — 2026-10-30 — Codex-managed versioning (local)
 
 ### Changed

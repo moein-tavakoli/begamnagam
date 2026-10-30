@@ -95,6 +95,22 @@ class APITestCase(TestCase):
         self.assertEqual(self.client.get("/api/v1/bootstrap").json()["phone_masked"], "091•••••789")
         self.assertNotIn("09123456789", response.content.decode())
 
+    def test_verified_otp_rotates_cookie_and_bootstrap_stays_authenticated(self):
+        challenge = self.post("/auth/request-otp", {"phone": "09123456789"}).json()
+        anonymous_key = self.client.session.session_key
+        response = self.post("/auth/verify-otp", {
+            "challenge_id": challenge["challenge_id"], "code": challenge["debug_code"],
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["authenticated"])
+        self.assertNotEqual(self.client.session.session_key, anonymous_key)
+        identities = []
+        for _ in range(3):
+            snapshot = self.client.get("/api/v1/bootstrap").json()
+            self.assertTrue(snapshot["authenticated"])
+            identities.append(snapshot["session_identity"])
+        self.assertEqual(len(set(identities)), 1)
+
     def test_otp_is_session_bound_single_use_and_attempts_persist(self):
         challenge = self.post("/auth/request-otp", {"phone": "09123456789"}).json()
         attacker = Client()

@@ -12,8 +12,8 @@ import {
 } from "@/lib/api";
 import {
   isPending,
-  latinDigits,
   normalizePhone,
+  phoneInput,
   validPhone,
 } from "@/lib/format";
 import { useApp } from "./app-provider";
@@ -191,6 +191,19 @@ export function Composer({ onExit }: { onExit?: () => void }) {
     setPreview(null);
     setConsent(false);
     idempotencyKey.current = "";
+  }
+
+  function changeRecipient(raw: string) {
+    const value = phoneInput(raw);
+    if (normalizePhone(value) !== normalizePhone(recipient)) {
+      setPreview(null);
+      setAlternatives([]); setSelectedAlternative(null);
+      setConsent(false);
+      idempotencyKey.current = "";
+    }
+    setRecipient(value);
+    setFields({});
+    setError("");
   }
 
   async function makePreview(event: React.FormEvent) {
@@ -445,21 +458,19 @@ export function Composer({ onExit }: { onExit?: () => void }) {
           {step > 0 && !finished && data?.authenticated && (
             <form className="review-form" aria-labelledby="compose-title" onSubmit={preview ? createOrder : makePreview} noValidate>
               <label htmlFor="quote-recipient">شماره موبایل گیرنده</label>
-              <input id="quote-recipient" type="tel" inputMode="tel" dir="ltr"
+              <input id="quote-recipient" className="phone-number-input" type="tel" inputMode="numeric" dir="ltr"
+                maxLength={11} minLength={11} pattern="09[0-9]{9}"
                 value={recipient}
-                onChange={event => {
-                  const value = latinDigits(event.target.value);
-                  if (normalizePhone(value) !== normalizePhone(recipient)) {
-                    setPreview(null);
-                    setAlternatives([]); setSelectedAlternative(null);
-                    setConsent(false);
-                    idempotencyKey.current = "";
+                onChange={event => changeRecipient(event.target.value)}
+                onPaste={event => {
+                  const input = event.currentTarget;
+                  if (input.readOnly || input.disabled) return;
+                  if (input.selectionStart === 0 && input.selectionEnd === input.value.length) {
+                    event.preventDefault();
+                    changeRecipient(event.clipboardData.getData("text"));
                   }
-                  setRecipient(value);
-                  setFields({});
-                  setError("");
                 }}
-                autoComplete="off" placeholder="0912 345 6789" disabled={busy}
+                autoComplete="off" placeholder="09123456789" disabled={busy}
                 readOnly={!!order}
                 aria-invalid={!!fields.recipient_phone}
                 aria-describedby={fields.recipient_phone ? "quote-recipient-error" : undefined} />

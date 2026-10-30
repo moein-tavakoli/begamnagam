@@ -2,14 +2,12 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { api, ApiError, errorMessage } from "@/lib/api";
-import { latinDigits, normalizePhone, validPhone } from "@/lib/format";
+import { latinDigits, normalizePhone, phoneInput, validPhone } from "@/lib/format";
 import { listenForSmsCode, validOtpCode } from "@/lib/otp-autofill";
 import { useApp } from "./app-provider";
 import { BusyButton, ErrorBox } from "./feedback";
 import { Icon } from "./icons";
 import { OtpCodeInput, type OtpPhase } from "./otp-code-input";
-
-const phoneInput = (value: string) => normalizePhone(value).replace(/[^0-9]/g, "").slice(0, 11);
 
 export function AuthGate({
   purpose = "برای ادامه، شماره خودت را تأیید کن.",
@@ -153,6 +151,7 @@ export function AuthGate({
           <div className="inline-form">
             <input
               id="sender-phone"
+              className="phone-number-input"
               name="tel"
               type="tel"
               inputMode="numeric"

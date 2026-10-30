@@ -10,6 +10,10 @@ export function normalizePhone(value: string): string {
   return digits;
 }
 
+export function phoneInput(value: string): string {
+  return normalizePhone(value).replace(/[^0-9]/g, "").slice(0, 11);
+}
+
 export function validPhone(value: string): boolean {
   return /^09\d{9}$/.test(normalizePhone(value));
 }

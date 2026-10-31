@@ -9,6 +9,36 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.18.0 — 2026-10-31 — Scoped documentation handoff and server release
+
+### Added
+
+- Add `/api/v2/document/login` and a CSRF-protected logout for an active account
+  holding only `core.view_api_documentation`. Staff privileges and a product
+  Account are not needed; product, management and support access remain denied.
+  Preserve existing authorized staff sessions. Anonymous Swagger entry leads
+  to login; schema, guide and assets remain inaccessible without permission.
+- Limit login attempts by address and username, fail closed if the limiter is
+  unavailable, preserve opaque credentials, rotate CSRF at login and expire
+  documentation sessions after eight hours. Permission removal or account
+  deactivation revokes access. The global documentation switch stays off by default.
+- Keep same-origin referrers on the two native documentation form pages so
+  browsers can submit CSRF-protected forms; other private API responses retain
+  no-referrer. Add mobile Persian login and explicit logout controls.
+- Prepare the explicitly authorized dev-to-prod/server release, encrypted
+  backup and restore checks, exact-image tests and a separate documentation
+  credential handoff. [Release procedure](docs/release-v0.18.0.fa.md) and
+  [actual deployment evidence](https://github.com/moein-tavakoli/begamnagam/releases/tag/v0.18.0).
+
+Validation before promotion: 553 tests passed on isolated PostgreSQL 17 and
+Redis 7.4, including 42 API/documentation/client tests. Eighty frontend tests,
+TypeScript, Django/migration/Compose checks and native Next browser checks at
+375px/1440px passed. Browser login uses an account without staff privileges,
+renders all 44 operations, retains keyboard access and the Farsi-Digits font,
+and makes no external schema requests. No real provider call was made.
+Deployment completion and final image/CI/backup evidence are recorded separately;
+this entry alone does not claim that the server release has finished.
+
 ## 0.17.0 — 2026-10-31 — REST integration API and private Swagger (local)
 
 ### Added

@@ -512,6 +512,7 @@ class PrivateDocumentationTests(TestCase):
              '/document/assets/swagger-ui.css', '/document/assets/docs.css', '/document/assets/font.woff2']
 
     def setUp(self):
+        cache.clear()
         self.client = Client()
         self.staff = get_user_model().objects.create_user(username='docs-staff', is_staff=True)
 
@@ -521,16 +522,23 @@ class PrivateDocumentationTests(TestCase):
 
     def test_all_docs_and_assets_are_hidden_for_anonymous_or_unprivileged_staff(self):
         for path in self.paths:
-            self.assertEqual(self.client.get('/api/v2' + path).status_code, 404)
+            self.assertEqual(self.client.get('/api/v2' + path).status_code, 302 if path == '/document' else 404)
         self.client.force_login(self.staff)
         for path in self.paths:
             self.assertEqual(self.client.get('/api/v2' + path).status_code, 404)
 
-    def test_permission_alone_without_staff_status_is_not_sufficient(self):
+    def test_documentation_permission_does_not_require_or_grant_staff_access(self):
         self.grant()
         get_user_model().objects.filter(pk=self.staff.pk).update(is_staff=False)
         for path in self.paths:
-            self.assertEqual(self.client.get('/api/v2' + path).status_code, 404)
+            response = self.client.get('/api/v2' + path)
+            self.assertEqual(response.status_code, 200)
+            if response.streaming:
+                b''.join(response.streaming_content)
+        self.assertEqual(self.client.get('/api/v2/me').status_code, 401)
+        self.assertEqual(self.client.get('/api/v1/manage/support/summary').status_code, 403)
+        self.assertEqual(self.client.get('/api/v1/manage/dashboard').status_code, 403)
+        self.assertEqual(self.client.get('/admin/').status_code, 302)
 
     def test_enabled_scoped_staff_access_and_disabled_gate(self):
         self.grant()
@@ -553,6 +561,65 @@ class PrivateDocumentationTests(TestCase):
             call_command('export_api_schema', stdout=output)
         self.assertEqual(json.loads(output.getvalue()), specification())
         self.assertEqual(self.client.get('/api/v2/document/openapi.json').status_code, 404)
+
+    def docs_login(self, *, permission=True, staff=False):
+        user = get_user_model().objects.create_user('frontend-documentation', password='opaque-docs-۰123-password', is_staff=staff)
+        if permission:
+            user.user_permissions.add(Permission.objects.get(codename='view_api_documentation'))
+        client = Client(enforce_csrf_checks=True)
+        self.assertEqual(client.get('/api/v2/document/login').status_code, 200)
+        self.assertEqual(client.get('/api/v2/document/login')['Referrer-Policy'], 'same-origin')
+        return user, client
+
+    def test_documentation_login_csrf_rotation_scoped_account_and_logout(self):
+        user, client = self.docs_login()
+        credentials = {'username': user.username, 'password': 'opaque-docs-۰123-password'}
+        self.assertEqual(client.post('/api/v2/document/login', credentials).status_code, 403)
+        old = client.cookies['csrftoken'].value
+        result = client.post('/api/v2/document/login?next=https://external.invalid', credentials, HTTP_X_CSRFTOKEN=old)
+        self.assertEqual(result.status_code, 303)
+        self.assertEqual(result['Location'], '/api/v2/document')
+        self.assertNotEqual(old, client.cookies['csrftoken'].value)
+        self.assertLessEqual(client.session.get_expiry_age(), 8*3600)
+        self.assertFalse(Account.objects.filter(user=user).exists())
+        self.assertEqual(client.get('/api/v2/document').status_code, 200)
+        self.assertEqual(client.get('/api/v2/document')['Referrer-Policy'], 'same-origin')
+        self.assertEqual(client.get('/api/v2/document/openapi.json')['Referrer-Policy'], 'no-referrer')
+        self.assertEqual(client.get('/api/v2/me').status_code, 401)
+        self.assertEqual(client.post('/api/v2/document/logout').status_code, 403)
+        result = client.post('/api/v2/document/logout', HTTP_X_CSRFTOKEN=client.cookies['csrftoken'].value)
+        self.assertEqual(result.status_code, 303)
+        self.assertEqual(client.get('/api/v2/document/openapi.json').status_code, 404)
+
+    def test_documentation_login_does_not_grant_access_without_permission(self):
+        user, client = self.docs_login(permission=False, staff=True)
+        result = client.post('/api/v2/document/login', {'username': user.username, 'password': 'opaque-docs-۰123-password'},
+                             HTTP_X_CSRFTOKEN=client.cookies['csrftoken'].value)
+        self.assertEqual(result.status_code, 403)
+        self.assertNotIn('_auth_user_id', client.session)
+
+    def test_documentation_login_is_disabled_with_the_global_switch(self):
+        with override_settings(API_DOCUMENTATION_ENABLED=False):
+            self.assertEqual(self.client.get('/api/v2/document/login').status_code, 404)
+
+    def test_documentation_access_is_revoked_by_permission_removal_or_deactivation(self):
+        self.grant()
+        self.staff.user_permissions.clear()
+        self.assertEqual(self.client.get('/api/v2/document/openapi.json').status_code, 404)
+        self.staff.user_permissions.add(Permission.objects.get(codename='view_api_documentation'))
+        get_user_model().objects.filter(pk=self.staff.pk).update(is_active=False)
+        self.assertEqual(self.client.get('/api/v2/document/openapi.json').status_code, 404)
+
+    def test_documentation_login_throttles_and_fails_closed_on_cache_failure(self):
+        _, client = self.docs_login()
+        csrf = client.cookies['csrftoken'].value
+        with patch('core.api_v2.documentation.authenticate', return_value=None):
+            for _ in range(10):
+                self.assertEqual(client.post('/api/v2/document/login', {'username': 'unknown', 'password': 'invalid'}, HTTP_X_CSRFTOKEN=csrf).status_code, 403)
+            self.assertEqual(client.post('/api/v2/document/login', {'username': 'unknown', 'password': 'invalid'}, HTTP_X_CSRFTOKEN=csrf).status_code, 429)
+        cache.clear()
+        with patch('core.services.cache.add', side_effect=RuntimeError('cache down')):
+            self.assertEqual(client.post('/api/v2/document/login', {'username': 'unknown', 'password': 'invalid'}, HTTP_X_CSRFTOKEN=csrf).status_code, 503)
 
     def test_schema_and_swagger_have_no_external_validator_or_asset_dependency(self):
         self.grant()

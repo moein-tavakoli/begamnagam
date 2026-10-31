@@ -41,6 +41,8 @@ urlpatterns = [
     path('recipient-capabilities/preference', views.recipient_preferences),
     path('recipient-reports', views.recipient_reports),
     path('document', documentation.swagger),
+    path('document/login', documentation.login_view),
+    path('document/logout', documentation.logout_view),
     path('document/openapi.json', documentation.schema),
     path('document/guide', documentation.guide),
     path('document/client.py', documentation.client_example),

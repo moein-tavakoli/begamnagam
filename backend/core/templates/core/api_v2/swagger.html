@@ -20,6 +20,9 @@
       <a href="/api/v2/document/guide">راهنمای گام‌به‌گام فارسی</a>
       <a href="/api/v2/document/openapi.json" download="begamnagam-openapi.json">دریافت OpenAPI</a>
       <a href="/api/v2/document/client.py" download="begamnagam-client.py">نمونهٔ کلاینت پایتون</a>
+      <form action="/api/v2/document/logout" method="post">
+        {% csrf_token %}<button type="submit">خروج از مستندات</button>
+      </form>
     </nav>
     <p>اجرای درخواست از همین نشست انجام می‌شود. برای آزمایش محصول، حساب باید شمارهٔ تأییدشده داشته باشد؛ ورود و خروج می‌توانند دسترسی همین صفحه را تغییر دهند. اقدامات واقعی تابع تنظیمات همان محیط‌اند.</p>
   </header>

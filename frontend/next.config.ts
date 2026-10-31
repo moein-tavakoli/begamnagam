@@ -65,6 +65,10 @@ const config: NextConfig = {
         ],
       },
       { source: "/admin/:path*", headers: [{ key: "Referrer-Policy", value: "same-origin" }] },
+      ...["/api/v2/document", "/api/v2/document/login"].map(source => ({
+        source,
+        headers: [{ key: "Referrer-Policy", value: "same-origin" }],
+      })),
     ];
   },
 };

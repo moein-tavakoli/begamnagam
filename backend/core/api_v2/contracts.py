@@ -195,6 +195,36 @@ def page(name):
 for _name in ('Category', 'Example', 'Package', 'Message', 'Purchase', 'Topup', 'Invitation', 'WalletEntry', 'CreditEntry'):
     SCHEMAS[_name + 'Page'] = page(_name)
 
+BOT_ID = string(pattern='^[1-9][0-9]{0,19}$', example='777', description='Canonical decimal provider ID as a string; never a username.')
+BOT_STEP = string(enum=['start', 'awaiting_phone', 'awaiting_otp', 'menu', 'awaiting_category',
+    'awaiting_recipient', 'awaiting_text', 'awaiting_tone', 'awaiting_confirmation', 'submitting', 'receipt', 'support'])
+SCHEMAS.update({
+    'BotFlowData': obj({'recipient_phone': PHONE, 'text': TEXT, 'category': string(maxLength=32),
+        'source_mode': string(enum=['suggestion', 'freeform']), 'message_tone': TONE,
+        'preview_id': UUID, 'message_id': UUID, 'idempotency_key': UUID, 'challenge_id': UUID,
+        'last_message_id': BOT_ID, 'last_notified_status': STATUS}, [], closed=True),
+    'BotIdentityInput': obj({'user_id': BOT_ID, 'chat_id': BOT_ID, 'chat_type': string(enum=['private'])}, closed=True),
+    'BotConversation': obj({'id': UUID, 'platform': string(enum=['telegram', 'bale']), 'bot_id': BOT_ID,
+        'user_id': BOT_ID, 'chat_id': BOT_ID, 'account_id': string(nullable=True), 'step': BOT_STEP,
+        'resume_action': string(enum=['authenticate', 'enter_otp', 'continue', 'refresh_preview', 'reconcile_message']),
+        'data': ref('BotFlowData'), 'revision': integer(minimum=0), 'state_expires_at': NULL_DATE}),
+    'BotStateInput': obj({'expected_revision': integer(minimum=0),
+        'event_id': string(minLength=1, maxLength=128, pattern='^[A-Za-z0-9:_-]+$',
+            description='Stable operation id, e.g. provider update_id plus checkpoint name. Never include private text.'),
+        'step': BOT_STEP, 'data': ref('BotFlowData')}, closed=True),
+    'BotResetInput': obj({'expected_revision': integer(minimum=0),
+        'event_id': string(minLength=1, maxLength=128, pattern='^[A-Za-z0-9:_-]+$')}, closed=True),
+    'BotResume': obj({'conversation': ref('BotConversation'), 'session': ref('Session'), 'session_restored': BOOL}),
+    'BotCheckpoint': obj({'conversation': ref('BotConversation'), 'applied': BOOL}),
+    'BotConversationSummary': obj({'id': UUID, 'user_id': BOT_ID, 'chat_id': BOT_ID,
+        'account_id': string(nullable=True), 'step': BOT_STEP, 'revision': integer(minimum=0),
+        'state_expires_at': NULL_DATE, 'created_at': DATE, 'last_seen_at': DATE}),
+})
+SCHEMAS['BotConversationSummaryPage'] = page('BotConversationSummary')
+SCHEMAS['BotIdentityInput']['example'] = {'user_id': '777', 'chat_id': '888', 'chat_type': 'private'}
+SCHEMAS['BotStateInput']['example'] = {'expected_revision': 0, 'event_id': '12345:recipient',
+    'step': 'awaiting_text', 'data': {'recipient_phone': '09901234567', 'message_tone': 'polite'}}
+
 PAGE_QUERY = {'limit': integer(minimum=1, maximum=50, default=20), 'cursor': string(maxLength=2048)}
 
 
@@ -229,9 +259,9 @@ def valid(value, schema):
     return True
 
 
-def operation(identifier, tag, summary, response, *, request=None, auth=True, key=False, status=200, query=None, description=''):
+def operation(identifier, tag, summary, response, *, request=None, auth=True, bot=False, key=False, status=200, query=None, description=''):
     return dict(identifier=identifier, tag=tag, summary=summary, response=response, request=request,
-                auth=auth, key=key, status=status, query=query or {}, description=description)
+                auth=auth, bot=bot, key=key, status=status, query=query or {}, description=description)
 
 
 def resource(**operations):
@@ -244,6 +274,9 @@ def resource(**operations):
                 response['Allow'] = ', '.join(key.upper() for key in operations)
                 return response
             spec = operations[method]
+            if spec['bot']:
+                from core.bot_conversations import authenticate_bot
+                request.bot_integration = authenticate_bot(request)
             if spec['auth'] and (not is_product_authenticated(request.user) or not request.user.is_active):
                 raise APIError('authentication_required', 'ابتدا شمارهٔ خودت را تأیید کن.', 401)
             if spec['auth']:

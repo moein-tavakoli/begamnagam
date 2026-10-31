@@ -9,6 +9,42 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.19.0 — 2026-10-31 — Persistent Telegram/Bale conversations (local)
+
+### Added
+
+- Persist each platform/bot/user identity, private chat routing, OTP-verified
+  Account link and encrypted session reference. Restore the same valid session
+  after bot restart without retaining a local cookie file; issue fresh CSRF.
+  Keep accounts/credits shared across platforms and sessions isolated. Expired
+  or revoked authentication requires OTP; account changes clear the old draft.
+- Add six bot operations to the private Swagger contract (50 total): discover
+  scoped conversations with signed keyset pages, resolve/resume an identity,
+  read it, replace/reset a stage and unlink its account. Record bounded,
+  encrypted checkpoints with revision checks and deduplicated event ids.
+  Return explicit instructions for expired OTP/previews and send reconciliation.
+- Issue, rotate and disable scoped adapter credentials through the audited
+  `manage_bot_integration` command. Store only secret digests; require the
+  current adapter key on every bot-owned session request, including ordinary
+  product calls. Preserve CSRF, verified-phone access and provider controls;
+  bot cookies cannot access v1, admin or documentation routes.
+- Extend the standard-library client with persistence APIs and private-update
+  identity parsers for both platforms. Document provisioning, restart discovery,
+  account verification, exact retry keys and UI receipt deduplication. Retain
+  drafts for 24 hours, prune idle/deleted identities and sessions after 30 days,
+  and include the four encrypted bot fields in hardened restore validation.
+
+Validation: 583 backend tests passed on isolated native PostgreSQL 14.18 and
+Redis 8.10.2, including 30 bot tests, concurrency races, new-process HTTP
+recovery for both platforms, revoked/expired sessions, lost reservation responses
+and single-credit/outbox assertions. The official OpenAPI 3.0 meta-schema and
+all 50 operations' exercised response contracts passed. Eighty frontend tests,
+TypeScript, Django/migration/Compose configuration checks and native Next browser
+checks at 375px/1440px passed; private docs stayed protected with no external
+requests. Docker daemon was unavailable; no Compose build or PostgreSQL 17/
+Redis 7.4 container acceptance was claimed. No real provider calls, live bot
+webhook activation, push or server deployment occurred. Local release only.
+
 ## 0.18.0 — 2026-10-31 — Scoped documentation handoff and server release
 
 ### Added

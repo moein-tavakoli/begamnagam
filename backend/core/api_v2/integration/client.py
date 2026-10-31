@@ -1,8 +1,8 @@
 """Standard-library client for a single frontend/bot user; no calls at import.
 
 Create one instance/cookie jar per (platform, bot_id, messenger_user_id). Serialize
-calls for that identity. Persist cookies and flow state in encrypted server-side
-storage in a real adapter; never use one global authenticated instance.
+calls for that identity. With bot_key, resume_conversation restores the server's
+durable session after restart; never use one global authenticated instance.
 """
 import http.cookiejar
 import json
@@ -27,8 +27,35 @@ class NoRedirect(HTTPRedirectHandler):
         return None
 
 
+def private_update_identity(platform, update):
+    """Extract routing IDs *after* the adapter has authenticated the update source.
+
+    Only new private messages and private-message callbacks are supported. This
+    parser does not verify a webhook, a phone, account ownership or consent.
+    """
+    if platform not in {'telegram', 'bale'} or not isinstance(update, dict):
+        raise ValueError('Unsupported platform or update.')
+    callback = update.get('callback_query')
+    message = update.get('message')
+    if callback is not None:
+        if not isinstance(callback, dict) or message is not None:
+            raise ValueError('Ambiguous update.')
+        message, sender = callback.get('message'), callback.get('from')
+    else:
+        sender = message.get('from') if isinstance(message, dict) else None
+    chat = message.get('chat') if isinstance(message, dict) else None
+    if not isinstance(sender, dict) or not isinstance(chat, dict) or chat.get('type') != 'private' or sender.get('is_bot'):
+        raise ValueError('A private user update is required.')
+    values = {'user_id': sender.get('id'), 'chat_id': chat.get('id'),
+              'update_id': update.get('update_id'), 'message_id': message.get('message_id')}
+    for name, value in values.items():
+        if type(value) is not int or value < (0 if name == 'update_id' else 1) or value >= 10**20:
+            raise ValueError('Invalid canonical provider ID.')
+    return {key: str(value) for key, value in values.items()}
+
+
 class BotAPI:
-    def __init__(self, base_url, *, cookie_jar=None, require_real_otp=True, require_real_delivery=True, timeout=35):
+    def __init__(self, base_url, *, cookie_jar=None, bot_key=None, require_real_otp=True, require_real_delivery=True, timeout=35):
         parsed = urlsplit(base_url)
         if (parsed.scheme not in {'https', 'http'} or not parsed.hostname or parsed.username or parsed.password
                 or parsed.query or parsed.fragment or parsed.path.rstrip('/') != '/api/v2'
@@ -38,6 +65,8 @@ class BotAPI:
         self.jar = cookie_jar if cookie_jar is not None else http.cookiejar.CookieJar()
         self.opener = build_opener(HTTPCookieProcessor(self.jar), NoRedirect())
         self.csrf_token = None
+        self.bot_key = bot_key
+        self.conversation_id = None
         self.require_real_otp = require_real_otp
         self.require_real_delivery = require_real_delivery
         self.timeout = timeout
@@ -46,6 +75,8 @@ class BotAPI:
         if not path.startswith('/') or path.startswith('//') or '?' in path or '#' in path or '..' in path:
             raise ValueError('Pass an API resource path and a separate query mapping.')
         headers = {'Accept': 'application/json'}
+        if self.bot_key:
+            headers['X-Bot-Key'] = self.bot_key
         unsafe = method.upper() not in {'GET', 'HEAD', 'OPTIONS'}
         if unsafe:
             if self.csrf_token is None:
@@ -85,6 +116,40 @@ class BotAPI:
 
     def bootstrap(self):
         return self.call('GET', '/bootstrap')
+
+    def resume_conversation(self, user_id, chat_id):
+        if not self.bot_key:
+            raise ValueError('A private adapter key is required; never use the vendor bot token.')
+        result = self.call('POST', '/bot/conversations/resolutions',
+            {'user_id': str(user_id), 'chat_id': str(chat_id), 'chat_type': 'private'})
+        self.conversation_id = result['conversation']['id']
+        return result
+
+    def conversations(self, *, cursor=None, limit=20, step=None):
+        if not self.bot_key:
+            raise ValueError('A private adapter key is required.')
+        query = {'limit': limit}
+        query.update({name: value for name, value in {'cursor': cursor, 'step': step}.items() if value is not None})
+        return self.call('GET', '/bot/conversations', query=query)
+
+    def _conversation_path(self):
+        if self.conversation_id is None:
+            raise ValueError('Resume this identity first.')
+        return '/bot/conversations/' + self.conversation_id
+
+    def conversation(self):
+        return self.call('GET', self._conversation_path())
+
+    def save_state(self, *, revision, event_id, step, data):
+        return self.call('PUT', self._conversation_path() + '/state',
+            {'expected_revision': revision, 'event_id': str(event_id), 'step': step, 'data': data})
+
+    def reset_state(self, *, revision, event_id):
+        return self.call('DELETE', self._conversation_path() + '/state',
+            {'expected_revision': revision, 'event_id': str(event_id)})
+
+    def unlink_account(self):
+        return self.call('DELETE', self._conversation_path() + '/account', {})
 
     def request_otp(self, phone):
         state = self.refresh_session()

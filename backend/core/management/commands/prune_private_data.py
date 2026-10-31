@@ -3,6 +3,10 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
+from importlib import import_module
+from django.conf import settings
+from core.bot_conversations import reset_state
+from core.models import BotConversation, BotConversationEvent
 from core.models import Account, AbuseReport, ModerationAudit, OTPChallenge, Order, Preview, RecipientState, RecipientGrant, OperatorAudit, Invitation, InvitationSend, RewriteUsage, SupportMessage
 
 
@@ -45,7 +49,22 @@ class Command(BaseCommand):
                     invitation.sends.update(full_sms='')
             support = SupportMessage.objects.filter(Q(created_at__lt=now-timedelta(days=90)) | Q(conversation__account__deletion_requested_at__lt=now-timedelta(days=30))).filter(redacted_at__isnull=True)
             counts['support_redacted'] = support.count()
+            bot_conversations = BotConversation.objects.filter(Q(last_seen_at__lt=now-timedelta(days=30)) |
+                Q(account__deletion_requested_at__lt=now-timedelta(days=30)))
+            bot_states = BotConversation.objects.filter(state_expires_at__lte=now)
+            counts['bot_conversations_deleted'] = bot_conversations.count()
+            counts['bot_states_cleared'] = bot_states.count()
+            counts['bot_events_deleted'] = BotConversationEvent.objects.filter(created_at__lt=now-timedelta(days=1)).count()
             if not options['dry_run']:
+                store = import_module(settings.SESSION_ENGINE).SessionStore
+                for conversation in bot_conversations.select_for_update(of=('self',)).iterator(chunk_size=200):
+                    if conversation.session_key:
+                        store().delete(conversation.session_key)
+                    conversation.delete()
+                for conversation in bot_states.select_for_update().iterator(chunk_size=200):
+                    reset_state(conversation, 'menu' if conversation.account_id else 'awaiting_phone')
+                    conversation.save(update_fields=['step', 'data', 'revision', 'state_expires_at'])
+                BotConversationEvent.objects.filter(created_at__lt=now-timedelta(days=1)).delete()
                 support.update(text='', redacted_at=now)
                 otp.delete()
                 previews.delete()

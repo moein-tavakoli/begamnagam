@@ -1,11 +1,16 @@
 from django.urls import path
 
-from . import documentation, views
+from . import bots, documentation, views
 
 app_name = 'api_v2'
 urlpatterns = [
     path('session', views.session),
     path('bootstrap', views.bootstrap),
+    path('bot/conversations', bots.conversations),
+    path('bot/conversations/resolutions', bots.resolve),
+    path('bot/conversations/<uuid:conversation_id>', bots.conversation),
+    path('bot/conversations/<uuid:conversation_id>/state', bots.state),
+    path('bot/conversations/<uuid:conversation_id>/account', bots.account),
     path('auth/otp-challenges', views.otp_challenges),
     path('auth/sessions', views.sessions),
     path('me', views.me),

@@ -9,6 +9,47 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.17.0 — 2026-10-31 — REST integration API and private Swagger (local)
+
+### Added
+
+- Provide 44 documented operations under `/api/v2` for frontend and Telegram/
+  Bale adapters: OTP/session, getMe, credit summary, catalog, destination
+  normalization, sealed preview creation/retrieval, credit reservation,
+  idempotent submission, receipts/history, packages, wallet/topups/ledgers,
+  transfer receipts, invitations/rewards, receiving preferences, support,
+  recipient capabilities/reports and account redaction requests. Preserve v1.
+- Share the executable request/route definitions with an OpenAPI 3.0 contract;
+  validate field types, query parameters, consent and idempotency keys before
+  forwarding mutations to the existing product services. Keep per-user sessions,
+  CSRF, phone verification, moderation, provider controls and recipient privacy.
+- Add `/api/v2/document`, protected schema/guide/client/assets and an offline
+  `export_api_schema` command. Documentation defaults off, requires active staff
+  with `core.view_api_documentation`, and returns 404 otherwise. Migration 0036
+  defines this permission without assigning it. Vendor integrity-verified,
+  licensed Swagger UI assets; use no external CDN or schema validator.
+- Include a Persian walkthrough and standard-library client with separate
+  cookie jars, real-provider guards, explicit consent, stored retry keys and
+  Telegram/Bale adapter guidance. Add the v2 Next.js proxy and verify that
+  service workers do not intercept the API or its private documentation.
+
+### Performance
+
+- Bound history pages to 50 with signed cursors tied to the owner, resource and
+  filter. Fetch receipt relations in four queries per page of messages funded
+  by credit, instead of querying payments, refunds and delivery for each row.
+
+Validation: 548 tests passed on isolated PostgreSQL 17 and Redis 7.4, including
+37 new integration/documentation/client tests and existing concurrency checks;
+80 frontend tests, TypeScript, migration consistency and Compose config passed.
+The official OpenAPI meta-schema and all 44 operations' exercised responses
+passed contract checks. Browser checks through native Next dev at 375px/1440px
+passed: all operations rendered, local Farsi-Digits font, keyboard expansion,
+no overflow, no console errors/external requests and anonymous docs denied.
+No real OTP/SMS/payment/AI call, product-data mutation, bot webhook activation,
+push or server deployment occurred. Local release only; messenger adapter
+deployment and live Telegram/Bale acceptance remain separate work.
+
 ## 0.16.2 — 2026-10-30 — Evidence-backed iTools product introduction
 
 ### Documentation

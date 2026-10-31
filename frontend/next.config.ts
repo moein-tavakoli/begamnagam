@@ -22,6 +22,7 @@ const config: NextConfig = {
   async rewrites() {
     return [
       { source: "/api/v1/:path*", destination: `${apiOrigin}/api/v1/:path*` },
+      { source: "/api/v2/:path*", destination: `${apiOrigin}/api/v2/:path*` },
       { source: "/admin/:path*", destination: `${apiOrigin}/admin/:path*/` },
       {
         source: "/static/admin/:path*",

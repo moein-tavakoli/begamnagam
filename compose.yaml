@@ -2,6 +2,7 @@ name: begamnagam
 
 x-backend-environment: &backend-environment
   DEBUG: "0"
+  API_DOCUMENTATION_ENABLED: ${API_DOCUMENTATION_ENABLED:-0}
   DEMO_MODE: "1"
   DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY in the private .env}
   PHONE_HASH_KEY: ${PHONE_HASH_KEY:?Set PHONE_HASH_KEY in the private .env}

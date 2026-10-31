@@ -227,6 +227,7 @@ CI روی GitHub برای push و pull request روی `dev` و `prod`، تست �
 - [قیمت‌گذاری و اقتصاد هر پیام](docs/pricing.md)
 - [حریم خصوصی و جلوگیری از سوءاستفاده](docs/privacy-safety.md)
 - [قرارداد API](docs/api.md)
+- [API فرانت و ربات تلگرام/بله و Swagger خصوصی](docs/bot-api.fa.md)
 - [راهنمای اجرا، رفع اشکال و بازیابی](docs/operations.md)
 - [مراجع رسمی فنی](docs/references.md)
 - [سئو، متاتگ‌ها، اشتراک‌گذاری و اعتبارسنجی JSON-LD](docs/seo.md)

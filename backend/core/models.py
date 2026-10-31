@@ -70,6 +70,7 @@ class Account(models.Model):
 
     class Meta:
         permissions = [('suspend_account', 'Suspend or resume product senders'),
+                       ('view_api_documentation', 'View private integration API documentation'),
                        ('manage_test_sending', 'Manage unlimited simulated sending for individual accounts'),
                        ('manage_message_tone', 'Manage respectful direct message tone for individual accounts'),
                        ('manage_account_limits', 'Manage individual sender and rewrite count limits')]

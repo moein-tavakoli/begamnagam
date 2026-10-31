@@ -1,0 +1,10 @@
+@font-face{font-family:VazirmatnFD;src:url('/api/v2/document/assets/font.woff2') format('woff2');font-display:swap}
+body{margin:0;background:#fafafa;color:#172332;font-family:VazirmatnFD,sans-serif;line-height:1.7}
+header{max-width:1360px;margin:auto;padding:24px 20px}h1{font-size:24px;margin:0 0 12px}
+nav{display:flex;gap:12px;flex-wrap:wrap}nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 12px;background:#e6edf5;border-radius:6px;color:#143f75}
+a:focus-visible,button:focus-visible{outline:3px solid #175cd3;outline-offset:3px}
+.skip{position:absolute;top:-100px;right:12px}.skip:focus{top:8px;background:white;padding:12px;z-index:1000}
+.swagger-ui,.swagger-ui *{font-family:VazirmatnFD,monospace!important}
+.swagger-ui .wrapper{padding:0 20px}.swagger-ui pre,.swagger-ui .highlight-code{max-width:100%;overflow:auto}
+@media(max-width:480px){header{padding:16px}h1{font-size:21px}.swagger-ui .wrapper{padding:0 12px}.swagger-ui .opblock .opblock-summary{flex-wrap:wrap;gap:6px}.swagger-ui .opblock .opblock-summary-path{max-width:100%;overflow-wrap:anywhere}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}

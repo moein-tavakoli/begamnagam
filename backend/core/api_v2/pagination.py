@@ -11,9 +11,9 @@ from core.services import APIError
 SALT = 'begamnagam.api-v2.cursor.v1'
 
 
-def paginate(request, rows, serialize, scope, *, serialize_many=None):
+def paginate(request, rows, serialize, scope, *, serialize_many=None, owner_identity=None):
     limit = request.api_query.get('limit', 20)
-    owner = digest('api-cursor:' + str(request.user.pk))
+    owner = digest('api-cursor:' + (str(request.user.pk) if owner_identity is None else owner_identity))
     cursor = request.api_query.get('cursor')
     if cursor:
         try:

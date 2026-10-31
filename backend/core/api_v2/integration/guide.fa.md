@@ -1,9 +1,9 @@
 # راهنمای اتصال فرانت و ربات تلگرام/بله به بگم نگم
 
 قرارداد جدید: `/api/v2`، بدون اسلش پایانی. مسیرهای فعلی `/api/v1` برای وب‌اپ
-حفظ شده‌اند. این راهنما قرارداد اپلیکیشن است؛ اتصال حساب ربات، webhook و
-ارسال پیام داخل پیام‌رسان هنوز باید در adapter جدا پیاده شود. هیچ ربات یا
-webhook عمومی در این تغییر فعال نشده است.
+حفظ شده‌اند. ذخیرهٔ هویت تلگرام/بله، اتصال حساب پس از OTP، نشست قابل بازیابی
+و مرحلهٔ مکالمه در بک‌اند پیاده شده است. دریافت update معتبر و ارسال پاسخ داخل
+پیام‌رسان در adapter جدا انجام می‌شود؛ هیچ ربات یا webhook عمومی خودکار فعال نمی‌شود.
 
 ## دسترسی خصوصی و تحویل موقت مستندات
 
@@ -81,7 +81,194 @@ Account تلفنی باشد. ورود OTP یا خروج در Swagger ممکن ا
 `(platform, bot_id, from_user_id)`؛ مثلاً `telegram` و `bale` namespace جدا
 دارند. شناسهٔ کاربر را از متن پیام، callback_data یا شمارهٔ ورودی نگیرید.
 ورود فقط در چت خصوصی باشد. هر هویت، cookie jar و قفل اجرای جدا دارد؛ یک
-کلاینت واردشدهٔ سراسری همهٔ کاربران را صاحب همان حساب می‌کند.
+کلاینت واردشدهٔ سراسری همهٔ کاربران را صاحب همان حساب می‌کند. ادامهٔ این بخش
+روش ماندگار را توضیح می‌دهد؛ برای وب‌اپ معمولی همان cookie/CSRF کافی است.
+
+### آماده‌سازی یک‌بارهٔ کلید اختصاصی هر ربات
+
+اپراتور در محیط خصوصی بک‌اند و پس از مهاجرت `0037`، برای هر پیام‌رسان یک
+integration می‌سازد. `bot-id` شناسهٔ عددی خود ربات در همان پیام‌رسان است،
+نه username. خروجی شامل کلید محرمانه است؛ فقط در فایل/secret store خصوصی
+adapter نگهداری شود و در لاگ CI، چت، کد فرانت یا Git قرار نگیرد:
+
+```sh
+umask 077
+python manage.py manage_bot_integration --platform telegram --bot-id 123456 > /private/telegram-api-key.json
+python manage.py manage_bot_integration --platform bale --bot-id 654321 > /private/bale-api-key.json
+```
+
+دایرکتوری `/private` نمونه است؛ مسیر موجود با دسترسی محدود خودتان را انتخاب کنید.
+فیلد `api_key` خروجی در header `X-Bot-Key` **تمام درخواست‌های نشست ربات**
+ارسال می‌شود. این کلید با توکن BotFather تلگرام/بله و رمز Swagger فرق دارد؛
+توکن پیام‌رسان به API بگم‌نگم ارسال نمی‌شود. مجوز مستندات هم مجوز ساخت یا
+استفاده از integration نیست. ایجاد کلید هیچ provider، پرداخت یا webhookی را فعال نمی‌کند.
+
+چرخش با همان گزینه‌ها و `--rotate` کلید تازه صادر می‌کند و کلید قبلی فوراً
+نامعتبر می‌شود. `--disable` دسترسی آن ربات، حتی با cookie قبلی، را می‌بندد.
+بعد از بررسی علت، `--rotate` ربات غیرفعال را با کلید جدید فعال می‌کند.
+کلیدها فقط به‌شکل digest ذخیره می‌شوند؛ ایجاد/چرخش/غیرفعال‌سازی audit دارد.
+
+### بازیابی بعد از ری‌استارت، بدون فایل cookie روی ربات
+
+ابتدا یک کلاینت/cookie jar خالی برای همان هویت بسازید و `GET /session` را
+برای cookie و CSRF بزنید. سپس:
+
+```http
+POST /api/v2/bot/conversations/resolutions
+X-Bot-Key: <private adapter key>
+X-CSRFToken: <from GET /session>
+Cookie: <this identity's anonymous cookie jar>
+Content-Type: application/json
+
+{"user_id":"777","chat_id":"888","chat_type":"private"}
+```
+
+سرور platform و bot را از کلید تشخیص می‌دهد؛ `platform`، `bot_id`، شماره یا
+`account_id` در بدنه پذیرفته نمی‌شود. شناسه‌ها رشتهٔ عددی ASCII هستند و باید
+از `from.id` و `message.chat.id` در update معتبر بیایند؛ username، متن کاربر
+یا callback_data مدرک هویت نیستند. در callback، فرستنده از `callback_query.from`
+و چت از `callback_query.message.chat` می‌آید. کلاینت نمونه، parser جداگانهٔ
+`private_update_identity(platform, update)` برای message/callback خصوصی دارد؛
+این parser **منبع webhook را تأیید نمی‌کند**. adapter ابتدا باید منبع update
+را با روش رسمی همان پلتفرم احراز کند. گروه، کانال، edited_message و پیام ربات
+در parser ورود پذیرفته نمی‌شوند. فرض یکسان‌بودن روش تأیید webhook دو پلتفرم نکنید.
+
+پاسخ نمونه:
+
+```json
+{
+  "conversation": {
+    "id":"11111111-1111-4111-8111-111111111111", "platform":"telegram", "bot_id":"123456",
+    "user_id":"777", "chat_id":"888", "account_id":null,
+    "step":"start", "data":{}, "revision":0, "state_expires_at":null,
+    "resume_action":"authenticate"
+  },
+  "session":{"authenticated":false,"csrf_token":"...","recent_auth":false,
+    "expires_in":604800,"otp_length":4,"demo_mode":false,"otp_is_real":true},
+  "session_restored":false
+}
+```
+
+`Set-Cookie` پاسخ و CSRF تازه را جایگزین کنید؛ `conversation.id`، مرحله و
+دادهٔ ذخیره‌شده برمی‌گردند. اگر نشست معتبر قبلی موجود باشد، همان حساب بدون
+OTP تازه بازیابی می‌شود. ورود OTP فقط یک بار در نشست همان مکالمه انجام و
+اتصال حساب خودکار ثبت می‌شود؛ endpoint اتصال به account دلخواه وجود ندارد.
+پس از انقضا، تغییر رمز، غیرفعال‌شدن حساب یا خروج، هویت پیام‌رسان مجوز ورود
+مجدد نیست؛ OTP لازم و پیش‌نویس وابسته به حساب قبلی پاک می‌شود. تلگرام و بله
+نشست‌های جدا دارند، ولی پس از ورود با همان شماره به یک Account و اعتبار مشترک می‌رسند.
+
+کلاینت یک هویت را برای هویت دیگر استفاده نکنید؛ سرور تغییر user/chat در
+نشست موجود و نسبت‌دادن یک چت خصوصی به دو کاربر را با `409` رد می‌کند.
+بعد از resolution، cookie ربات فقط روی API عملیاتی v2 و همراه کلید همان
+integration معتبر است؛ برای وب‌اپ، ادمین، v1 یا مستندات استفاده نشود.
+
+### API مرحلهٔ مکالمه و جلوگیری از بازنویسی هم‌زمان
+
+| مسیر | کاربرد |
+| --- | --- |
+| `GET /bot/conversations?step=submitting&limit=20` | کشف مکالمه‌های همین ربات پس از ری‌استارت، برای پیگیری قبلی‌ها |
+| `POST /bot/conversations/resolutions` | ایجاد/بازیابی هویت و نشست پس از ری‌استارت |
+| `GET /bot/conversations/{id}` | خواندن هویت، اتصال حساب، مرحله و اقدام لازم |
+| `PUT /bot/conversations/{id}/state` | ذخیرهٔ اتمیک مرحله با revision و event_id |
+| `DELETE /bot/conversations/{id}/state` | پاک‌کردن مرحله با حفظ ورود و اتصال حساب |
+| `DELETE /bot/conversations/{id}/account` | خروج، قطع اتصال همان ربات و پاک‌کردن پیش‌نویس |
+
+همهٔ این مسیرها زیر `/api/v2` هستند. مسیرهای دارای `{id}` فقط با کلید و
+cookie همان مکالمه کار می‌کنند؛ تغییر UUID به هویت دیگر `404` می‌گیرد.
+هر درخواست تغییردهنده همچنان JSON و CSRF می‌خواهد.
+
+فهرست مکالمه‌ها فقط کلید adapter لازم دارد، cookie نمی‌خواهد و متن/شمارهٔ
+مقصد/نشست را نشان نمی‌دهد. `step` اختیاری است؛ صفحه‌بندی `limit` و `cursor`
+امضاشده، پیش‌فرض۲۰و حداکثر۵۰است و به همین integration و فیلتر متصل است.
+بعد از ری‌استارت، `submitting` و `receipt` را برای تطبیق نتایج قبلی بخوانید؛
+برای هر user_id/chat_id برگشتی، کلاینت جدا بسازید و resolution بزنید. هیچ
+فهرست یا resumeای خودش OTP/پیامک یا پیام UI ارسال نمی‌کند. خلاصهٔ بدون فیلتر
+ممکن است مرحلهٔ قدیمی نشان دهد؛ اعتبار حساب/مرحله را از پاسخ resolution بخوانید.
+
+```http
+PUT /api/v2/bot/conversations/<id>/state
+
+{"expected_revision":0,"event_id":"12345:recipient","step":"awaiting_text",
+ "data":{"recipient_phone":"09901234567","message_tone":"polite"}}
+```
+
+پاسخ `{conversation: {...}, applied: true}` و revision تازه دارد. هر PUT
+**کل data را جایگزین می‌کند**؛ patch/merge ضمنی نیست. برای رویداد پیام‌رسان
+و نام checkpoint یک event_id ثابت بسازید، مثلاً `update_id:recipient`؛ در
+تلاش مجدد همان بدنه، event_id و expected_revision را حفظ کنید. تکرار دقیق
+`applied:false` می‌دهد و مرحلهٔ جدیدتر را عقب نمی‌برد. event_id یکسان با
+بدنهٔ دیگر یا revision قدیمی `409` است؛ وضعیت تازه را بخوانید و رویداد را
+دوباره ارزیابی کنید، نه اینکه تغییر قدیمی را کورکورانه روی revision جدید بنویسید.
+
+مرحله‌ها: `start`, `awaiting_phone`, `awaiting_otp`, `menu`, `awaiting_category`,
+`awaiting_recipient`, `awaiting_text`, `awaiting_tone`, `awaiting_confirmation`,
+`submitting`, `receipt`, `support`. ترتیب منوها در adapter است؛ ذخیرهٔ مرحله
+هیچ عملیات محصولی را خودکار اجرا نمی‌کند. `awaiting_otp` به challenge_id،
+`awaiting_confirmation` به preview_id و recipient_phone، `submitting` علاوه
+بر این دو به idempotency_key و `receipt` به message_id نیاز دارد.
+
+data فقط این فیلدها را می‌پذیرد: `recipient_phone`, `text`, `category`,
+`source_mode` (`suggestion|freeform`), `message_tone`, `preview_id`, `message_id`,
+`idempotency_key`, `challenge_id`, `last_message_id`, `last_notified_status`. کد OTP، cookie، رمز،
+توکن و تاریخچهٔ آزاد چت قابل ذخیره نیستند. preview باید منقضی‌نشده و متعلق
+به همین حساب/نشست و message متعلق به همین حساب باشد. challenge هم باید
+برای همان نشست معتبر باشد. این data مجوز ارسال متن خام یا رضایت محسوب نمی‌شود.
+
+`resume_action` را قبل از ادامه بررسی کنید:
+
+| مقدار | رفتار adapter |
+| --- | --- |
+| `authenticate` | ورود با شماره و OTP؛ صرف هویت پیام‌رسان کافی نیست |
+| `enter_otp` | چالش قبلی معتبر است؛ همان کد را بگیرید، SMS جدید نفرستید |
+| `continue` | مرحلهٔ ذخیره‌شده را نمایش دهید؛ اقدام خودکار تازه انجام ندهید |
+| `refresh_preview` | پیش‌نمایش تازه بسازید و تأیید صریح دوباره بگیرید |
+| `reconcile_message` | ارسال قبلی را با message_id یا کلید ثابت بررسی کنید؛ ارسال تازه نسازید |
+
+قبل از POST پیام، پس از تأیید صریح کاربر، مرحلهٔ `submitting` و کلید UUID
+آن اقدام را ماندگار کنید. اگر پاسخ POST گم شد یا ربات ری‌استارت شد، با همان
+بدنه و کلید رزرو را تطبیق دهید. message_id را فوراً ذخیره و فقط همان submission
+را پیگیری کنید. در نبود شاهدِ تأیید قبلی، دوباره از کاربر تأیید بگیرید.
+اگر checkpoint پاسخ نامعلوم داشت، با بدنهٔ عیناً یکسان تکرار کنید؛ `applied:false`
+یعنی checkpoint قبلاً ثبت شده، نه اثبات ارسال پیامک یا پاسخ داخل پیام‌رسان.
+اگر مرحله `submitting` است، عملیات محصول را با کلید/id موجود تطبیق دهید.
+برای جواب‌های تلگرام/بله هم last_message_id را نگه دارید و در صورت امکان
+همان پیام را ویرایش کنید و وضعیت اعلان‌شده را در last_notified_status نگه
+دارید؛ API پیامک تضمین ارسال دقیقاً یک‌بارهٔ پیام UI پیام‌رسان را نمی‌دهد.
+
+متن، شمارهٔ مقصد، user_id، chat_id و کلید نشست در دیتابیس رمز می‌شوند؛ matching
+هویت با HMAC است. draft بیست‌وچهار ساعت پس از آخرین checkpoint منقضی می‌شود؛
+این مهلت، OTP یا preview را تمدید نمی‌کند. فرمان زمان‌بندی‌شدهٔ فعلی
+`prune_private_data` دادهٔ مرحله و رویدادهای قدیمی را پاک می‌کند و هویت‌های
+سی روز بدون فعالیت یا حساب‌های دارای درخواست حذفِ سی‌روزه را همراه نشست حذف
+می‌کند؛ دفتر مالی و سفارش‌ها باقی می‌مانند. `--dry-run` شمارش بدون تغییر دارد.
+
+### نمونهٔ کلاینت پس از شروع فرایند یا ری‌استارت
+
+```python
+import os
+from client import BotAPI, private_update_identity
+
+# authenticated_update از دریافت‌کنندهٔ معتبر همان پیام‌رسان آمده است.
+identity = private_update_identity("telegram", authenticated_update)  # یا "bale"
+api = BotAPI("https://begamnagam.ir/api/v2",
+             bot_key=os.environ["BEGAMNAGAM_BOT_API_KEY"])
+resumed = api.resume_conversation(identity["user_id"], identity["chat_id"])
+conversation = resumed["conversation"]
+# برای این هویت api را نگه دارید؛ برای هویت دیگر نمونهٔ جدا بسازید.
+# resume_action را مدیریت کنید. کاربر هیچ CSRF یا کلید فنی وارد نمی‌کند.
+# پس از دریافت شمارهٔ مقصد از کاربر و اعتبارسنجی موفق:
+# saved = api.save_state(revision=conversation["revision"],
+#     event_id=identity["update_id"] + ":recipient", step="awaiting_text",
+#     data={"recipient_phone": validated_phone})
+```
+
+همین کد با کلید integration بله کار می‌کند. `conversations()`, `conversation()`, `save_state()`,
+`reset_state()` و `unlink_account()` در کلاینت وجود دارند؛ کلاینت cookie/CSRF
+و header کلید را خودکار مدیریت می‌کند و هیچ OTP/پیام/پرداختی را خودکار retry نمی‌کند.
+کلاینت زندهٔ سراسری را میان کاربران مشترک نکنید؛ هم‌زمانی کار هر هویت در
+adapter ترتیبی باشد. بک‌اند عملیات همان مکالمه و ذخیرهٔ نشست پس از چرخش ورود
+را با قفل دیتابیس سری می‌کند. پاسخ `401` با کد `bot_authentication_required`
+یعنی کلید adapter مشکل دارد؛ با درخواست OTP کاربر رفع نمی‌شود.
 
 `GET /bootstrap` اطلاعات شروع را یکجا برمی‌گرداند:
 

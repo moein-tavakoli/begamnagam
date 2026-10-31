@@ -3,6 +3,7 @@ import uuid
 from django.conf import settings
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator, MinLengthValidator
+from django.utils import timezone
 from .fields import EncryptedTextField
 
 
@@ -87,6 +88,54 @@ class OTPChallenge(models.Model):
     expires_at = models.DateTimeField()
     consumed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class BotIntegration(models.Model):
+    """A trusted server-side adapter; never a Telegram/Bale vendor token."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    platform = models.CharField(max_length=12, choices=[('telegram', 'Telegram'), ('bale', 'Bale')])
+    bot_id = models.CharField(max_length=32)
+    secret_digest = models.CharField(max_length=64, editable=False)
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['platform', 'bot_id'], name='unique_platform_bot')]
+
+
+class BotConversation(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    integration = models.ForeignKey(BotIntegration, on_delete=models.CASCADE)
+    user_hash = models.CharField(max_length=64)
+    chat_hash = models.CharField(max_length=64)
+    user_id = EncryptedTextField(editable=False)
+    chat_id = EncryptedTextField(editable=False)
+    account = models.ForeignKey(Account, null=True, on_delete=models.SET_NULL)
+    session_key = EncryptedTextField(blank=True, default='', editable=False)
+    step = models.CharField(max_length=32, default='start')
+    data = EncryptedTextField(default='{}', editable=False)
+    revision = models.PositiveBigIntegerField(default=0)
+    state_expires_at = models.DateTimeField(null=True)
+    last_seen_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['integration', 'user_hash'], name='unique_bot_user'),
+            models.UniqueConstraint(fields=['integration', 'chat_hash'], name='unique_bot_private_chat'),
+        ]
+        indexes = [models.Index(fields=['last_seen_at']), models.Index(fields=['state_expires_at']),
+                   models.Index(fields=['integration', '-created_at', '-id'], name='bot_integration_created_idx')]
+
+
+class BotConversationEvent(models.Model):
+    conversation = models.ForeignKey(BotConversation, on_delete=models.CASCADE, related_name='events')
+    event_hash = models.CharField(max_length=64)
+    payload_digest = models.CharField(max_length=64)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['conversation', 'event_hash'], name='unique_bot_checkpoint_event')]
 
 
 class Preview(models.Model):

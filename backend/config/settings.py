@@ -95,7 +95,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "core.middleware.PrivateResponses",
     "core.middleware.RuntimeLimits",
-    "django.middleware.security.SecurityMiddleware", "whitenoise.middleware.WhiteNoiseMiddleware", "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.security.SecurityMiddleware", "whitenoise.middleware.WhiteNoiseMiddleware", "core.bot_conversations.BotSessionMiddleware",
     "django.middleware.common.CommonMiddleware", "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware", "django.contrib.messages.middleware.MessageMiddleware",
     "core.middleware.AdminLoginThrottle",

@@ -130,7 +130,7 @@ class IntegrationAPITests(TestCase):
             for method, operation in methods.items():
                 identifiers.append(operation['operationId'])
                 concrete = path.replace('{category_id}', '1')
-                for placeholder in ('message_id', 'preview_id', 'purchase_id', 'topup_id', 'invitation_id'):
+                for placeholder in ('message_id', 'preview_id', 'purchase_id', 'topup_id', 'invitation_id', 'conversation_id'):
                     concrete = concrete.replace('{' + placeholder + '}', str(uuid.uuid4()))
                 self.assertTrue(hasattr(resolve('/api/v2' + concrete).func, 'api_operations'))
                 if method != 'get':

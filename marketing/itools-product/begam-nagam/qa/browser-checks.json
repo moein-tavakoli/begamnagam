@@ -1,0 +1,71 @@
+{
+  "sourceVersion": "0.16.1",
+  "checks": [
+    {
+      "width": 375,
+      "check": "template mode blocks arbitrary freeform",
+      "pass": true
+    },
+    {
+      "width": 375,
+      "check": "incomplete recipient rejected; Persian input canonicalized",
+      "pass": true
+    },
+    {
+      "width": 375,
+      "check": "preview horizontal overflow",
+      "pass": true
+    },
+    {
+      "width": 375,
+      "check": "simulated order, receipt, history and explicit refresh",
+      "pass": true
+    },
+    {
+      "width": 375,
+      "check": "own-number stop/resume with recent OTP and no horizontal overflow",
+      "pass": true
+    },
+    {
+      "width": 375,
+      "check": "keyboard focus reachable",
+      "pass": true
+    },
+    {
+      "width": 1600,
+      "check": "template mode blocks arbitrary freeform",
+      "pass": true
+    },
+    {
+      "width": 1600,
+      "check": "incomplete recipient rejected; Persian input canonicalized",
+      "pass": true
+    },
+    {
+      "width": 1600,
+      "check": "preview horizontal overflow",
+      "pass": true
+    },
+    {
+      "width": 1600,
+      "check": "simulated order, receipt, history and explicit refresh",
+      "pass": true
+    },
+    {
+      "width": 1600,
+      "check": "own-number stop/resume with recent OTP and no horizontal overflow",
+      "pass": true
+    },
+    {
+      "width": 1600,
+      "check": "keyboard focus reachable",
+      "pass": true
+    }
+  ],
+  "pageErrors": [],
+  "externalRequests": [],
+  "physicalDevice": false,
+  "productionPWA": false,
+  "completedAt": "2026-10-30T16:45:47.966Z",
+  "status": "passed"
+}

@@ -1,0 +1,11 @@
+{
+  "cleanedAt": "2026-10-30T20:33:45.514627+03:30",
+  "runtimeRemoved": true,
+  "temporaryServersStopped": true,
+  "portsChecked": [
+    3137,
+    8137
+  ],
+  "syntheticSessionsAndRecipientGrantsInvalidated": true,
+  "scope": "Only the runtime created by this screenshot review; product services were not modified."
+}

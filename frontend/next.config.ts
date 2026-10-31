@@ -22,6 +22,7 @@ const config: NextConfig = {
   async rewrites() {
     return [
       { source: "/api/v1/:path*", destination: `${apiOrigin}/api/v1/:path*` },
+      { source: "/api/v2/:path*", destination: `${apiOrigin}/api/v2/:path*` },
       { source: "/admin/:path*", destination: `${apiOrigin}/admin/:path*/` },
       {
         source: "/static/admin/:path*",
@@ -64,6 +65,10 @@ const config: NextConfig = {
         ],
       },
       { source: "/admin/:path*", headers: [{ key: "Referrer-Policy", value: "same-origin" }] },
+      ...["/api/v2/document", "/api/v2/document/login"].map(source => ({
+        source,
+        headers: [{ key: "Referrer-Policy", value: "same-origin" }],
+      })),
     ];
   },
 };

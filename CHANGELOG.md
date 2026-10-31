@@ -9,6 +9,100 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.18.0 — 2026-10-31 — Scoped documentation handoff and server release
+
+### Added
+
+- Add `/api/v2/document/login` and a CSRF-protected logout for an active account
+  holding only `core.view_api_documentation`. Staff privileges and a product
+  Account are not needed; product, management and support access remain denied.
+  Preserve existing authorized staff sessions. Anonymous Swagger entry leads
+  to login; schema, guide and assets remain inaccessible without permission.
+- Limit login attempts by address and username, fail closed if the limiter is
+  unavailable, preserve opaque credentials, rotate CSRF at login and expire
+  documentation sessions after eight hours. Permission removal or account
+  deactivation revokes access. The global documentation switch stays off by default.
+- Keep same-origin referrers on the two native documentation form pages so
+  browsers can submit CSRF-protected forms; other private API responses retain
+  no-referrer. Add mobile Persian login and explicit logout controls.
+- Prepare the explicitly authorized dev-to-prod/server release, encrypted
+  backup and restore checks, exact-image tests and a separate documentation
+  credential handoff. [Release procedure](docs/release-v0.18.0.fa.md) and
+  [actual deployment evidence](https://github.com/moein-tavakoli/begamnagam/releases/tag/v0.18.0).
+
+Validation before promotion: 553 tests passed on isolated PostgreSQL 17 and
+Redis 7.4, including 42 API/documentation/client tests. Eighty frontend tests,
+TypeScript, Django/migration/Compose checks and native Next browser checks at
+375px/1440px passed. Browser login uses an account without staff privileges,
+renders all 44 operations, retains keyboard access and the Farsi-Digits font,
+and makes no external schema requests. No real provider call was made.
+Deployment completion and final image/CI/backup evidence are recorded separately;
+this entry alone does not claim that the server release has finished.
+
+## 0.17.0 — 2026-10-31 — REST integration API and private Swagger (local)
+
+### Added
+
+- Provide 44 documented operations under `/api/v2` for frontend and Telegram/
+  Bale adapters: OTP/session, getMe, credit summary, catalog, destination
+  normalization, sealed preview creation/retrieval, credit reservation,
+  idempotent submission, receipts/history, packages, wallet/topups/ledgers,
+  transfer receipts, invitations/rewards, receiving preferences, support,
+  recipient capabilities/reports and account redaction requests. Preserve v1.
+- Share the executable request/route definitions with an OpenAPI 3.0 contract;
+  validate field types, query parameters, consent and idempotency keys before
+  forwarding mutations to the existing product services. Keep per-user sessions,
+  CSRF, phone verification, moderation, provider controls and recipient privacy.
+- Add `/api/v2/document`, protected schema/guide/client/assets and an offline
+  `export_api_schema` command. Documentation defaults off, requires active staff
+  with `core.view_api_documentation`, and returns 404 otherwise. Migration 0036
+  defines this permission without assigning it. Vendor integrity-verified,
+  licensed Swagger UI assets; use no external CDN or schema validator.
+- Include a Persian walkthrough and standard-library client with separate
+  cookie jars, real-provider guards, explicit consent, stored retry keys and
+  Telegram/Bale adapter guidance. Add the v2 Next.js proxy and verify that
+  service workers do not intercept the API or its private documentation.
+
+### Performance
+
+- Bound history pages to 50 with signed cursors tied to the owner, resource and
+  filter. Fetch receipt relations in four queries per page of messages funded
+  by credit, instead of querying payments, refunds and delivery for each row.
+
+Validation: 548 tests passed on isolated PostgreSQL 17 and Redis 7.4, including
+37 new integration/documentation/client tests and existing concurrency checks;
+80 frontend tests, TypeScript, migration consistency and Compose config passed.
+The official OpenAPI meta-schema and all 44 operations' exercised responses
+passed contract checks. Browser checks through native Next dev at 375px/1440px
+passed: all operations rendered, local Farsi-Digits font, keyboard expansion,
+no overflow, no console errors/external requests and anonymous docs denied.
+No real OTP/SMS/payment/AI call, product-data mutation, bot webhook activation,
+push or server deployment occurred. Local release only; messenger adapter
+deployment and live Telegram/Bale acceptance remain separate work.
+
+## 0.16.2 — 2026-10-30 — Evidence-backed iTools product introduction
+
+### Documentation
+
+- Deliver the Persian product copy and schema-valid iTools JSON with eight
+  features, eight gallery entries, three signature sections, five workflow steps
+  and eight FAQs. Document 21 capabilities, their implementation status and
+  dependencies, including the boundaries of templates, optional AI, privacy,
+  recipient controls and simulated versus real delivery/payment.
+- Include 12 authentic, reviewed WebP screenshots from an explicitly authorized
+  isolated 0.16.1 demo, the unchanged product icon, capture metadata, reproducible
+  demo/QA scripts and a ZIP with SHA-256. Keep the homepage trust-placeholder
+  screenshot and controlled freeform error outside the public image directory.
+
+Validation: actual company draft-07 schema, exact JSON/readable-copy parity,
+all image references/hashes/dimensions/budgets, source/icon integrity and ZIP CRC
+passed. Two main journeys plus invitation reward, demo credit purchase and
+private support were exercised. Twelve browser checks at 375px and 1600px passed;
+six additional mobile captures use a 390px viewport. Temporary servers and the
+synthetic database/keys were removed. No product behavior or company site was
+changed, and no real OTP/SMS/payment/paid AI call, push or deployment occurred.
+Capture source remains 0.16.1; this is a local documentation release only.
+
 ## 0.16.1 — 2026-10-30 — Consistent recipient phone entry
 
 ### Fixed

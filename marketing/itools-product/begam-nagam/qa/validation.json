@@ -1,0 +1,27 @@
+{
+  "status": "passed",
+  "checkedAt": "2026-10-30T20:35:46.434210+03:30",
+  "schema": "copied actual iTools draft-07 contract",
+  "summaryCharacters": 115,
+  "copyMatchesJsonExactly": true,
+  "features": 8,
+  "gallery": 8,
+  "signature": 3,
+  "workflow": 5,
+  "faq": 8,
+  "approvedScreenshots": 12,
+  "rejectedScreenshots": 1,
+  "qaOnlyScreenshots": 1,
+  "referencedImageOccurrences": 13,
+  "maxApprovedImageBytes": 66032,
+  "logoMatchesSource": true,
+  "browserChecksPassed": 12,
+  "allowedFileSetOnly": true,
+  "captureSourceVersion": "0.16.1",
+  "localContentPackageVersion": "0.16.2",
+  "limitations": [
+    "No current production verification",
+    "No physical-device/PWA acceptance",
+    "No paid AI, real SMS or payment in this review"
+  ]
+}

@@ -1,0 +1,342 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "iTools product landing content",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "sourceProductId",
+    "category",
+    "headline",
+    "summary",
+    "accent",
+    "features",
+    "gallery"
+  ],
+  "properties": {
+    "category": {
+      "type": "string"
+    },
+    "headline": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "eyebrow": {
+      "type": "string"
+    },
+    "introTitle": {
+      "type": "string"
+    },
+    "intro": {
+      "type": "string"
+    },
+    "releaseStatus": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "titleEn": {
+      "type": "string"
+    },
+    "sourceProductId": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 1
+        },
+        {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "accent": {
+      "type": "string",
+      "pattern": "^#[0-9a-fA-F]{6}$"
+    },
+    "visual": {
+      "enum": [
+        "dashboard",
+        "analytics",
+        "chat",
+        "pipeline",
+        "content",
+        "mobile",
+        "spatial",
+        "game",
+        "monitor",
+        "voice",
+        "menu"
+      ]
+    },
+    "heroImage": {
+      "type": "string",
+      "pattern": "^(|/images/products/[^?#]+|https://api\\.itols\\.ir/media/[^ ]+)$"
+    },
+    "cardImage": {
+      "type": "string",
+      "pattern": "^(|/images/products/[^?#]+|https://api\\.itols\\.ir/media/[^ ]+)$"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "description"
+        ],
+        "properties": {
+          "icon": {
+            "enum": [
+              "layers",
+              "bolt",
+              "chart",
+              "shield",
+              "search",
+              "code",
+              "globe",
+              "phone",
+              "link",
+              "grid"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "gallery": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "title",
+          "description",
+          "image",
+          "alt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "image": {
+            "type": "string",
+            "pattern": "^(|/images/products/[^?#]+|https://api\\.itols\\.ir/media/[^ ]+)$"
+          },
+          "alt": {
+            "type": "string"
+          },
+          "visual": {
+            "enum": [
+              "dashboard",
+              "analytics",
+              "chat",
+              "pipeline",
+              "content",
+              "mobile",
+              "spatial",
+              "game",
+              "monitor",
+              "voice",
+              "menu"
+            ]
+          }
+        }
+      }
+    },
+    "signature": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "layout",
+          "title",
+          "description"
+        ],
+        "properties": {
+          "layout": {
+            "enum": [
+              "spotlight",
+              "reverse"
+            ]
+          },
+          "eyebrow": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "bullets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "visual": {
+            "enum": [
+              "dashboard",
+              "analytics",
+              "chat",
+              "pipeline",
+              "content",
+              "mobile",
+              "spatial",
+              "game",
+              "monitor",
+              "voice",
+              "menu"
+            ]
+          },
+          "image": {
+            "type": "string",
+            "pattern": "^(|/images/products/[^?#]+|https://api\\.itols\\.ir/media/[^ ]+)$"
+          },
+          "alt": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "workflow": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "description"
+        ],
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "modules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "description",
+          "status"
+        ],
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "integrations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "status"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "faq": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "question",
+          "answer"
+        ],
+        "properties": {
+          "question": {
+            "type": "string"
+          },
+          "answer": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "cta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "title",
+        "description",
+        "label",
+        "href"
+      ],
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "href": {
+          "type": "string",
+          "pattern": "^(/[^/]|https://)"
+        }
+      }
+    }
+  }
+}

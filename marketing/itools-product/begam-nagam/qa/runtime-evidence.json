@@ -1,0 +1,116 @@
+{
+  "sourceVersion": "0.16.1",
+  "sourceCommit": "4c1ffceae5b10421b0f2f0fc134f402ead270b8b",
+  "reviewedAt": "2026-10-30T20:19:05.519984+03:30",
+  "settings": {
+    "DEMO_MODE": true,
+    "OTP_BACKEND": "demo",
+    "SMS_BACKEND": "console",
+    "PAYMENT_BACKEND": "demo",
+    "LOCAL_REAL_OTP_ENABLED": false,
+    "PROVIDER_NETWORK_MODE": "disabled",
+    "LIVE_PROVIDERS_ENABLED": false,
+    "PROVIDER_ENVIRONMENT": "sandbox",
+    "AI_MODE": "template",
+    "CELERY_TASK_ALWAYS_EAGER": true,
+    "DEMO_TEST_TOOLS_ENABLED": false,
+    "APP_BASE_URL": "https://demo.invalid",
+    "PILOT_POSITIVE_ONLY": false
+  },
+  "credentialsPresent": {
+    "GAPGPT_API_KEY": false,
+    "KAVENEGAR_API_KEY": false,
+    "KAVENEGAR_SENDER": false,
+    "ZARINPAL_MERCHANT_ID": false
+  },
+  "database": "django.db.backends.sqlite3",
+  "cache": "django.core.cache.backends.locmem.LocMemCache",
+  "aiProvider": "template",
+  "effectiveLimits": {
+    "sender_limit": 5,
+    "sender_window_hours": 24,
+    "recipient_limit": 0,
+    "recipient_window_hours": 24,
+    "recipient_cooldown_hours": 24,
+    "pair_cooldown_hours": 24,
+    "sending_window_enabled": false,
+    "sending_start_hour": 9,
+    "sending_end_hour": 21,
+    "invitation_max_sends": 3,
+    "invitation_limit": 5,
+    "invitation_window_hours": 24,
+    "invitation_cooldown_hours": 24,
+    "invitation_validity_days": 30,
+    "otp_validity_seconds": 300,
+    "otp_max_attempts": 5,
+    "preview_validity_seconds": 900,
+    "provider_daily_budget_rial": 0,
+    "provider_budget_unlimited": false,
+    "rewrite_daily_limit": 0,
+    "rewrite_user_limit": 0,
+    "wallet_enabled": false,
+    "gateway_enabled": false
+  },
+  "paymentOptions": {
+    "wallet_enabled": false,
+    "card_enabled": false,
+    "receipt_channels": [],
+    "gateway_enabled": false,
+    "gateway_configured": false,
+    "wallet_terms_version": "wallet-credit-v1"
+  },
+  "activePackages": [
+    {
+      "name": "بستهٔ ۳ پیامی",
+      "message_count": 3,
+      "price_toman": 10000
+    },
+    {
+      "name": "همراه",
+      "message_count": 9,
+      "price_toman": 30000
+    },
+    {
+      "name": "دوستانه",
+      "message_count": 30,
+      "price_toman": 100000
+    },
+    {
+      "name": "ویژه",
+      "message_count": 90,
+      "price_toman": 300000
+    }
+  ],
+  "syntheticAccounts": 5,
+  "orderStatuses": [
+    {
+      "status": "delivered_demo",
+      "count": 4
+    }
+  ],
+  "deliveryProviders": [
+    {
+      "provider": "demo",
+      "status": "delivered_demo",
+      "count": 4
+    }
+  ],
+  "invitationStatuses": [
+    {
+      "provider": "console",
+      "status": "delivered_demo",
+      "count": 1
+    }
+  ],
+  "rewardedInvitations": 1,
+  "purchaseEnvironments": [
+    {
+      "environment": "demo",
+      "count": 1
+    }
+  ],
+  "providerReservations": 0,
+  "aiUsageRows": 0,
+  "supportMessages": 1,
+  "blockedSyntheticRecipients": 1
+}

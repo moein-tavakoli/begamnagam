@@ -44,9 +44,10 @@ class PrivateResponses(MiddlewareMixin):
     def process_response(self, request, response):
         if request.path in {'/api', '/admin', '/r'} or request.path.startswith(('/api/', '/admin/', '/r/')):
             response['Cache-Control'] = 'no-store'
-            # Native admin POST forms need their same-origin context for CSRF.
-            # Keep private capability/API responses from sending any referrer.
-            response['Referrer-Policy'] = 'same-origin' if request.path.startswith('/admin/') else 'no-referrer'
+            # Native admin/documentation forms need same-origin context for CSRF.
+            # Other private capability/API responses never send a referrer.
+            native_form = request.path.startswith('/admin/') or request.path in {'/api/v2/document', '/api/v2/document/login'}
+            response['Referrer-Policy'] = 'same-origin' if native_form else 'no-referrer'
             response['X-Robots-Tag'] = 'noindex, nofollow, noarchive'
         response['X-Request-ID'] = getattr(request, 'public_request_id', uuid.uuid4().hex)
         response.setdefault('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')

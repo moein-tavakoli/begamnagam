@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django.urls import path
+from django.urls import include, path
 from core import views
 from core import invitations
 from core import management_api as management
@@ -13,6 +13,7 @@ handler404 = "core.views.not_found"
 handler500 = "core.views.server_error"
 
 urlpatterns = [
+    path('api/v2/', include('core.api_v2.urls')),
     path('api/v1/manage/message-examples', example_views.catalog),
     path('api/v1/manage/message-examples/<str:kind>', example_views.save),
     path('api/v1/manage/message-examples/<str:kind>/<int:record_id>', example_views.save),

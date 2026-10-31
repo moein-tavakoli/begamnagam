@@ -100,16 +100,24 @@ def get_owned_order(user, order_id):
         raise APIError("not_found", "درخواست پیدا نشد.", 404)
 
 
-def serialize_order(order):
-    payment = order.payment_attempts.filter(applied_to_order=True).first() or order.payment_attempts.order_by("-created_at").first()
-    delivery = MessageDelivery.objects.filter(order=order).first()
-    from .models import Refund
-    open_refund = Refund.objects.filter(payment__order=order).exclude(status="refunded").exists()
+def serialize_order(order, *, related=None):
+    from .models import Refund, WalletEntry
+    if related is None:
+        payment = order.payment_attempts.filter(applied_to_order=True).first() or order.payment_attempts.order_by("-created_at").first()
+        delivery = MessageDelivery.objects.filter(order=order).first()
+        open_refund = Refund.objects.filter(payment__order=order).exclude(status="refunded").exists()
+        event = Outbox.objects.filter(order=order).first()
+        wallet_returned = WalletEntry.objects.filter(order=order, kind='order_return').exists() if order.payment_method == 'wallet' else False
+        refunded = bool(payment and payment.refunds.filter(status='refunded').exists())
+    else:
+        payment = related['payments'].get(order.pk)
+        delivery = related['deliveries'].get(order.pk)
+        event = related['events'].get(order.pk)
+        open_refund = order.pk in related['open_refunds']
+        wallet_returned = order.pk in related['wallet_returns']
+        refunded = bool(payment and payment.pk in related['refunded_payments'])
     from .status_reasons import order_status_reason
-    event = Outbox.objects.filter(order=order).first()
-    from .models import WalletEntry
-    wallet_returned = WalletEntry.objects.filter(order=order, kind='order_return').exists() if order.payment_method == 'wallet' else False
-    return {"financial_status": ('wallet_returned' if wallet_returned else 'wallet_paid' if order.paid_at else 'unpaid') if order.payment_method == 'wallet' else ("credit_returned" if order.purchased_credit_released_at else "credit_reserved") if order.uses_purchased_credit else ("free_credit_returned" if order.free_credit_released_at else "free") if order.is_free else 'wallet_returned' if payment and payment.return_to_wallet and payment.refunds.filter(status='refunded').exists() else "refunded" if payment and payment.refunds.filter(status="refunded").exists() else "refund_pending" if open_refund else payment.status if payment else "legacy_demo_paid" if order.paid_at else "unpaid",
+    return {"financial_status": ('wallet_returned' if wallet_returned else 'wallet_paid' if order.paid_at else 'unpaid') if order.payment_method == 'wallet' else ("credit_returned" if order.purchased_credit_released_at else "credit_reserved") if order.uses_purchased_credit else ("free_credit_returned" if order.free_credit_released_at else "free") if order.is_free else 'wallet_returned' if payment and payment.return_to_wallet and refunded else "refunded" if payment and refunded else "refund_pending" if open_refund else payment.status if payment else "legacy_demo_paid" if order.paid_at else "unpaid",
         "payment_method": order.payment_method,
         "uses_purchased_credit": order.uses_purchased_credit,
         "status_reason": order_status_reason(order, delivery, event),
@@ -117,6 +125,29 @@ def serialize_order(order):
         "payment_mode": order.payment_mode, "recipient_masked": order.recipient_masked, "is_free": order.is_free,
         "text": order.full_sms or order.text, "category": order.category, "paid_at": order.paid_at.isoformat() if order.paid_at else None,
         "created_at": order.created_at.isoformat(), "payment_expires_at": (order.created_at + PAYMENT_WINDOW).isoformat()}
+
+
+def serialize_orders(orders):
+    """Batch history reads without one payment/refund/delivery query per row."""
+    from .models import Refund, WalletEntry
+    if not orders:
+        return []
+    ids = [order.pk for order in orders]
+    payments = {}
+    for payment in PaymentAttempt.objects.filter(order_id__in=ids).order_by('-created_at', 'pk'):
+        if payment.order_id not in payments or payment.applied_to_order:
+            payments[payment.order_id] = payment
+    refunds = list(Refund.objects.filter(payment__order_id__in=ids).values_list('payment__order_id', 'payment_id', 'status'))
+    wallet_ids = [order.pk for order in orders if order.payment_method == 'wallet']
+    related = {
+        'payments': payments,
+        'deliveries': {row.order_id: row for row in MessageDelivery.objects.filter(order_id__in=ids)},
+        'events': {row.order_id: row for row in Outbox.objects.filter(order_id__in=ids)},
+        'open_refunds': {order_id for order_id, _, status in refunds if status != 'refunded'},
+        'refunded_payments': {payment_id for _, payment_id, status in refunds if status == 'refunded'},
+        'wallet_returns': set(WalletEntry.objects.filter(order_id__in=wallet_ids, kind='order_return').values_list('order_id', flat=True)) if wallet_ids else set(),
+    }
+    return [serialize_order(order, related=related) for order in orders]
 
 
 def create_order(user, session_key, data, idempotency_key):

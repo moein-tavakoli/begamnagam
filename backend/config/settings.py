@@ -19,6 +19,7 @@ def flag(name, default=False):
 TESTING = flag("DJANGO_TESTING")
 DEBUG = flag("DEBUG")
 DEMO_MODE = flag("DEMO_MODE", True)
+API_DOCUMENTATION_ENABLED = flag("API_DOCUMENTATION_ENABLED")
 
 
 def required_secret(name):

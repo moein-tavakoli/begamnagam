@@ -46,7 +46,9 @@ def specification():
                                 422: 'Invalid fields, cursor, consent or content', 429: 'Rate or account limit',
                                 503: 'Service or provider unavailable; do not assume success'}.items():
                 responses[str(code)] = {'description': label, 'content': {'application/json': {'schema': ref('Error')}}}
-            security = {'SessionCookie': []} if spec['auth'] else {}
+            # Verification needs the anonymous session that owns the challenge,
+            # even though a verified phone is not required until after login.
+            security = {'SessionCookie': []} if spec['auth'] or spec['identifier'] == 'createSession' else {}
             if spec['bot']:
                 security['BotKey'] = []
                 if spec['identifier'] not in {'resolveBotConversation', 'listBotConversations'}:
@@ -72,7 +74,10 @@ def specification():
                                                 'Invitations', 'Support', 'Recipient controls', 'Bot conversations']],
             'paths': paths, 'components': {'schemas': SCHEMAS, 'securitySchemes': {
                 'SessionCookie': {'type': 'apiKey', 'in': 'cookie', 'name': 'sessionid',
-                                  'description': 'HttpOnly Django session. Obtain by verifying OTP, not by sending a messenger user id.'},
+                                  'description': 'HttpOnly Django session, initially issued by GET /session. '
+                                                 'Preserve the OTP challenge session through verification; '
+                                                 'merge Set-Cookie after each response and replace the cookie after login. '
+                                                 'A messenger user id cannot replace this cookie.'},
                 'BotKey': {'type': 'apiKey', 'in': 'header', 'name': 'X-Bot-Key',
                            'description': 'Private adapter credential, issued by manage_bot_integration. Different from the vendor bot token. '
                                           'Required on every request using a bot-owned session; never expose in a browser, URL or chat.'},

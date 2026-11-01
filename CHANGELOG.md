@@ -9,6 +9,30 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.19.2 — 2026-11-01 — OTP session diagnosis and n8n verification guidance (local)
+
+### Fixed
+
+- Describe the anonymous session cookie required by OTP verification in
+  OpenAPI, independently of the verified-phone authentication requirement.
+  Clarify that invalid_otp also covers a lost/replaced session or a consumed
+  challenge; keep authentication checks and public error behavior unchanged.
+- Explain the n8n verification endpoint/body, matching challenge/session across
+  separate messenger executions, merging Set-Cookie by name, OTP versus session
+  expiry and saving the rotated login cookies/CSRF. Correct the bot overview's
+  v0.19.0 release status using the existing deployment evidence.
+- Add HTTPS tests with explicit manual cookies: missing/replaced session fails
+  while the original unexpired challenge succeeds; verify leading zeroes,
+  cookie/CSRF rotation, authenticated getMe, replay rejection and actual expiry.
+
+Validation: 116 API, bot, OTP and provider tests passed on isolated PostgreSQL
+14.18 and Redis 8.10.2. The official OpenAPI 3.0 meta-schema, all 50 operations,
+Django checks, scoped diff and synchronized version metadata passed. Read-only
+production metadata showed a 300-second OTP policy and zero attempts on today's
+13 challenges, consistent with (but not proof of) a session mismatch. The user's
+n8n request was unavailable, so its exact cause remains unconfirmed. No real OTP
+was requested; no workflow edit, production mutation, push or deployment occurred.
+
 ## 0.19.1 — 2026-11-01 — HTTPS client Origin and n8n guidance (local)
 
 ### Fixed

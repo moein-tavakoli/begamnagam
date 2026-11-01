@@ -108,14 +108,19 @@ def bootstrap(request):
 
 @resource(post=op('createOTPChallenge', 'Authentication', 'Send a phone verification code', 'OTPChallenge',
                   request='OTPInput', auth=False, status=201,
-                  description='Bound to this cookie jar. A timeout is not permission to resend automatically. Real provider failures stay failures.'))
+                  description='Bound to this cookie jar. Save challenge_id and expires_in; merge any Set-Cookie into this identity’s jar. '
+                              'A timeout is not permission to resend automatically. Real provider failures stay failures.'))
 def otp_challenges(request):
     return delegate(request, legacy.request_otp)
 
 
 @resource(post=op('createSession', 'Authentication', 'Verify OTP and start a product session', 'Session',
                   request='LoginInput', auth=False, status=201,
-                  description='The returned csrf_token replaces the previous token. A messenger contact alone does not authenticate.'))
+                  description='Send challenge_id from the matching OTP response and the code as a four-digit string, '
+                              'using the same sessionid that requested that challenge. Valid CSRF alone does not restore a lost session. '
+                              'invalid_otp can mean a different session, an expired/consumed challenge, exhausted attempts or an incorrect code. '
+                              'On success merge Set-Cookie and replace csrf_token before the next request. Do not automatically replay login. '
+                              'A messenger contact alone does not authenticate.'))
 def sessions(request):
     result = delegate(request, legacy.verify_otp)
     return session_data(request) if isinstance(result, dict) else result

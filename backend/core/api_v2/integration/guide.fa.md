@@ -127,6 +127,53 @@ HttpOnly از Set-Cookie را به Cookie درخواست منتقل نکنید. 
 راهنمای رسمی [n8n HTTP Request](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.httprequest/)
 و [اعتبارسنجی Origin/Referer در Django](https://docs.djangoproject.com/en/5.2/ref/csrf/) مبنای این تنظیم‌اند.
 
+### وقتی OTP می‌رسد ولی تأیید «نامعتبر یا منقضی‌شده» است
+
+این پیام به‌تنهایی انقضای زمانی را ثابت نمی‌کند. چالش به `sessionid` زمان
+ارسال متصل است؛ نبودن/عوض‌شدن این cookie، مصرف قبلی چالش، پایان مهلت یا سقف
+تلاش هم رد می‌شوند. گرفتن CSRF تازه با یک نشست دیگر، چالش قبلی را منتقل نمی‌کند.
+
+۱. از پاسخ موفق ارسال کد، `challenge_id` و `expires_in` را همراه cookie jar
+و CSRF همان کاربر نگه دارید. هر `Set-Cookie` جدید را بر اساس نام با jar ادغام
+کنید؛ نبودن sessionid در یک پاسخ به معنی حذف آن از jar نیست. مهلت OTP از
+`expires_in` پاسخ **ارسال کد** است؛ expires_in پاسخ session مهلت نشست است.
+
+۲. تأیید را با `POST https://begamnagam.ir/api/v2/auth/sessions` و همان هدرهای
+Origin، Cookie، X-CSRFToken و Content-Type بفرستید. Body:
+
+```json
+{"challenge_id":"<challenge_id همان ارسال>","code":"<کد چهاررقمی کاربر>"}
+```
+
+کد String است؛ صفر ابتدای آن را نگه دارید. اگر نود ارسال `Send OTP` نام
+دارد و Include Response Headers and Status روشن است، مسیر شناسه
+`{{ $('Send OTP').item.json.body.challenge_id }}` است. بدون این گزینه،
+`body` را حذف کنید. این expression فقط به نودِ اجراشده در همان execution
+ارجاع می‌دهد؛ از دادهٔ پین‌شده/اجرای قدیمی استفاده نکنید.
+
+۳. در اجرای مجزای دریافت کد از تلگرام/بله، GET Session خالی را دوباره از اول
+اجرا نکنید و کوکی کاربر دیگر را هم نگیرید. state را با کلید
+`(platform, bot_id, from_user_id)` بازیابی کنید. در مسیر ماندگار API، پس از
+ارسال کد مرحلهٔ `awaiting_otp` و `challenge_id` را checkpoint کنید؛ در update
+بعدی resolution همان هویت، cookie/CSRF نشست قبلی و چالش را برمی‌گرداند.
+با `resume_action: enter_otp` همان چالش را تأیید کنید. در پیاده‌سازی بدون
+conversation API باید خود adapter، jar و challenge را در فضای خصوصی و امن
+بین executionها حفظ کند. OTP را ذخیره یا لاگ نکنید.
+
+۴. پاسخ موفق تأیید `201` و `authenticated:true` است. همان لحظه cookieهای
+پاسخ و csrf_token تازه را ذخیره کنید؛ ورود sessionid را می‌چرخاند. سپس
+`GET /me` با cookie تازه بزنید. POST تأیید، کد را یک‌بار مصرف می‌کند؛ اجرای
+دوبارهٔ آن با همان کد ممکن است همان خطای «منقضی‌شده» بدهد. ارسال و تأیید OTP
+را خودکار retry نکنید. اگر پاسخ گم شد، با آخرین jar ذخیره‌شده `GET /session`
+را بررسی کنید؛ بدون cookie چرخیده، احراز ورود موفق قابل بازیابی نیست، مگر
+از resolution مکالمهٔ ماندگار همان هویت.
+
+برای عیب‌یابی فقط status، `error.code` و X-Request-ID را نگه دارید و ببینید
+sessionid بین ارسال و تأیید ثابت بوده است؛ مقدار cookie، OTP و شماره را در
+گزارش قابل اشتراک قرار ندهید. در صورت انقضای واقعی، کد تازه فقط با اقدام
+صریح کاربر درخواست شود. [مستندات نشست Django](https://docs.djangoproject.com/en/5.2/topics/http/sessions/)
+نحوهٔ نگهداری و چرخش نشست را توضیح می‌دهد.
+
 ## گام ۱ — ساخت نشست مستقل هر کاربر ربات
 
 کلید نگهداری state ربات را از **هویت تأییدشدهٔ update پیام‌رسان** بسازید:

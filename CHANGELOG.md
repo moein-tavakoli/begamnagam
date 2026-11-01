@@ -9,6 +9,54 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.19.2 — 2026-11-01 — OTP session diagnosis and n8n verification guidance (local)
+
+### Fixed
+
+- Describe the anonymous session cookie required by OTP verification in
+  OpenAPI, independently of the verified-phone authentication requirement.
+  Clarify that invalid_otp also covers a lost/replaced session or a consumed
+  challenge; keep authentication checks and public error behavior unchanged.
+- Explain the n8n verification endpoint/body, matching challenge/session across
+  separate messenger executions, merging Set-Cookie by name, OTP versus session
+  expiry and saving the rotated login cookies/CSRF. Correct the bot overview's
+  v0.19.0 release status using the existing deployment evidence.
+- Add HTTPS tests with explicit manual cookies: missing/replaced session fails
+  while the original unexpired challenge succeeds; verify leading zeroes,
+  cookie/CSRF rotation, authenticated getMe, replay rejection and actual expiry.
+
+Validation: 116 API, bot, OTP and provider tests passed on isolated PostgreSQL
+14.18 and Redis 8.10.2. The official OpenAPI 3.0 meta-schema, all 50 operations,
+Django checks, scoped diff and synchronized version metadata passed. Read-only
+production metadata showed a 300-second OTP policy and zero attempts on today's
+13 challenges, consistent with (but not proof of) a session mismatch. The user's
+n8n request was unavailable, so its exact cause remains unconfirmed. No real OTP
+was requested; no workflow edit, production mutation, push or deployment occurred.
+
+## 0.19.1 — 2026-11-01 — HTTPS client Origin and n8n guidance (local)
+
+### Fixed
+
+- Send the API Origin on mutations in the Python client. Django's HTTPS CSRF
+  protection also checks Origin/Referer; correct cookies and CSRF alone returned
+  403 from server-side clients. Keep strict origin validation and CSRF enabled.
+- Document n8n's full-response body nesting, dynamic cookie/header expressions,
+  local n8n usage and the no-SMS empty-body diagnostic. Add the Origin/Referer
+  requirement to Swagger and clarify that the existing server accepts this
+  client-side fix without a deployment. Record actual v0.19.0 deployment evidence
+  in README while keeping this patch local.
+- Close concurrency-test thread connections explicitly so the isolated
+  PostgreSQL test database can be removed reliably with persistent connections.
+
+Validation: 74 API/bot/client tests passed on isolated PostgreSQL 14.18 and
+Redis 8.10.2, including HTTPS CSRF regression checks. A live HTTPS probe verified
+nonempty 64-character JSON tokens from session/bootstrap, reproduced 403 without
+Origin/Referer and passed CSRF with either valid header (422 for an intentionally
+empty OTP body). The cookie secret also worked as CSRF. No real OTP was requested.
+n8n HTTP Request 4.5 node configurations and cookie expressions, the official
+OpenAPI meta-schema, Django/migration checks, version metadata and scoped diff
+passed. No n8n workflow edit/execution, push or server deployment occurred.
+
 ## 0.19.0 — 2026-10-31 — Persistent Telegram/Bale conversations (local)
 
 ### Added

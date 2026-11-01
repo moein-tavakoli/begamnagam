@@ -32,6 +32,11 @@ def specification():
             if unsafe:
                 parameters.append({'name': 'X-CSRFToken', 'in': 'header', 'required': True,
                                    'schema': {'type': 'string'}, 'description': 'Current session.csrf_token; refresh after login/logout.'})
+                parameters.append({'name': 'Origin', 'in': 'header', 'required': False,
+                                   'schema': {'type': 'string', 'format': 'uri'}, 'example': 'https://begamnagam.ir',
+                                   'description': 'HTTPS server-to-server clients (including n8n) must send the API origin, '
+                                                  'or a valid same-origin Referer, in addition to cookies and CSRF. '
+                                                  'Browsers normally supply this header automatically. Do not use the n8n UI origin.'})
             responses = {str(spec['status']): {'description': 'Success. Idempotent operations return the existing resource on replay.',
                                               'content': {'application/json': {'schema': ref(spec['response'])}}}}
             for code, label in {400: 'Malformed JSON or invalid phone', 401: 'Phone verification or valid bot credential required',
@@ -41,7 +46,9 @@ def specification():
                                 422: 'Invalid fields, cursor, consent or content', 429: 'Rate or account limit',
                                 503: 'Service or provider unavailable; do not assume success'}.items():
                 responses[str(code)] = {'description': label, 'content': {'application/json': {'schema': ref('Error')}}}
-            security = {'SessionCookie': []} if spec['auth'] else {}
+            # Verification needs the anonymous session that owns the challenge,
+            # even though a verified phone is not required until after login.
+            security = {'SessionCookie': []} if spec['auth'] or spec['identifier'] == 'createSession' else {}
             if spec['bot']:
                 security['BotKey'] = []
                 if spec['identifier'] not in {'resolveBotConversation', 'listBotConversations'}:
@@ -67,7 +74,10 @@ def specification():
                                                 'Invitations', 'Support', 'Recipient controls', 'Bot conversations']],
             'paths': paths, 'components': {'schemas': SCHEMAS, 'securitySchemes': {
                 'SessionCookie': {'type': 'apiKey', 'in': 'cookie', 'name': 'sessionid',
-                                  'description': 'HttpOnly Django session. Obtain by verifying OTP, not by sending a messenger user id.'},
+                                  'description': 'HttpOnly Django session, initially issued by GET /session. '
+                                                 'Preserve the OTP challenge session through verification; '
+                                                 'merge Set-Cookie after each response and replace the cookie after login. '
+                                                 'A messenger user id cannot replace this cookie.'},
                 'BotKey': {'type': 'apiKey', 'in': 'header', 'name': 'X-Bot-Key',
                            'description': 'Private adapter credential, issued by manage_bot_integration. Different from the vendor bot token. '
                                           'Required on every request using a bot-owned session; never expose in a browser, URL or chat.'},

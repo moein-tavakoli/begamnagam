@@ -121,6 +121,47 @@ class IntegrationAPITests(TestCase):
         self.assertNotIn('original_text', receipt)
         self.assertEqual(self.client.get('/api/v1/messages').json()['results'][0]['id'], message_id)
 
+    @override_settings(ALLOWED_HOSTS=['begamnagam.ir'], CSRF_TRUSTED_ORIGINS=['https://begamnagam.ir'])
+    def test_https_mutations_need_api_origin_or_referer_even_with_valid_csrf(self):
+        response = self.client.get('/api/v2/session', secure=True, HTTP_HOST='begamnagam.ir')
+        token = response.json()['csrf_token']
+        self.assertEqual(len(token), 64)
+        cases = [({}, 403), ({'HTTP_ORIGIN': 'http://localhost:5678'}, 403),
+                 ({'HTTP_ORIGIN': 'https://begamnagam.ir'}, 422),
+                 ({'HTTP_REFERER': 'https://begamnagam.ir/'}, 422)]
+        for extra, expected in cases:
+            result = self.client.post('/api/v2/auth/otp-challenges', data='{}', content_type='application/json',
+                secure=True, HTTP_HOST='begamnagam.ir', HTTP_X_CSRFTOKEN=token, **extra)
+            self.assertEqual(result.status_code, expected, result.content)
+        self.assertEqual(OTPChallenge.objects.count(), 0)
+
+    @override_settings(ALLOWED_HOSTS=['begamnagam.ir'], CSRF_TRUSTED_ORIGINS=['https://begamnagam.ir'])
+    def test_sample_client_passes_real_https_csrf_middleware_without_sending_otp(self):
+        from urllib.error import HTTPError
+        from urllib.parse import urlsplit
+        path = Path(__file__).parent / 'api_v2/integration/client.py'
+        spec = importlib.util.spec_from_file_location('https_bot_api_client', path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        sample = module.BotAPI('https://begamnagam.ir/api/v2')
+
+        def transport(request, **kwargs):
+            headers = {'HTTP_' + name.upper().replace('-', '_'): value for name, value in request.header_items()}
+            headers['HTTP_HOST'] = 'begamnagam.ir'
+            result = self.client.generic(request.get_method(), urlsplit(request.full_url).path,
+                data=request.data or b'', content_type=headers.pop('HTTP_CONTENT_TYPE', 'application/json'),
+                secure=True, **headers)
+            if result.status_code >= 400:
+                raise HTTPError(request.full_url, result.status_code, '', {}, io.BytesIO(result.content))
+            return io.BytesIO(result.content)
+
+        with patch.object(sample.opener, 'open', side_effect=transport):
+            with self.assertRaises(module.APIResponseError) as caught:
+                sample.call('POST', '/auth/otp-challenges', {})
+        self.assertEqual(caught.exception.status, 422)
+        self.assertEqual(caught.exception.code, 'invalid_input')
+        self.assertEqual(OTPChallenge.objects.count(), 0)
+
     def test_schema_has_every_route_operation_unique_ids_and_security(self):
         spec = specification()
         identifiers = []
@@ -171,6 +212,75 @@ class IntegrationAPITests(TestCase):
         self.assertEqual(self.mutate('/auth/sessions', payload).status_code, 201)
         self.assertEqual(self.mutate('/auth/sessions', payload).status_code, 400)
         self.assertFalse(self.session(other)['authenticated'])
+
+    def test_https_otp_with_manual_n8n_cookies_needs_original_session_and_rotates_on_login(self):
+        # Each HTTP Request node starts without an implicit shared cookie jar.
+        def snapshot():
+            response = Client(enforce_csrf_checks=True).get('/api/v2/session', secure=True)
+            cookies = {name: value.value for name, value in response.cookies.items()}
+            return cookies, response.json()['csrf_token']
+
+        def post(path, payload, cookies, csrf):
+            return Client(enforce_csrf_checks=True).post('/api/v2' + path,
+                data=json.dumps(payload), content_type='application/json', secure=True,
+                HTTP_ORIGIN='https://testserver', HTTP_X_CSRFTOKEN=csrf,
+                HTTP_COOKIE='; '.join(name + '=' + value for name, value in cookies.items()))
+
+        cookies, csrf = snapshot()
+        with patch('core.views.secrets.randbelow', return_value=123):
+            sent = post('/auth/otp-challenges', {'phone': '09123456789'}, cookies, csrf)
+        self.assertEqual(sent.status_code, 201, sent.content)
+        cookies.update({name: value.value for name, value in sent.cookies.items()})
+        payload = {'challenge_id': sent.json()['challenge_id'], 'code': '0123'}
+        original_session = cookies['sessionid']
+
+        # A valid CSRF token cannot restore a lost OTP-bound session.
+        replaced_cookies, replaced_csrf = snapshot()
+        for label, sent_cookies, token in [
+            ('missing sessionid', {'csrftoken': cookies['csrftoken']}, csrf),
+            ('new Get Session execution', replaced_cookies, replaced_csrf),
+        ]:
+            with self.subTest(label=label):
+                failed = post('/auth/sessions', payload, sent_cookies, token)
+                self.assertEqual(failed.status_code, 400, failed.content)
+                self.assertEqual(failed.json()['error']['code'], 'invalid_otp')
+                self.assertIn('منقضی', failed.json()['error']['message'])
+                challenge = OTPChallenge.objects.get(pk=payload['challenge_id'])
+                self.assertEqual(challenge.attempts, 0)
+                self.assertIsNone(challenge.consumed_at)
+                self.assertGreater(challenge.expires_at, timezone.now())
+
+        verified = post('/auth/sessions', payload, cookies, csrf)
+        self.assertEqual(verified.status_code, 201, verified.content)
+        self.assertTrue(verified.json()['authenticated'])
+        cookies.update({name: value.value for name, value in verified.cookies.items()})
+        self.assertNotEqual(cookies['sessionid'], original_session)
+        self.assertNotEqual(verified.json()['csrf_token'], csrf)
+        me = Client(enforce_csrf_checks=True).get('/api/v2/me', secure=True,
+            HTTP_COOKIE='; '.join(name + '=' + value for name, value in cookies.items()))
+        self.assertEqual(me.status_code, 200, me.content)
+        replay = post('/auth/sessions', payload, cookies, verified.json()['csrf_token'])
+        self.assertEqual(replay.status_code, 400)
+        self.assertEqual(replay.json()['error']['code'], 'invalid_otp')
+        self.assertIn('منقضی', replay.json()['error']['message'])
+        self.assertEqual(OTPChallenge.objects.get(pk=payload['challenge_id']).attempts, 1)
+
+    def test_otp_actual_expiry_is_rejected_without_counting_a_code_attempt(self):
+        challenge = self.mutate('/auth/otp-challenges', {'phone': '09123456789'}).json()
+        OTPChallenge.objects.filter(pk=challenge['challenge_id']).update(
+            expires_at=timezone.now() - timedelta(seconds=1))
+        response = self.mutate('/auth/sessions', {
+            'challenge_id': challenge['challenge_id'], 'code': challenge['debug_code']})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error']['code'], 'invalid_otp')
+        self.assertIn('منقضی', response.json()['error']['message'])
+        self.assertEqual(OTPChallenge.objects.get(pk=challenge['challenge_id']).attempts, 0)
+
+    def test_schema_documents_anonymous_cookie_requirement_for_otp_verification(self):
+        spec = specification()
+        self.assertEqual(spec['paths']['/auth/sessions']['post']['security'],
+                         [{'SessionCookie': [], 'CSRFToken': []}])
+        self.assertEqual(spec['paths']['/session']['get']['security'], [])
 
     def test_csrf_required_for_all_mutating_verbs_including_login_and_recipient_capability(self):
         self.session()
@@ -675,6 +785,8 @@ class BotClientTests(SimpleTestCase):
         self.assertEqual(requests[1].get_header('X-csrftoken'), old)
         self.assertEqual(requests[2].get_header('X-csrftoken'), new)
         self.assertEqual(requests[2].get_header('Idempotency-key'), 'stored-key')
+        self.assertEqual(requests[1].get_header('Origin'), 'https://begamnagam.ir')
+        self.assertEqual(requests[2].get_header('Origin'), 'https://begamnagam.ir')
         self.assertEqual(len(requests), 3)
 
     def test_real_execution_rejects_demo_and_requires_explicit_consent(self):

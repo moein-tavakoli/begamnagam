@@ -13,7 +13,7 @@ from unittest.mock import patch
 from django.contrib.sessions.models import Session
 from django.core.cache import cache
 from django.core.management import call_command, CommandError
-from django.db import close_old_connections, connection
+from django.db import close_old_connections, connection, connections
 from django.test import Client, LiveServerTestCase, SimpleTestCase, TestCase, TransactionTestCase, override_settings, skipUnlessDBFeature
 from django.utils import timezone
 
@@ -446,7 +446,7 @@ class BotConcurrencyTests(BotHelpers, TransactionTestCase):
                         'step': 'awaiting_text', 'data': {}}), content_type='application/json',
                     HTTP_X_BOT_KEY=self.key, HTTP_X_CSRFTOKEN=token).status_code
             finally:
-                close_old_connections()
+                connections.close_all()
 
         with ThreadPoolExecutor(max_workers=2) as executor:
             self.assertEqual(sorted(executor.map(run, ['first', 'second'])), [200, 409])
@@ -467,7 +467,7 @@ class BotConcurrencyTests(BotHelpers, TransactionTestCase):
                     content_type='application/json', HTTP_X_BOT_KEY=self.key, HTTP_X_CSRFTOKEN=tokens[index])
                 return response.status_code, response.json()
             finally:
-                close_old_connections()
+                connections.close_all()
 
         with ThreadPoolExecutor(max_workers=2) as executor:
             results = list(executor.map(run, [0, 1]))

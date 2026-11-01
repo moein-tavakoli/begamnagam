@@ -54,7 +54,10 @@ Account تلفنی باشد. ورود OTP یا خروج در Swagger ممکن ا
 
 - هر درخواست تغییردهنده: `Content-Type: application/json`، cookie jar همان
   کاربر، `X-CSRFToken` جاری و بدنهٔ JSON؛ بدنهٔ خالی یعنی `{}`، حتی برای
-  `DELETE /session`. CSRF برای ربات هم حذف نشده است.
+  `DELETE /session`. در HTTPS، کلاینت سمت سرور مانند n8n باید
+  `Origin: https://begamnagam.ir` هم بفرستد؛ جایگزین آن Referer معتبر همان
+  مبدأ است. فقط cookie و توکن برای HTTPS کافی نیستند. Origin از مبدأ API
+  می‌آید، نه آدرس رابط n8n. CSRF برای ربات هم حذف نشده است.
 - ابتدا `GET /session` یا `GET /bootstrap` را بزنید. cookieها را نگه دارید و
   `csrf_token` پاسخ را بخوانید. پس از ورود، توکن تازهٔ پاسخ را جایگزین کنید.
   نشست با خروج یا انقضا بی‌اعتبار می‌شود؛ پاسخ `401` نیاز به ورود دوباره دارد.
@@ -74,6 +77,102 @@ Account تلفنی باشد. ورود OTP یا خروج در Swagger ممکن ا
 - endpoint حدس‌زدن حساب دیگر، تغییر آزاد اعتبار، ارسال متن خام، ارسال گروهی
   یا استعلام وضعیت دریافت مقصد وجود ندارد. تغییر محیط یا adapter مجوز
   فعال‌سازی پرداخت/ارسال واقعی تازه نیست.
+
+### تنظیم n8n و تشخیص خطای CSRF
+
+اجرای n8n روی لوکال مانع استفاده از API HTTPS سایت نیست؛ درخواست HTTP Request
+از سرور n8n می‌رود و به CORS مرورگر برای localhost نیاز ندارد. در POST به
+سایت، Origin همان `https://begamnagam.ir` است. اگر خود API را محلی اجرا
+می‌کنید، base URL و Origin باید متعلق به همان محیط محلی باشند؛ cookieهای
+سایت و API محلی را مخلوط نکنید و HTTPS/اعتبارسنجی گواهی را غیرفعال نکنید.
+
+۱. نود نخست را مثلاً `Get Session` بنامید: `GET https://begamnagam.ir/api/v2/session`.
+در Options → Response، گزینهٔ **Include Response Headers and Status** را
+روشن و Response Format را **JSON** انتخاب کنید. خروجی شامل body و headers است.
+
+| حالت پاسخ | مسیر توکن |
+| --- | --- |
+| session با headers/status | `body.csrf_token` |
+| bootstrap با headers/status | `body.session.csrf_token` |
+| session بدون headers/status | `csrf_token` |
+| bootstrap بدون headers/status | `session.csrf_token` |
+
+۲. نود POST را به خروجی همان GET وصل کنید. Body باید JSON باشد، مثلاً
+`{"phone":"09123456789"}`؛ شماره رشته است. برای هدرها Using Fields Below:
+
+| Name | Value |
+| --- | --- |
+| `Origin` | `https://begamnagam.ir` |
+| `Content-Type` | `application/json` |
+| `X-CSRFToken` | `{{ $('Get Session').item.json.body.csrf_token }}` |
+| `Cookie` | `{{ [ $('Get Session').item.json.headers['set-cookie'] ].flat().filter(Boolean).map(c => c.split(';')[0]).join('; ') }}` |
+
+دو مقدار آخر را در حالت **Expression** قرار دهید؛ نام `Get Session` باید
+عین نام نود شما باشد. Cookie فقط `name=value`های همان GET و همان اجرای
+همان کاربر است، مانند `csrftoken=...; sessionid=...`؛ Path/Expires/Secure/
+HttpOnly از Set-Cookie را به Cookie درخواست منتقل نکنید. Set-Cookie را با
+ویرگول جدا نکنید، چون Expires خودش ویرگول دارد. پس از ورود یا resolution
+ربات، cookie و توکن جدید همان پاسخ جایگزین می‌شوند. مقادیر واقعی را در
+پارامتر ثابت نود، مخزن عمومی یا گزارش قابل اشتراک قرار ندهید.
+
+توکن JSON ماسک‌شده معمولاً۶۴کاراکتر و مقدار cookie معمولاً۳۲کاراکتر است؛ هر
+دو در X-CSRFToken معتبرند، به شرطی که متعلق به یک جفت cookie/پاسخ باشند.
+`authenticated:false` پیش از OTP طبیعی است. پاسخ 403 با `csrf_failed` قبل
+از بررسی شماره و ارسال SMS اتفاق می‌افتد و به‌تنهایی اثبات انقضای session نیست.
+برای بررسی بدون SMS، body را `{}` بفرستید: با Origin و CSRF صحیح، پاسخ
+`422 invalid_input` نشان می‌دهد CSRF عبور کرده ولی شمارهٔ ضروری داده نشده؛
+بدون Origin/Referer در HTTPS حتی با توکن صحیح، پاسخ403است. سپس فقط با اقدام
+صریح کاربر شمارهٔ واقعی را بفرستید؛ retry خودکار OTP را خاموش نگه دارید.
+
+راهنمای رسمی [n8n HTTP Request](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.httprequest/)
+و [اعتبارسنجی Origin/Referer در Django](https://docs.djangoproject.com/en/5.2/ref/csrf/) مبنای این تنظیم‌اند.
+
+### وقتی OTP می‌رسد ولی تأیید «نامعتبر یا منقضی‌شده» است
+
+این پیام به‌تنهایی انقضای زمانی را ثابت نمی‌کند. چالش به `sessionid` زمان
+ارسال متصل است؛ نبودن/عوض‌شدن این cookie، مصرف قبلی چالش، پایان مهلت یا سقف
+تلاش هم رد می‌شوند. گرفتن CSRF تازه با یک نشست دیگر، چالش قبلی را منتقل نمی‌کند.
+
+۱. از پاسخ موفق ارسال کد، `challenge_id` و `expires_in` را همراه cookie jar
+و CSRF همان کاربر نگه دارید. هر `Set-Cookie` جدید را بر اساس نام با jar ادغام
+کنید؛ نبودن sessionid در یک پاسخ به معنی حذف آن از jar نیست. مهلت OTP از
+`expires_in` پاسخ **ارسال کد** است؛ expires_in پاسخ session مهلت نشست است.
+
+۲. تأیید را با `POST https://begamnagam.ir/api/v2/auth/sessions` و همان هدرهای
+Origin، Cookie، X-CSRFToken و Content-Type بفرستید. Body:
+
+```json
+{"challenge_id":"<challenge_id همان ارسال>","code":"<کد چهاررقمی کاربر>"}
+```
+
+کد String است؛ صفر ابتدای آن را نگه دارید. اگر نود ارسال `Send OTP` نام
+دارد و Include Response Headers and Status روشن است، مسیر شناسه
+`{{ $('Send OTP').item.json.body.challenge_id }}` است. بدون این گزینه،
+`body` را حذف کنید. این expression فقط به نودِ اجراشده در همان execution
+ارجاع می‌دهد؛ از دادهٔ پین‌شده/اجرای قدیمی استفاده نکنید.
+
+۳. در اجرای مجزای دریافت کد از تلگرام/بله، GET Session خالی را دوباره از اول
+اجرا نکنید و کوکی کاربر دیگر را هم نگیرید. state را با کلید
+`(platform, bot_id, from_user_id)` بازیابی کنید. در مسیر ماندگار API، پس از
+ارسال کد مرحلهٔ `awaiting_otp` و `challenge_id` را checkpoint کنید؛ در update
+بعدی resolution همان هویت، cookie/CSRF نشست قبلی و چالش را برمی‌گرداند.
+با `resume_action: enter_otp` همان چالش را تأیید کنید. در پیاده‌سازی بدون
+conversation API باید خود adapter، jar و challenge را در فضای خصوصی و امن
+بین executionها حفظ کند. OTP را ذخیره یا لاگ نکنید.
+
+۴. پاسخ موفق تأیید `201` و `authenticated:true` است. همان لحظه cookieهای
+پاسخ و csrf_token تازه را ذخیره کنید؛ ورود sessionid را می‌چرخاند. سپس
+`GET /me` با cookie تازه بزنید. POST تأیید، کد را یک‌بار مصرف می‌کند؛ اجرای
+دوبارهٔ آن با همان کد ممکن است همان خطای «منقضی‌شده» بدهد. ارسال و تأیید OTP
+را خودکار retry نکنید. اگر پاسخ گم شد، با آخرین jar ذخیره‌شده `GET /session`
+را بررسی کنید؛ بدون cookie چرخیده، احراز ورود موفق قابل بازیابی نیست، مگر
+از resolution مکالمهٔ ماندگار همان هویت.
+
+برای عیب‌یابی فقط status، `error.code` و X-Request-ID را نگه دارید و ببینید
+sessionid بین ارسال و تأیید ثابت بوده است؛ مقدار cookie، OTP و شماره را در
+گزارش قابل اشتراک قرار ندهید. در صورت انقضای واقعی، کد تازه فقط با اقدام
+صریح کاربر درخواست شود. [مستندات نشست Django](https://docs.djangoproject.com/en/5.2/topics/http/sessions/)
+نحوهٔ نگهداری و چرخش نشست را توضیح می‌دهد.
 
 ## گام ۱ — ساخت نشست مستقل هر کاربر ربات
 

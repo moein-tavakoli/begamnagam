@@ -62,6 +62,7 @@ class BotAPI:
                 or (parsed.scheme == 'http' and parsed.hostname not in {'localhost', '127.0.0.1', '::1'})):
             raise ValueError('Use an HTTPS /api/v2 base URL (HTTP is allowed on loopback only).')
         self.base_url = base_url.rstrip('/')
+        self.origin = parsed.scheme + '://' + parsed.netloc
         self.jar = cookie_jar if cookie_jar is not None else http.cookiejar.CookieJar()
         self.opener = build_opener(HTTPCookieProcessor(self.jar), NoRedirect())
         self.csrf_token = None
@@ -83,6 +84,9 @@ class BotAPI:
                 self.refresh_session()
             headers['X-CSRFToken'] = self.csrf_token
             headers['Content-Type'] = 'application/json'
+            # Django also checks Origin/Referer for HTTPS mutations. urllib and
+            # server-side tools such as n8n do not supply a browser Origin.
+            headers['Origin'] = self.origin
         if key is not None:
             headers['Idempotency-Key'] = str(key)
         encoded = json.dumps(data if data is not None else {}, ensure_ascii=False).encode('utf-8') if unsafe else None

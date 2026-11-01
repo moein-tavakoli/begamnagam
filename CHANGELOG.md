@@ -9,6 +9,30 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.19.1 — 2026-11-01 — HTTPS client Origin and n8n guidance (local)
+
+### Fixed
+
+- Send the API Origin on mutations in the Python client. Django's HTTPS CSRF
+  protection also checks Origin/Referer; correct cookies and CSRF alone returned
+  403 from server-side clients. Keep strict origin validation and CSRF enabled.
+- Document n8n's full-response body nesting, dynamic cookie/header expressions,
+  local n8n usage and the no-SMS empty-body diagnostic. Add the Origin/Referer
+  requirement to Swagger and clarify that the existing server accepts this
+  client-side fix without a deployment. Record actual v0.19.0 deployment evidence
+  in README while keeping this patch local.
+- Close concurrency-test thread connections explicitly so the isolated
+  PostgreSQL test database can be removed reliably with persistent connections.
+
+Validation: 74 API/bot/client tests passed on isolated PostgreSQL 14.18 and
+Redis 8.10.2, including HTTPS CSRF regression checks. A live HTTPS probe verified
+nonempty 64-character JSON tokens from session/bootstrap, reproduced 403 without
+Origin/Referer and passed CSRF with either valid header (422 for an intentionally
+empty OTP body). The cookie secret also worked as CSRF. No real OTP was requested.
+n8n HTTP Request 4.5 node configurations and cookie expressions, the official
+OpenAPI meta-schema, Django/migration checks, version metadata and scoped diff
+passed. No n8n workflow edit/execution, push or server deployment occurred.
+
 ## 0.19.0 — 2026-10-31 — Persistent Telegram/Bale conversations (local)
 
 ### Added

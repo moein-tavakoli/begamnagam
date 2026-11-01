@@ -121,6 +121,47 @@ class IntegrationAPITests(TestCase):
         self.assertNotIn('original_text', receipt)
         self.assertEqual(self.client.get('/api/v1/messages').json()['results'][0]['id'], message_id)
 
+    @override_settings(ALLOWED_HOSTS=['begamnagam.ir'], CSRF_TRUSTED_ORIGINS=['https://begamnagam.ir'])
+    def test_https_mutations_need_api_origin_or_referer_even_with_valid_csrf(self):
+        response = self.client.get('/api/v2/session', secure=True, HTTP_HOST='begamnagam.ir')
+        token = response.json()['csrf_token']
+        self.assertEqual(len(token), 64)
+        cases = [({}, 403), ({'HTTP_ORIGIN': 'http://localhost:5678'}, 403),
+                 ({'HTTP_ORIGIN': 'https://begamnagam.ir'}, 422),
+                 ({'HTTP_REFERER': 'https://begamnagam.ir/'}, 422)]
+        for extra, expected in cases:
+            result = self.client.post('/api/v2/auth/otp-challenges', data='{}', content_type='application/json',
+                secure=True, HTTP_HOST='begamnagam.ir', HTTP_X_CSRFTOKEN=token, **extra)
+            self.assertEqual(result.status_code, expected, result.content)
+        self.assertEqual(OTPChallenge.objects.count(), 0)
+
+    @override_settings(ALLOWED_HOSTS=['begamnagam.ir'], CSRF_TRUSTED_ORIGINS=['https://begamnagam.ir'])
+    def test_sample_client_passes_real_https_csrf_middleware_without_sending_otp(self):
+        from urllib.error import HTTPError
+        from urllib.parse import urlsplit
+        path = Path(__file__).parent / 'api_v2/integration/client.py'
+        spec = importlib.util.spec_from_file_location('https_bot_api_client', path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        sample = module.BotAPI('https://begamnagam.ir/api/v2')
+
+        def transport(request, **kwargs):
+            headers = {'HTTP_' + name.upper().replace('-', '_'): value for name, value in request.header_items()}
+            headers['HTTP_HOST'] = 'begamnagam.ir'
+            result = self.client.generic(request.get_method(), urlsplit(request.full_url).path,
+                data=request.data or b'', content_type=headers.pop('HTTP_CONTENT_TYPE', 'application/json'),
+                secure=True, **headers)
+            if result.status_code >= 400:
+                raise HTTPError(request.full_url, result.status_code, '', {}, io.BytesIO(result.content))
+            return io.BytesIO(result.content)
+
+        with patch.object(sample.opener, 'open', side_effect=transport):
+            with self.assertRaises(module.APIResponseError) as caught:
+                sample.call('POST', '/auth/otp-challenges', {})
+        self.assertEqual(caught.exception.status, 422)
+        self.assertEqual(caught.exception.code, 'invalid_input')
+        self.assertEqual(OTPChallenge.objects.count(), 0)
+
     def test_schema_has_every_route_operation_unique_ids_and_security(self):
         spec = specification()
         identifiers = []
@@ -675,6 +716,8 @@ class BotClientTests(SimpleTestCase):
         self.assertEqual(requests[1].get_header('X-csrftoken'), old)
         self.assertEqual(requests[2].get_header('X-csrftoken'), new)
         self.assertEqual(requests[2].get_header('Idempotency-key'), 'stored-key')
+        self.assertEqual(requests[1].get_header('Origin'), 'https://begamnagam.ir')
+        self.assertEqual(requests[2].get_header('Origin'), 'https://begamnagam.ir')
         self.assertEqual(len(requests), 3)
 
     def test_real_execution_rejects_demo_and_requires_explicit_consent(self):

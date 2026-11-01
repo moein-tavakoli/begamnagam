@@ -19,6 +19,12 @@ adapter با کلید اختصاصی خود `POST /api/v2/bot/conversations/reso
 - Swagger خصوصی: `/api/v2/document`
 - OpenAPI خصوصی: `/api/v2/document/openapi.json`
 
+اصلاح محلی۰٫۱۹٫۱: کلاینت HTTPS، Origin همان مبدأ API را همراه CSRF می‌فرستد.
+راهنمای کامل، تنظیم نود HTTP Request در n8n، مسیر body توکن با headers/status
+و انتقال درست cookieها را دارد. اجرای n8n روی لوکال برای اتصال به API سایت
+مجاز است؛ افزودن Origin آدرس API لازم است و CORS عمومی فعال نمی‌شود.
+این اصلاح هنوز انتشار تازهٔ سرور نیست؛ تنظیم هدر n8n با سرور۰٫۱۹٫۰ هم کار می‌کند.
+
 `API_DOCUMENTATION_ENABLED=1` و نشست حساب فعال دارای مجوز
 `core.view_api_documentation` هر دو لازم‌اند. ورود اختصاصی در
 `/api/v2/document/login` است؛ حساب فرانت‌کار فقط همین مجوز را با staff و

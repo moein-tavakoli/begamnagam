@@ -32,6 +32,11 @@ def specification():
             if unsafe:
                 parameters.append({'name': 'X-CSRFToken', 'in': 'header', 'required': True,
                                    'schema': {'type': 'string'}, 'description': 'Current session.csrf_token; refresh after login/logout.'})
+                parameters.append({'name': 'Origin', 'in': 'header', 'required': False,
+                                   'schema': {'type': 'string', 'format': 'uri'}, 'example': 'https://begamnagam.ir',
+                                   'description': 'HTTPS server-to-server clients (including n8n) must send the API origin, '
+                                                  'or a valid same-origin Referer, in addition to cookies and CSRF. '
+                                                  'Browsers normally supply this header automatically. Do not use the n8n UI origin.'})
             responses = {str(spec['status']): {'description': 'Success. Idempotent operations return the existing resource on replay.',
                                               'content': {'application/json': {'schema': ref(spec['response'])}}}}
             for code, label in {400: 'Malformed JSON or invalid phone', 401: 'Phone verification or valid bot credential required',

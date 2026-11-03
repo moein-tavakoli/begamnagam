@@ -24,6 +24,7 @@ test("production CSP authorizes nonce scripts and excludes arbitrary script exec
   for (const key of ["script-src-attr", "object-src", "frame-src", "base-uri", "frame-ancestors"])
     assert.deepEqual(directives[key], ["'none'"]);
   assert.deepEqual(directives["connect-src"], ["'self'"]);
+  assert.deepEqual(directives["img-src"], ["'self'", "data:", "blob:", "https://trustseal.enamad.ir"]);
   assert.deepEqual(directives["form-action"], ["'self'"]);
   assert.deepEqual(directives["worker-src"], ["'self'"]);
   assert.ok("upgrade-insecure-requests" in directives);

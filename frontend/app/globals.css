@@ -238,7 +238,8 @@ input[aria-invalid="true"],textarea[aria-invalid="true"] { border-color: var(--e
   .home-trust-marks { display: flex; justify-content: center; gap: 14px; }
   .home-trust-slot { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; width: 128px; min-height: 134px; padding: 14px 18px; border: 1px solid var(--warm); border-radius: 24px; background: var(--warm); box-shadow: 0 6px 20px #6b471a0a; }
   .home-trust-slot-frame { display: grid; place-items: center; width: 48px; height: 44px; margin-bottom: 4px; border: 1px dashed var(--control-line); border-radius: 12px; background: var(--surface); color: var(--muted); }
-  .home-trust-slot-monogram { font-family: Tahoma, sans-serif; font-size: 23px; font-weight: 700; line-height: 1; opacity: .65; }
+  .home-enamad-badge a { display: inline-flex; }
+  .home-enamad-badge img { display: block; width: 96px; height: 112px; object-fit: contain; }
   .home-trust-slot strong { font-size: 15px; font-weight: 600; line-height: 1.8; }
   .home-trust-slot-caption { font-size: 11px; color: var(--muted); }
 }

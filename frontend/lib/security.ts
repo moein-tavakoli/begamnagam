@@ -7,7 +7,7 @@ export function contentSecurityPolicy(nonce: string, development: boolean, https
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${development ? " 'unsafe-eval'" : ""}`,
     "script-src-attr 'none'",
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",
+    "img-src 'self' data: blob: https://trustseal.enamad.ir",
     "font-src 'self'",
     `connect-src 'self'${development ? " ws: wss:" : ""}`,
     "worker-src 'self'",

@@ -9,6 +9,23 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.19.3 — 2026-11-03 — Official Enamad home badge (local)
+
+### Fixed
+
+- Replace the home page's Enamad placeholder with the supplied official embed
+  verbatim. Permit its HTTPS image host in CSP and display the badge only on
+  desktop, hiding it on mobile as requested, without changing the supplied
+  link/image attributes.
+
+Validation: 80 frontend tests and TypeScript passed. Native Next development
+HTML and hydrated DOM preserve the exact supplied embed and all attributes.
+Browser checks passed at 1440, 375, 320 and 812 pixels: desktop keyboard focus
+and badge bounds, hidden mobile badge, and no horizontal overflow.
+The external logo did not load from localhost, but a separate HTTPS request
+with the registered domain as Referer returned a valid PNG (200). Actual seal
+validation on the deployed domain remains unverified. No push or deployment.
+
 ## 0.19.2 — 2026-11-01 — OTP session diagnosis and n8n verification guidance (local)
 
 ### Fixed

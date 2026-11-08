@@ -11,7 +11,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import connection
 from .gapgpt import (GapGPTRejected, GapGPTUnavailable, _NoRedirect, _candidate,
-                     _json_object, _read_response, _REWRITE_INSTRUCTION, _REVIEW_INSTRUCTION)
+                     _json_object, _read_response, _REWRITE_INSTRUCTION, _REVIEW_INSTRUCTION, _review_prompt)
 
 _locks = [Lock(), Lock()]
 _LOCK_NAMESPACE = 18476112
@@ -125,11 +125,9 @@ def rewrite_message(cleaned_text, *, max_units, direct=False, message_tone=None,
     from .draft_guard import validate_polite_body
     validate_polite_body(candidate, max_units=max_units)
     checks = (*REVIEW_KEYS, 'tone_matched') if message_tone in {'firm', 'blunt', 'angry'} else REVIEW_KEYS
-    if 'tone_matched' in checks:
-        extra += '\nAlso require tone_matched: candidate follows the server-selected tone without adding hostility or facts absent from the source. Any uncertainty is false.'
     schema = {'type': 'object', 'properties': {key: {'type': 'boolean'} for key in checks},
         'required': list(checks), 'additionalProperties': False}
-    verdict = _chat(opener, config, REVIEW + extra, {'source': cleaned_text, 'candidate': candidate}, schema, deadline, 100)
+    verdict = _chat(opener, config, _review_prompt(checks, message_tone), {'source': cleaned_text, 'candidate': candidate}, schema, deadline, 100)
     if set(verdict) != set(checks) or any(type(value) is not bool for value in verdict.values()):
         raise GapGPTUnavailable('invalid_local_review')
     if not all(verdict.values()):

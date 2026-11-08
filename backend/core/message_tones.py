@@ -45,6 +45,18 @@ def instruction(tone):
     raise ValueError('invalid_tone')
 
 
+def review_instruction(tone):
+    criteria = {
+        'polite': 'Calm and respectful language in the original register; ordinary colloquial friendliness is sufficient.',
+        'firm': 'Direct, clear and respectful language in the original register; no invented anger, complaint or excessive softening.',
+        'blunt': 'Plain, direct language with the least necessary change. An already civil, clear source can match exactly. No added formality, literary wording, pleasantries, anger or disrespect.',
+        'angry': 'Terse and serious language; frustration only when supported by the source. No invented hostility or abuse.',
+    }
+    if tone is None:
+        return ''
+    return '\nTone classification criterion (' + tone + '): ' + criteria[tone] + '\nAll safety prohibitions still apply. Evaluate the existing candidate only.'
+
+
 def templates(category, tone):
     from .moderation import TEMPLATES, DIRECT_TEMPLATES, ANGRY_TEMPLATES
     return {'polite': TEMPLATES, 'firm': DIRECT_TEMPLATES, 'blunt': DIRECT_TEMPLATES, 'angry': ANGRY_TEMPLATES}[tone][category]

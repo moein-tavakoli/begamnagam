@@ -109,6 +109,7 @@ def bootstrap(request):
         data["recent_auth"] = timezone.now().timestamp() - request.session.get("phone_verified_at", 0) <= 300
         data["session_identity"] = digest("session-identity:" + request.session.session_key)
         data["phone_masked"] = request.user.account.phone_masked
+        data["phone"] = decrypt(request.user.account.phone_cipher) if request.user.account.phone_cipher else ''
         data["recipient_blocked"] = RecipientState.objects.filter(phone_hash=request.user.account.phone_hash, blocked=True).exists()
     return data
 
@@ -226,7 +227,8 @@ def verify_otp(request):
     # Absolute expiry survives browser restarts and is not renewed by session writes.
     request.session.set_expiry(verified_at + timedelta(seconds=settings.PRODUCT_SESSION_AGE))
     Preview.objects.filter(session_key=old_session, owner__isnull=True).update(owner=user, session_key=new_session)
-    return {"authenticated": True, "phone_masked": user.account.phone_masked, "recent_auth": True}
+    return {"authenticated": True, "phone_masked": user.account.phone_masked,
+        "phone": decrypt(user.account.phone_cipher) if user.account.phone_cipher else '', "recent_auth": True}
 
 
 @api(["POST"], authenticated=True)

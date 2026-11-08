@@ -55,7 +55,7 @@ class ProfileSessionTests(TestCase):
         value = client.get("/api/v1/bootstrap").json()
         self.assertTrue(value["authenticated"])
         self.assertEqual((value["free_sends_remaining"], value["free_sends_total"], value["free_sends_earned_total"]), (5, 6, 3))
-        self.assertNotIn(phone, str(value))
+        self.assertEqual(value["phone"], phone)
         self.assertEqual(client.post("/api/v1/auth/logout", data="{}", content_type="application/json").status_code, 403)
         self.assertTrue(client.get("/api/v1/bootstrap").json()["authenticated"])
         result = client.post("/api/v1/auth/logout", data="{}", content_type="application/json",
@@ -64,6 +64,8 @@ class ProfileSessionTests(TestCase):
         value = client.get("/api/v1/bootstrap").json()
         self.assertFalse(value["authenticated"])
         self.assertNotIn("phone_masked", value)
+        self.assertNotIn("phone", value)
+        self.assertNotIn(phone, str(value))
         self.assertNotIn("free_sends_remaining", value)
         self.assertFalse(OTPChallenge.objects.exists())
         self.assertFalse(Order.objects.exists())

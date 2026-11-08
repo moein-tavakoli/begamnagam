@@ -11,7 +11,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 
 from .models import Account, Order, Outbox, Preview, RecipientState, PaymentAttempt, MessageDelivery, FinancialEvent
-from .privacy import digest, encrypt, mask, normalize_phone
+from .privacy import decrypt, digest, encrypt, mask, normalize_phone
 
 logger = logging.getLogger(__name__)
 PAYMENT_WINDOW = timedelta(minutes=15)
@@ -123,6 +123,7 @@ def serialize_order(order, *, related=None):
         "status_reason": order_status_reason(order, delivery, event),
         "delivery_status": delivery.status if delivery else "not_ready","id": str(order.id), "status": order.status, "amount_toman": order.amount_toman,
         "payment_mode": order.payment_mode, "recipient_masked": order.recipient_masked, "is_free": order.is_free,
+        "recipient_phone": decrypt(order.recipient_cipher) if order.recipient_cipher else '',
         "text": order.full_sms or order.text, "category": order.category, "paid_at": order.paid_at.isoformat() if order.paid_at else None,
         "created_at": order.created_at.isoformat(), "payment_expires_at": (order.created_at + PAYMENT_WINDOW).isoformat()}
 

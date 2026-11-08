@@ -92,7 +92,7 @@ class IntegrationAPITests(TestCase):
         self.assertEqual(data['credits']['total_remaining'], 10)
         self.assertEqual(data['credits']['wallet_balance_toman'], '321')
         self.assertEqual(data['me'], self.client.get('/api/v2/me').json())
-        self.assertNotIn('09123456789', json.dumps(data))
+        self.assertEqual(data['me']['phone'], '09123456789')
         self.assertNotIn('phone_hash', json.dumps(data))
 
     def test_complete_review_reserve_submit_poll_and_retry_journey(self):
@@ -117,7 +117,7 @@ class IntegrationAPITests(TestCase):
         self.assertEqual(self.client.get('/api/v2/messages').json()['results'][0]['id'], message_id)
         self.assertEqual(Outbox.objects.count(), 1)
         self.assertEqual(MessageDelivery.objects.count(), 1)
-        self.assertNotIn('09901234567', json.dumps(receipt))
+        self.assertEqual(receipt['recipient_phone'], '09901234567')
         self.assertNotIn('original_text', receipt)
         self.assertEqual(self.client.get('/api/v1/messages').json()['results'][0]['id'], message_id)
 

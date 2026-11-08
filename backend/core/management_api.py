@@ -49,7 +49,7 @@ def staff_api(methods, permission=None, *, automatic_reason=False):
 RESOURCES = {
     'manual-payments': (m.ManualPayment, 'رسیدهای کارت‌به‌کارت', 'created_at', 'status', [
         ('id','شناسهٔ درخواست','id'), ('purchase_id','شناسهٔ خرید','id'),
-        ('purchase__owner__account__id','حساب','id'), ('purchase__owner__account__phone_masked','موبایل','text'),
+        ('purchase__owner__account__id','حساب','id'), ('purchase__owner__account__phone','موبایل','text'),
         ('purchase__package_name','بسته','text'), ('purchase__message_count','تعداد پیام','number'),
         ('purchase__amount_toman','مبلغ (تومان)','number'), ('purchase__environment','محیط','text'), ('status','وضعیت','status'),
         ('receipt_submitted_at','ثبت رسید','date'), ('reviewed_at','بررسی','date'), ('created_at','ثبت','date')]),
@@ -82,7 +82,7 @@ RESOURCES = {
         ("amount_toman", "مبلغ (تومان)", "number"), ("is_free", "رایگان", "bool"), ("is_sponsored", "تأمین هزینه توسط سرویس", "bool"),
         ("payment_mode", "روش پرداخت", "text"), ("created_at", "ثبت", "date")]),
     "invitations": (m.Invitation, "دعوت‌ها", "created_at", None, [
-        ("id", "شناسه", "id"), ("phone_masked", "مخاطب", "text"),
+        ("id", "شناسه", "id"), ("phone", "مخاطب", "text"),
         ("registered_at", "ثبت‌نام مخاطب", "date"), ("reward_awarded_at", "اعطای جایزه", "date"), ("created_at", "ثبت", "date")]),
     "invitation-sends": (m.InvitationSend, "ارسال دعوت", "created_at", "status", [
         ("id", "شناسه", "id"), ("ordinal", "نوبت", "number"), ("status", "وضعیت", "status"),
@@ -117,6 +117,14 @@ RESOURCES = {
         ("id", "شناسه", "id"), ("actor_id", "شناسهٔ مدیر", "id"), ("action", "اقدام", "text"),
         ("object_id", "رکورد", "text"), ("reason", "دلیل", "text"), ("before", "پیش از تغییر", "json"),
         ("after", "پس از تغییر", "json"), ("created_at", "ثبت", "date")]),
+}
+
+# Virtual display fields are decrypted only for an authorized, bounded page.
+# The legacy masked fields remain in payloads/search for API compatibility.
+PHONE_DISPLAY_FIELDS = {
+    'invitations': ('phone', 'phone_cipher', 'phone_masked'),
+    'manual-payments': ('purchase__owner__account__phone',
+        'purchase__owner__account__phone_cipher', 'purchase__owner__account__phone_masked'),
 }
 
 
@@ -196,6 +204,7 @@ def records(request, resource):
         from .management_blacklist import blacklist_payload
         return blacklist_payload(request.user, query, page, page_size)
     model, title, ordering, status_field, columns = spec
+    phone_fields = PHONE_DISPLAY_FIELDS.get(resource)
     rows = model.objects.all()
     if status and status_field:
         rows = rows.filter(**{status_field: status})
@@ -210,6 +219,8 @@ def records(request, resource):
             condition = Q(search_id__icontains=query)
             for field, _, kind in columns:
                 if kind in {"status", "text"} and field not in {"reason", "object_id"}:
+                    if phone_fields and field == phone_fields[0]:
+                        field = phone_fields[2]
                     condition |= Q(**{field + "__icontains": query})
             rows = rows.annotate(search_id=Cast("pk", CharField())).filter(condition)
     if resource == 'accounts':
@@ -219,7 +230,15 @@ def records(request, resource):
     else:
         total = rows.count()
         fields = list(dict.fromkeys([model._meta.pk.name] + [col[0] for col in columns]))
+        if phone_fields:
+            display_field, cipher_field, legacy_field = phone_fields
+            fields = [cipher_field if field == display_field else field for field in fields]
+            fields.append(legacy_field)
         values = list(rows.order_by("-" + ordering, "-pk").values(*fields)[(page-1)*page_size:page*page_size])
+        if phone_fields:
+            for value in values:
+                cipher = value.pop(cipher_field)
+                value[display_field] = decrypt(cipher) if cipher else ''
     for value in values:
         for money_field in ('balance_after_toman', 'wallet_balance_toman'):
             if money_field in value:

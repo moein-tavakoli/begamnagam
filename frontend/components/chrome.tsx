@@ -38,7 +38,7 @@ export function Header() {
         <Link href="/help#how-it-works">راهنمای استفاده</Link>
       </nav>
       {data?.authenticated && <div className="header-account">
-        <bdi className="header-phone" dir="ltr" tabIndex={-1} aria-label="شمارهٔ حساب واردشده">{data.phone_masked}</bdi>
+        <bdi className="header-phone" dir="ltr" tabIndex={-1} aria-label="شمارهٔ حساب واردشده">{data.phone||'شماره در دسترس نیست'}</bdi>
         <span className="header-balance" role="status">{data.unlimited_free_sends ? "ارسال رایگان نامحدود" : <>اعتبار: {new Intl.NumberFormat("fa-IR").format(data.purchased_sends_remaining ?? 0)} و {new Intl.NumberFormat("fa-IR").format(data.free_sends_remaining ?? 0)} هدیه</>}</span>
       </div>}
     </header>

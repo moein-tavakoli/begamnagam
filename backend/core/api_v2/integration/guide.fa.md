@@ -428,8 +428,20 @@ POST /api/v2/auth/sessions
 
 ## گام ۳ — getMe، اعتبار و منوی اصلی
 
-`GET /me` همان کاربرد getMe را به‌شکل REST دارد: `id` حساب، `phone_masked`,
-`suspended`, `deletion_requested_at`, `recent_auth`. `GET /me/credits`:
+`GET /me` همان کاربرد getMe را به‌شکل REST دارد: `id` حساب، `phone`، `phone_masked`,
+`suspended`, `deletion_requested_at`, `recent_auth`.
+
+`phone` شمارهٔ کامل و استاندارد ASCII حسابِ واردشده است؛ در bootstrap ناشناس
+اطلاعات حساب برگردانده نمی‌شود. تاریخچه و رسید پیامِ متعلق به کاربر،
+`recipient_phone` و دعوت‌های متعلق به او `phone` را برمی‌گردانند. این فیلدها
+افزوده و اختیاری در قرارداد هستند؛ فیلدهای قدیمی `phone_masked` و
+`recipient_masked` برای سازگاری باقی مانده‌اند، اما سایت از فیلد کامل برای نمایش
+استفاده می‌کند. اگر دادهٔ رمز‌شده طبق سیاست نگهداری حذف شده باشد، فیلد کامل
+رشتهٔ خالی است؛ شماره از نسخهٔ پوشانده‌شده بازسازی نمی‌شود. شمارهٔ کاربر در
+پشتیبانی فقط به مدیر فعال نمایش داده می‌شود؛ هویت مدیر یا فرستندهٔ پیام ناشناس
+به کاربر یا گیرنده اضافه نمی‌شود.
+
+`GET /me/credits`:
 
 ```json
 {"gift_remaining":3,"gift_total":3,"invitation_rewards_total":0,

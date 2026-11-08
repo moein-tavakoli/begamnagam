@@ -9,6 +9,32 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.27.0 — 2026-11-08 — Full authorized phone display throughout the site (local)
+
+### Added
+
+- Add full `phone` fields for the authenticated account, owned invitations and
+  staff support threads, plus `recipient_phone` for owned message history/receipts.
+  Extend v2 Me/Message/Invitation schemas and private integration docs additively;
+  legacy masked payload fields remain for existing consumers.
+- Display full phones across profile/header, message/invitation history, support
+  inbox/thread titles, management invitation/manual-payment grids and Django
+  account/invitation read-only views. Remove every UI masked-field fallback;
+  pruned or missing numbers stay unavailable rather than reconstructed.
+- Preserve owner/staff guards, anonymous sender secrecy, encrypted storage,
+  redacted logs/audits, current pagination and private Swagger access. Generic
+  management decrypts only its bounded page and maps virtual phone search fields
+  to existing database fields. Update privacy text to describe actual display.
+
+Validation: 685 PostgreSQL tests (including 14 new access/display regressions),
+104 frontend tests, TypeScript and Persian changelog parity passed. Update legacy
+masked-response expectations while preserving post-logout redaction checks.
+Independent review found no material issues. Authenticated native support checks
+at 1280px and 375px confirmed full phones in list/thread titles and no horizontal
+overflow; owner UI paths are covered by serializer access tests and source review,
+without creating a fresh product session. No real OTP, support message, recipient
+SMS, payment or AI call was sent. Local version only; no push or deployment.
+
 ## 0.26.0 — 2026-11-08 — Private TV monitoring and support composer (local)
 
 ### Added

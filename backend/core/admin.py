@@ -40,6 +40,13 @@ class ReadOnlyAdmin(admin.ModelAdmin):
         return False
 
 
+class ReadOnlyPhoneAdmin(ReadOnlyAdmin):
+    @admin.display(description='موبایل')
+    def full_phone(self, obj):
+        from .privacy import decrypt
+        return decrypt(obj.phone_cipher) if obj.phone_cipher else 'شماره در سوابق موجود نیست'
+
+
 @admin.register(Order)
 class OrderAdmin(ReadOnlyAdmin):
     list_display = ("id", "status", "amount_toman", "created_at")
@@ -73,13 +80,13 @@ class OrderAdmin(ReadOnlyAdmin):
 
 
 @admin.register(Account)
-class AccountAdmin(ReadOnlyAdmin):
+class AccountAdmin(ReadOnlyPhoneAdmin):
     form = AccountOptionsForm
     change_list_template = "admin/core/account/change_list.html"
-    list_display = ("id", "phone_masked", "unlimited_free_sends", "free_sends_remaining", "sender_daily_limit", "rewrite_daily_limit", "unlimited_demo_sends", "direct_message_tone", "created_at")
+    list_display = ("id", "full_phone", "unlimited_free_sends", "free_sends_remaining", "sender_daily_limit", "rewrite_daily_limit", "unlimited_demo_sends", "direct_message_tone", "created_at")
     list_filter = ("unlimited_free_sends", "unlimited_demo_sends", "direct_message_tone", ('sender_daily_limit', admin.EmptyFieldListFilter), ('rewrite_daily_limit', admin.EmptyFieldListFilter))
     search_fields = ("phone_masked",)
-    fields = ("id", "phone_masked", "free_sends_remaining", "free_sends_earned_total", "purchased_sends_remaining", "demo_sends_remaining", "created_at")
+    fields = ("id", "full_phone", "free_sends_remaining", "free_sends_earned_total", "purchased_sends_remaining", "demo_sends_remaining", "created_at")
     readonly_fields = fields
 
 
@@ -367,8 +374,8 @@ class SpendBudgetAdmin(ReadOnlyAdmin):
 
 
 @admin.register(Invitation)
-class InvitationAdmin(ReadOnlyAdmin):
-    list_display = ('id', 'phone_masked', 'created_at', 'registered_at', 'reward_awarded_at')
+class InvitationAdmin(ReadOnlyPhoneAdmin):
+    list_display = ('id', 'full_phone', 'created_at', 'registered_at', 'reward_awarded_at')
     fields = list_display
     readonly_fields = fields
 

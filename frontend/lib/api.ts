@@ -19,6 +19,7 @@ export type Bootstrap = {
   demo_mode: boolean;
   otp_is_real?: boolean;
   authenticated: boolean;
+  phone?: string;
   phone_masked?: string;
   unlimited_free_sends?: boolean;
   free_sends_remaining?: number;
@@ -64,6 +65,7 @@ export type ReceiptChannel = { name: string; label: string; url: string };
 export type CreditPurchase = { id: string; package_id: number; name: string; message_count: number; amount_toman: number; environment: string; status: string; payment_method?: string; redirect_url?: string | null; created_at: string;
   manual_payment_id?: string; card?: { number: string; holder: string; bank_name?: string }; receipt_channels?: ReceiptChannel[]; receipt_submitted_at?: string | null; review_note?: string };
 export type Message = Order & {
+  recipient_phone: string;
   recipient_masked: string;
   text: string;
   created_at: string;

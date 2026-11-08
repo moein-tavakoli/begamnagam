@@ -2,7 +2,7 @@ export type SupportThreadData = {
   id: string; status: 'open'|'closed'; last_sequence: number; last_customer_sequence: number;
   answered_customer_sequence: number; staff_read_sequence: number; customer_read_sequence: number;
   needs_reply: boolean; updated_at: string; closed_at?: string|null;
-  account_id?: number; phone_masked?: string; unread_count?: number;
+  account_id?: number; phone?: string; phone_masked?: string; unread_count?: number;
 };
 export type SupportMessage = { id:string; sequence:number; role:'customer'|'staff'; text:string; created_at:string; redacted:boolean; client_key?:string };
 export type SupportPage = { thread:SupportThreadData|null; messages:SupportMessage[]; has_older:boolean; before_cursor:number|null; staff_online:boolean };

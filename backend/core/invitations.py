@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
 from .models import Account, Invitation, InvitationSend, RecipientState
-from .privacy import digest, encrypt, mask, normalize_phone
+from .privacy import decrypt, digest, encrypt, mask, normalize_phone
 from .services import APIError, api, limited, recipient_unavailable
 
 CONSENT_VERSION = 'invitations-v1'
@@ -171,6 +171,7 @@ def serialize(invitation):
     if latest and latest.status in ['unknown', 'submitting']:
         reason = 'نتیجهٔ ارسال در حال بررسی است؛ برای جلوگیری از تکرار، ارسال دوباره بسته است.'
     return {'id': str(invitation.pk), 'phone_masked': invitation.phone_masked,
+        'phone': decrypt(invitation.phone_cipher) if invitation.phone_cipher else '',
         'created_at': invitation.created_at.isoformat(), 'registered_at': invitation.registered_at.isoformat() if registered else None,
         'status': 'registered' if registered else 'expired' if expired else 'waiting',
         'reward_credits': 3 if invitation.reward_awarded_at else 0,

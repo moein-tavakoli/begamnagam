@@ -1,5 +1,6 @@
 export type Invitation = {
   id: string;
+  phone: string;
   phone_masked: string;
   created_at: string;
   registered_at: string | null;

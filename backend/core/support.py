@@ -6,7 +6,7 @@ from django.db import transaction
 from django.db.models import Count, F, Q
 from django.utils import timezone
 from .models import Account, OperatorAudit, SupportConversation, SupportMessage
-from .privacy import DIGITS, digest, normalize_phone
+from .privacy import DIGITS, decrypt, digest, normalize_phone
 from .services import APIError, limited
 
 PAGE_SIZE = 50
@@ -57,7 +57,8 @@ def thread_data(thread, *, staff=False):
         'needs_reply': thread.last_customer_sequence > thread.answered_customer_sequence,
         'updated_at': thread.updated_at.isoformat(), 'closed_at': thread.closed_at.isoformat() if thread.closed_at else None}
     if staff:
-        value.update(account_id=thread.account_id, phone_masked=thread.account.phone_masked)
+        value.update(account_id=thread.account_id, phone_masked=thread.account.phone_masked,
+            phone=decrypt(thread.account.phone_cipher) if thread.account.phone_cipher else '')
     return value
 
 

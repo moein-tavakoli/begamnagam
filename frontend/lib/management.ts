@@ -47,6 +47,7 @@ export function managementActions(resource: string, row: ManagementRow, permissi
   const actions: ManagementAction[] = [];
   const add = (name: string, label: string, value?: boolean) => actions.push({ name, label, object_id: row.record_id, value });
   if (resource === "accounts") {
+    if (permissions.includes("manage_free_sending")) add("free_sending", row.unlimited_free_sends ? "قطع ارسال رایگان نامحدود" : "فعال‌سازی ارسال رایگان نامحدود", !row.unlimited_free_sends);
     if (permissions.includes("approve_manual_payments")) add("grant_package", "فعال‌سازی بسته با رسید بانکی");
     if (permissions.includes('manage_account_limits')) actions.push({ name: 'account_limits', label: 'سقف اختصاصی', object_id: row.record_id,
       accountLimits: { sender_daily_limit: typeof row.sender_daily_limit === 'number' ? row.sender_daily_limit : null,

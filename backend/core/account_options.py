@@ -8,6 +8,7 @@ from .services import APIError
 
 
 OPTION_PERMISSIONS = {
+    "unlimited_free_sends": "core.manage_free_sending",
     "unlimited_demo_sends": "core.manage_test_sending",
     "direct_message_tone": "core.manage_message_tone",
     "sender_daily_limit": "core.manage_account_limits",

@@ -6,6 +6,7 @@ import { Icon } from "./icons";
 export function FreeSendsBalance({ compact = false }: { compact?: boolean } = {}) {
   const { data } = useApp();
   if (!data?.authenticated || data.free_sends_remaining === undefined) return null;
+  if (data.unlimited_free_sends) return <p className={`free-sends-balance small${compact ? " is-compact" : ""}`} role="status">ارسال رایگان نامحدود برای این حساب</p>;
   const number = new Intl.NumberFormat("fa-IR");
   return (
     <p className={`free-sends-balance small${compact ? " is-compact" : ""}`} role="status">

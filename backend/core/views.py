@@ -100,6 +100,7 @@ def bootstrap(request):
     if authenticated:
         from .wallet import balance_field as wallet_balance_field
         data['wallet_balance_toman'] = str(getattr(request.user.account, wallet_balance_field()))
+        data["unlimited_free_sends"] = request.user.account.unlimited_free_sends
         data["free_sends_remaining"] = request.user.account.free_sends_remaining
         data['purchased_sends_remaining'] = getattr(request.user.account, balance_field())
         data["free_sends_total"] = 3 + request.user.account.free_sends_earned_total
@@ -320,7 +321,7 @@ def preview(request):
         raise APIError("rewrite_unavailable", "آماده‌سازی متن موقتاً در دسترس نیست؛ کمی بعد تلاش کنید.", 503)
     from .limits import policy
     expires_at = timezone.now() + timedelta(seconds=policy().preview_validity_seconds)
-    is_free = bool(owner and owner.account.free_sends_remaining > 0)
+    is_free = bool(owner and (owner.account.unlimited_free_sends or owner.account.free_sends_remaining > 0))
     with transaction.atomic():
         item = Preview.objects.create(owner=owner, session_key=session_key(request), category=category,
             message_tone=tone,

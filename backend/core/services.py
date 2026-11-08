@@ -242,7 +242,10 @@ def create_order(user, session_key, data, idempotency_key):
             raise APIError("pair_cooldown", f"بین ارسال‌های شما به همین شماره باید {limits.pair_cooldown_hours} ساعت فاصله باشد؛ بعد از گذشت این زمان دوباره تلاش کن.", 409)
         if state.blocked or busy or recipient_in_cooldown(state, now, sender=user):
             raise recipient_unavailable()
-        if preview.is_free:
+        if user.account.unlimited_free_sends and not preview.is_free:
+            raise APIError('free_quota_changed', 'مجوز ارسال رایگان تغییر کرده؛ پیش‌نمایش تازه بساز تا اعتبار بسته مصرف نشود.', 409)
+        sponsored = preview.is_free and user.account.unlimited_free_sends
+        if preview.is_free and not sponsored:
             from django.db.models import F
             if not Account.objects.filter(user=user, free_sends_remaining__gt=0).update(free_sends_remaining=F("free_sends_remaining")-1):
                 raise APIError("free_quota_changed", "سهمیهٔ رایگان تغییر کرده؛ متن نهایی و هزینه را دوباره آماده کن.", 409)
@@ -251,7 +254,7 @@ def create_order(user, session_key, data, idempotency_key):
             consent_at=now if consent else None, terms_version=preview.terms_version if consent else "",
             recipient_hash=phone_hash, recipient_cipher=encrypt(phone), recipient_masked=mask(phone),
             text=preview.text, full_sms=preview.full_sms, category=preview.category, amount_toman=0,
-            is_free=preview.is_free, uses_purchased_credit=not preview.is_free,
+            is_free=preview.is_free, is_sponsored=sponsored, uses_purchased_credit=not preview.is_free,
             payment_mode="free" if preview.is_free else "credit_demo" if settings.DEMO_MODE else "credit_live")
         if order.uses_purchased_credit:
             from .packages import reserve_credit
@@ -329,7 +332,7 @@ def release_free_credit(order):
         from .packages import release_credit
         release_credit(order)
         return
-    if order.is_free and not order.free_credit_released_at:
+    if order.is_free and not order.is_sponsored and not order.free_credit_released_at:
         order.free_credit_released_at = timezone.now()
         order.save(update_fields=["free_credit_released_at"])
         Account.objects.filter(user_id=order.owner_id).update(free_sends_remaining=F("free_sends_remaining")+1)

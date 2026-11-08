@@ -63,6 +63,7 @@ RESOURCES = {
     "accounts": (m.Account, "حساب‌ها", "created_at", None, [
         ("id", "شناسه", "id"), ("phone_masked", "موبایل", "text"),
         ("wallet_balance_toman", "موجودی کیف پول", "money"),
+        ('unlimited_free_sends', 'ارسال رایگان نامحدود', 'bool'),
         ('sender_daily_limit', 'سقف اختصاصی ارسال / ۲۴ ساعت', 'number'),
         ('rewrite_daily_limit', 'سقف اختصاصی بازنویسی / روز', 'number'),
         ("suspended", "تعلیق", "bool"), ("free_sends_remaining", "هدیهٔ باقی‌مانده", "number"),
@@ -70,7 +71,7 @@ RESOURCES = {
         ("deletion_requested_at", "درخواست حذف", "date"), ("created_at", "عضویت", "date")]),
     "orders": (m.Order, "پیام‌ها و سفارش‌ها", "created_at", "status", [
         ("id", "شناسه", "id"), ("status", "وضعیت", "status"), ("category", "موضوع", "text"),
-        ("amount_toman", "مبلغ (تومان)", "number"), ("is_free", "هدیه", "bool"),
+        ("amount_toman", "مبلغ (تومان)", "number"), ("is_free", "رایگان", "bool"), ("is_sponsored", "تأمین هزینه توسط سرویس", "bool"),
         ("payment_mode", "روش پرداخت", "text"), ("created_at", "ثبت", "date")]),
     "invitations": (m.Invitation, "دعوت‌ها", "created_at", None, [
         ("id", "شناسه", "id"), ("phone_masked", "مخاطب", "text"),
@@ -119,7 +120,7 @@ def resource_permission(spec):
 
 def context(user):
     return {"authenticated": True, "session_identity": digest("staff-session-actor:"+str(user.pk)), "username": "مدیر" if hasattr(user, "account") else user.get_username(),
-        "permissions": ["support_chat"] + [name for name in ("view_operations", "manage_site_limits", "manage_account_limits", "manage_manual_payments", "approve_manual_payments", "manage_ai", "manage_message_packages", "manage_message_examples", "view_private_message_text", "operate_safety", "suspend_account", "manage_message_tone", "triage_report", "confirm_refund") if user.has_perm("core." + name)],
+        "permissions": ["support_chat"] + [name for name in ("view_operations", "manage_site_limits", "manage_account_limits", "manage_free_sending", "manage_manual_payments", "approve_manual_payments", "manage_ai", "manage_message_packages", "manage_message_examples", "view_private_message_text", "operate_safety", "suspend_account", "manage_message_tone", "triage_report", "confirm_refund") if user.has_perm("core." + name)],
         "resources": [{"key": key, "title": spec[1]} for key, spec in RESOURCES.items() if user.has_perm(resource_permission(spec))]}
 
 
@@ -256,6 +257,8 @@ def action(request):
         if not isinstance(values, dict) or not values or set(values)-{'sender_daily_limit', 'rewrite_daily_limit'}:
             raise APIError('invalid_input', 'تنظیمات سقف حساب معتبر نیست.', 422)
         update_account_options(request.user, identifier, values, data.get('reason'))
+    elif name == "free_sending":
+        update_account_options(request.user, identifier, {"unlimited_free_sends": data.get("value")}, data.get("reason"))
     elif name == "tone":
         value = data.get("value")
         if type(value) is not bool:

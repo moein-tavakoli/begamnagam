@@ -492,7 +492,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                   {preview.moderation_mode === "gapgpt" || preview.moderation_mode === "ollama" ? "متن بازنویسی و بررسی‌شده" : "متن آمادهٔ بررسی‌شده"}
                 </span>
                 <span>
-                  مصرف: <b>{isFree ? "یک ارسال از هدیه" : "یک اعتبار از بسته"}</b> · {preview.sms_segments || "—"} بخش پیامک
+                  مصرف: <b>{isFree ? "ارسال رایگان" : "یک اعتبار از بسته"}</b> · {preview.sms_segments || "—"} بخش پیامک
                 </span>
               </div>
               <label className="checkbox-label" htmlFor="respect-consent">

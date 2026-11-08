@@ -7,7 +7,7 @@ from .services import APIError
 
 FIELDS = ('provider', 'ollama_model', 'gapgpt_model', 'timeout_seconds',
           'parallel_requests', 'daily_limit', 'user_daily_limit',
-          'tone_polite_enabled', 'tone_firm_enabled', 'tone_angry_enabled')
+          'tone_polite_enabled', 'tone_firm_enabled', 'tone_blunt_enabled', 'tone_angry_enabled')
 
 
 def current():

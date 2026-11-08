@@ -12,9 +12,9 @@ from .gapgpt import (APPROVED_BASE_URL, GENERATION_MAX_TOKENS, REVIEW_MAX_TOKENS
 
 
 SOURCE = 'لطفاً وسایل مشترک را بعد از استفاده سر جای خود بگذار.'
-BODY = 'لطفاً پس از استفاده، وسایل مشترک را سر جای خود بگذارید. سپاس از توجهتان.'
+BODY = 'لطفاً وسایل مشترک را بعد از استفاده سر جای خود بگذار.'
 VERDICT = dict(safe=True, intent_preserved=True, no_added_claims=True,
-               no_private_data=True, only_message=True)
+               no_private_data=True, only_message=True, register_preserved=True)
 
 
 class _Response(io.BytesIO):
@@ -173,9 +173,9 @@ class GapGPTClientTests(SimpleTestCase):
         self.assertEqual(str(GapGPTRejected('private source synthetic-api-key')), 'checks_uncertain')
 
     def test_friendly_messages_still_need_independent_review_without_template_substitution(self):
-        for source, candidate in [('رفیق پولدار منی', 'تو رفیق پولدار من هستی.'),
-                                  ('تو خیلی باحالی', 'تو خیلی باحال هستی.'),
-                                  ('رفیق خوش شانسمی', 'تو رفیق خوش شانس من هستی.')]:
+        for source, candidate in [('رفیق پولدار منی', 'رفیق پولدار منی'),
+                                  ('تو خیلی باحالی', 'تو خیلی باحالی'),
+                                  ('رفیق خوش شانسمی', 'رفیق خوش شانسمی')]:
             with self.subTest(source=source):
                 self.opener.open.reset_mock()
                 self.opener.open.side_effect = [_Response(_completion({'allowed': True, 'message': candidate})),
@@ -201,7 +201,7 @@ class GapGPTClientTests(SimpleTestCase):
 
     def test_any_failed_review_check_rejects_candidate(self):
         reasons = {'safe': 'review_unsafe', 'intent_preserved': 'review_intent',
-                   'no_added_claims': 'review_added_claims', 'no_private_data': 'review_private', 'only_message': 'review_format'}
+                   'no_added_claims': 'review_added_claims', 'no_private_data': 'review_private', 'only_message': 'review_format', 'register_preserved': 'review_register'}
         for field in VERDICT:
             with self.subTest(field=field):
                 self.opener.open.side_effect = [

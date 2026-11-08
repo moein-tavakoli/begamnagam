@@ -40,3 +40,11 @@ test('free sending requires its own permission and does not reuse daily count pe
   const [disable] = managementActions('accounts', { ...row, unlimited_free_sends: true }, ['manage_free_sending']);
   assert.equal(disable.value, false);
 });
+
+
+test('blunt alternatives retain their bound tone and exact reviewed body', () => {
+  const result = messageAlternatives({ alternatives: [{ ...offer, message_tone: 'blunt', text: 'حلالم کن داداش' }] });
+  assert.equal(result.length, 1);
+  assert.equal(result[0].text, 'حلالم کن داداش');
+  assert.equal(alternativeRequest(result[0], '09901234567').message_tone, 'blunt');
+});

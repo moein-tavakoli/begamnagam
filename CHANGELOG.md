@@ -9,6 +9,70 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.21.0 — 2026-11-08 — Blunt minimal-edit tone and firm default (local)
+
+### Added
+
+- Offer exactly three public choices: polite, firm (default) and blunt (`blunt`,
+  رُک). Preserve already civil colloquial messages with minimal edits; require
+  independent meaning, register and tone approval without relaxing moderation,
+  consent, privacy or sender/recipient controls. Reviewed templates remain the
+  only option when freeform is disabled; no unapproved raw-text dispatch.
+- Enable the three requested choices with an audited configuration revision;
+  preserve provider/budget settings, historical angry snapshots and guarded
+  legacy API support. Set the web composer's initial/default tone to firm and
+  expose the additive tone in REST/Swagger and bot schemas.
+
+Validation: 113 related PostgreSQL tests, 82 frontend tests, TypeScript, Django
+checks, migration consistency, Compose configuration and independent code review
+passed. Isolated tone-component checks passed at 375px/1440px (three choices,
+firm selected, blunt selectable, no overflow); authenticated live sending was not
+retested. New tests cover defaults, public/legacy choices, safe unchanged text,
+unsafe input/output, strict review and migration settings preservation. Provider
+responses were controlled; no paid model or SMS calls. This local version does
+not itself attest server deployment; release evidence is recorded separately.
+
+## 0.20.2 — 2026-11-08 — Preserve colloquial intent and monthly login (local)
+
+### Fixed
+
+- Require minimal edits and preserve Persian colloquial/formal register, familiar
+  address and concrete meaning in both AI providers. Treat ordinary forgiveness
+  requests such as «حلالم کن داداش» as valid without inventing harmful context;
+  reject unrelated good wishes, literary embellishment and unnecessary formality
+  through a required independent register review. Keep all local content checks,
+  preview consent and the existing two-call budget; no raw-text fallback.
+- Give successful product OTP login a persistent, fixed 30-day session expiry,
+  overriding inherited short/browser-close expiry. Reads and writes do not renew
+  it; logout revokes it. Existing sessions retain their old deadline until the
+  next successful login. Preserve OTP, five-minute recent-auth and private
+  documentation's eight-hour lifetimes; update Swagger and integration guidance.
+
+Validation: all 611 PostgreSQL backend tests, 81 frontend tests, TypeScript and
+scoped diff checks passed. New tests cover colloquial/forgiveness/wish inputs,
+strict independent review, meaning drift, reopening after 20 days, expiry after
+30 days, inherited short expiry and logout. Provider responses are controlled;
+real-model quality was not retested and no paid AI/OTP/SMS calls were made.
+Independent code review found no important issues. Local commit only; no push
+or server deployment.
+
+## 0.20.1 — 2026-11-08 — Archive old unknown queue entries (local)
+
+### Fixed
+
+- Support audited archival of an old unknown outbox item from active queue
+  metrics and automatic provider polling, preserving delivery uncertainty,
+  historical records and balances. Never requeue or resend an archived item.
+- Add a privileged, dry-run-first operational command with age/state guards and
+  idempotent auditing. A late unknown provider response preserves the archive.
+
+Validation: 30 related PostgreSQL tests and 81 frontend tests passed. Tests cover
+history/balance preservation, queue
+metrics, direct and scheduled polling, no resend, concurrent response handling,
+rejection of recent/nonunknown records and dry-run/apply behavior. Migration
+consistency and scoped diff checked. No account or production record changed
+by local tests; deployment is separately authorized by the current request.
+
 ## 0.20.0 — 2026-11-08 — Per-account sponsored free sending (local)
 
 ### Added

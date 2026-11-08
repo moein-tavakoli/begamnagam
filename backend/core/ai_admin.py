@@ -27,8 +27,8 @@ class AIConfigurationAdmin(admin.ModelAdmin):
     fieldsets = (
         ('سرویس فعال برای پیش‌نمایش‌های تازه', {'fields': ('provider',),
             'description': 'پردازش داخل همان درخواست انجام می‌شود؛ صف AI و جایگزینی خودکار سرویس وجود ندارد.'}),
-        ('لحن‌های قابل انتخاب کاربران', {'fields': ('tone_polite_enabled', 'tone_firm_enabled', 'tone_angry_enabled'),
-            'description': 'فقط لحن‌های تیک‌خورده زیر کادر متن نمایش داده می‌شوند. بدون تیک، حالت مودبانهٔ فعلی برقرار است. هیچ لحنی توهین، تهدید یا اطلاعات خصوصی را مجاز نمی‌کند.'}),
+        ('لحن‌های قابل انتخاب کاربران', {'fields': ('tone_polite_enabled', 'tone_firm_enabled', 'tone_blunt_enabled'),
+            'description': 'فقط لحن‌های تیک‌خورده زیر کادر متن نمایش داده می‌شوند. پیش‌فرض کمی مودبانه است؛ اگر خاموش باشد اولین لحن فعال انتخاب می‌شود. بدون تیک، حالت مودبانه برقرار است. هیچ لحنی توهین، تهدید یا اطلاعات خصوصی را مجاز نمی‌کند.'}),
         ('Ollama — اجرای محلی', {'fields': ('ollama_model', 'timeout_seconds', 'parallel_requests', 'daily_limit', 'user_daily_limit')}),
         ('GapGPT', {'fields': ('gapgpt_model',), 'description': 'کلید فقط از env سرور خوانده می‌شود؛ فعال‌سازی به سهمیهٔ مثبت GapGPT نیاز دارد.'}),
         ('ثبت تغییر', {'fields': ('reason', 'source_revision', 'revision', 'updated_at')}),

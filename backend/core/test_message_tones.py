@@ -25,7 +25,7 @@ class TonePolicyTests(TestCase):
     def setUp(self):
         fixture.APITestCase.setUp(self)
         self.user = self.authenticate(free_sends=None)
-        self.config = AIConfiguration.objects.create()
+        self.config = AIConfiguration.objects.create(tone_firm_enabled=False, tone_blunt_enabled=False)
 
     def quote(self, tone=None, category='parking', **extra):
         payload = {'category': category, 'text': 'جلوی در پارک نکن، رفت‌وآمد سخت میشه', 'recipient_phone': '09901234567', **extra}
@@ -50,16 +50,16 @@ class TonePolicyTests(TestCase):
         self.assertFalse(RewriteUsage.objects.exists()); self.assertFalse(Preview.objects.exists())
 
     def test_only_enabled_choices_are_public_and_omission_uses_first_enabled(self):
-        AIConfiguration.objects.update(tone_polite_enabled=False, tone_angry_enabled=True)
+        AIConfiguration.objects.update(tone_polite_enabled=False, tone_blunt_enabled=True)
         data = self.client.get('/api/v1/bootstrap').json()
-        self.assertEqual([row['id'] for row in data['message_tones']], ['angry'])
-        self.assertEqual(data['default_message_tone'], 'angry')
+        self.assertEqual([row['id'] for row in data['message_tones']], ['blunt'])
+        self.assertEqual(data['default_message_tone'], 'blunt')
         self.assertEqual(self.quote('polite').json()['error']['code'], 'tone_unavailable')
         result = self.quote()
         self.assertEqual(result.status_code, 200, result.content)
-        self.assertEqual(result.json()['message_tone'], 'angry')
-        self.assertEqual(Preview.objects.get().message_tone, 'angry')
-        self.assertIn(result.json()['rewritten_text'], ANGRY_TEMPLATES['parking'])
+        self.assertEqual(result.json()['message_tone'], 'blunt')
+        self.assertEqual(Preview.objects.get().message_tone, 'blunt')
+        self.assertIn(result.json()['rewritten_text'], DIRECT_TEMPLATES['parking'])
 
     def test_all_reviewed_tone_templates_fit_and_keep_safety_checks(self):
         from .draft_guard import validate_polite_body
@@ -119,7 +119,7 @@ class TonePolicyTests(TestCase):
 @override_settings(AI_MODE='gapgpt', GAPGPT_API_KEY='synthetic-key', GAPGPT_MODEL='synthetic-model', GAPGPT_BASE_URL=APPROVED_BASE_URL, GAPGPT_TIMEOUT_SECONDS=5)
 class TonePromptTests(SimpleTestCase):
     def test_gapgpt_has_distinct_server_owned_tones_and_independent_tone_review(self):
-        for tone in ('polite', 'firm', 'angry'):
+        for tone in ('polite', 'firm', 'blunt', 'angry'):
             verdict = {**VERDICT, **({'tone_matched': True} if tone != 'polite' else {})}
             opener = Mock(); opener.open.side_effect = [_Response(_completion({'allowed': True, 'message': BODY})), _Response(_completion(verdict))]
             with patch('core.gapgpt.urllib.request.build_opener', return_value=opener):
@@ -147,3 +147,14 @@ class TonePromptTests(SimpleTestCase):
         self.assertEqual(json.loads(generated['messages'][1]['content'])['tone'], 'terse, frustrated, non-abusive')
         self.assertIn('tone_matched', reviewed['format']['required'])
         self.assertIn('No insults', generated['messages'][0]['content'])
+
+
+@override_settings(AI_MODE='gapgpt', GAPGPT_API_KEY='synthetic-key', GAPGPT_MODEL='synthetic-model', GAPGPT_BASE_URL=APPROVED_BASE_URL, GAPGPT_TIMEOUT_SECONDS=5)
+class BluntReviewTests(SimpleTestCase):
+    def test_blunt_cannot_skip_or_fail_independent_tone_review(self):
+        for verdict in ({**VERDICT, 'tone_matched': False}, VERDICT):
+            opener = Mock()
+            opener.open.side_effect = [_Response(_completion({'allowed': True, 'message': 'حلالم کن داداش'})), _Response(_completion(verdict))]
+            with patch('core.gapgpt.urllib.request.build_opener', return_value=opener), self.assertRaises((GapGPTRejected, GapGPTUnavailable)):
+                rewrite_message('حلالم کن داداش', max_units=130, message_tone='blunt')
+            self.assertEqual(opener.open.call_count, 2)

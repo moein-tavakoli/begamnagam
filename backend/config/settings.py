@@ -170,6 +170,8 @@ X_FRAME_OPTIONS = "DENY"
 CSRF_FAILURE_VIEW = "core.views.csrf_failure"
 DATA_UPLOAD_MAX_MEMORY_SIZE = 8192
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 7
+# Verified product login has a fixed lifetime; staff/anonymous defaults stay separate.
+PRODUCT_SESSION_AGE = 60 * 60 * 24 * 30
 # These protect administrator passwords independently of editable product limits.
 ADMIN_LOGIN_WINDOW_SECONDS = 600
 ADMIN_LOGIN_PAIR_LIMIT = 10

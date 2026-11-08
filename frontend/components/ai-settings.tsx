@@ -7,7 +7,7 @@ import { api, ApiError, errorMessage } from "@/lib/api";
 import { managementNumber } from "@/lib/management";
 import type { MessageTone, MessageToneOption } from '@/lib/message-tones';
 
-type ToneFlag = 'tone_polite_enabled' | 'tone_firm_enabled' | 'tone_angry_enabled';
+type ToneFlag = 'tone_polite_enabled' | 'tone_firm_enabled' | 'tone_blunt_enabled' | 'tone_angry_enabled';
 type Values = { provider: string; ollama_model: string; gapgpt_model: string; timeout_seconds: number; parallel_requests: number; daily_limit: number; user_daily_limit: number } & Record<ToneFlag, boolean>;
 type Settings = { values: Values; revision: number; gapgpt_credentials_configured: boolean; tone_options: (MessageToneOption & {field: ToneFlag})[] };
 type Result = { allowed: boolean; message: string; elapsed_seconds: number };

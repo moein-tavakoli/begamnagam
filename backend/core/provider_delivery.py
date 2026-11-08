@@ -58,7 +58,8 @@ def apply_result(order, state, event, delivery, result):
     else:
         delivery.status = 'unknown'
         order.status = 'unknown'
-        event.state = 'unknown'
+        if event.state != 'archived':
+            event.state = 'unknown'
     delivery.save()
     order.save(update_fields=['status', 'updated_at'])
     event.save(update_fields=['state', 'processed_at'])
@@ -191,6 +192,8 @@ def reconcile_delivery(delivery_id):
         return
     with transaction.atomic():
         order = Order.objects.select_for_update().get(pk=meta['order_id'])
+        if Outbox.objects.filter(order=order, state='archived').exists():
+            return
         delivery = MessageDelivery.objects.select_for_update().get(pk=delivery_id)
         if delivery.status not in {'accepted', 'submitting', 'unknown'} or (delivery.lease_until and delivery.lease_until > timezone.now()):
             return

@@ -43,7 +43,7 @@ DATE = string(format='date-time')
 NULL_DATE = {**DATE, 'nullable': True}
 NULL_STRING = string(nullable=True)
 PHONE = string(minLength=11, maxLength=32, description='Iran mobile; Persian/Arabic digits and +98 are accepted.', example='09123456789')
-TONE = string(enum=['polite', 'firm', 'angry'])
+TONE = string(enum=['polite', 'firm', 'blunt', 'angry'])
 TEXT = string(minLength=1, maxLength=280)
 TOKEN = string(minLength=1, maxLength=4096, description='Opaque capability. Preserve exactly; never put in a URL or log.')
 CONSENT = {'type': 'boolean', 'enum': [True]}

@@ -4,6 +4,7 @@ from core import views
 from core import invitations
 from core import management_api as management
 from core import management_changelog
+from core import management_monitoring
 from core import ai_management
 from core import wallet_views
 from core import package_views
@@ -50,6 +51,7 @@ urlpatterns = [
     path("api/v1/manage/login", management.login_view),
     path("api/v1/manage/logout", management.logout_view),
     path("api/v1/manage/dashboard", management.dashboard),
+    path("api/v1/manage/monitoring", management_monitoring.monitoring),
     path("api/v1/manage/records/<slug:resource>", management.records),
     path("api/v1/manage/users/<int:account_id>", management.user_summary),
     path("api/v1/manage/users/<int:account_id>/activity", management.user_activity),

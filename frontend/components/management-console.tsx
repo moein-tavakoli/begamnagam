@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -54,6 +55,8 @@ import { ExampleSettings } from './example-settings';
 import { ManagementChangelog } from './management-changelog';
 import { ManagementDataGrid } from './management-data-grid';
 
+const ManagementMonitoring=dynamic(()=>import('./management-monitoring').then(module=>module.ManagementMonitoring),{loading:()=> <Loading/>});
+
 function ContentCard({children}: {children:ReactNode}) { return <Card sx={{p:{xs:2,sm:3},minWidth:0}}><Stack spacing={2.5}>{children}</Stack></Card>; }
 function SectionTitle({title,icon,action}: {title:string;icon:string;action?:ReactNode}) { return <Stack direction="row" sx={{alignItems:'center',justifyContent:'space-between',gap:1,flexWrap:'wrap'}}><Stack direction="row" spacing={1} sx={{alignItems:'center'}}><ManagementIcon name={icon} color="primary"/><Typography component="h2" variant="h6">{title}</Typography></Stack>{action}</Stack>; }
 function Failure({ message, retry }: { message: string; retry?: () => void }) { return <Alert severity="error" action={retry?<Button onClick={retry} startIcon={<RefreshRounded/>}>تلاش دوباره</Button>:undefined}>{message}</Alert>; }
@@ -62,6 +65,7 @@ function Empty({message='رکوردی پیدا نشد'}:{message?:string}) {retu
 
 export function ManagementConsole({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const searchParams=useSearchParams();
   const route = managementRoute(pathname);
   const [session, setSession] = useState<ManagementSession | null>(null);
   const [error, setError] = useState("");
@@ -120,11 +124,11 @@ export function ManagementConsole({ children }: { children: React.ReactNode }) {
       {error&&<Failure message={error} retry={()=>void loadSession()}/>}
       {!session?<Loading/>:<Login onLogin={current=>{if(supportIdentity.current!==current.session_identity)supportMemory.current={thread:null,composer:{draft:'',pending:null}};supportIdentity.current=current.session_identity;setSession(current);}}/>}
       <Button component={Link} href="/" variant="text" startIcon={<ArrowForwardRounded/>}>مشاهدهٔ سایت</Button>
-    </ContentCard></Stack> : <ManagementFrame session={session} pathname={pathname} title={title} active={active} supportCount={supportCount} busy={busy} onSignOut={()=>void signOut()}>
+    </ContentCard></Stack> : <ManagementFrame session={session} pathname={pathname} title={title} active={active} supportCount={supportCount} busy={busy} television={active==='monitoring'&&searchParams.get('tv')==='1'} onSignOut={()=>void signOut()}>
       {managementShowsBalances(active,permissions)&&<ProviderBalances onFailure={failed}/>}
       {error&&<Failure message={error}/>}
       {!allowed&&<Alert severity="warning">این بخش برای حساب شما در دسترس نیست. از فهرست بخش‌های مجاز انتخاب کنید.</Alert>}
-      {allowed&&(route.userId?<UserActivity key={`${route.userId}-${epoch}`} userId={route.userId} permissions={permissions} resources={session.resources||[]} onAction={setAction} onFailure={failed}/>:active==='changelog'?<ManagementChangelog onFailure={failed}/>:active==='examples'?<ExampleSettings onFailure={failed}/>:active==='support'?<SupportInbox onFailure={supportFailure} memory={supportMemory}/>:active==='dashboard'?<Dashboard key={`dashboard-${epoch}`} canOperate={permissions.includes('operate_safety')} onAction={setAction} onFailure={failed}/>:active==='limits'?<Limits onFailure={failed}/>:active==='ai'?<AISettings onFailure={failed}/>:active==='manual-settings'?<ManualPaymentSettings onFailure={failed}/>:active==='packages'?<PackageSettings onFailure={failed}/>:active&&<Records key={`${active}-${epoch}`} resource={active} permissions={permissions} onAction={setAction} onFailure={failed}/>)}
+      {allowed&&(route.userId?<UserActivity key={`${route.userId}-${epoch}`} userId={route.userId} permissions={permissions} resources={session.resources||[]} onAction={setAction} onFailure={failed}/>:active==='monitoring'?<ManagementMonitoring onFailure={supportFailure}/>:active==='changelog'?<ManagementChangelog onFailure={failed}/>:active==='examples'?<ExampleSettings onFailure={failed}/>:active==='support'?<SupportInbox onFailure={supportFailure} memory={supportMemory}/>:active==='dashboard'?<Dashboard key={`dashboard-${epoch}`} canOperate={permissions.includes('operate_safety')} onAction={setAction} onFailure={failed}/>:active==='limits'?<Limits onFailure={failed}/>:active==='ai'?<AISettings onFailure={failed}/>:active==='manual-settings'?<ManualPaymentSettings onFailure={failed}/>:active==='packages'?<PackageSettings onFailure={failed}/>:active&&<Records key={`${active}-${epoch}`} resource={active} permissions={permissions} onAction={setAction} onFailure={failed}/>)}
       {children}
       {action&&(['grant_package','approve_card','reject_card'].includes(action.name)?<ManualPaymentDialog action={action} onClose={()=>setAction(null)} onComplete={()=>{setAction(null);setEpoch(v=>v+1);}} onFailure={failed}/>:<ActionDialog action={action} onClose={()=>setAction(null)} onComplete={()=>{setAction(null);setEpoch(v=>v+1);}} onFailure={failed}/>)}
     </ManagementFrame>}

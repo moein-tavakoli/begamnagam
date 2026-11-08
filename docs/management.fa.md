@@ -47,6 +47,7 @@
 | `session` | GET | نشست مدیر و بخش‌های مجاز؛ صدور کوکی CSRF |
 | `login` / `logout` | POST | ورود با نام کاربری/رمز فعلی و خروج |
 | `dashboard` | GET | آمار و وضعیت سرویس‌های همین محیط |
+| `monitoring` | GET | آمار تجمیعی فقط‌خواندنی برای نمایشگر؛ مجوز عملیات؛ [راهنما](monitoring.fa.md) |
 | `records/<resource>` | POST | خواندن فهرست؛ `page`، `query` و `status`؛ از۰٫۲۵٫۰، `page_size` یا `limit` صحیح۱تا۱۰۰، پیش‌فرض۲۵ |
 | `limits` | GET / POST | خواندن/نوشتن سیاست مشترک؛ `values`، `revision` و `reason` |
 | `request-limits/<scope>` | POST | نوشتن کنترل درخواست؛ همان قرارداد نسخه و دلیل |

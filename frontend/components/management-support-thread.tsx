@@ -47,9 +47,9 @@ export function ManagementSupportThread({page,messages,draft,pending,busy,error,
     <Stack spacing={1.5} sx={{p:{xs:1.5,md:2},borderTop:1,borderColor:'divider',bgcolor:'background.paper',flexShrink:0}}>
       {(error || pollError) && <Alert severity="error">{error || pollError}</Alert>}
       {pending && !busy && <Alert severity="warning" role="status" action={<Button color="inherit" onClick={onRetry} startIcon={<Refresh/>}>تلاش دوباره</Button>} sx={{flexWrap:'wrap'}}>نتیجهٔ ارسال هنوز مشخص نیست؛ تکرار با همان شناسه انجام می‌شود تا پیام دوباره ثبت نشود.</Alert>}
-      <Stack component="form" onSubmit={onSubmit} aria-label="ارسال پیام به پشتیبانی" direction="row" spacing={1} sx={{alignItems:'flex-end'}}>
+      <Stack component="form" onSubmit={onSubmit} aria-label="ارسال پیام به پشتیبانی" direction="row-reverse" spacing={1} sx={{alignItems:'flex-end'}}>
         <TextField id="support-draft-staff" inputRef={input} label="پاسخ به کاربر" value={draft} onChange={event=>onDraftChange(event.target.value)} multiline rows={2} fullWidth disabled={busy || pending} placeholder="پاسخت را بنویس…" autoComplete="off" slotProps={{htmlInput:{maxLength:2000,onKeyDown}}} sx={{minWidth:0,'& textarea':{fontSize:{xs:16,md:14},lineHeight:1.8}}}/>
-        <IconButton type="submit" color="primary" aria-label={busy?'در حال ارسال پیام':'ارسال پیام پشتیبانی'} disabled={busy || pending || !draft.trim() || !page || !page.thread?.last_customer_sequence} sx={{flexShrink:0,mb:.5}}>{busy?<CircularProgress size={22} color="inherit"/>:<Send sx={{transform:'scaleX(-1)'}}/>}</IconButton>
+        <IconButton type="submit" color="primary" aria-label={busy?'در حال ارسال پیام':'ارسال پیام پشتیبانی'} disabled={busy || pending || !draft.trim() || !page || !page.thread?.last_customer_sequence} sx={{flexShrink:0,mb:.5}}>{busy?<CircularProgress size={22} color="inherit"/>:<Send/>}</IconButton>
       </Stack>
       <Stack direction="row" spacing={1} sx={{alignItems:'flex-start',justifyContent:'space-between'}}><Typography variant="caption" color="text.secondary">فقط متن · رمز، کد ورود یا اطلاعات حساس نفرست.</Typography><Typography variant="caption" color="text.secondary" sx={{whiteSpace:'nowrap'}}>{draft.length.toLocaleString('fa-IR')}/۲۰۰۰</Typography></Stack>
     </Stack>

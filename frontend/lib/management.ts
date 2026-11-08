@@ -115,6 +115,7 @@ export function managementNavigation(session: ManagementSession): { key: string;
   return [
     ...(permissions.includes("view_operations") ? [{ key: "dashboard", title: "نمای کلی" }] : []),
     ...(resources.some(item => item.key === "accounts") ? [{ key: "accounts", title: "کاربران" }] : []),
+    ...(permissions.includes("view_operations") ? [{ key: "monitoring", title: "مانیتورینگ" }] : []),
     ...(resources.some(item => item.key === "blacklist") ? [{ key: "blacklist", title: "لیست سیاه" }] : []),
     ...(session.authenticated ? [{ key: "support", title: "پشتیبانی" }] : []),
     ...(session.authenticated ? [{ key: "changelog", title: "تاریخچهٔ تغییرات" }] : []),

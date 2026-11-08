@@ -9,6 +9,38 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.26.0 — 2026-11-08 — Private TV monitoring and support composer (local)
+
+### Added
+
+- Add `/manage/monitoring` for operations staff with MUI X Community line, bar
+  and donut charts, compact live-operation cards and a TV layout without the
+  sidebar. Default refresh is 30 seconds; 30/60/120/300-second selections persist
+  in the browser. Pause hidden/offline requests, prevent overlap, cancel on exit,
+  preserve clearly marked stale data after failure and clear data on auth loss.
+- Add read-only `/api/v1/manage/monitoring` with bounded 24 Tehran hour buckets,
+  delivery creation cohorts, moderation partitions, current queues, unanswered
+  support and five prioritized active alerts. No private text/phone/IDs, provider
+  probes or reporting writes; provider balances remain overview-only.
+
+### Fixed
+
+- Reverse public/staff support composer field and button placement and orient
+  both send icons right; preserve draft, limits, retry and submit behavior.
+- Label delivery/demo and time/cohort scopes explicitly; critical alerts stay
+  errors, queue-age alerts use time units and payment labels identify the provider
+  without claiming effective checkout availability or infrastructure health.
+
+Validation: 671 PostgreSQL tests (including eight new monitoring tests), 104
+frontend tests, TypeScript and Persian changelog parity passed. Independent
+review findings were resolved. Native checks cover 1920×1080 TV fit, 375px bounds,
+Persian axes/controls, saved interval, refreshing timestamps and support composer
+placement at mobile/desktop. The real local window had no new delivery/moderation
+rows; empty charts were observed and nonempty partitions tested in isolation.
+Public composer styling was inspected without creating a fresh OTP session.
+No support messages, SMS, paid AI calls, payment actions, push or deployment.
+
+
 ## 0.25.0 — 2026-11-08 — Persian management DataGrid pagination (local)
 
 ### Added

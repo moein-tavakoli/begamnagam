@@ -70,3 +70,11 @@ test('staff without user access retain authorized order and invitation navigatio
   assert.ok(nav.some(item => item.key === 'invitations'));
   assert.equal(nav.some(item => item.key === 'accounts'), false);
 });
+
+
+test('blacklist has its own route and no consent-override row actions', () => {
+  assert.equal(management.managementHref('blacklist'), '/manage/blacklist');
+  const nav = management.managementNavigation({authenticated:true,resources:[{key:'accounts',title:'کاربران'},{key:'blacklist',title:'لیست سیاه'}]});
+  assert.equal(nav.filter(item => item.key === 'blacklist').length, 1);
+  assert.deepEqual(managementActions('blacklist', {record_id:'opaque-id',blocked:true}, ['operate_safety','view_recipientstate','view_account']), []);
+});

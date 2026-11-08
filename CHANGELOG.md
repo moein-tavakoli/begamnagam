@@ -9,6 +9,28 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.23.0 — 2026-11-08 — Active recipient blacklist (local)
+
+### Added
+
+- Add `/manage/blacklist` for active recipient opt-outs, including nonmembers.
+  Require both staff account-view and recipient-state-view permissions; audit
+  access without phone/search text. Never expose recipient hashes, cipher,
+  sender identity or unsubscribe capabilities, and provide no unblock action.
+- Resolve full phones from surviving encrypted accounts/orders/invitations;
+  retain entries with an explicit unavailable label after source data deletion.
+  Support full/partial Persian-digit phone search and bounded pagination.
+  Opening the cancellation link alone remains distinct from confirmed opt-out.
+
+Validation: 28 related PostgreSQL tests, 88 frontend tests, TypeScript, Django
+checks, version/diff checks and independent review passed. Tests cover permissions,
+nonmembers, cancellation/resumption, unavailable phones, partial search and page 2.
+Authenticated local browser checks covered the blacklist empty state, full-phone
+user table, Persian partial search, compact actions and invitation deep-link reload.
+The local page loaded without a certificate warning; no warning was bypassed.
+No paid AI calls, OTP/message sends, consent changes, push or server deployment;
+local commit only.
+
 ## 0.22.0 — 2026-11-08 — Routed management users workspace (local)
 
 ### Added

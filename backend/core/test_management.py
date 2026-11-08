@@ -121,6 +121,7 @@ class ManagementTests(TestCase):
         m.OperatorAudit.objects.create(actor=self.admin, action="test", reason="audit fixture")
         grant = m.RecipientGrant.objects.create(preview=preview, token_digest="private-grant", recipient_hash=digest("09999999999"))
         m.AbuseReport.objects.create(grant=grant, reason="other", details="private-report-details")
+        m.RecipientState.objects.create(phone_hash=self.account.phone_hash, blocked=True)
         for resource in RESOURCES:
             with self.subTest(resource=resource):
                 response = self.post("records/" + resource)

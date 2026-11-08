@@ -170,10 +170,11 @@ function Records({ resource, permissions, onAction, onFailure }: { resource: str
   function search(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const form = new FormData(event.currentTarget); setFilter({ page: 1, query: String(form.get("query") || ""), status: String(form.get("status") || "") }); }
   const pages = data ? Math.max(1, Math.ceil(data.total / data.page_size)) : 1;
   return <section className="manage-card manage-records"><form className="manage-search" onSubmit={search}>
-    <label>جست‌وجو<input name="query" maxLength={100} aria-describedby={resource === "accounts" ? "manage-phone-search-help" : undefined} placeholder={resource === "accounts" || resource === "invitations" ? "همه یا بخشی از شماره موبایل یا شناسه" : "شناسه، وضعیت یا کد"} /></label>
+    <label>جست‌وجو<input name="query" maxLength={100} aria-describedby={resource === "accounts" ? "manage-phone-search-help" : undefined} placeholder={resource === "accounts" || resource === "invitations" || resource === "blacklist" ? "همه یا بخشی از شماره موبایل یا شناسه" : "شناسه، وضعیت یا کد"} /></label>
     {!!data?.statuses.length && <label>وضعیت<select name="status" defaultValue=""><option value="">همهٔ وضعیت‌ها</option>{data.statuses.map(([key, label]) => <option key={key} value={key}>{managementState(key) === key ? label : managementState(key)}</option>)}</select></label>}
     <button className="manage-button primary" disabled={busy}>جست‌وجو</button><button className="manage-button secondary" type="button" disabled={busy} onClick={() => setFilter(v => ({ ...v }))}>تازه‌سازی</button>
   </form>
+    {resource === "blacklist" && <p className="manage-muted">فقط لغو دریافتِ فعال نمایش داده می‌شود؛ بازکردن لینک به‌تنهایی لغو نیست. این فهرست شامل شماره‌های بدون حساب هم هست و امکان فعال‌کردن دریافت از اینجا وجود ندارد.</p>}
     {resource === "accounts" && <p id="manage-phone-search-help" className="manage-muted">شمارهٔ کامل یا بخشی از آن را وارد کنید؛ ارقام فارسی و لاتین پذیرفته می‌شوند.</p>}
     {error && <Failure message={error} retry={() => setFilter(v => ({ ...v }))} />}
     {busy && <Loading />}

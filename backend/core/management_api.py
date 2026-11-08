@@ -76,6 +76,7 @@ RESOURCES = {
         ("suspended", "تعلیق", "bool"), ("free_sends_remaining", "هدیهٔ باقی‌مانده", "number"),
         ("free_sends_earned_total", "جایزهٔ دعوت", "number"), ("purchased_sends_remaining", "اعتبار خریداری‌شده", "number"), ("direct_message_tone", "لحن صریح", "bool"),
         ("deletion_requested_at", "درخواست حذف", "date"), ("created_at", "عضویت", "date")]),
+    "blacklist": (m.RecipientState, "لیست سیاه", "updated_at", None, []),
     "orders": (m.Order, "پیام‌ها و سفارش‌ها", "created_at", "status", [
         ("id", "شناسه", "id"), ("status", "وضعیت", "status"), ("category", "موضوع", "text"),
         ("amount_toman", "مبلغ (تومان)", "number"), ("is_free", "رایگان", "bool"), ("is_sponsored", "تأمین هزینه توسط سرویس", "bool"),
@@ -128,7 +129,7 @@ def resource_permission(spec):
 def context(user):
     return {"authenticated": True, "session_identity": digest("staff-session-actor:"+str(user.pk)), "username": "مدیر" if hasattr(user, "account") else user.get_username(),
         "permissions": ["support_chat"] + [name for name in ("view_operations", "manage_site_limits", "manage_account_limits", "manage_free_sending", "manage_manual_payments", "approve_manual_payments", "manage_ai", "manage_message_packages", "manage_message_examples", "view_private_message_text", "operate_safety", "suspend_account", "manage_message_tone", "triage_report", "confirm_refund") if user.has_perm("core." + name)],
-        "resources": [{"key": key, "title": spec[1]} for key, spec in RESOURCES.items() if user.has_perm(resource_permission(spec))]}
+        "resources": [{"key": key, "title": spec[1]} for key, spec in RESOURCES.items() if user.has_perm(resource_permission(spec)) and (key != "blacklist" or user.has_perm("core.view_account"))]}
 
 
 @ensure_csrf_cookie
@@ -185,6 +186,11 @@ def records(request, resource):
     page, query, status = data.get("page", 1), data.get("query", ""), data.get("status", "")
     if type(page) is not int or not 1 <= page <= 100000 or not isinstance(query, str) or len(query) > 100 or not isinstance(status, str) or len(status) > 40:
         raise APIError("invalid_input", "فیلتر جست‌وجو معتبر نیست.", 422)
+    if resource == 'blacklist':
+        if not request.user.has_perm('core.view_account'):
+            raise APIError('forbidden', 'مجوز مشاهدهٔ این بخش را ندارید.', 403)
+        from .management_blacklist import blacklist_payload
+        return blacklist_payload(request.user, query, page)
     model, title, ordering, status_field, columns = spec
     rows = model.objects.all()
     if status and status_field:

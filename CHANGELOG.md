@@ -9,6 +9,27 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.30.0 — 2026-11-08 — Exact-IP monitoring access (local)
+
+### Added
+
+- Owner-managed exact IP allowlist for unauthenticated, read-only monitoring only.
+  Other networks retain staff login and operations permission requirements.
+- Persist empty-by-default IPv4/IPv6 settings with CSRF, transactional audit and
+  optimistic revisions; reject networks, proxy addresses and non-client IPs.
+  Each read rechecks access; malformed/unverified forwarding and unavailable
+  settings never grant anonymous access. No staff/product credential is issued.
+- Add the MUI form to site settings, preserve staff-only management entry,
+  private Swagger and sensitive APIs, and document trusted proxy requirements.
+
+Validation: 720 PostgreSQL tests (15 new IP-access tests), 116 frontend tests,
+TypeScript, migration consistency and Persian catalog parity passed. Native
+owner settings/monitoring display verified at desktop and 375px (no horizontal
+overflow); anonymous native API correctly denies the empty allowlist. Next.js
+reports no compilation/session errors; independent security review found no
+material issues. Real-network IP grants/revocation were tested only against the
+isolated test database. No live IP grants, provider calls, push or deployment.
+
 ## 0.29.1 — 2026-11-08 — Permanent monitoring display layout (local)
 
 ### Changed

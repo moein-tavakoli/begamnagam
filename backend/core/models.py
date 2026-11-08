@@ -7,6 +7,17 @@ from django.utils import timezone
 from .fields import EncryptedTextField
 
 
+class MonitoringAccessSettings(models.Model):
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    ips = models.JSONField(default=list)
+    revision = models.PositiveIntegerField(default=0, editable=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        default_permissions = ()
+        constraints = [models.CheckConstraint(condition=models.Q(id=1), name='single_monitoring_access_settings')]
+
+
 class StaffRole(models.Model):
     name = models.CharField(max_length=80, unique=True)
     group = models.OneToOneField('auth.Group', on_delete=models.PROTECT, related_name='staff_role')

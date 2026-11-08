@@ -58,6 +58,7 @@ import { ManagementDataGrid } from './management-data-grid';
 
 const ManagementStaff=dynamic(()=>import('./management-staff').then(module=>module.ManagementStaff),{loading:()=> <Loading/>});
 const ManagementMonitoring=dynamic(()=>import('./management-monitoring').then(module=>module.ManagementMonitoring),{loading:()=> <Loading/>});
+const MonitoringAccessSettings=dynamic(()=>import('./monitoring-access-settings').then(module=>module.MonitoringAccessSettings),{loading:()=> <Loading/>});
 
 function ContentCard({children}: {children:ReactNode}) { return <Card sx={{p:{xs:2,sm:3},minWidth:0}}><Stack spacing={2.5}>{children}</Stack></Card>; }
 function SectionTitle({title,icon,action}: {title:string;icon:string;action?:ReactNode}) { return <Stack direction="row" sx={{alignItems:'center',justifyContent:'space-between',gap:1,flexWrap:'wrap'}}><Stack direction="row" spacing={1} sx={{alignItems:'center'}}><ManagementIcon name={icon} color="primary"/><Typography component="h2" variant="h6">{title}</Typography></Stack>{action}</Stack>; }
@@ -66,6 +67,43 @@ function Loading() { return <Stack direction="row" spacing={1.5} role="status" s
 function Empty({message='رکوردی پیدا نشد'}:{message?:string}) {return <Stack spacing={1.5} sx={{alignItems:'center',textAlign:'center',py:5}}><ReceiptLongOutlined color="disabled" sx={{fontSize:36}}/><Typography variant="subtitle1">{message}</Typography></Stack>;}
 
 export function ManagementConsole({ children }: { children: React.ReactNode }) {
+  const pathname=usePathname();
+  const supportIdentity=useRef<string|undefined>(undefined);
+  const supportMemory=useRef<SupportWorkspaceMemory>({thread:null,composer:{draft:'',pending:null}});
+  return managementRoute(pathname).resource==='monitoring'?<MonitoringEntry>{children}</MonitoringEntry>:<StaffConsole supportIdentity={supportIdentity} supportMemory={supportMemory}>{children}</StaffConsole>;
+}
+
+function MonitoringEntry({children}:{children:ReactNode}) {
+  const [allowed,setAllowed]=useState<boolean|null>(null),[error,setError]=useState('');
+  const generation=useRef(0);
+  const load=useCallback(async()=>{
+    const current=++generation.current;
+    setAllowed(null);setError('');
+    try{
+      const result=await api<{allowed:boolean}>('/manage/monitoring/access');
+      if(current===generation.current)setAllowed(result.allowed===true);
+    }catch(e){if(current===generation.current)setError(errorMessage(e));}
+  },[]);
+  useEffect(()=>{
+    void load();
+    const refresh=()=>{void load();};
+    const visible=()=>{if(document.visibilityState==='visible')refresh();};
+    window.addEventListener('focus',refresh);document.addEventListener('visibilitychange',visible);
+    return()=>{generation.current++;window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',visible);};
+  },[load]);
+  const failed=useCallback(()=>{void load();},[load]);
+  return allowed?<ManagementMonitoringLayout><ManagementMonitoring onFailure={failed}/>{children}</ManagementMonitoringLayout>:
+    <Stack sx={{maxWidth:500,mx:'auto',px:2,py:{xs:4,sm:7},gap:3}}><ManagementBrand/><ContentCard>
+      <Stack direction="row" spacing={1} sx={{alignItems:'center'}}><ShieldOutlined color="primary"/><Typography component="h1" variant="h5">ورود به مانیتورینگ</Typography></Stack>
+      {error?<Failure message={error} retry={()=>void load()}/>:allowed===null?<Loading/>:<>
+        <Typography color="text.secondary">با نام کاربری و رمز حساب دارای مجوز مانیتورینگ وارد شوید.</Typography>
+        <Login onLogin={current=>{if(!current.permissions?.includes('view_operations'))setError('این حساب مجوز مشاهدهٔ مانیتورینگ را ندارد.');else void load();}}/>
+      </>}
+      <Button component={Link} href="/manage" startIcon={<ArrowForwardRounded/>}>ورود به مدیریت</Button>
+    </ContentCard></Stack>;
+}
+
+function StaffConsole({children,supportIdentity,supportMemory}:{children:ReactNode;supportIdentity:{current:string|undefined};supportMemory:{current:SupportWorkspaceMemory}}) {
   const pathname = usePathname();
   const router=useRouter();
   const route = managementRoute(pathname);
@@ -75,8 +113,6 @@ export function ManagementConsole({ children }: { children: React.ReactNode }) {
   const [epoch, setEpoch] = useState(0);
   const [action, setAction] = useState<ManagementAction | null>(null);
   const sessionGeneration = useRef(0);
-  const supportIdentity = useRef<string|undefined>(undefined);
-  const supportMemory = useRef<SupportWorkspaceMemory>({thread:null,composer:{draft:"",pending:null}});
   const loadSession = useCallback(async () => {
     const generation = ++sessionGeneration.current;
     setSession(null); setAction(null); setError("");
@@ -127,7 +163,7 @@ export function ManagementConsole({ children }: { children: React.ReactNode }) {
       {managementShowsBalances(active,permissions)&&<ProviderBalances onFailure={failed}/>}
       {error&&<Failure message={error}/>}
       {!allowed&&<Alert severity="warning" action={<Button component={Link} href={managementLanding(session||{authenticated:false})||'/manage'}>بازگشت به بخش مجاز</Button>}>این بخش برای حساب شما در دسترس نیست. از فهرست بخش‌های مجاز انتخاب کنید.</Alert>}
-      {allowed&&(route.userId?<UserActivity key={`${route.userId}-${epoch}`} userId={route.userId} permissions={permissions} resources={session?.resources||[]} onAction={setAction} onFailure={failed}/>:active==='staff'?<ManagementStaff view={pathname.endsWith('/roles')?'roles':'employees'} onFailure={failed}/>:active==='monitoring'?<ManagementMonitoring onFailure={supportFailure}/>:active==='changelog'?<ManagementChangelog onFailure={failed}/>:active==='examples'?<ExampleSettings onFailure={failed}/>:active==='support'?<SupportInbox onFailure={supportFailure} memory={supportMemory}/>:active==='dashboard'?<Dashboard key={`dashboard-${epoch}`} canOperate={permissions.includes('operate_safety')} onAction={setAction} onFailure={failed}/>:active==='limits'?<Limits onFailure={failed}/>:active==='ai'?<AISettings onFailure={failed}/>:active==='manual-settings'?<ManualPaymentSettings onFailure={failed}/>:active==='packages'?<PackageSettings onFailure={failed}/>:active&&<Records key={`${active}-${epoch}`} resource={active} permissions={permissions} onAction={setAction} onFailure={failed}/>)}
+      {allowed&&(route.userId?<UserActivity key={`${route.userId}-${epoch}`} userId={route.userId} permissions={permissions} resources={session?.resources||[]} onAction={setAction} onFailure={failed}/>:active==='staff'?<ManagementStaff view={pathname.endsWith('/roles')?'roles':'employees'} onFailure={failed}/>:active==='changelog'?<ManagementChangelog onFailure={failed}/>:active==='examples'?<ExampleSettings onFailure={failed}/>:active==='support'?<SupportInbox onFailure={supportFailure} memory={supportMemory}/>:active==='dashboard'?<Dashboard key={`dashboard-${epoch}`} canOperate={permissions.includes('operate_safety')} onAction={setAction} onFailure={failed}/>:active==='limits'?<Limits canManageMonitoringAccess={permissions.includes('manage_monitoring_access')} onFailure={failed}/>:active==='ai'?<AISettings onFailure={failed}/>:active==='manual-settings'?<ManualPaymentSettings onFailure={failed}/>:active==='packages'?<PackageSettings onFailure={failed}/>:active&&<Records key={`${active}-${epoch}`} resource={active} permissions={permissions} onAction={setAction} onFailure={failed}/>)}
       {children}
       {action&&(['grant_package','approve_card','reject_card'].includes(action.name)?<ManualPaymentDialog action={action} onClose={()=>setAction(null)} onComplete={()=>{setAction(null);setEpoch(v=>v+1);}} onFailure={failed}/>:<ActionDialog action={action} onClose={()=>setAction(null)} onComplete={()=>{setAction(null);setEpoch(v=>v+1);}} onFailure={failed}/>)}
   </>;
@@ -138,7 +174,7 @@ export function ManagementConsole({ children }: { children: React.ReactNode }) {
       {error&&<Failure message={error} retry={()=>void loadSession()}/>}
       {!session?<Loading/>:<Login onLogin={current=>{if(supportIdentity.current!==current.session_identity)supportMemory.current={thread:null,composer:{draft:'',pending:null}};supportIdentity.current=current.session_identity;setSession(current);if(!managementNavigation(current).some(item=>item.key===active)&&!current.resources?.some(item=>item.key===active)){const target=managementLanding(current);if(target)router.replace(target);}}}/>}
       <Button component={Link} href="/" variant="text" startIcon={<ArrowForwardRounded/>}>مشاهدهٔ سایت</Button>
-    </ContentCard></Stack> : active==='monitoring'?<ManagementMonitoringLayout>{workspace}</ManagementMonitoringLayout>:<ManagementFrame session={session} pathname={pathname} title={title} active={active} supportCount={supportCount} busy={busy} onSignOut={()=>void signOut()}>{workspace}</ManagementFrame>}
+    </ContentCard></Stack> : <ManagementFrame session={session} pathname={pathname} title={title} active={active} supportCount={supportCount} busy={busy} onSignOut={()=>void signOut()}>{workspace}</ManagementFrame>}
   </>;
 }
 
@@ -203,13 +239,13 @@ function Records({ resource, permissions, onAction, onFailure }: { resource: str
   </ContentCard>;
 }
 
-function Limits({ onFailure }: { onFailure: (e: unknown) => void }) {
+function Limits({ onFailure, canManageMonitoringAccess }: { onFailure: (e: unknown) => void; canManageMonitoringAccess:boolean }) {
   const [data, setData] = useState<LimitSettings | null>(null), [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
   const onSaved = (updated: LimitSettings) => { setData(updated); setSaved(true); };
   const load = useCallback(async () => { setError(""); try { setData(await api<LimitSettings>("/manage/limits")); } catch (e) { setError(errorMessage(e)); onFailure(e); } }, [onFailure]);
   useEffect(() => { void load(); }, [load]);
-  return <Stack spacing={3}>{error&&<Failure message={error} retry={()=>void load()}/>} {saved&&<Alert severity="success">تنظیمات ذخیره شد.</Alert>}{!data?!error&&<Loading/>:<>
+  return <Stack spacing={3}>{canManageMonitoringAccess&&<MonitoringAccessSettings onFailure={onFailure}/>} {error&&<Failure message={error} retry={()=>void load()}/>} {saved&&<Alert severity="success">تنظیمات ذخیره شد.</Alert>}{!data?!error&&<Loading/>:<>
     <Alert severity="info">سه ارسال هدیهٔ اولیه رایگان می‌مانند. صفر در بازه‌های شمارش و فاصله‌ها همان محدودیت را خاموش می‌کند. برای ارسال در تمام شبانه‌روز، گزینهٔ «ارسال فقط در ساعت مجاز» را بردارید.</Alert>
     {data.gateway_problem&&<Alert severity="warning">درگاه آمادهٔ فعال‌سازی نیست: {data.gateway_problem}</Alert>}
     <SiteLimits key={`site-${data.revision}`} data={data} onSaved={onSaved} onFailure={onFailure}/><RequestLimits rules={data.requests} onSaved={onSaved} onFailure={onFailure}/>

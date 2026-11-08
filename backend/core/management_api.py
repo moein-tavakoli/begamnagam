@@ -136,7 +136,7 @@ def resource_permission(spec):
 
 def context(user):
     from .staff_roles import can_support, can_view_changelog
-    role_permissions = (['support_chat'] if can_support(user) else []) + (['view_changelog'] if can_view_changelog(user) else []) + (['manage_staff'] if user.is_superuser else [])
+    role_permissions = (['support_chat'] if can_support(user) else []) + (['view_changelog'] if can_view_changelog(user) else []) + (['manage_staff', 'manage_monitoring_access'] if user.is_superuser else [])
     return {"authenticated": True, "session_identity": digest("staff-session-actor:"+str(user.pk)), "username": "مدیر" if hasattr(user, "account") else user.get_username(),
         "permissions": role_permissions + [name for name in ("view_operations", "manage_site_limits", "manage_account_limits", "manage_free_sending", "manage_manual_payments", "approve_manual_payments", "manage_ai", "manage_message_packages", "manage_message_examples", "view_private_message_text", "operate_safety", "suspend_account", "manage_message_tone", "triage_report", "confirm_refund") if user.has_perm("core." + name)],
         "resources": [{"key": key, "title": spec[1]} for key, spec in RESOURCES.items() if user.has_perm(resource_permission(spec)) and (key != "blacklist" or user.has_perm("core.view_account"))]}

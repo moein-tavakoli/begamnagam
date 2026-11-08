@@ -10,7 +10,8 @@ from django.views.decorators.vary import vary_on_cookie
 
 from . import models as m
 from .limits import daily_budget_limit, policy
-from .management_api import staff_api
+from .monitoring_access import require_monitoring
+from .services import api
 
 
 TEHRAN = ZoneInfo('Asia/Tehran')
@@ -56,8 +57,9 @@ def _operations_snapshot(now):
 
 
 @vary_on_cookie
-@staff_api(['GET'], 'core.view_operations')
+@api(['GET'])
 def monitoring(request):
+    require_monitoring(request)
     now = timezone.now()
     end = now.astimezone(TEHRAN)
     start = end.replace(minute=0, second=0, microsecond=0) - timedelta(hours=23)

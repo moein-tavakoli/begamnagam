@@ -90,8 +90,9 @@ def main():
     else:
         raise AssertionError(f"Worker did not process outbox: {result['status']}")
     history = sender.call("/messages")["results"]
-    assert any(item["id"] == order["id"] for item in history)
-    assert recipient_phone not in json.dumps(history), "History exposed a full recipient phone."
+    owned = next(item for item in history if item["id"] == order["id"])
+    assert owned["recipient_phone"] == recipient_phone, "Owner history must show the full destination phone."
+    assert not {"phone_cipher", "recipient_cipher", "recipient_hash"}.intersection(owned), "History exposed storage fields."
     receiver = Client()
     receiver.call("/bootstrap")
     receiver.login(recipient_phone)
@@ -99,6 +100,9 @@ def main():
     assert receiver.call("/preferences")["blocked"] is True
     # A second session cannot inspect the sender's order.
     receiver.call(f"/orders/{order['id']}", expected=404)
+    assert all(item["id"] != order["id"] for item in receiver.call("/messages")["results"]), "Another account saw the sender's history."
+    sender.call("/auth/logout", {})
+    sender.call("/messages", expected=401)
     print(f"PASS at {BASE}: CSRF, OTP, preview, idempotent free checkout, credit balance, demo delivery, history, opt-out, ownership.")
 
 

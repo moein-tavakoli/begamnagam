@@ -9,6 +9,19 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.30.1 — 2026-11-08 — Align release smoke with owner phone display (local)
+
+### Fixed
+
+- Update the demo smoke journey to expect the full destination phone only in
+  the owner's history, as authorized in 0.27.0. Keep order ownership checks,
+  check that another account cannot list the order, and verify logout removes
+  history access. Do not expose encryption/hash storage fields.
+
+Validation: initial GitHub backend/frontend checks passed; Compose smoke caught
+the obsolete masked-number expectation. Python syntax and scoped ownership
+tests are checked before retrying the full release CI; no live provider calls.
+
 ## 0.30.0 — 2026-11-08 — Exact-IP monitoring access (local)
 
 ### Added

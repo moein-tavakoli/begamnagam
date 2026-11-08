@@ -9,6 +9,23 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.20.1 — 2026-11-08 — Archive old unknown queue entries (local)
+
+### Fixed
+
+- Support audited archival of an old unknown outbox item from active queue
+  metrics and automatic provider polling, preserving delivery uncertainty,
+  historical records and balances. Never requeue or resend an archived item.
+- Add a privileged, dry-run-first operational command with age/state guards and
+  idempotent auditing. A late unknown provider response preserves the archive.
+
+Validation: 30 related PostgreSQL tests and 81 frontend tests passed. Tests cover
+history/balance preservation, queue
+metrics, direct and scheduled polling, no resend, concurrent response handling,
+rejection of recent/nonunknown records and dry-run/apply behavior. Migration
+consistency and scoped diff checked. No account or production record changed
+by local tests; deployment is separately authorized by the current request.
+
 ## 0.20.0 — 2026-11-08 — Per-account sponsored free sending (local)
 
 ### Added

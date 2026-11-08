@@ -143,7 +143,7 @@ def reconcile_providers():
     from .safety import refresh_alerts
     refresh_alerts()
     reconcile_payments()
-    for delivery_id in MessageDelivery.objects.filter(provider='kavenegar', status__in=['submitting', 'unknown', 'accepted']).values_list('pk', flat=True)[:100]:
+    for delivery_id in MessageDelivery.objects.filter(provider='kavenegar', status__in=['submitting', 'unknown', 'accepted']).exclude(order__outbox__state='archived').values_list('pk', flat=True)[:100]:
         reconcile_delivery(delivery_id)
     for refund_id in Refund.objects.exclude(status='refunded').values_list('pk', flat=True)[:100]:
         process_refund(refund_id)

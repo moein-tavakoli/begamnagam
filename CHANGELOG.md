@@ -9,6 +9,20 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.24.1 — 2026-11-08 — Simplify management navigation and show version (local)
+
+### Fixed
+
+- Remove the advanced Django management item from the shared desktop/mobile
+  navigation. Show the build's canonical package version in the management
+  footer using MUI Typography and the local Farsi-Digits font.
+- Update the Persian release catalog and generated changelog for this version.
+
+Validation: 96 frontend tests, TypeScript and Persian changelog parity passed.
+Authenticated browser checks at 1280px and 375px confirm the removed navigation
+item, package version 0.24.1 in the footer, Farsi-Digits font and no page overflow.
+Local version only; no push or server deployment.
+
 ## 0.24.0 — 2026-11-08 — Private Persian release history (local)
 
 ### Added

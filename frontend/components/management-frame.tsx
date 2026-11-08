@@ -15,18 +15,16 @@ import ListItemText from '@mui/material/ListItemText';
 import Breadcrumbs from '@mui/material/Breadcrumbs';
 import MuiLink from '@mui/material/Link';
 import IconButton from '@mui/material/IconButton';
-import Button from '@mui/material/Button';
 import Badge from '@mui/material/Badge';
-import Divider from '@mui/material/Divider';
 import Tooltip from '@mui/material/Tooltip';
 import ForumRounded from '@mui/icons-material/ForumRounded';
 import MenuRounded from '@mui/icons-material/MenuRounded';
 import CloseRounded from '@mui/icons-material/CloseRounded';
 import LogoutRounded from '@mui/icons-material/LogoutRounded';
-import OpenInNewRounded from '@mui/icons-material/OpenInNewRounded';
 import HomeOutlined from '@mui/icons-material/HomeOutlined';
 import ChevronLeftRounded from '@mui/icons-material/ChevronLeftRounded';
 import { ManagementIcon } from './management-icons';
+import { version } from '../package.json';
 import { managementBreadcrumbs, managementHref, managementNavigation, type ManagementSession } from '@/lib/management';
 import type { ReactNode } from 'react';
 
@@ -41,7 +39,7 @@ export function ManagementFrame({session,pathname,title,active,supportCount,busy
     <Typography variant="overline" color="text.secondary" sx={{px:1}}>مدیریت محصول</Typography>
     <List component="nav" aria-label="بخش‌های مدیریت" sx={{flex:1,overflowY:'auto',p:0}}>{managementNavigation(session).map(item=><ListItemButton key={item.key} component={Link} href={managementHref(item.key)} selected={active===item.key} aria-current={active===item.key?'page':undefined} onClick={()=>setMobileOpen(false)} sx={{borderRadius:2,mb:.5,py:1}}>
       <ListItemIcon sx={{minWidth:40}}><Badge color="error" badgeContent={item.key==='support'?supportCount:0} max={99} showZero={false}><ManagementIcon name={item.key}/></Badge></ListItemIcon><ListItemText primary={item.title} slotProps={{primary:{sx:{fontSize:14,fontWeight:active===item.key?700:500}}}}/>
-    </ListItemButton>)}</List><Divider/><Button component="a" href="/admin/" variant="text" startIcon={<OpenInNewRounded/>} sx={{justifyContent:'flex-start',fontSize:12}}>مدیریت پیشرفتهٔ جنگو</Button>
+    </ListItemButton>)}</List>
   </Stack>;
   return <Box dir="rtl" data-management-ui="material" data-update-blocked="true" sx={{display:'flex',minHeight:'100dvh',bgcolor:'background.default',color:'text.primary'}}>
     <Box component="aside" sx={{width:{md:drawerWidth},flexShrink:{md:0}}}>
@@ -57,7 +55,7 @@ export function ManagementFrame({session,pathname,title,active,supportCount,busy
           <Tooltip title="خروج از مدیریت"><IconButton disabled={busy} aria-label="خروج از مدیریت" onClick={onSignOut}><LogoutRounded/></IconButton></Tooltip>
         </Toolbar>
       </AppBar>
-      <Stack spacing={{xs:2,md:3}} sx={{p:{xs:2,sm:3,lg:4},maxWidth:1600,mx:'auto',minWidth:0}}>{children}<Typography variant="caption" color="text.secondary" sx={{textAlign:'center',pt:1}}>زمان‌ها به وقت تهران · اقدام‌های مدیریتی در سابقه ثبت می‌شوند.</Typography></Stack>
+      <Stack spacing={{xs:2,md:3}} sx={{p:{xs:2,sm:3,lg:4},maxWidth:1600,mx:'auto',minWidth:0}}>{children}<Stack component="footer" aria-label="پاورقی مدیریت" spacing={.5} sx={{textAlign:'center',pt:1}}><Typography variant="caption" color="text.secondary">زمان‌ها به وقت تهران · اقدام‌های مدیریتی در سابقه ثبت می‌شوند.</Typography><Typography variant="caption" color="text.secondary" aria-label="نسخهٔ نرم‌افزار">نسخهٔ نرم‌افزار {version}</Typography></Stack></Stack>
     </Box>
   </Box>;
 }

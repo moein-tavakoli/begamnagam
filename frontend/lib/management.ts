@@ -11,6 +11,20 @@ export type ManagementRecords = {
   title: string; columns: { key: string; label: string; type: string }[];
   rows: ManagementRow[]; total: number; page: number; page_size: number; statuses: [string, string][];
 };
+export type ManagementRecordFilter = { page: number; page_size: number; query: string; status: string };
+export const managementPageSizes = [10, 25, 50, 100] as const;
+export function managementVisibleColumns(columns: ManagementRecords['columns']): ManagementRecords['columns'] {
+  return columns.filter(col => col.type !== 'id' && col.key !== 'id' && col.key !== 'record_id'
+    && !col.key.endsWith('_id') && !col.label.includes('شناسه'));
+}
+export function managementGridPage(current: ManagementRecordFilter, model: {page:number;pageSize:number}): ManagementRecordFilter {
+  const page=model.pageSize === current.page_size ? model.page + 1 : 1;
+  return page===current.page && model.pageSize===current.page_size ? current : {...current,page,page_size:model.pageSize};
+}
+export function managementGridRange({from,to,count}:{from:number;to:number;count:number}): string {
+  const number = (n:number) => n.toLocaleString('fa-IR');
+  return `${number(from)} تا ${number(to)} از ${number(count)} سطر`;
+}
 export type LimitRule = { scope: string; label: string; protected: boolean; enabled: boolean; maximum: number; window_seconds: number; revision: number };
 export type LimitSettings = {
   gateway_problem?: string;

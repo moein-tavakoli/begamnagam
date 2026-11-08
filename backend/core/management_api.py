@@ -184,13 +184,17 @@ def records(request, resource):
         raise APIError("forbidden", "مجوز مشاهدهٔ این بخش را ندارید.", 403)
     data = body(request)
     page, query, status = data.get("page", 1), data.get("query", ""), data.get("status", "")
-    if type(page) is not int or not 1 <= page <= 100000 or not isinstance(query, str) or len(query) > 100 or not isinstance(status, str) or len(status) > 40:
+    page_size = data.get('page_size', data.get('limit', 25))
+    invalid_size = any(type(data[key]) is not int or not 1 <= data[key] <= 100
+        for key in ('page_size', 'limit') if key in data)
+    conflicting_size = 'page_size' in data and 'limit' in data and data['page_size'] != data['limit']
+    if invalid_size or conflicting_size or type(page) is not int or not 1 <= page <= 100000 or not isinstance(query, str) or len(query) > 100 or not isinstance(status, str) or len(status) > 40:
         raise APIError("invalid_input", "فیلتر جست‌وجو معتبر نیست.", 422)
     if resource == 'blacklist':
         if not request.user.has_perm('core.view_account'):
             raise APIError('forbidden', 'مجوز مشاهدهٔ این بخش را ندارید.', 403)
         from .management_blacklist import blacklist_payload
-        return blacklist_payload(request.user, query, page)
+        return blacklist_payload(request.user, query, page, page_size)
     model, title, ordering, status_field, columns = spec
     rows = model.objects.all()
     if status and status_field:
@@ -209,13 +213,13 @@ def records(request, resource):
                     condition |= Q(**{field + "__icontains": query})
             rows = rows.annotate(search_id=Cast("pk", CharField())).filter(condition)
     if resource == 'accounts':
-        total, values = account_records(rows, query, page, columns)
+        total, values = account_records(rows, query, page, columns, page_size)
         m.OperatorAudit.objects.create(actor=request.user, action='account_phones_viewed', object_id='accounts',
             reason='مشاهدهٔ شمارهٔ کاربران در پنل مدیریت', after={'page': page, 'returned': len(values)})
     else:
         total = rows.count()
         fields = list(dict.fromkeys([model._meta.pk.name] + [col[0] for col in columns]))
-        values = list(rows.order_by("-" + ordering, "-pk").values(*fields)[(page-1)*25:page*25])
+        values = list(rows.order_by("-" + ordering, "-pk").values(*fields)[(page-1)*page_size:page*page_size])
     for value in values:
         for money_field in ('balance_after_toman', 'wallet_balance_toman'):
             if money_field in value:
@@ -229,10 +233,10 @@ def records(request, resource):
             "outbox": ["pending", "submitting", "sent", "failed", "cancelled", "unknown"],
             "reports": ["open", "closed"], "moderation": ["accepted", "rejected"]}.get(resource, [])]
     return {"title": title, "columns": [{"key": k, "label": label, "type": kind} for k, label, kind in columns],
-        "rows": values, "total": total, "page": page, "page_size": 25, "statuses": choices}
+        "rows": values, "total": total, "page": page, "page_size": page_size, "statuses": choices}
 
 
-def account_records(rows, query, page, columns):
+def account_records(rows, query, page, columns, page_size=25):
     """Scan encrypted phones only after permission checks; retain one page."""
     fields = ['phone_cipher' if key == 'phone' else key for key, _, _ in columns]
     fields.append('phone_masked')
@@ -246,7 +250,7 @@ def account_records(rows, query, page, columns):
     selected = []
     if partial is None:
         total = rows.count()
-        candidates = rows.values(*fields)[(page-1)*25:page*25]
+        candidates = rows.values(*fields)[(page-1)*page_size:page*page_size]
         for value in candidates:
             cipher = value.pop('phone_cipher')
             value['phone'] = decrypt(cipher) if cipher else ''
@@ -259,7 +263,7 @@ def account_records(rows, query, page, columns):
     for value in rows.values('pk', 'phone_cipher').iterator(chunk_size=500):
         phone = decrypt(value['phone_cipher']) if value['phone_cipher'] else ''
         if (partial.isascii() and partial.isdigit() and partial in phone) or str(value['pk']) == query:
-            if (page-1)*25 <= total < page*25:
+            if (page-1)*page_size <= total < page*page_size:
                 ids.append(value['pk'])
             total += 1
     for value in rows.filter(pk__in=ids).values(*fields):

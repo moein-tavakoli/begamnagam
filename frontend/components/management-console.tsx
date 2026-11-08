@@ -14,12 +14,6 @@ import Accordion from '@mui/material/Accordion';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
 import CircularProgress from '@mui/material/CircularProgress';
-import Table from '@mui/material/Table';
-import TableHead from '@mui/material/TableHead';
-import TableBody from '@mui/material/TableBody';
-import TableRow from '@mui/material/TableRow';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
 import IconButton from '@mui/material/IconButton';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
@@ -44,9 +38,8 @@ import SettingsOutlined from '@mui/icons-material/SettingsOutlined';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { FormEvent, useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { api, ApiError, errorMessage } from '@/lib/api';
-import { managementActions, managementDate, managementNumber, managementState, managementNavigation, managementRoute, managementUserHref, managementReason, managementExplanation, managementDisplayValue, managementShowsBalances,
+import { managementActions, managementDate, managementNumber, managementState, managementNavigation, managementRoute, managementUserHref, managementReason, managementExplanation, managementDisplayValue, managementShowsBalances, managementGridPage,
  type LimitRule, type LimitSettings, type ManagementAction, type ManagementDashboard, type ManagementRecords, type ManagementSession, type ManagementActivity, type ManagementRow } from '@/lib/management';
-import { walletToman } from '@/lib/wallet';
 import type { SupportWorkspaceMemory } from '@/lib/support';
 import { ManagementButton, ManagementInput, ManagementSelect, ManagementDigitInput, ManagementDialog } from './management-ui';
 import { ManagementFrame, ManagementBrand } from './management-frame';
@@ -59,6 +52,7 @@ import { SupportInbox, useSupportBadge } from './support-inbox';
 import { PackageSettings } from './package-settings';
 import { ExampleSettings } from './example-settings';
 import { ManagementChangelog } from './management-changelog';
+import { ManagementDataGrid } from './management-data-grid';
 
 function ContentCard({children}: {children:ReactNode}) { return <Card sx={{p:{xs:2,sm:3},minWidth:0}}><Stack spacing={2.5}>{children}</Stack></Card>; }
 function SectionTitle({title,icon,action}: {title:string;icon:string;action?:ReactNode}) { return <Stack direction="row" sx={{alignItems:'center',justifyContent:'space-between',gap:1,flexWrap:'wrap'}}><Stack direction="row" spacing={1} sx={{alignItems:'center'}}><ManagementIcon name={icon} color="primary"/><Typography component="h2" variant="h6">{title}</Typography></Stack>{action}</Stack>; }
@@ -174,41 +168,27 @@ function Dashboard({ canOperate, onAction, onFailure }: { canOperate: boolean; o
   </Stack>;
 }
 
-function Cell({value,kind}:{value:unknown;kind:string}) {
-  if(value===null||value===undefined||value==='')return <Typography variant="body2">—</Typography>;
-  if(kind==='bool')return <Chip size="small" variant="outlined" color={value?'success':'default'} label={value?'بله':'خیر'}/>;
-  if(kind==='date')return <Typography variant="body2" sx={{whiteSpace:'nowrap'}}>{managementDate(value)}</Typography>;
-  if(kind==='number')return <Typography variant="body2">{managementNumber(value)}</Typography>;
-  if(kind==='money')return <Typography variant="body2" sx={{whiteSpace:'nowrap'}}>{walletToman(String(value))}</Typography>;
-  if(kind==='status')return <Chip size="small" label={managementState(value)}/>;
-  if(kind==='json')return <Accordion disableGutters elevation={0}><AccordionSummary expandIcon={<ExpandMoreRounded/>}><Typography variant="caption">مشاهدهٔ مقادیر</Typography></AccordionSummary><AccordionDetails><Box component="pre" dir="ltr" sx={{overflow:'auto',maxWidth:350,maxHeight:260,fontSize:12}}>{JSON.stringify(value,null,2)}</Box></AccordionDetails></Accordion>;
-  return <Typography component="bdi" variant="body2" title={kind==='id'?String(value):undefined} sx={kind==='id'?{display:'block',maxWidth:150,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}:{overflowWrap:'anywhere'}}>{String(value)}</Typography>;
-}
-
 function Records({ resource, permissions, onAction, onFailure }: { resource: string; permissions: string[]; onAction: (a: ManagementAction) => void; onFailure: (e: unknown) => void }) {
   const [data, setData] = useState<ManagementRecords | null>(null), [error, setError] = useState(""), [busy, setBusy] = useState(false);
-  const [filter, setFilter] = useState({ page: 1, query: "", status: "" });
+  const [filter, setFilter] = useState({ page: 1, page_size:25, query: "", status: "" });
   useEffect(() => {
     const controller = new AbortController(); setBusy(true); setError("");
-    void api<ManagementRecords>(`/manage/records/${resource}`, { method: "POST", body: filter, signal: controller.signal }).then(setData).catch(e => { if (controller.signal.aborted) return; setError(errorMessage(e)); onFailure(e); }).finally(() => { if (!controller.signal.aborted) setBusy(false); });
+    void api<ManagementRecords>(`/manage/records/${resource}`, { method: "POST", body: filter, signal: controller.signal }).then(result=>{if(!controller.signal.aborted)setData(result);}).catch(e => { if (controller.signal.aborted) return; setError(errorMessage(e)); onFailure(e); }).finally(() => { if (!controller.signal.aborted) setBusy(false); });
     return () => controller.abort();
   }, [resource, filter, onFailure]);
-  function search(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const form = new FormData(event.currentTarget); setFilter({ page: 1, query: String(form.get("query") || ""), status: String(form.get("status") || "") }); }
-  const pages = data ? Math.max(1, Math.ceil(data.total / data.page_size)) : 1;
+  function search(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const form = new FormData(event.currentTarget); setFilter(previous=>({...previous,page:1,query:String(form.get('query')||''),status:String(form.get('status')||'')})); }
+  const renderActions=useCallback((row:ManagementRow,focused:boolean)=><RowActions resource={resource} row={row} permissions={permissions} onAction={onAction} tabIndex={focused?0:-1}/>,[resource,permissions,onAction]);
   return <ContentCard>
     <Grid component="form" container spacing={2} onSubmit={search} sx={{alignItems:'flex-start'}}>
-      <Grid size={{xs:12,md:data?.statuses.length?5:7}}><ManagementInput label="جست‌وجو" name="query" maxLength={100} placeholder={['accounts','invitations','blacklist'].includes(resource)?'همه یا بخشی از شماره موبایل':'شناسه، وضعیت یا کد'} helperText={resource==='accounts'?'شمارهٔ کامل یا بخشی از آن؛ ارقام فارسی و لاتین پذیرفته می‌شوند.':undefined}/></Grid>
+      <Grid size={{xs:12,md:data?.statuses.length?5:7}}><ManagementInput label="جست‌وجو" name="query" maxLength={100} placeholder={['accounts','invitations','blacklist'].includes(resource)?'همه یا بخشی از شماره موبایل':'وضعیت، موضوع یا کد'} helperText={resource==='accounts'?'شمارهٔ کامل یا بخشی از آن؛ ارقام فارسی و لاتین پذیرفته می‌شوند.':undefined}/></Grid>
       {!!data?.statuses.length&&<Grid size={{xs:12,sm:6,md:3}}><ManagementSelect label="وضعیت" name="status" defaultValue=""><option value="">همهٔ وضعیت‌ها</option>{data.statuses.map(([key])=><option key={key} value={key}>{managementState(key)}</option>)}</ManagementSelect></Grid>}
       <Grid size={{xs:12,sm:6,md:data?.statuses.length?4:5}}><Stack direction="row" spacing={1}><ManagementButton disabled={busy} startIcon={<SearchRounded/>}>جست‌وجو</ManagementButton><ManagementButton type="button" variant="outlined" disabled={busy} startIcon={<RefreshRounded/>} onClick={()=>setFilter(v=>({...v}))}>تازه‌سازی</ManagementButton></Stack></Grid>
     </Grid>
     {resource==='blacklist'&&<Alert severity="info">فقط لغو دریافتِ فعال نمایش داده می‌شود؛ بازکردن لینک به‌تنهایی لغو نیست. فهرست شامل شماره‌های بدون حساب هم هست و امکان فعال‌کردن دریافت از اینجا وجود ندارد.</Alert>}
-    {error&&<Failure message={error} retry={()=>setFilter(v=>({...v}))}/>}{busy&&<Loading/>}
-    {data&&!busy&&!error&&<>
-      <Stack direction="row" sx={{justifyContent:'space-between',gap:1}}><Typography variant="body2" color="text.secondary">{managementNumber(data.total)} رکورد</Typography><Typography variant="body2" color="text.secondary">صفحهٔ {managementNumber(data.page)} از {managementNumber(pages)}</Typography></Stack>
-      {!data.rows.length?<Empty/>:<TableContainer tabIndex={0} role="region" aria-label={data.title} sx={{border:1,borderColor:'divider',borderRadius:2,maxWidth:'100%',overflowX:'auto'}}><Table size="small" aria-label={data.title}><TableHead><TableRow>{data.columns.map(col=><TableCell key={col.key} sx={{whiteSpace:'nowrap'}}>{col.label}</TableCell>)}{(resource==='accounts'||data.rows.some(row=>managementActions(resource,row,permissions).length>0))&&<TableCell sx={{position:'sticky',insetInlineEnd:0,bgcolor:'background.paper',zIndex:2}}>عملیات</TableCell>}</TableRow></TableHead>
-      <TableBody>{data.rows.map(row=><TableRow key={row.record_id} hover>{data.columns.map(col=><TableCell key={col.key} sx={{minWidth:col.key==='phone'?135:95,maxWidth:320}}>{resource==='accounts'&&['id','phone'].includes(col.key)?<Button component={Link} href={managementUserHref(row.record_id)} variant="text" sx={{p:0,minWidth:0,whiteSpace:'nowrap'}}><Cell value={managementDisplayValue(col.key,row[col.key])} kind={col.type}/></Button>:<Cell value={managementDisplayValue(col.key,row[col.key])} kind={col.type}/>}</TableCell>)}{(resource==='accounts'||data.rows.some(r=>managementActions(resource,r,permissions).length>0))&&<TableCell sx={{position:'sticky',insetInlineEnd:0,bgcolor:'background.paper',borderInlineStart:1,borderColor:'divider',minWidth:68,width:68,zIndex:1}}><RowActions resource={resource} row={row} permissions={permissions} onAction={onAction}/></TableCell>}</TableRow>)}</TableBody></Table></TableContainer>}
-      <Stack component="nav" aria-label="صفحه‌بندی رکوردها" direction="row" spacing={1} sx={{justifyContent:'flex-end'}}><ManagementButton type="button" variant="outlined" disabled={filter.page<=1} startIcon={<ArrowForwardRounded/>} onClick={()=>setFilter(v=>({...v,page:v.page-1}))}>قبلی</ManagementButton><ManagementButton type="button" variant="outlined" disabled={filter.page>=pages} endIcon={<ArrowBackRounded/>} onClick={()=>setFilter(v=>({...v,page:v.page+1}))}>بعدی</ManagementButton></Stack>
-    </>}
+    {error&&<Failure message={error} retry={()=>setFilter(v=>({...v}))}/>}
+    <ManagementDataGrid resource={resource} data={data} rows={busy||error?[]:data?.rows||[]} loading={busy||(!data&&!error)} failed={!!error}
+      pagination={{page:filter.page-1,pageSize:filter.page_size}} onPaginationChange={model=>setFilter(current=>managementGridPage(current,model))}
+      renderActions={renderActions} hasActions={resource==='accounts'||!!data?.rows.some(row=>managementActions(resource,row,permissions).length>0)}/>
   </ContentCard>;
 }
 
@@ -299,14 +279,14 @@ function AccountLimitInput({ name, label, value }: { name: string; label: string
   return <Grid container spacing={2}><Grid size={{xs:12,sm:6}}><ManagementSelect label={label} name={`${name}_mode`} value={mode} onChange={e=>setMode(e.target.value)}><option value="site">طبق تنظیم سایت</option><option value="custom">عدد اختصاصی</option><option value="unlimited">تعداد نامحدود</option></ManagementSelect></Grid>{mode==='custom'&&<Grid size={{xs:12,sm:6}}><ManagementDigitInput label={`حداکثر ${label}`} name={name} min={1} max={1000000} step={1} defaultValue={value||1000} required/></Grid>}</Grid>;
 }
 
-function RowActions({ resource, row, permissions, onAction }: { resource: string; row: ManagementRow; permissions: string[]; onAction: (a: ManagementAction) => void }) {
+function RowActions({ resource, row, permissions, onAction, tabIndex=0 }: { resource: string; row: ManagementRow; permissions: string[]; onAction: (a: ManagementAction) => void; tabIndex?:number }) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const id = useId();
   const actions = managementActions(resource, row, permissions);
   if (resource !== "accounts" && !actions.length) return null;
   const close = () => setAnchor(null);
   return <>
-    <IconButton id={`${id}-button`} aria-label={`عملیات رکورد ${row.record_id}`} aria-haspopup="menu" aria-expanded={!!anchor} aria-controls={anchor ? `${id}-menu` : undefined} onClick={event => setAnchor(event.currentTarget)}>
+    <IconButton id={`${id}-button`} aria-label="عملیات ردیف" tabIndex={tabIndex} aria-haspopup="menu" aria-expanded={!!anchor} aria-controls={anchor ? `${id}-menu` : undefined} onClick={event => setAnchor(event.currentTarget)}>
       <MoreHorizRounded/>
     </IconButton>
     <Menu id={`${id}-menu`} dir="rtl" anchorEl={anchor} open={!!anchor} onClose={close} anchorOrigin={{vertical:'bottom',horizontal:'left'}} transformOrigin={{vertical:'top',horizontal:'left'}} slotProps={{list:{'aria-labelledby':`${id}-button`}}}>

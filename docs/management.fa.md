@@ -47,7 +47,7 @@
 | `session` | GET | نشست مدیر و بخش‌های مجاز؛ صدور کوکی CSRF |
 | `login` / `logout` | POST | ورود با نام کاربری/رمز فعلی و خروج |
 | `dashboard` | GET | آمار و وضعیت سرویس‌های همین محیط |
-| `records/<resource>` | POST | خواندن فهرست؛ `page`، `query` و `status`؛ هر صفحه ۲۵ رکورد |
+| `records/<resource>` | POST | خواندن فهرست؛ `page`، `query` و `status`؛ از۰٫۲۵٫۰، `page_size` یا `limit` صحیح۱تا۱۰۰، پیش‌فرض۲۵ |
 | `limits` | GET / POST | خواندن/نوشتن سیاست مشترک؛ `values`، `revision` و `reason` |
 | `request-limits/<scope>` | POST | نوشتن کنترل درخواست؛ همان قرارداد نسخه و دلیل |
 | `actions` | POST | `action`، `object_id`، `reason`؛ برای لحن `value` و برای بازپرداخت `reference` |

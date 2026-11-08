@@ -9,6 +9,29 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.25.0 — 2026-11-08 — Persian management DataGrid pagination (local)
+
+### Added
+
+- Move every management records table to MUI X Community DataGrid with Persian
+  controls, row ranges and total counts; offer 10/25/50/100 rows on desktop and
+  mobile. Use server pagination and reset to the first page on search/status/size
+  changes. Keep page-only sorting/filtering disabled in favor of server search.
+- Accept optional integer `page_size` or `limit` on management records, default
+  25 and bounded to 1–100. Reject invalid/conflicting sizes with 422. Apply sizes
+  consistently to normal records and encrypted account/blacklist search while
+  preserving permission checks, bounded retained rows and audit privacy.
+- Exclude identifier columns from tables while preserving internal keys, user
+  links and row action targets. Keep actions first in RTL, accessible cell focus
+  and JSON value dialogs without increasing row height.
+
+Validation: 663 PostgreSQL tests, 99 frontend tests, TypeScript and Persian
+changelog parity passed. Independent review found no material issues. Native
+browser checks cover desktop/375px, page transitions without duplicate rows,
+size changes resetting pages, visible Persian mobile size controls, hidden
+identifier columns, row menus and value-dialog focus. No live sends, account or
+financial changes were submitted. Local version only; no push or deployment.
+
 ## 0.24.1 — 2026-11-08 — Simplify management navigation and show version (local)
 
 ### Fixed

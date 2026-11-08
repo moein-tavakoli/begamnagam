@@ -138,3 +138,27 @@ test('Persian release history navigation is limited to authenticated management 
   assert.equal(management.managementNavigation({authenticated:true}).find(item=>item.key==='changelog')?.title,'تاریخچهٔ تغییرات');
   assert.equal(management.managementHref('changelog'),'/manage/changelog');
 });
+
+test('all identifier columns are excluded without dropping row action targets', () => {
+  const columns = [
+    {key:'id',label:'شناسه',type:'id'}, {key:'account_id',label:'حساب',type:'id'},
+    {key:'object_id',label:'رکورد',type:'text'}, {key:'record_id',label:'رکورد',type:'text'},
+    {key:'opaque',label:'شناسهٔ رهگیری',type:'text'}, {key:'phone',label:'موبایل',type:'text'},
+    {key:'amount_toman',label:'مبلغ',type:'number'},
+  ];
+  assert.deepEqual(management.managementVisibleColumns(columns).map(c=>c.key),['phone','amount_toman']);
+  const row = {record_id:'17',id:17};
+  assert.equal(managementActions('accounts',row,['suspend_account'])[0].object_id,'17');
+  assert.equal(columns.length,7);
+});
+
+test('DataGrid pages map to server pages and changing size resets the page', () => {
+  const current = {page:3,page_size:25,query:'۱۲۳',status:'failed'};
+  assert.deepEqual(management.managementGridPage(current,{page:3,pageSize:25}),{...current,page:4});
+  assert.deepEqual(management.managementGridPage(current,{page:3,pageSize:50}),{...current,page:1,page_size:50});
+});
+
+test('pagination ranges and row counts are Persian including empty results', () => {
+  assert.equal(management.managementGridRange({from:11,to:20,count:27}),'۱۱ تا ۲۰ از ۲۷ سطر');
+  assert.equal(management.managementGridRange({from:0,to:0,count:0}),'۰ تا ۰ از ۰ سطر');
+});

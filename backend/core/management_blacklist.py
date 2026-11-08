@@ -31,7 +31,7 @@ def resolve_phones(hashes):
     return result
 
 
-def blacklist_payload(actor, query, page):
+def blacklist_payload(actor, query, page, page_size=PAGE_SIZE):
     rows = m.RecipientState.objects.filter(blocked=True).order_by('-updated_at', '-pk')
     query = ascii_digits(query).strip()
     partial = ''
@@ -57,7 +57,7 @@ def blacklist_payload(actor, query, page):
             phone = phones.get(state.phone_hash, '')
             if partial and partial not in phone:
                 continue
-            if (page - 1) * PAGE_SIZE <= total < page * PAGE_SIZE:
+            if (page - 1) * page_size <= total < page * page_size:
                 selected.append(
                     {
                         'record_id': digest('management-blacklist:' + state.phone_hash),
@@ -79,8 +79,8 @@ def blacklist_payload(actor, query, page):
             take(batch)
     else:
         total_count = rows.count()
-        total = (page - 1) * PAGE_SIZE
-        take(list(rows[(page - 1) * PAGE_SIZE : page * PAGE_SIZE]))
+        total = (page - 1) * page_size
+        take(list(rows[(page - 1) * page_size : page * page_size]))
         total = total_count
     m.OperatorAudit.objects.create(
         actor=actor,
@@ -99,6 +99,6 @@ def blacklist_payload(actor, query, page):
         'rows': selected,
         'total': total,
         'page': page,
-        'page_size': PAGE_SIZE,
+        'page_size': page_size,
         'statuses': [],
     }

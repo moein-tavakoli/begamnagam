@@ -1,3 +1,4 @@
+import BadgeOutlined from '@mui/icons-material/BadgeOutlined';
 import MonitorHeartOutlined from '@mui/icons-material/MonitorHeartOutlined';
 import DashboardOutlined from '@mui/icons-material/DashboardOutlined';
 import PeopleOutlined from '@mui/icons-material/PeopleOutlined';
@@ -26,7 +27,7 @@ import PersonOutline from '@mui/icons-material/PersonOutlined';
 import type { SvgIconProps } from '@mui/material/SvgIcon';
 
 const icons = {
-  dashboard:DashboardOutlined, monitoring:MonitorHeartOutlined, accounts:PeopleOutlined, blacklist:BlockOutlined,
+  dashboard:DashboardOutlined, monitoring:MonitorHeartOutlined, staff:BadgeOutlined, accounts:PeopleOutlined, blacklist:BlockOutlined,
   support:SupportAgentOutlined, 'manual-payments':ReceiptLongOutlined,
   'wallet-entries':AccountBalanceWalletOutlined, 'wallet-topups':AddCardOutlined,
   'credit-purchases':Inventory2Outlined, 'credit-entries':CreditScoreOutlined,

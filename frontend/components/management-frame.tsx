@@ -32,7 +32,7 @@ const drawerWidth=256;
 export function ManagementBrand() {
   return <MuiLink component={Link} href="/" underline="none" color="text.primary" sx={{display:'inline-flex',alignItems:'center',gap:1.5}}><ForumRounded color="primary" sx={{fontSize:34}}/><Typography component="span" variant="h5" sx={{fontWeight:800}}>بگم نگم.</Typography></MuiLink>;
 }
-export function ManagementFrame({session,pathname,title,active,supportCount,busy,television=false,onSignOut,children}: {session:ManagementSession;pathname:string;title:string;active:string;supportCount:number;busy:boolean;television?:boolean;onSignOut:()=>void;children:ReactNode}) {
+export function ManagementFrame({session,pathname,title,active,supportCount,busy,onSignOut,children}: {session:ManagementSession;pathname:string;title:string;active:string;supportCount:number;busy:boolean;onSignOut:()=>void;children:ReactNode}) {
   const [mobileOpen,setMobileOpen]=useState(false);
   const nav = <Stack sx={{height:'100%',p:2,gap:2}}>
     <Stack direction="row" sx={{alignItems:'center',justifyContent:'space-between',px:1,pt:1}}><ManagementBrand/><IconButton aria-label="بستن منوی مدیریت" onClick={()=>setMobileOpen(false)} sx={{display:{xs:'inline-flex',md:'none'}}}><CloseRounded/></IconButton></Stack>
@@ -42,20 +42,20 @@ export function ManagementFrame({session,pathname,title,active,supportCount,busy
     </ListItemButton>)}</List>
   </Stack>;
   return <Box dir="rtl" data-management-ui="material" data-update-blocked="true" sx={{display:'flex',minHeight:'100dvh',bgcolor:'background.default',color:'text.primary'}}>
-    {!television&&<Box component="aside" sx={{width:{md:drawerWidth},flexShrink:{md:0}}}>
+    <Box component="aside" sx={{width:{md:drawerWidth},flexShrink:{md:0}}}>
       <Drawer variant="temporary" anchor="left" open={mobileOpen} onClose={()=>setMobileOpen(false)} dir="rtl" slotProps={{paper:{sx:{width:drawerWidth,maxWidth:'88vw'}}}} sx={{display:{xs:'block',md:'none'}}}>{nav}</Drawer>
       <Drawer variant="permanent" anchor="left" open slotProps={{paper:{sx:{width:drawerWidth,boxSizing:'border-box'}}}} sx={{display:{xs:'none',md:'block'}}}>{nav}</Drawer>
-    </Box>}
+    </Box>
     <Box sx={{flex:1,minWidth:0}}>
       <AppBar position="sticky" color="inherit" elevation={0} sx={{borderBottom:1,borderColor:'divider',bgcolor:'background.paper'}}>
-        <Toolbar sx={{gap:1,px:{xs:1.5,sm:3},minHeight:television?56:{xs:68,sm:80}}}>
-          {!television&&<IconButton aria-label="بازکردن منوی مدیریت" aria-expanded={mobileOpen} onClick={()=>setMobileOpen(true)} sx={{display:{md:'none'}}}><MenuRounded/></IconButton>}
+        <Toolbar sx={{gap:1,px:{xs:1.5,sm:3},minHeight:{xs:68,sm:80}}}>
+          <IconButton aria-label="بازکردن منوی مدیریت" aria-expanded={mobileOpen} onClick={()=>setMobileOpen(true)} sx={{display:{md:'none'}}}><MenuRounded/></IconButton>
           <Stack spacing={.25} sx={{minWidth:0,flex:1}}><Typography component="h1" variant="h6" noWrap>{title}</Typography><Breadcrumbs aria-label="مسیر صفحه" separator={<ChevronLeftRounded sx={{fontSize:16}}/>} sx={{fontSize:12}}>{managementBreadcrumbs(session,pathname).map((item,index)=>item.href?<MuiLink key={index} component={Link} href={item.href} underline="hover" color="inherit">{item.title}</MuiLink>:<Typography key={index} variant="caption" color="text.primary">{item.title}</Typography>)}</Breadcrumbs></Stack>
           <Tooltip title="بازگشت به سایت"><IconButton component={Link} href="/" aria-label="بازگشت به سایت"><HomeOutlined/></IconButton></Tooltip>
           <Tooltip title="خروج از مدیریت"><IconButton disabled={busy} aria-label="خروج از مدیریت" onClick={onSignOut}><LogoutRounded/></IconButton></Tooltip>
         </Toolbar>
       </AppBar>
-      <Stack spacing={television?1.5:{xs:2,md:3}} sx={{p:television?2:{xs:2,sm:3,lg:4},maxWidth:television?'none':1600,mx:'auto',minWidth:0}}>{children}<Stack component="footer" aria-label="پاورقی مدیریت" spacing={.5} sx={{textAlign:'center',pt:1}}><Typography variant="caption" color="text.secondary">زمان‌ها به وقت تهران · اقدام‌های مدیریتی در سابقه ثبت می‌شوند.</Typography><Typography variant="caption" color="text.secondary" aria-label="نسخهٔ نرم‌افزار">نسخهٔ نرم‌افزار {version}</Typography></Stack></Stack>
+      <Stack spacing={{xs:2,md:3}} sx={{p:{xs:2,sm:3,lg:4},maxWidth:1600,mx:'auto',minWidth:0}}>{children}<Stack component="footer" aria-label="پاورقی مدیریت" spacing={.5} sx={{textAlign:'center',pt:1}}><Typography variant="caption" color="text.secondary">زمان‌ها به وقت تهران · اقدام‌های مدیریتی در سابقه ثبت می‌شوند.</Typography><Typography variant="caption" color="text.secondary" aria-label="نسخهٔ نرم‌افزار">نسخهٔ نرم‌افزار {version}</Typography></Stack></Stack>
     </Box>
   </Box>;
 }

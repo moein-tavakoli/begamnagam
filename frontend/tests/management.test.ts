@@ -133,9 +133,9 @@ test('breadcrumbs preserve the user route hierarchy without exposing phone data'
   ]);
 });
 
-test('Persian release history navigation is limited to authenticated management sessions', () => {
+test('Persian release history navigation requires its granted capability', () => {
   assert.equal(management.managementNavigation({authenticated:false}).some(item=>item.key==='changelog'),false);
-  assert.equal(management.managementNavigation({authenticated:true}).find(item=>item.key==='changelog')?.title,'تاریخچهٔ تغییرات');
+  assert.equal(management.managementNavigation({authenticated:true,permissions:['view_changelog']}).find(item=>item.key==='changelog')?.title,'تاریخچهٔ تغییرات');
   assert.equal(management.managementHref('changelog'),'/manage/changelog');
 });
 
@@ -161,4 +161,27 @@ test('DataGrid pages map to server pages and changing size resets the page', () 
 test('pagination ranges and row counts are Persian including empty results', () => {
   assert.equal(management.managementGridRange({from:11,to:20,count:27}),'۱۱ تا ۲۰ از ۲۷ سطر');
   assert.equal(management.managementGridRange({from:0,to:0,count:0}),'۰ تا ۰ از ۰ سطر');
+});
+
+test('staff navigation and landing respect role capabilities instead of staff status',()=>{
+  const support={authenticated:true,permissions:['support_chat'],resources:[]};
+  assert.deepEqual(management.managementNavigation(support),[{key:'support',title:'پشتیبانی'}]);
+  assert.equal(management.managementLanding(support),'/manage/support');
+  const finance={authenticated:true,permissions:[],resources:[{key:'manual-payments',title:'رسیدها'}]};
+  assert.equal(management.managementLanding(finance),'/manage/manual-payments');
+  assert.ok(!management.managementNavigation(finance).some(item=>['support','changelog','staff','limits'].includes(item.key)));
+  const owner={authenticated:true,permissions:['view_operations','manage_staff','support_chat','view_changelog'],resources:[]};
+  assert.ok(management.managementNavigation(owner).some(item=>item.key==='staff'));
+  assert.equal(management.managementLanding(owner),'/manage');
+  assert.deepEqual(management.managementNavigation({...owner,authenticated:false}),[]);
+  assert.equal(management.managementLanding({authenticated:true,permissions:[],resources:[]}),null);
+});
+
+test('staff role pages have a separate breadcrumb and stable deep link',()=>{
+  const owner={authenticated:true,permissions:['manage_staff'],resources:[]};
+  assert.equal(management.managementHref('staff'),'/manage/staff');
+  assert.deepEqual(management.managementRoute('/manage/staff/roles'),{resource:'staff'});
+  assert.deepEqual(management.managementBreadcrumbs(owner,'/manage/staff/roles'),[
+    {title:'مدیریت',href:'/manage'},{title:'کارمندان سامانه',href:'/manage/staff'},{title:'نقش‌ها'},
+  ]);
 });

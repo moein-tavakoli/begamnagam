@@ -9,6 +9,40 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.28.0 — 2026-11-08 — Owner-managed staff roles and standalone monitoring (local)
+
+### Added
+
+- Add owner-only `/manage/staff` and `/manage/staff/roles` with Persian server-
+  paginated MUI DataGrids, compact menus, employee forms and six-section role
+  editor. Seed support/finance/operations/admin roles without creating or
+  reassigning any existing user. A managed employee has exactly one role;
+  assignment replaces prior groups/direct permissions and protects superusers.
+- Add strict owner API CRUD with CSRF, bounded queries, password validation/hash,
+  version conflicts, transaction/row locks, audit metadata and assigned-role
+  deletion protection. No auth administration privileges are granted. Managed
+  support/changelog access is checked in the service and API; legacy staff keep
+  current rights until assigned. Navigation, support polling and first landing
+  follow actual capabilities; forbidden refresh clears old private view state.
+
+### Fixed
+
+- Give every monitoring route a dedicated layout with no management header,
+  sidebar or footer and an explicit return link. Fit the normal monitoring view
+  at 1466×827, keep the 1920×1080 presentation and mobile scrolling. Long alerts
+  scroll within their bounded panel instead of expanding the compact page.
+- Color unanswered support 1–9 warning/10+ error and oldest queue 120–599 seconds
+  warning/600+ error, with Persian severity text. Highlight new accounts with
+  a primary accent and larger value. Keep real metrics, empty states and polling.
+
+Validation: 703 PostgreSQL tests, including 18 staff authorization/CRUD/revision/
+concurrency regressions, 116 frontend tests, TypeScript, migration consistency
+and Persian changelog parity passed. Independent security review found no
+material issues. Native owner lists/dialogs and four seeded roles were inspected
+at desktop/mobile; monitoring shell absence and compact fit were measured.
+No real employee/credential mutation, support/SMS/payment or paid AI test was
+performed. Local version only; no push or server deployment.
+
 ## 0.27.0 — 2026-11-08 — Full authorized phone display throughout the site (local)
 
 ### Added

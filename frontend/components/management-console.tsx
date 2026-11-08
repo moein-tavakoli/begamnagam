@@ -36,13 +36,14 @@ import CheckCircleOutline from '@mui/icons-material/CheckCircleOutlined';
 import HistoryOutlined from '@mui/icons-material/HistoryOutlined';
 import MailOutlineRounded from '@mui/icons-material/MailOutlineRounded';
 import SettingsOutlined from '@mui/icons-material/SettingsOutlined';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { FormEvent, useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { api, ApiError, errorMessage } from '@/lib/api';
-import { managementActions, managementDate, managementNumber, managementState, managementNavigation, managementRoute, managementUserHref, managementReason, managementExplanation, managementDisplayValue, managementShowsBalances, managementGridPage,
+import { managementActions, managementDate, managementNumber, managementState, managementNavigation, managementRoute, managementUserHref, managementReason, managementExplanation, managementDisplayValue, managementShowsBalances, managementGridPage, managementLanding,
  type LimitRule, type LimitSettings, type ManagementAction, type ManagementDashboard, type ManagementRecords, type ManagementSession, type ManagementActivity, type ManagementRow } from '@/lib/management';
 import type { SupportWorkspaceMemory } from '@/lib/support';
 import { ManagementButton, ManagementInput, ManagementSelect, ManagementDigitInput, ManagementDialog } from './management-ui';
+import { ManagementMonitoringLayout } from './management-monitoring-layout';
 import { ManagementFrame, ManagementBrand } from './management-frame';
 import { ManagementIcon } from './management-icons';
 import { ProviderBalances } from './provider-balances';
@@ -55,6 +56,7 @@ import { ExampleSettings } from './example-settings';
 import { ManagementChangelog } from './management-changelog';
 import { ManagementDataGrid } from './management-data-grid';
 
+const ManagementStaff=dynamic(()=>import('./management-staff').then(module=>module.ManagementStaff),{loading:()=> <Loading/>});
 const ManagementMonitoring=dynamic(()=>import('./management-monitoring').then(module=>module.ManagementMonitoring),{loading:()=> <Loading/>});
 
 function ContentCard({children}: {children:ReactNode}) { return <Card sx={{p:{xs:2,sm:3},minWidth:0}}><Stack spacing={2.5}>{children}</Stack></Card>; }
@@ -65,7 +67,7 @@ function Empty({message='رکوردی پیدا نشد'}:{message?:string}) {retu
 
 export function ManagementConsole({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const searchParams=useSearchParams();
+  const router=useRouter();
   const route = managementRoute(pathname);
   const [session, setSession] = useState<ManagementSession | null>(null);
   const [error, setError] = useState("");
@@ -81,7 +83,7 @@ export function ManagementConsole({ children }: { children: React.ReactNode }) {
     try {
       const current = await api<ManagementSession>("/manage/session");
       if (generation === sessionGeneration.current) {
-        if (!current.authenticated || supportIdentity.current !== current.session_identity) supportMemory.current={thread:null,composer:{draft:"",pending:null}};
+        if (!current.authenticated || !current.permissions?.includes('support_chat') || supportIdentity.current !== current.session_identity) supportMemory.current={thread:null,composer:{draft:"",pending:null}};
         supportIdentity.current=current.session_identity;
         setSession(current);
       }
@@ -101,37 +103,42 @@ export function ManagementConsole({ children }: { children: React.ReactNode }) {
     };
   }, [loadSession]);
   const failed = useCallback((e: unknown) => {
-    if (e instanceof ApiError && e.code === "management_login_required") { supportMemory.current={thread:null,composer:{draft:"",pending:null}}; supportIdentity.current=undefined; setSession({ authenticated: false }); }
-  }, []);
+    if (e instanceof ApiError && ['management_login_required','forbidden'].includes(e.code)) {
+      supportMemory.current={thread:null,composer:{draft:"",pending:null}}; supportIdentity.current=undefined; setAction(null);
+      if(e.code==='management_login_required')setSession({authenticated:false});else void loadSession();
+    }
+  }, [loadSession]);
   async function signOut() {
     setBusy(true); setError("");
     try { await api("/manage/logout", { method: "POST", body: {} }); supportMemory.current={thread:null,composer:{draft:"",pending:null}}; supportIdentity.current=undefined; setSession({ authenticated: false }); }
     catch (e) { setError(errorMessage(e)); }
     finally { setBusy(false); }
   }
-  const supportFailure = useCallback((e:unknown) => { failed(e); if(e instanceof ApiError && e.code === 'forbidden') setSession({authenticated:false}); },[failed]);
-  const supportCount = useSupportBadge(!!session?.authenticated,supportFailure);
+  const supportFailure = failed;
   const permissions = session?.permissions || [];
+  const supportCount = useSupportBadge(!!session?.authenticated&&permissions.includes('support_chat'),supportFailure);
   const navigation = managementNavigation(session || { authenticated: false });
   const active = route.resource;
   const allowed = navigation.some(item => item.key === active) || session?.resources?.some(item => item.key === active);
   const title = route.userId ? "پروندهٔ کاربر" : navigation.find(item => item.key === active)?.title || session?.resources?.find(item => item.key === active)?.title || "مدیریت";
   useEffect(() => { setAction(null); }, [pathname]);
+  useEffect(()=>{if(session?.authenticated&&active==='dashboard'&&!allowed){const target=managementLanding(session);if(target&&target!=='/manage')router.replace(target);}},[session,active,allowed,router]);
+  const workspace=<>
+      {managementShowsBalances(active,permissions)&&<ProviderBalances onFailure={failed}/>}
+      {error&&<Failure message={error}/>}
+      {!allowed&&<Alert severity="warning" action={<Button component={Link} href={managementLanding(session||{authenticated:false})||'/manage'}>بازگشت به بخش مجاز</Button>}>این بخش برای حساب شما در دسترس نیست. از فهرست بخش‌های مجاز انتخاب کنید.</Alert>}
+      {allowed&&(route.userId?<UserActivity key={`${route.userId}-${epoch}`} userId={route.userId} permissions={permissions} resources={session?.resources||[]} onAction={setAction} onFailure={failed}/>:active==='staff'?<ManagementStaff view={pathname.endsWith('/roles')?'roles':'employees'} onFailure={failed}/>:active==='monitoring'?<ManagementMonitoring onFailure={supportFailure}/>:active==='changelog'?<ManagementChangelog onFailure={failed}/>:active==='examples'?<ExampleSettings onFailure={failed}/>:active==='support'?<SupportInbox onFailure={supportFailure} memory={supportMemory}/>:active==='dashboard'?<Dashboard key={`dashboard-${epoch}`} canOperate={permissions.includes('operate_safety')} onAction={setAction} onFailure={failed}/>:active==='limits'?<Limits onFailure={failed}/>:active==='ai'?<AISettings onFailure={failed}/>:active==='manual-settings'?<ManualPaymentSettings onFailure={failed}/>:active==='packages'?<PackageSettings onFailure={failed}/>:active&&<Records key={`${active}-${epoch}`} resource={active} permissions={permissions} onAction={setAction} onFailure={failed}/>)}
+      {children}
+      {action&&(['grant_package','approve_card','reject_card'].includes(action.name)?<ManualPaymentDialog action={action} onClose={()=>setAction(null)} onComplete={()=>{setAction(null);setEpoch(v=>v+1);}} onFailure={failed}/>:<ActionDialog action={action} onClose={()=>setAction(null)} onComplete={()=>{setAction(null);setEpoch(v=>v+1);}} onFailure={failed}/>)}
+  </>;
   return <>
     {!session || !session.authenticated ? <Stack sx={{maxWidth:500,mx:'auto',px:2,py:{xs:4,sm:7},gap:3}}><ManagementBrand/><ContentCard>
       <Stack direction="row" spacing={1} sx={{alignItems:'center'}}><ShieldOutlined color="primary"/><Typography component="h1" variant="h5">مدیریت بگم نگم</Typography></Stack>
       <Typography color="text.secondary">با نام کاربری و رمز حساب مدیر وارد شوید.</Typography>
       {error&&<Failure message={error} retry={()=>void loadSession()}/>}
-      {!session?<Loading/>:<Login onLogin={current=>{if(supportIdentity.current!==current.session_identity)supportMemory.current={thread:null,composer:{draft:'',pending:null}};supportIdentity.current=current.session_identity;setSession(current);}}/>}
+      {!session?<Loading/>:<Login onLogin={current=>{if(supportIdentity.current!==current.session_identity)supportMemory.current={thread:null,composer:{draft:'',pending:null}};supportIdentity.current=current.session_identity;setSession(current);if(!managementNavigation(current).some(item=>item.key===active)&&!current.resources?.some(item=>item.key===active)){const target=managementLanding(current);if(target)router.replace(target);}}}/>}
       <Button component={Link} href="/" variant="text" startIcon={<ArrowForwardRounded/>}>مشاهدهٔ سایت</Button>
-    </ContentCard></Stack> : <ManagementFrame session={session} pathname={pathname} title={title} active={active} supportCount={supportCount} busy={busy} television={active==='monitoring'&&searchParams.get('tv')==='1'} onSignOut={()=>void signOut()}>
-      {managementShowsBalances(active,permissions)&&<ProviderBalances onFailure={failed}/>}
-      {error&&<Failure message={error}/>}
-      {!allowed&&<Alert severity="warning">این بخش برای حساب شما در دسترس نیست. از فهرست بخش‌های مجاز انتخاب کنید.</Alert>}
-      {allowed&&(route.userId?<UserActivity key={`${route.userId}-${epoch}`} userId={route.userId} permissions={permissions} resources={session.resources||[]} onAction={setAction} onFailure={failed}/>:active==='monitoring'?<ManagementMonitoring onFailure={supportFailure}/>:active==='changelog'?<ManagementChangelog onFailure={failed}/>:active==='examples'?<ExampleSettings onFailure={failed}/>:active==='support'?<SupportInbox onFailure={supportFailure} memory={supportMemory}/>:active==='dashboard'?<Dashboard key={`dashboard-${epoch}`} canOperate={permissions.includes('operate_safety')} onAction={setAction} onFailure={failed}/>:active==='limits'?<Limits onFailure={failed}/>:active==='ai'?<AISettings onFailure={failed}/>:active==='manual-settings'?<ManualPaymentSettings onFailure={failed}/>:active==='packages'?<PackageSettings onFailure={failed}/>:active&&<Records key={`${active}-${epoch}`} resource={active} permissions={permissions} onAction={setAction} onFailure={failed}/>)}
-      {children}
-      {action&&(['grant_package','approve_card','reject_card'].includes(action.name)?<ManualPaymentDialog action={action} onClose={()=>setAction(null)} onComplete={()=>{setAction(null);setEpoch(v=>v+1);}} onFailure={failed}/>:<ActionDialog action={action} onClose={()=>setAction(null)} onComplete={()=>{setAction(null);setEpoch(v=>v+1);}} onFailure={failed}/>)}
-    </ManagementFrame>}
+    </ContentCard></Stack> : active==='monitoring'?<ManagementMonitoringLayout>{workspace}</ManagementMonitoringLayout>:<ManagementFrame session={session} pathname={pathname} title={title} active={active} supportCount={supportCount} busy={busy} onSignOut={()=>void signOut()}>{workspace}</ManagementFrame>}
   </>;
 }
 

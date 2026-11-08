@@ -96,6 +96,8 @@ Object.assign(values.action, {
   account_send_options: 'ویرایش گزینه‌های ارسال کاربر', account_delete_requested: 'ثبت درخواست حذف حساب', archive_unknown_outbox: 'بایگانی مورد نامعلوم صف',
   automatic_cost_halt: 'توقف خودکار به‌علت هزینه', bot_integration_disabled: 'غیرفعال‌کردن اتصال ربات', bot_integration_key_issued: 'صدور کلید اتصال ربات',
   invitation_reward: 'اعطای جایزهٔ دعوت', manual_payment_settings: 'ویرایش تنظیمات رسید بانکی', reset_demo_limits: 'بازنشانی سقف‌های آزمایشی',
+  staff_role_created:'تعریف نقش کارمند', staff_role_updated:'ویرایش نقش کارمند', staff_role_deleted:'حذف نقش کارمند',
+  staff_employee_created:'تعریف کارمند', staff_employee_updated:'ویرایش دسترسی یا وضعیت کارمند',
   support_close: 'بستن گفت‌وگوی پشتیبانی', support_reply: 'پاسخ پشتیبانی', save_message_groups: 'ذخیرهٔ دستهٔ پیام نمونه', save_message_examples: 'ذخیرهٔ پیام نمونه',
   delete_message_groups: 'حذف دستهٔ پیام نمونه', delete_message_examples: 'حذف پیام نمونه',
 });

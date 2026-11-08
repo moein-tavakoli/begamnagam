@@ -107,23 +107,30 @@ export function managementShowsBalances(resource: string, permissions: string[])
 export function managementBreadcrumbs(session: ManagementSession, pathname: string): { title: string; href?: string }[] {
   const route = managementRoute(pathname);
   const title = managementNavigation(session).find(item => item.key === route.resource)?.title || session.resources?.find(item => item.key === route.resource)?.title || 'بخش مدیریت';
+  if (route.resource === 'staff' && pathname.endsWith('/roles')) return [{title:'مدیریت',href:'/manage'},{title:'کارمندان سامانه',href:'/manage/staff'},{title:'نقش‌ها'}];
   if (route.resource === 'dashboard') return [{ title: 'مدیریت', href: '/manage' }, { title: 'نمای کلی' }];
   return [{ title: 'مدیریت', href: '/manage' }, ...(route.userId ? [{ title:'کاربران', href:'/manage/users' }, { title:`پروندهٔ کاربر ${Number(route.userId).toLocaleString('fa-IR')}` }] : [{title}])];
 }
 export function managementNavigation(session: ManagementSession): { key: string; title: string }[] {
+  if (!session.authenticated) return [];
   const permissions = session.permissions || [], resources = session.resources || [];
   return [
     ...(permissions.includes("view_operations") ? [{ key: "dashboard", title: "نمای کلی" }] : []),
     ...(resources.some(item => item.key === "accounts") ? [{ key: "accounts", title: "کاربران" }] : []),
     ...(permissions.includes("view_operations") ? [{ key: "monitoring", title: "مانیتورینگ" }] : []),
     ...(resources.some(item => item.key === "blacklist") ? [{ key: "blacklist", title: "لیست سیاه" }] : []),
-    ...(session.authenticated ? [{ key: "support", title: "پشتیبانی" }] : []),
-    ...(session.authenticated ? [{ key: "changelog", title: "تاریخچهٔ تغییرات" }] : []),
+    ...(permissions.includes("support_chat") ? [{ key: "support", title: "پشتیبانی" }] : []),
+    ...(permissions.includes("manage_staff") ? [{ key: "staff", title: "کارمندان سامانه" }] : []),
+    ...(permissions.includes("view_changelog") ? [{ key: "changelog", title: "تاریخچهٔ تغییرات" }] : []),
     ...resources.filter(item => item.key !== "accounts" && item.key !== "blacklist" && (!resources.some(resource => resource.key === "accounts") || !["orders", "invitations", "invitation-deliveries", "invitation-sends"].includes(item.key))),
     ...([ ["manage_site_limits", "limits", "تنظیمات سایت"], ["manage_message_packages", "packages", "بسته‌های پیام"],
       ["manage_message_examples", "examples", "پیام‌های نمونه"], ["manage_manual_payments", "manual-settings", "کارت و دریافت رسید"],
       ["manage_ai", "ai", "هوش مصنوعی"] ].filter(([permission]) => permissions.includes(permission)).map(([, key, title]) => ({ key, title }))),
   ];
+}
+export function managementLanding(session:ManagementSession):string|null {
+  const first=managementNavigation(session)[0];
+  return first?managementHref(first.key):null;
 }
 const auditReasons: Record<string, string> = {
   suspend: "تعلیق کاربر از پنل مدیریت", unsuspend: "رفع تعلیق کاربر از پنل مدیریت", tone: "تغییر لحن کاربر از پنل مدیریت",

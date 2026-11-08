@@ -13,6 +13,9 @@ from .services import APIError
 @vary_on_cookie
 @staff_api(['GET'])
 def changelog(request):
+    from .staff_roles import can_view_changelog
+    if not can_view_changelog(request.user):
+        raise APIError('forbidden', 'مجوز مشاهدهٔ تاریخچهٔ تغییرات را ندارید.', 403)
     try:
         return json.loads(files('core').joinpath('release_notes.fa.json').read_text(encoding='utf-8'))
     except (OSError, ValueError):

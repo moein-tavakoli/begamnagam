@@ -12,6 +12,16 @@ test('refresh settings accept only supported periods with default thirty seconds
   for(const value of [null,'', 'bad','0','-30','31','Infinity'])assert.equal(monitoring.monitoringInterval(value),30);
   for(const value of [30,60,120,300])assert.equal(monitoring.monitoringInterval(String(value)),value);
 });
+test('unanswered support becomes warning at one conversation and urgent at ten',()=>{
+  for(const [count,severity] of [[0,'normal'],[1,'warning'],[9,'warning'],[10,'error'],[30,'error']] as const) {
+    assert.equal(monitoring.monitoringMetricSeverity('support_unanswered',count),severity,`support count ${count}`);
+  }
+});
+test('oldest queue age becomes warning at two minutes and urgent at ten minutes',()=>{
+  for(const [seconds,severity] of [[0,'normal'],[119,'normal'],[120,'warning'],[599,'warning'],[600,'error'],[1200,'error']] as const) {
+    assert.equal(monitoring.monitoringMetricSeverity('oldest_queue_seconds',seconds),severity,`queue age ${seconds}s`);
+  }
+});
 test('polling serializes requests, aborts on pause, resumes and stops without late updates',async()=>{
   let active=true, calls=0, signals:AbortSignal[]=[], delivered:number[]=[], queued:{fn:()=>void;ms:number}[]=[];
   let resolve:((x:number)=>void)|undefined;

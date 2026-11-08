@@ -15,8 +15,9 @@ PRESENCE_KEY = 'support:staff-present:v1'
 
 
 def staff_required(actor):
-    if not actor.is_active or not actor.is_staff:
-        raise APIError('forbidden', 'فقط ادمین واردشده می‌تواند به پشتیبانی دسترسی داشته باشد.', 403)
+    from .staff_roles import can_support
+    if not can_support(actor):
+        raise APIError('forbidden', 'مجوز دسترسی به پشتیبانی را ندارید.', 403)
 
 
 def normalize_text(value):

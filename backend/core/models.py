@@ -7,6 +7,25 @@ from django.utils import timezone
 from .fields import EncryptedTextField
 
 
+class StaffRole(models.Model):
+    name = models.CharField(max_length=80, unique=True)
+    group = models.OneToOneField('auth.Group', on_delete=models.PROTECT, related_name='staff_role')
+    sections = models.JSONField(default=list)
+    revision = models.PositiveIntegerField(default=0, editable=False)
+
+    class Meta:
+        default_permissions = ()
+
+
+class StaffMembership(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='staff_membership')
+    role = models.ForeignKey(StaffRole, on_delete=models.PROTECT, related_name='memberships')
+    revision = models.PositiveIntegerField(default=0, editable=False)
+
+    class Meta:
+        default_permissions = ()
+
+
 class ExampleCategory(models.Model):
     name = models.CharField('نام دسته', max_length=60, unique=True)
     active = models.BooleanField('نمایش در سایت', default=True)

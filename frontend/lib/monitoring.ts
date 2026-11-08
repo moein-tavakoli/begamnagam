@@ -3,6 +3,11 @@ export function monitoringInterval(value:unknown):number {
   const number=typeof value==='string'||typeof value==='number'?Number(value):0;
   return monitoringIntervals.some(item=>item===number)?number:30;
 }
+export type MonitoringMetricSeverity = 'normal' | 'warning' | 'error';
+export function monitoringMetricSeverity(metric:'support_unanswered'|'oldest_queue_seconds',value:number):MonitoringMetricSeverity {
+  const [warning,error]=metric==='support_unanswered'?[1,10]:[120,600];
+  return value>=error?'error':value>=warning?'warning':'normal';
+}
 export type MonitoringData = {
   generated_at:string;
   window:{start:string;end:string;timezone:string};

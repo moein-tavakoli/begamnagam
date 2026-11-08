@@ -58,7 +58,7 @@ export function SupportInbox({onFailure,memory}:{onFailure:(e:unknown)=>void;mem
   const rememberDraft=useCallback((composer:SupportDraftState)=>{memory.current.composer=composer;},[memory]);
   return <Stack component="section" aria-label="صندوق پشتیبانی" spacing={2.5} sx={{minWidth:0}}>
     <Stack direction={{xs:'column',md:'row'}} spacing={2} sx={{alignItems:{xs:'flex-start',md:'center'},justifyContent:'space-between'}}>
-      <Stack spacing={.75}><Typography component="h2" variant="h5">یک جای مشترک برای پاسخ‌دادن</Typography><Typography variant="body2" color="text.secondary" sx={{maxWidth:650,lineHeight:2}}>همهٔ ادمین‌های واردشده می‌توانند پاسخ بدهند؛ نشان قرمز تا پاسخ به پیام کاربر باقی می‌ماند.</Typography></Stack>
+      <Stack spacing={.75}><Typography component="h2" variant="h5">یک جای مشترک برای پاسخ‌دادن</Typography><Typography variant="body2" color="text.secondary" sx={{maxWidth:650,lineHeight:2}}>کارمندان دارای دسترسی پشتیبانی می‌توانند پاسخ بدهند؛ نشان قرمز تا پاسخ به پیام کاربر باقی می‌ماند.</Typography></Stack>
       <Chip color="error" variant="outlined" label={`${(data?.waiting_count??0).toLocaleString('fa-IR')} منتظر پاسخ`} sx={{flexShrink:0}}/>
     </Stack>
     {error && <Alert severity="error">{error}</Alert>}

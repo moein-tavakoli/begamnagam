@@ -5,6 +5,7 @@ from core import invitations
 from core import management_api as management
 from core import management_changelog
 from core import management_monitoring
+from core import staff_management
 from core import ai_management
 from core import wallet_views
 from core import package_views
@@ -15,6 +16,11 @@ handler404 = "core.views.not_found"
 handler500 = "core.views.server_error"
 
 urlpatterns = [
+    path('api/v1/manage/staff/catalog', staff_management.catalog),
+    path('api/v1/manage/staff/roles', staff_management.role_list),
+    path('api/v1/manage/staff/roles/<int:role_id>', staff_management.role_detail),
+    path('api/v1/manage/staff/employees', staff_management.employee_list),
+    path('api/v1/manage/staff/employees/<int:user_id>', staff_management.employee_detail),
     path('api/v2/', include('core.api_v2.urls')),
     path('api/v1/manage/message-examples', example_views.catalog),
     path('api/v1/manage/message-examples/<str:kind>', example_views.save),

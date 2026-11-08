@@ -9,6 +9,25 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.21.1 — 2026-11-08 — Keep AI review classification-only (local)
+
+### Fixed
+
+- Stop sending generation/edit commands to the independent review step. Use
+  dedicated tone classification criteria and an exact boolean JSON schema in
+  both providers. Preserve meaning/register/safety gates and reject incomplete,
+  malformed or generation-shaped reviews without a sendable preview.
+- Add bounded schema diagnostics: known missing/nonboolean labels and unknown
+  key counts only; never record response text, arbitrary keys or private input.
+
+Validation: 126 related PostgreSQL tests and 82 frontend tests passed; independent
+review found no important issues. A new regression test failed before the fix.
+Within the explicitly authorized four paid calls, the deployed blunt pipeline
+reproduced the invalid review shape and the corrected review canary returned all
+seven required booleans with approval for a synthetic safe source/candidate.
+All four calls were consumed; no SMS or order was created. This limited canary
+is not an evaluation of every input. Local fix only; no push or deployment.
+
 ## 0.21.0 — 2026-11-08 — Blunt minimal-edit tone and firm default (local)
 
 ### Added

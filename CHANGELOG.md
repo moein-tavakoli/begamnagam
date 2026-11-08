@@ -9,6 +9,33 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.23.2 — 2026-11-08 — Complete Material management workspace (local)
+
+### Fixed
+
+- Complete the `/manage` migration to MUI layouts, Typography, Grid/Stack,
+  labeled TextFields, Material icons, Breadcrumbs, badges, buttons and menus.
+  Replace the bespoke sidebar with an RTL permanent/temporary Drawer and keep
+  card/table overflow bounded on mobile. Remove the old management layout CSS.
+- Mount provider balances only on the authorized overview. Settings, catalogs,
+  bank-proof dialogs and the complete staff support inbox/thread use Material
+  components; public support retains its renderer and shared conversation logic.
+  Preserve drafts across management routes, retry keys, read/poll behavior,
+  permissions, CSRF, auditing, form names, digit normalization and constraints.
+- Keep AI-rejected/unavailable inputs inspectable in per-user history. Verify
+  existing encrypted capture across website, API v2 and bot-owned sessions with
+  integration tests; no backend production behavior change was necessary.
+  Legacy unstored text cannot be recovered; existing retention still applies.
+
+Validation: 95 frontend tests, TypeScript and 28 related PostgreSQL tests passed.
+Authenticated browser checks covered all 24 menu routes at desktop, representative
+pages at 375px, overview-only balances, Drawer Escape/focus, row height 57px before
+and after menu opening, native constraints/date rejection and support draft
+retention across routes. Independent review found explicit-ID label association
+broken in the new field adapters; browser regression failed before and passed
+after forwarding IDs to TextField. No SMS/AI calls or account/payment changes
+were submitted for QA. Local version only; no push or server deployment.
+
 ## 0.23.1 — 2026-11-08 — MUI management controls and Persian explanations (local)
 
 ### Fixed

@@ -9,7 +9,7 @@ import type { ReactNode } from 'react';
 
 const theme = createTheme({
   direction: 'rtl',
-  typography: { fontFamily: '"Vazirmatn FD", "Vazirmatn", Tahoma, sans-serif', fontSize: 14, button: { textTransform: 'none', fontWeight: 600 } },
+  typography: { fontFamily: '"Vazirmatn FD", "Vazirmatn", Tahoma, sans-serif', fontSize: 14, h4:{fontSize:"1.8rem",fontWeight:800}, h5:{fontSize:"1.4rem",fontWeight:700}, h6:{fontSize:"1.1rem",fontWeight:700}, body1:{lineHeight:1.9}, body2:{lineHeight:1.9}, button: { textTransform: 'none', fontWeight: 600 } },
   palette: { primary: { main: '#6843ad' }, secondary: { main: '#201c29' }, background: { default: '#f2eeff', paper: '#fff' }, text: { primary: '#201c29', secondary: '#6e627d' }, error: { main: '#a52c42' }, divider: '#e1d8f1' },
   shape: { borderRadius: 12 },
   components: {
@@ -17,9 +17,18 @@ const theme = createTheme({
     MuiIconButton: { styleOverrides: { root: { width: 44, height: 44 } } },
     MuiMenuItem: { styleOverrides: { root: { minHeight: 44, fontSize: 14, whiteSpace: 'normal', gap: 10 } } },
     MuiMenu: { styleOverrides: { paper: { border: '1px solid #e1d8f1', boxShadow: '0 12px 40px #201c2924', minWidth: 220, maxWidth: 'calc(100vw - 32px)', marginTop: 4 } } },
+    MuiTextField: { styleOverrides: { root: {
+      '&& .MuiInputBase-input': { margin:0, border:0, borderRadius:0, background:'transparent', minHeight:0, height:'auto', padding:'12px 14px', fontFamily:'inherit', fontSize:16, lineHeight:1.7, '@media (min-width:900px)':{fontSize:14} },
+      '&& .MuiInputBase-inputMultiline': { padding:0 },
+      '&& .MuiInputBase-input[data-number-input]': { textAlign:'end' },
+      '& .MuiInputBase-multiline': { padding:'12px 14px' },
+    } } },
+    MuiChip: { styleOverrides:{root:{fontFamily:'inherit',fontWeight:500}} },
+    MuiBadge: { styleOverrides:{badge:{fontFamily:'inherit'}} },
+    MuiFormControlLabel: {styleOverrides:{root:{minHeight:44},label:{fontSize:14,lineHeight:1.8}}},
     MuiOutlinedInput: { defaultProps: { size: 'small' }, styleOverrides: { root: { backgroundColor: '#fff', minHeight: 48 }, input: { fontFamily: 'inherit', fontSize: 14 } } },
     MuiCard: { defaultProps: { variant: 'outlined' }, styleOverrides: { root: { borderRadius: 20 } } },
-    MuiTableCell: { styleOverrides: { root: { textAlign: 'right', fontFamily: 'inherit' }, head: { fontWeight: 600 } } },
+    MuiTableCell: { styleOverrides: { root: { textAlign: 'start', fontFamily: 'inherit' }, head: { fontWeight: 600 } } },
     MuiDialog: { styleOverrides: { paper: { borderRadius: 20 } } },
     MuiDialogTitle: { styleOverrides: { root: { fontSize: 19, fontWeight: 700 } } },
   },

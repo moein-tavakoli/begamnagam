@@ -1,4 +1,11 @@
 "use client";
+import Stack from "@mui/material/Stack";
+import Grid from "@mui/material/Grid";
+import Typography from "@mui/material/Typography";
+import Alert from "@mui/material/Alert";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import CancelIcon from "@mui/icons-material/Cancel";
 
 import { ManagementButton, ManagementInput, ManagementSelect, ManagementDigitInput, ManagementDialog } from "./management-ui";
 
@@ -29,18 +36,23 @@ export function ManualPaymentDialog({action,onClose,onComplete,onFailure}:{actio
     }catch(e){setError(errorMessage(e));onFailure(e);}finally{setBusy(false);}
   }
   return <ManagementDialog title={action.label} onClose={onClose} busy={busy}>
-    <p className="manage-muted">{grant?'شناسهٔ حساب':'شناسهٔ درخواست'}: <bdi className="manage-dialog-id">{action.object_id}</bdi></p>
-    {error && <p role="alert" className="manage-error">{error}</p>}
-    <form className="manage-form" onSubmit={submit}>
-      {!reject && <><p className="manage-notice">فقط پس از مشاهدهٔ واریز قطعی در حساب بانکی تأیید کن؛ تصویر رسید به‌تنهایی کافی نیست. مبلغ باید دقیقاً با بسته تطبیق داشته باشد. تأیید این فرم، اعتبار بسته را بلافاصله اضافه می‌کند.</p>
-        {grant?<label>بستهٔ فعال<ManagementSelect value={selected??''} disabled={busy || submitted} required onChange={e=>setSelected(Number(e.target.value))}>{!packages.length && <option value="">بستهٔ فعالی موجود نیست</option>}{packages.map(p=><option key={p.id} value={p.id}>{p.name} · {p.message_count.toLocaleString('fa-IR')} پیام · {toman(p.price_toman)}</option>)}</ManagementSelect></label>:<p>مبلغ ثبت‌شده: <strong>{toman(action.manualPayment?.amount_toman??0)}</strong></p>}
-        <label>مبلغ واریزِ تأییدشده (تومان)<ManagementDigitInput name="amount_toman" type="number" inputMode="numeric" min={1} max={2147483647} step={1} required defaultValue={action.manualPayment?.amount_toman}/></label>
-        <label>مرجع واریز در صورتحساب بانک<ManagementInput name="bank_reference" dir="ltr" inputMode="numeric" minLength={6} maxLength={64} autoComplete="off" required/></label>
-        <label>تاریخ واریز (میلادی)<ManagementDigitInput name="paid_date" type="date" dir="ltr" max={today()} defaultValue={today()} required/></label>
-        <label className="checkbox-label"><ManagementInput type="checkbox" name="bank_verified" required/>واریز قطعی، مبلغ و مرجع را در حساب بانک بررسی و با این خرید تطبیق دادم.</label>
-      </>}
-      {reject && <p className="manage-notice">درخواست با پیام «رسید بانکی تأیید نشد» رد می‌شود. اگر وجهی دریافت شده، رد درخواست جای بازپرداخت را نمی‌گیرد.</p>}
-      <ManagementButton className={`manage-button ${reject?'danger':'primary'}`} disabled={busy || (grant && !chosen)}>{busy?'در حال ثبت…':reject?'ثبت رد رسید':'تأیید و فعال‌سازی بسته'}</ManagementButton>
-    </form>
+    <Stack spacing={3}>
+      <Typography variant="body2" color="text.secondary">{grant?'شناسهٔ حساب':'شناسهٔ درخواست'}: <Typography component="bdi" variant="inherit" sx={{ overflowWrap: 'anywhere' }}>{action.object_id}</Typography></Typography>
+      {error && <Alert severity="error">{error}</Alert>}
+      <Stack component="form" spacing={3} onSubmit={submit}>
+        {!reject && <>
+          <Alert severity="warning">فقط پس از مشاهدهٔ واریز قطعی در حساب بانکی تأیید کن؛ تصویر رسید به‌تنهایی کافی نیست. مبلغ باید دقیقاً با بسته تطبیق داشته باشد. تأیید این فرم، اعتبار بسته را بلافاصله اضافه می‌کند.</Alert>
+          {grant?<ManagementSelect label="بستهٔ فعال" value={selected??''} disabled={busy || submitted} required onChange={e=>setSelected(Number(e.target.value))}>{!packages.length && <option value="">بستهٔ فعالی موجود نیست</option>}{packages.map(p=><option key={p.id} value={p.id}>{p.name} · {p.message_count.toLocaleString('fa-IR')} پیام · {toman(p.price_toman)}</option>)}</ManagementSelect>:<Typography>مبلغ ثبت‌شده: <Typography component="strong" sx={{ fontWeight: 700 }}>{toman(action.manualPayment?.amount_toman??0)}</Typography></Typography>}
+          <Grid container spacing={2}>
+            <Grid size={12}><ManagementDigitInput label="مبلغ واریزِ تأییدشده (تومان)" name="amount_toman" type="number" inputMode="numeric" min={1} max={2147483647} step={1} required defaultValue={action.manualPayment?.amount_toman}/></Grid>
+            <Grid size={12}><ManagementInput label="مرجع واریز در صورتحساب بانک" name="bank_reference" dir="ltr" inputMode="numeric" minLength={6} maxLength={64} autoComplete="off" required/></Grid>
+            <Grid size={12}><ManagementDigitInput label="تاریخ واریز (میلادی)" name="paid_date" type="date" dir="ltr" max={today()} defaultValue={today()} required/></Grid>
+          </Grid>
+          <FormControlLabel control={<ManagementInput type="checkbox" name="bank_verified" required/>} label="واریز قطعی، مبلغ و مرجع را در حساب بانک بررسی و با این خرید تطبیق دادم." />
+        </>}
+        {reject && <Alert severity="warning">درخواست با پیام «رسید بانکی تأیید نشد» رد می‌شود. اگر وجهی دریافت شده، رد درخواست جای بازپرداخت را نمی‌گیرد.</Alert>}
+        <ManagementButton className={reject?'danger':''} startIcon={reject?<CancelIcon />:<CheckCircleIcon />} disabled={busy || (grant && !chosen)}>{busy?'در حال ثبت…':reject?'ثبت رد رسید':'تأیید و فعال‌سازی بسته'}</ManagementButton>
+      </Stack>
+    </Stack>
   </ManagementDialog>;
 }

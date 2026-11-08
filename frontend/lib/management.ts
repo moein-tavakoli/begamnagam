@@ -87,6 +87,15 @@ export function managementRoute(pathname: string): { resource: string; userId?: 
   return { resource: !resource ? "dashboard" : resource === "users" ? "accounts" : resource,
     ...(resource === "users" && userId ? { userId } : {}) };
 }
+export function managementShowsBalances(resource: string, permissions: string[]): boolean {
+  return resource === 'dashboard' && permissions.includes('view_operations');
+}
+export function managementBreadcrumbs(session: ManagementSession, pathname: string): { title: string; href?: string }[] {
+  const route = managementRoute(pathname);
+  const title = managementNavigation(session).find(item => item.key === route.resource)?.title || session.resources?.find(item => item.key === route.resource)?.title || 'بخش مدیریت';
+  if (route.resource === 'dashboard') return [{ title: 'مدیریت', href: '/manage' }, { title: 'نمای کلی' }];
+  return [{ title: 'مدیریت', href: '/manage' }, ...(route.userId ? [{ title:'کاربران', href:'/manage/users' }, { title:`پروندهٔ کاربر ${Number(route.userId).toLocaleString('fa-IR')}` }] : [{title}])];
+}
 export function managementNavigation(session: ManagementSession): { key: string; title: string }[] {
   const permissions = session.permissions || [], resources = session.resources || [];
   return [

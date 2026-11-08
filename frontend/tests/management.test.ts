@@ -119,3 +119,16 @@ test('actual backend audit actions retain distinct Persian meaning', () => {
   assert.equal(new Set(labels).size, actions.length);
   labels.forEach(label => assert.doesNotMatch(String(label), /اقدام مدیریتی ثبت‌شده|[a-z_]/));
 });
+
+test('service balances mount only on an authorized overview', () => {
+  assert.equal(management.managementShowsBalances('dashboard', ['view_operations']), true);
+  for (const resource of ['accounts','blacklist','support','limits','ai','orders']) assert.equal(management.managementShowsBalances(resource, ['view_operations']), false);
+  assert.equal(management.managementShowsBalances('dashboard', []), false);
+});
+
+test('breadcrumbs preserve the user route hierarchy without exposing phone data', () => {
+  const session = {authenticated:true,permissions:['view_operations'],resources:[{key:'accounts',title:'کاربران'}]};
+  assert.deepEqual(management.managementBreadcrumbs(session,'/manage/users/17'), [
+    {title:'مدیریت',href:'/manage'}, {title:'کاربران',href:'/manage/users'}, {title:'پروندهٔ کاربر ۱۷'},
+  ]);
+});

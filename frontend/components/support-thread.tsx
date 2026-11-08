@@ -1,12 +1,36 @@
 "use client";
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode, type RefObject, type UIEventHandler } from 'react';
 import { api, ApiError, createIdempotencyKey, errorMessage } from '@/lib/api';
 import { mergeSupportMessages, pendingIsConfirmed, supportAccessLost, supportDay, supportTime, type SupportMessage, type SupportPage, type SupportPending, type SupportThreadData, type SupportDraftState } from '@/lib/support';
 import { Icon } from './icons';
 import { notifySupportUpdate, useSupportPolling } from './support-polling';
 import styles from './support-chat.module.css';
 
-export function SupportThread({base,active,staff=false,onThread,onDirty,onFailure,initialDraft,onDraftState}:{base:string;active:boolean;staff?:boolean;onThread?:(t:SupportThreadData|null)=>void;onDirty?:(dirty:boolean)=>void;onFailure?:(e:unknown)=>void;initialDraft?:SupportDraftState;onDraftState?:(value:SupportDraftState)=>void}){
+// Staff presentation is injected by the management entry point so the public
+// support widget retains its lightweight renderer and shares all conversation logic.
+export type SupportThreadViewProps = {
+  page: SupportPage | null;
+  messages: SupportMessage[];
+  draft: string;
+  pending: boolean;
+  busy: boolean;
+  error: string;
+  pollError: string;
+  older: number | null;
+  loadingOlder: boolean;
+  atBottom: boolean;
+  viewport: RefObject<HTMLDivElement | null>;
+  input: RefObject<HTMLTextAreaElement | null>;
+  onScroll: UIEventHandler<HTMLDivElement>;
+  onDraftChange: (value: string) => void;
+  onKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onRetry: () => void;
+  onLoadOlder: () => void;
+  onLatest: () => void;
+};
+
+export function SupportThread({base,active,staff=false,onThread,onDirty,onFailure,initialDraft,onDraftState,renderView}:{base:string;active:boolean;staff?:boolean;onThread?:(t:SupportThreadData|null)=>void;onDirty?:(dirty:boolean)=>void;onFailure?:(e:unknown)=>void;initialDraft?:SupportDraftState;onDraftState?:(value:SupportDraftState)=>void;renderView?:(props:SupportThreadViewProps)=>ReactNode}){
   const [page,setPage]=useState<SupportPage|null>(null),[messages,setMessages]=useState<SupportMessage[]>([]);
   const [draft,setDraft]=useState(initialDraft?.draft??''),[pending,setPending]=useState<SupportPending|null>(initialDraft?.pending??null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[pollError,setPollError]=useState('');
   const [older,setOlder]=useState<number|null>(null),[loadingOlder,setLoadingOlder]=useState(false),[atBottom,setAtBottom]=useState(true);
@@ -61,6 +85,12 @@ export function SupportThread({base,active,staff=false,onThread,onDirty,onFailur
   function keyDown(event:KeyboardEvent<HTMLTextAreaElement>){
     if(event.key==='Enter' && !event.shiftKey && !event.nativeEvent.isComposing && !matchMedia('(pointer:coarse)').matches){event.preventDefault();void send();}
   }
+  if(renderView)return renderView({
+    page,messages,draft,pending:!!pending,busy,error,pollError,older,loadingOlder,atBottom,viewport,input,
+    onScroll:event=>{const el=event.currentTarget;setAtBottom(el.scrollHeight-el.scrollTop-el.clientHeight<72);},
+    onDraftChange:setDraft,onKeyDown:keyDown,onSubmit:event=>void send(event),onRetry:()=>void send(),
+    onLoadOlder:()=>void loadOlder(),onLatest:()=>{setAtBottom(true);if(viewport.current)viewport.current.scrollTop=viewport.current.scrollHeight;},
+  });
   return <div className={styles.thread} data-update-blocked={draft || pending ? 'true':undefined}>
     <div className={styles.stream} ref={viewport} tabIndex={0} role="log" aria-live="polite" aria-relevant="additions" aria-label="پیام‌های گفت‌وگو" onScroll={e=>{const el=e.currentTarget;setAtBottom(el.scrollHeight-el.scrollTop-el.clientHeight<72);}}>
       {older && <button type="button" className={styles.older} disabled={loadingOlder} onClick={()=>void loadOlder()}>{loadingOlder?'در حال دریافت…':'پیام‌های قدیمی‌تر'}</button>}

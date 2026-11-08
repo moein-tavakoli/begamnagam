@@ -2,11 +2,20 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, errorMessage } from '@/lib/api';
 import { balanceLabel, type ProviderBalance } from '@/lib/provider-balances';
-import { Icon } from './icons';
-import styles from './provider-balances.module.css';
+import Grid from '@mui/material/Grid';
+import Card from '@mui/material/Card';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+import Avatar from '@mui/material/Avatar';
+import Button from '@mui/material/Button';
+import Chip from '@mui/material/Chip';
+import SmsOutlined from '@mui/icons-material/SmsOutlined';
+import AutoAwesomeOutlined from '@mui/icons-material/AutoAwesomeOutlined';
+import OpenInNewRounded from '@mui/icons-material/OpenInNewRounded';
+
 
 export function ProviderBalances({onFailure}:{onFailure:(e:unknown)=>void}){
-  return <section className={styles.bar} aria-label="اعتبار سرویس‌های متصل"><Balance provider="kavenegar" onFailure={onFailure}/><Balance provider="gapgpt" onFailure={onFailure}/></section>;
+  return <Grid container spacing={2} component="section" aria-label="اعتبار سرویس‌های متصل"><Grid size={{xs:12,sm:6}}><Balance provider="kavenegar" onFailure={onFailure}/></Grid><Grid size={{xs:12,sm:6}}><Balance provider="gapgpt" onFailure={onFailure}/></Grid></Grid>;
 }
 function Balance({provider,onFailure}:{provider:'kavenegar'|'gapgpt';onFailure:(e:unknown)=>void}){
   const [value,setValue]=useState<ProviderBalance|null>(null),[error,setError]=useState('');
@@ -31,12 +40,15 @@ function Balance({provider,onFailure}:{provider:'kavenegar'|'gapgpt';onFailure:(
   const stale=value?.status==='stale';
   const time=value?.observed_at?new Intl.DateTimeFormat('fa-IR',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Tehran'}).format(new Date(value.observed_at)):null;
   const message=error?'ارتباط با سرویس برقرار نشد':stale?(value.reason==='refresh_in_progress'?'آخرین موجودی؛ در حال استعلام':'آخرین موجودی؛ استعلام تازه ناموفق'):value?.status==='unsupported'?'API موجودی تأیید نشده':value?.status==='available'?`استعلام ${time} · تا ۲ دقیقه تأخیر`:value?.status==='not_configured'?'کلید خصوصی سرویس لازم است':value?.status==='disabled'?'پروفایل اتصال خارجی فعال نیست':value?.status==='unavailable'?(value.reason==='access_denied'?'دسترسی به موجودی مجاز نیست':'دوباره به‌صورت خودکار بررسی می‌شود'):'';
-  return <article className={`${styles.card} ${stale?styles.stale:''}`} aria-label={label}>
-    <span className={styles.icon}><Icon name={provider==='kavenegar'?'phone':'sparkle'} size={20}/></span>
-    <div className={styles.copy}><h2>{label}<span>{provider==='kavenegar'?'کاوه‌نگار':''}</span></h2>
-      <p className={styles.amount} aria-live="polite" aria-atomic="true"><span className="sr-only">{label}: </span>{provider==='gapgpt'?<a className={styles.wallet} href="https://gapgpt.app/platform-v2/wallet" target="_blank" rel="noopener noreferrer" aria-label="بازکردن کیف پول GapGPT در زبانهٔ جدید">بررسی در پنل ↗</a>:error?'فعلاً دریافت نشد':balanceLabel(value)}{stale && <span className={styles.old}>قدیمی</span>}</p>
-      <small title={stale&&time?`آخرین استعلام موفق: ${time}`:undefined}>{message}</small>
-    </div>
-    
-  </article>;
+  return <Card component="article" aria-label={label} sx={{p:2.5,height:'100%',bgcolor:stale?'#fffaf0':'background.paper'}}>
+    <Stack direction="row" spacing={2} sx={{alignItems:'center'}}>
+      <Avatar variant="rounded" sx={{bgcolor:'primary.light',color:'primary.contrastText'}}>{provider==='kavenegar'?<SmsOutlined/>:<AutoAwesomeOutlined/>}</Avatar>
+      <Stack spacing={1} sx={{minWidth:0}}><Typography component="h2" variant="subtitle2" color="text.secondary">{label}{provider==='kavenegar'?' کاوه‌نگار':''}</Typography>
+        <Stack direction="row" spacing={1} sx={{alignItems:'center',flexWrap:'wrap'}} aria-live="polite" aria-atomic="true">
+          {provider==='gapgpt'?<Button variant="outlined" size="small" href="https://gapgpt.app/platform-v2/wallet" target="_blank" rel="noopener noreferrer" aria-label="بازکردن کیف پول GapGPT در زبانهٔ جدید" endIcon={<OpenInNewRounded/>}>بررسی در پنل</Button>:<Typography variant="h6">{error?'فعلاً دریافت نشد':balanceLabel(value)}</Typography>}
+          {stale&&<Chip size="small" label="قدیمی" color="warning" variant="outlined"/>}
+        </Stack><Typography variant="caption" color="text.secondary" title={stale&&time?`آخرین استعلام موفق: ${time}`:undefined}>{message}</Typography>
+      </Stack>
+    </Stack>
+  </Card>;
 }

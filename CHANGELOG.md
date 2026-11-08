@@ -9,6 +9,27 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.20.0 — 2026-11-08 — Per-account sponsored free sending (local)
+
+### Added
+
+- Add a separate, audited per-account unlimited free sending permission and UI.
+  Preserve existing daily-count overrides and gift/package balances; sponsored
+  failures never manufacture gift credits. No account is enabled by migration.
+- Expose the flag in authenticated bootstrap and v2 credit summaries; retain
+  finite balances and document bot behavior at zero credit. Update the profile,
+  header and balance displays, clarify daily-cap labels and retain provider
+  budgets, recipient controls and exact reviewed-message dispatch.
+
+Validation: 252 related backend tests passed on isolated PostgreSQL/Redis,
+including real-profile tests with mocked SMS, permission/audit, revocation,
+retry and refund checks. Eight sponsored-send tests passed again after the
+final balance/requote checks. Eighty-one frontend tests, TypeScript, migration
+consistency and native Next browser checks at 375/1440 pixels passed. Browser
+API responses were isolated fixtures; no real OTP/SMS/payment was requested.
+Migration 0038 defaults existing accounts/orders to false. Local only: no push,
+server deployment or actual account activation.
+
 ## 0.19.3 — 2026-11-03 — Official Enamad home badge (local)
 
 ### Fixed

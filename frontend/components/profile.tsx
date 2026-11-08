@@ -49,7 +49,7 @@ export function Profile() {
             </div>
             <dl className="profile-stats">
               <div><dt>اعتبار بسته‌ها</dt><dd>{number.format(data.purchased_sends_remaining ?? 0)} <small>پیام{data.demo_mode ? " آزمایشی" : ""}</small></dd></div>
-              <div><dt>ارسال باقی‌مانده</dt><dd>{number.format(data.free_sends_remaining ?? 0)} <small>از {number.format(data.free_sends_total ?? 3)}</small></dd></div>
+              <div><dt>ارسال باقی‌مانده</dt><dd>{data.unlimited_free_sends ? "رایگان نامحدود" : <>{number.format(data.free_sends_remaining ?? 0)} <small>از {number.format(data.free_sends_total ?? 3)}</small></>}</dd></div>
               <div><dt>جایزهٔ دعوت‌ها</dt><dd>{number.format(data.free_sends_earned_total ?? 0)} <small>ارسال</small></dd></div>
             </dl>
             <nav className="profile-links" aria-label="بخش‌های حساب">

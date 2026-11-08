@@ -77,8 +77,8 @@ class OrderAdmin(ReadOnlyAdmin):
 class AccountAdmin(ReadOnlyAdmin):
     form = AccountOptionsForm
     change_list_template = "admin/core/account/change_list.html"
-    list_display = ("id", "phone_masked", "free_sends_remaining", "sender_daily_limit", "rewrite_daily_limit", "unlimited_demo_sends", "direct_message_tone", "created_at")
-    list_filter = ("unlimited_demo_sends", "direct_message_tone", ('sender_daily_limit', admin.EmptyFieldListFilter), ('rewrite_daily_limit', admin.EmptyFieldListFilter))
+    list_display = ("id", "phone_masked", "unlimited_free_sends", "free_sends_remaining", "sender_daily_limit", "rewrite_daily_limit", "unlimited_demo_sends", "direct_message_tone", "created_at")
+    list_filter = ("unlimited_free_sends", "unlimited_demo_sends", "direct_message_tone", ('sender_daily_limit', admin.EmptyFieldListFilter), ('rewrite_daily_limit', admin.EmptyFieldListFilter))
     search_fields = ("phone_masked",)
     fields = ("id", "phone_masked", "free_sends_remaining", "free_sends_earned_total", "purchased_sends_remaining", "demo_sends_remaining", "created_at")
     readonly_fields = fields

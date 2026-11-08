@@ -31,3 +31,12 @@ test('account count controls require their permission and preserve the differenc
   assert.equal(action.name, 'account_limits');
   assert.deepEqual(action.accountLimits, { sender_daily_limit: null, rewrite_daily_limit: 0 });
 });
+
+test('free sending requires its own permission and does not reuse daily count permission', () => {
+  const row = { record_id: 'sponsor-fixture', unlimited_free_sends: false };
+  assert.equal(managementActions('accounts', row, ['manage_account_limits']).some(a => a.name === 'free_sending'), false);
+  const [enable] = managementActions('accounts', row, ['manage_free_sending']);
+  assert.equal(enable.value, true);
+  const [disable] = managementActions('accounts', { ...row, unlimited_free_sends: true }, ['manage_free_sending']);
+  assert.equal(disable.value, false);
+});

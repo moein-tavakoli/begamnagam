@@ -20,6 +20,7 @@ export type Bootstrap = {
   otp_is_real?: boolean;
   authenticated: boolean;
   phone_masked?: string;
+  unlimited_free_sends?: boolean;
   free_sends_remaining?: number;
   free_sends_total?: number;
   free_sends_earned_total?: number;

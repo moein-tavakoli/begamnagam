@@ -57,7 +57,7 @@ def me_data(request):
 def credit_data(request):
     account = Account.objects.get(user=request.user)
     purchased = getattr(account, balance_field())
-    return {'gift_remaining': account.free_sends_remaining, 'gift_total': 3 + account.free_sends_earned_total,
+    return {'unlimited_free_sends': account.unlimited_free_sends, 'gift_remaining': account.free_sends_remaining, 'gift_total': 3 + account.free_sends_earned_total,
             'invitation_rewards_total': account.free_sends_earned_total, 'purchased_remaining': purchased,
             'total_remaining': account.free_sends_remaining + purchased,
             'wallet_balance_toman': str(getattr(account, wallet_balance_field())), 'environment': credit_environment()}

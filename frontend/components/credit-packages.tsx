@@ -109,8 +109,8 @@ function CreditCheckout() {
       </>}
     </div>
     <aside className={styles.stack}>
-      {data?.authenticated && <section className={styles.balance}><h2>موجودی پیام‌های تو</h2><div className={styles.balances}><p>هدیه<strong>{fa.format(data.free_sends_remaining??0)}</strong></p><p>اعتبار بسته<strong>{fa.format(data.purchased_sends_remaining??0)}</strong></p></div></section>}
-      <section className={styles.panel}><Icon name="heart" size={27}/><h3>هدیه‌ها سر جای خودشان‌اند</h3><p className={styles.muted}>اول هدیه‌های باقی‌مانده مصرف می‌شوند، بعد اعتبار بسته. هر ارسال، حتی پیامک چندبخشی، یک اعتبار دارد.</p><Link href="/#compose" className="text-button">برگشت به نوشتن پیام <Icon name="arrow" size={16}/></Link></section>
+      {data?.authenticated && <section className={styles.balance}><h2>موجودی پیام‌های تو</h2><div className={styles.balances}><p>ارسال رایگان<strong>{data.unlimited_free_sends ? "نامحدود" : fa.format(data.free_sends_remaining??0)}</strong></p><p>اعتبار بسته<strong>{fa.format(data.purchased_sends_remaining??0)}</strong></p></div></section>}
+      <section className={styles.panel}><Icon name="heart" size={27}/><h3>هدیه‌ها سر جای خودشان‌اند</h3><p className={styles.muted}>{data?.unlimited_free_sends ? "تا وقتی ارسال رایگان نامحدود این حساب فعال است، هدیه و اعتبار بسته مصرف نمی‌شوند." : "اول هدیه‌های باقی‌مانده مصرف می‌شوند، بعد اعتبار بسته. هر ارسال، حتی پیامک چندبخشی، یک اعتبار دارد."}</p><Link href="/#compose" className="text-button">برگشت به نوشتن پیام <Icon name="arrow" size={16}/></Link></section>
       {purchases.length>0 && <details className={styles.history}><summary>خریدهای اخیر من</summary>{purchases.slice(0,12).map(item=><button type="button" disabled={busy} key={item.id} onClick={()=>setPurchase(item)}>{item.name} · {fa.format(item.message_count)} پیام<span>{statuses[item.status]||'در حال بررسی'} · {toman(item.amount_toman)}</span></button>)}</details>}
     </aside>
   </div>;

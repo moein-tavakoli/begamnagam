@@ -54,6 +54,8 @@ class Account(models.Model):
     phone_cipher = models.TextField()
     phone_masked = models.CharField(max_length=20)
     suspended = models.BooleanField(default=False)
+    unlimited_free_sends = models.BooleanField('ارسال رایگان نامحدود', default=False, db_default=False,
+        help_text='بدون مصرف هدیه یا اعتبار بسته؛ هزینهٔ واقعی بر عهدهٔ سرویس است. سقف روزانه و کنترل‌های گیرنده و محتوا مستقل‌اند.')
     free_sends_remaining = models.PositiveIntegerField(default=3)
     free_sends_earned_total = models.PositiveIntegerField(default=0, db_default=0)
     purchased_sends_remaining = models.PositiveIntegerField('اعتبار خریداری‌شده', default=0, db_default=0, editable=False)
@@ -70,7 +72,8 @@ class Account(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        permissions = [('suspend_account', 'Suspend or resume product senders'),
+        permissions = [('manage_free_sending', 'Manage sponsored unlimited free sends for individual accounts'),
+                       ('suspend_account', 'Suspend or resume product senders'),
                        ('view_api_documentation', 'View private integration API documentation'),
                        ('manage_test_sending', 'Manage unlimited simulated sending for individual accounts'),
                        ('manage_message_tone', 'Manage respectful direct message tone for individual accounts'),
@@ -199,6 +202,7 @@ class DemoLimitReset(models.Model):
 class Order(models.Model):
     payment_method = models.CharField(max_length=12, default='legacy', db_default='legacy', editable=False)
     wallet_refund_consent = models.BooleanField(default=False, db_default=False, editable=False)
+    is_sponsored = models.BooleanField(default=False, db_default=False, editable=False)
     uses_purchased_credit = models.BooleanField(default=False, db_default=False)
     purchased_credit_released_at = models.DateTimeField(null=True, blank=True)
     is_free = models.BooleanField(default=False)

@@ -220,7 +220,10 @@ def verify_otp(request):
     # Switching from a different authenticated account flushes the old session.
     # Create the new key now rather than waiting for SessionMiddleware.save().
     new_session = session_key(request)
-    request.session["phone_verified_at"] = timezone.now().timestamp()
+    verified_at = timezone.now()
+    request.session["phone_verified_at"] = verified_at.timestamp()
+    # Absolute expiry survives browser restarts and is not renewed by session writes.
+    request.session.set_expiry(verified_at + timedelta(seconds=settings.PRODUCT_SESSION_AGE))
     Preview.objects.filter(session_key=old_session, owner__isnull=True).update(owner=user, session_key=new_session)
     return {"authenticated": True, "phone_masked": user.account.phone_masked, "recent_auth": True}
 

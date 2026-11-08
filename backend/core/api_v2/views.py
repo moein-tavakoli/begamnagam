@@ -120,6 +120,8 @@ def otp_challenges(request):
                               'using the same sessionid that requested that challenge. Valid CSRF alone does not restore a lost session. '
                               'invalid_otp can mean a different session, an expired/consumed challenge, exhausted attempts or an incorrect code. '
                               'On success merge Set-Cookie and replace csrf_token before the next request. Do not automatically replay login. '
+                              'Verified product login lasts a fixed 30 days from successful OTP verification, including browser restarts; reads/writes do not renew it. '
+                              'Logout revokes it. Sensitive-action recent authentication remains five minutes. '
                               'A messenger contact alone does not authenticate.'))
 def sessions(request):
     result = delegate(request, legacy.verify_otp)
@@ -175,7 +177,9 @@ def recipient_validations(request):
 
 @resource(post=op('createMessagePreview', 'Messages', 'Review and seal an exact recipient-bound SMS preview', 'Preview',
                   request='PreviewInput', status=201,
-                  description='Show full_sms and obtain explicit consent. Freeform never silently falls back. Changing the phone or text requires a new preview.'))
+                  description='Show full_sms and obtain explicit consent. Freeform uses minimal edits and preserves meaning and colloquial/formal register; '
+                              'safe suitable text can remain unchanged. An independent review must approve it. '
+                              'Freeform never silently falls back. Changing the phone or text requires a new preview.'))
 def previews(request):
     return delegate(request, legacy.preview)
 

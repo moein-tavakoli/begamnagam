@@ -129,7 +129,7 @@ def rejection_feedback(reason):
         return ('rewrite_intent_changed', 'بازنویسی نتوانست منظورت را دقیق حفظ کند؛ پیام ارسال نشد. لطفاً جمله را روشن‌تر بنویس.')
     if reason == 'generation_unclear':
         return ('rewrite_intent_unclear', 'منظور جمله برای بازنویسی روشن نبود؛ احساس یا منظورت را کمی واضح‌تر بنویس.')
-    if reason in {'review_format', 'review_tone', 'candidate_rejected', 'invalid_polite_body'}:
+    if reason in {'review_format', 'review_tone', 'review_register', 'candidate_rejected', 'invalid_polite_body'}:
         return ('rewrite_output_rejected', 'نسخهٔ آماده‌شده تأیید نشد؛ پیام ارسال نشد. می‌توانی متن را ساده‌تر بنویسی و دوباره امتحان کنی.')
     if reason in {'contact_details', 'generation_private', 'review_private'}:
         return ('moderation_rejected', 'متن یا بازنویسی آن از نظر حریم خصوصی تأیید نشد؛ اطلاعات شخصی، نشانی و راه تماس را در پیام ننویس.')

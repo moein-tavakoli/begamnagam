@@ -3,11 +3,12 @@
 import { DigitInput } from "./digit-input";
 
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError, errorMessage } from "@/lib/api";
-import { managementActions, managementDate, managementNumber, managementState,
+import { managementActions, managementDate, managementNumber, managementState, managementNavigation, managementRoute, managementHref, managementUserHref, managementReason,
   type LimitRule, type LimitSettings, type ManagementAction, type ManagementDashboard,
-  type ManagementRecords, type ManagementSession } from "@/lib/management";
+  type ManagementRecords, type ManagementSession, type ManagementActivity, type ManagementRow } from "@/lib/management";
 import { Brand } from "./chrome";
 import { Icon } from "./icons";
 import { ProviderBalances } from "./provider-balances";
@@ -26,10 +27,11 @@ function Failure({ message, retry }: { message: string; retry?: () => void }) {
 }
 function Loading() { return <p className="manage-loading" role="status">در حال دریافت اطلاعات…</p>; }
 
-export function ManagementConsole() {
+export function ManagementConsole({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const route = managementRoute(pathname);
   const [session, setSession] = useState<ManagementSession | null>(null);
   const [error, setError] = useState("");
-  const [tab, setTab] = useState("dashboard");
   const [menu, setMenu] = useState(false);
   const [busy, setBusy] = useState(false);
   const [epoch, setEpoch] = useState(0);
@@ -63,40 +65,33 @@ export function ManagementConsole() {
     };
   }, [loadSession]);
   const failed = useCallback((e: unknown) => {
-    if (e instanceof ApiError && e.code === "management_login_required") setSession({ authenticated: false });
+    if (e instanceof ApiError && e.code === "management_login_required") { supportMemory.current={thread:null,composer:{draft:"",pending:null}}; supportIdentity.current=undefined; setSession({ authenticated: false }); }
   }, []);
   async function signOut() {
     setBusy(true); setError("");
-    try { await api("/manage/logout", { method: "POST", body: {} }); setSession({ authenticated: false }); }
+    try { await api("/manage/logout", { method: "POST", body: {} }); supportMemory.current={thread:null,composer:{draft:"",pending:null}}; supportIdentity.current=undefined; setSession({ authenticated: false }); }
     catch (e) { setError(errorMessage(e)); }
     finally { setBusy(false); }
   }
   const supportFailure = useCallback((e:unknown) => { failed(e); if(e instanceof ApiError && e.code === 'forbidden') setSession({authenticated:false}); },[failed]);
   const supportCount = useSupportBadge(!!session?.authenticated,supportFailure);
   const permissions = session?.permissions || [];
-  const navigation = [
-    ...(permissions.includes("view_operations") ? [{ key: "dashboard", title: "نمای کلی" }] : []),
-    ...(session?.authenticated ? [{key:"support",title:"پشتیبانی"}] : []),
-    ...(session?.resources || []),
-    ...(permissions.includes("manage_site_limits") ? [{ key: "limits", title: "تنظیمات سایت" }] : []),
-    ...(permissions.includes("manage_message_packages") ? [{ key: "packages", title: "بسته‌های پیام" }] : []),
-    ...(permissions.includes("manage_message_examples") ? [{ key: "examples", title: "پیام‌های نمونه" }] : []),
-    ...(permissions.includes("manage_manual_payments") ? [{ key: "manual-settings", title: "کارت و دریافت رسید" }] : []),
-    ...(permissions.includes("manage_ai") ? [{ key: "ai", title: "هوش مصنوعی" }] : []),
-  ];
-  const active = navigation.some(item => item.key === tab) ? tab : session?.resources?.[0]?.key || navigation[0]?.key;
-  const title = navigation.find(item => item.key === active)?.title || "مدیریت";
+  const navigation = managementNavigation(session || { authenticated: false });
+  const active = route.resource;
+  const allowed = navigation.some(item => item.key === active) || session?.resources?.some(item => item.key === active);
+  const title = route.userId ? "پروندهٔ کاربر" : navigation.find(item => item.key === active)?.title || session?.resources?.find(item => item.key === active)?.title || "مدیریت";
+  useEffect(() => { setMenu(false); setAction(null); }, [pathname]);
   return <div className="manage-app" data-update-blocked="true">
     {!session || !session.authenticated ? <div className="manage-login-wrap"><Brand />
       <section className="manage-login"><span className="manage-kicker"><Icon name="shield" size={19} /> پنل مدیریت</span><h1>مدیریت بگم نگم</h1>
         <p>با نام کاربری و رمز حساب مدیر وارد شوید.</p>
         {error && <Failure message={error} retry={() => void loadSession()} />}
-        {!session ? <Loading /> : <Login onLogin={setSession} />}
+        {!session ? <Loading /> : <Login onLogin={current => { if (supportIdentity.current !== current.session_identity) supportMemory.current={thread:null,composer:{draft:"",pending:null}}; supportIdentity.current=current.session_identity; setSession(current); }} />}
         <Link href="/" className="manage-site-link">مشاهدهٔ سایت</Link>
       </section></div> : <>
       <aside className={`manage-sidebar ${menu ? "is-open" : ""}`}>
         <Brand /><span className="manage-kicker">مدیریت محصول</span>
-        <nav id="manage-navigation" aria-label="بخش‌های مدیریت">{navigation.map(item => <button key={item.key} aria-current={active === item.key ? "page" : undefined} onClick={() => { setTab(item.key); setMenu(false); }}>{item.title}{item.key === "support" && supportCount>0 && <span className={supportStyles.navBadge} aria-label={`${supportCount.toLocaleString("fa-IR")} گفت‌وگوی نیازمند توجه`}>{supportCount.toLocaleString("fa-IR")}</span>}</button>)}</nav>
+        <nav id="manage-navigation" aria-label="بخش‌های مدیریت">{navigation.map(item => <Link key={item.key} href={managementHref(item.key)} aria-current={active === item.key ? "page" : undefined} onClick={() => setMenu(false)}>{item.title}{item.key === "support" && supportCount>0 && <span className={supportStyles.navBadge} aria-label={`${supportCount.toLocaleString("fa-IR")} گفت‌وگوی نیازمند توجه`}>{supportCount.toLocaleString("fa-IR")}</span>}</Link>)}</nav>
         <a className="manage-advanced" href="/admin/">مدیریت پیشرفتهٔ جنگو ↗</a>
       </aside>
       <div className="manage-workspace">
@@ -106,9 +101,10 @@ export function ManagementConsole() {
         {permissions.includes("view_operations") && <ProviderBalances onFailure={failed} />}
         <span className="sr-only" role="status" aria-atomic="true">{supportCount>0 ? `${supportCount.toLocaleString("fa-IR")} گفت‌وگوی پشتیبانی تازه یا بی‌پاسخ داری.` : ""}</span>
         <div className="manage-content">{error && <Failure message={error} />}
-          {!active && <section className="manage-card"><p>برای این حساب بخشی مجاز نشده است. مجوزها از مدیریت پیشرفتهٔ جنگو قابل تنظیم‌اند.</p></section>}
-          {active === "examples" ? <ExampleSettings onFailure={failed} /> : active === "support" ? <SupportInbox onFailure={supportFailure} memory={supportMemory} /> : active === "dashboard" ? <Dashboard key={`dashboard-${epoch}`} canOperate={permissions.includes("operate_safety")} onAction={setAction} onFailure={failed} /> : active === "limits" ? <Limits onFailure={failed} /> : active === "ai" ? <AISettings onFailure={failed} /> : active === "manual-settings" ? <ManualPaymentSettings onFailure={failed} /> : active === "packages" ? <PackageSettings onFailure={failed} /> : active && <Records key={`${active}-${epoch}`} resource={active} permissions={permissions} onAction={setAction} onFailure={failed} />}
-          <p className="manage-footnote">زمان‌ها به وقت تهران · تغییرات مدیریتی با دلیل و سابقه ثبت می‌شوند.</p>
+          {!allowed && <section className="manage-card"><p>این بخش برای حساب شما در دسترس نیست. از فهرست بخش‌های مجاز انتخاب کنید.</p></section>}
+          {allowed && (route.userId ? <UserActivity key={`${route.userId}-${epoch}`} userId={route.userId} permissions={permissions} resources={session.resources || []} onAction={setAction} onFailure={failed} /> : active === "examples" ? <ExampleSettings onFailure={failed} /> : active === "support" ? <SupportInbox onFailure={supportFailure} memory={supportMemory} /> : active === "dashboard" ? <Dashboard key={`dashboard-${epoch}`} canOperate={permissions.includes("operate_safety")} onAction={setAction} onFailure={failed} /> : active === "limits" ? <Limits onFailure={failed} /> : active === "ai" ? <AISettings onFailure={failed} /> : active === "manual-settings" ? <ManualPaymentSettings onFailure={failed} /> : active === "packages" ? <PackageSettings onFailure={failed} /> : active && <Records key={`${active}-${epoch}`} resource={active} permissions={permissions} onAction={setAction} onFailure={failed} />)}
+          {children}
+          <p className="manage-footnote">زمان‌ها به وقت تهران · اقدام‌های مدیریتی در سابقه ثبت می‌شوند.</p>
         </div>
       </div>
       {action && (["grant_package","approve_card","reject_card"].includes(action.name) ? <ManualPaymentDialog action={action} onClose={() => setAction(null)} onComplete={() => { setAction(null); setEpoch(v => v + 1); }} onFailure={failed} /> : <ActionDialog action={action} onClose={() => setAction(null)} onComplete={() => { setAction(null); setEpoch(v => v + 1); }} onFailure={failed} />)}
@@ -174,14 +170,15 @@ function Records({ resource, permissions, onAction, onFailure }: { resource: str
   function search(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const form = new FormData(event.currentTarget); setFilter({ page: 1, query: String(form.get("query") || ""), status: String(form.get("status") || "") }); }
   const pages = data ? Math.max(1, Math.ceil(data.total / data.page_size)) : 1;
   return <section className="manage-card manage-records"><form className="manage-search" onSubmit={search}>
-    <label>جست‌وجو<input name="query" maxLength={100} placeholder={resource === "accounts" || resource === "invitations" ? "شماره موبایل یا شناسه" : "شناسه، وضعیت یا کد"} /></label>
+    <label>جست‌وجو<input name="query" maxLength={100} aria-describedby={resource === "accounts" ? "manage-phone-search-help" : undefined} placeholder={resource === "accounts" || resource === "invitations" ? "همه یا بخشی از شماره موبایل یا شناسه" : "شناسه، وضعیت یا کد"} /></label>
     {!!data?.statuses.length && <label>وضعیت<select name="status" defaultValue=""><option value="">همهٔ وضعیت‌ها</option>{data.statuses.map(([key, label]) => <option key={key} value={key}>{managementState(key) === key ? label : managementState(key)}</option>)}</select></label>}
     <button className="manage-button primary" disabled={busy}>جست‌وجو</button><button className="manage-button secondary" type="button" disabled={busy} onClick={() => setFilter(v => ({ ...v }))}>تازه‌سازی</button>
   </form>
+    {resource === "accounts" && <p id="manage-phone-search-help" className="manage-muted">شمارهٔ کامل یا بخشی از آن را وارد کنید؛ ارقام فارسی و لاتین پذیرفته می‌شوند.</p>}
     {error && <Failure message={error} retry={() => setFilter(v => ({ ...v }))} />}
     {busy && <Loading />}
     {data && !busy && !error && <><div className="manage-table-info"><span>{managementNumber(data.total)} رکورد</span><span>صفحهٔ {managementNumber(data.page)} از {managementNumber(pages)}</span></div>
-      {!data.rows.length ? <div className="manage-empty"><Icon name="receipt" size={32} /><h2>رکوردی پیدا نشد</h2><p>پس از ثبت فعالیت، اطلاعات این بخش نمایش داده می‌شود.</p></div> : <div className="manage-table-scroll" tabIndex={0} role="region" aria-label={data.title}><table><caption className="sr-only">{data.title}</caption><thead><tr>{data.columns.map(col => <th scope="col" key={col.key}>{col.label}</th>)}{data.rows.some(row => managementActions(resource, row, permissions).length > 0) && <th scope="col">اقدام</th>}</tr></thead><tbody>{data.rows.map(row => <tr key={row.record_id}>{data.columns.map(col => <td key={col.key}><Cell value={row[col.key]} kind={col.type} /></td>)}{data.rows.some(r => managementActions(resource, r, permissions).length > 0) && <td><div className="manage-row-actions">{managementActions(resource, row, permissions).map(item => <button key={item.name} className="manage-button secondary" onClick={() => onAction(item)}>{item.label}</button>)}</div></td>}</tr>)}</tbody></table></div>}
+      {!data.rows.length ? <div className="manage-empty"><Icon name="receipt" size={32} /><h2>رکوردی پیدا نشد</h2><p>پس از ثبت فعالیت، اطلاعات این بخش نمایش داده می‌شود.</p></div> : <div className="manage-table-scroll" tabIndex={0} role="region" aria-label={data.title}><table><caption className="sr-only">{data.title}</caption><thead><tr>{data.columns.map(col => <th scope="col" key={col.key}>{col.label}</th>)}{(resource === "accounts" || data.rows.some(row => managementActions(resource, row, permissions).length > 0)) && <th scope="col" className="manage-action-column">عملیات</th>}</tr></thead><tbody>{data.rows.map(row => <tr key={row.record_id}>{data.columns.map(col => <td key={col.key}>{resource === "accounts" && ["id", "phone"].includes(col.key) ? <Link className="manage-record-link" href={managementUserHref(row.record_id)}><Cell value={row[col.key]} kind={col.type} /></Link> : <Cell value={row[col.key]} kind={col.type} />}</td>)}{(resource === "accounts" || data.rows.some(r => managementActions(resource, r, permissions).length > 0)) && <td className="manage-action-column"><RowActions resource={resource} row={row} permissions={permissions} onAction={onAction} /></td>}</tr>)}</tbody></table></div>}
       <nav className="manage-pagination" aria-label="صفحه‌بندی رکوردها"><button className="manage-button secondary" disabled={filter.page <= 1} onClick={() => setFilter(v => ({ ...v, page: v.page - 1 }))}>صفحهٔ قبل</button><button className="manage-button secondary" disabled={filter.page >= pages} onClick={() => setFilter(v => ({ ...v, page: v.page + 1 }))}>صفحهٔ بعد</button></nav>
     </>}
   </section>;
@@ -203,7 +200,7 @@ function SiteLimits({ data, onSaved, onFailure }: { data: LimitSettings; onSaved
     event.preventDefault(); const form = new FormData(event.currentTarget); const values: Record<string, number | boolean> = {};
     for (const [key, value] of Object.entries(data.values)) values[key] = typeof value === "boolean" ? form.get(key) === "on" : Number(form.get(key));
     setBusy(true); setError(""); setMessage(""); setFields({});
-    try { const updated = await api<LimitSettings>("/manage/limits", { method: "POST", body: { values, revision: data.revision, reason: form.get("reason") } }); onSaved(updated); setMessage("تنظیمات ذخیره شد."); }
+    try { const updated = await api<LimitSettings>("/manage/limits", { method: "POST", body: { values, revision: data.revision, reason: managementReason("limits") } }); onSaved(updated); setMessage("تنظیمات ذخیره شد."); }
     catch (e) { setError(errorMessage(e)); if (e instanceof ApiError) setFields(e.fields || {}); onFailure(e); }
     finally { setBusy(false); }
   }
@@ -214,7 +211,7 @@ function SiteLimits({ data, onSaved, onFailure }: { data: LimitSettings; onSaved
       <span>{field.label}</span>{field.type === "bool" ? <input id={`limit-${field.key}`} name={field.key} type="checkbox" role={["wallet_enabled","gateway_enabled"].includes(field.key) ? "switch" : undefined} defaultChecked={Boolean(data.values[field.key])} aria-invalid={!!fields[field.key]} aria-describedby={field.help || fields[field.key] ? `help-${field.key}` : undefined} /> : <DigitInput id={`limit-${field.key}`} name={field.key} type="number" min={field.min ?? 0} step={1} max={field.max ?? Number.MAX_SAFE_INTEGER} defaultValue={Number(data.values[field.key])} required aria-invalid={!!fields[field.key]} aria-describedby={field.help || fields[field.key] ? `help-${field.key}` : undefined} />}
       {(field.help || fields[field.key]) && <small id={`help-${field.key}`} className={fields[field.key] ? "manage-field-error" : ""}>{fields[field.key] ? String(fields[field.key]) : field.help}</small>}
     </label>)}</div></details>)}
-      <label>دلیل تغییر<input name="reason" required minLength={3} maxLength={200} placeholder="دلیل کوتاه؛ اطلاعات خصوصی ننویسید" /></label>
+
       <div className="manage-form-actions"><button className="manage-button primary">{busy ? "در حال ذخیره…" : "ذخیرهٔ تنظیمات"}</button><button type="button" className="manage-button secondary" onClick={() => window.location.reload()}>دریافت آخرین تنظیمات</button></div>
     </fieldset>
   </form>;
@@ -229,10 +226,10 @@ function RequestRule({ rule, onSaved, onFailure }: { rule: LimitRule; onSaved: (
   const [busy, setBusy] = useState(false), [error, setError] = useState("");
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); const form = new FormData(event.currentTarget); setBusy(true); setError("");
-    try { onSaved(await api<LimitSettings>(`/manage/request-limits/${rule.scope}`, { method: "POST", body: { revision: rule.revision, reason: form.get("reason"), values: { enabled: rule.protected || form.get("enabled") === "on", maximum: Number(form.get("maximum")), window_seconds: Number(form.get("window_seconds")) } } })); }
+    try { onSaved(await api<LimitSettings>(`/manage/request-limits/${rule.scope}`, { method: "POST", body: { revision: rule.revision, reason: managementReason("request_limits"), values: { enabled: rule.protected || form.get("enabled") === "on", maximum: Number(form.get("maximum")), window_seconds: Number(form.get("window_seconds")) } } })); }
     catch (e) { setError(errorMessage(e)); onFailure(e); } finally { setBusy(false); }
   }
-  return <form className="manage-form" onSubmit={save}>{error && <Failure message={error} />}<fieldset className="manage-fieldset" disabled={busy}><label className="manage-checkbox"><span>کنترل فعال باشد</span><input name="enabled" type="checkbox" defaultChecked={rule.enabled} disabled={rule.protected} /></label><div className="manage-settings-grid"><label>حداکثر تعداد<DigitInput name="maximum" type="number" min={1} step={1} defaultValue={rule.maximum} required /></label><label>بازه (ثانیه)<DigitInput name="window_seconds" type="number" min={1} step={1} defaultValue={rule.window_seconds} required /></label></div><label>دلیل تغییر<input name="reason" minLength={3} maxLength={200} required /></label><button className="manage-button primary">{busy ? "در حال ذخیره…" : "ذخیرهٔ این کنترل"}</button></fieldset></form>;
+  return <form className="manage-form" onSubmit={save}>{error && <Failure message={error} />}<fieldset className="manage-fieldset" disabled={busy}><label className="manage-checkbox"><span>کنترل فعال باشد</span><input name="enabled" type="checkbox" defaultChecked={rule.enabled} disabled={rule.protected} /></label><div className="manage-settings-grid"><label>حداکثر تعداد<DigitInput name="maximum" type="number" min={1} step={1} defaultValue={rule.maximum} required /></label><label>بازه (ثانیه)<DigitInput name="window_seconds" type="number" min={1} step={1} defaultValue={rule.window_seconds} required /></label></div><button className="manage-button primary">{busy ? "در حال ذخیره…" : "ذخیرهٔ این کنترل"}</button></fieldset></form>;
 }
 
 function ActionDialog({ action, onClose, onComplete, onFailure }: { action: ManagementAction; onClose: () => void; onComplete: () => void; onFailure: (e: unknown) => void }) {
@@ -246,16 +243,17 @@ function ActionDialog({ action, onClose, onComplete, onFailure }: { action: Mana
     try {
       const countValues = Object.fromEntries(['sender_daily_limit', 'rewrite_daily_limit'].map(key => [key,
         form.get(`${key}_mode`) === 'site' ? null : form.get(`${key}_mode`) === 'unlimited' ? 0 : Number(form.get(key))]));
-      const values = { action: action.name, object_id: action.object_id, value: action.value, reason: form.get("reason"), reference: form.get("reference") || "",
+      const values = { action: action.name, object_id: action.object_id, value: action.value, reason: managementReason(action.name), reference: form.get("reference") || "",
         ...(action.name === 'account_limits' ? { values: countValues } : {}) };
       if (action.name === "review") setReport(await api(`/manage/reports/${action.object_id}/review`, { method: "POST", body: values }));
+      else if (action.name === "attempt_texts") { const result = await api<{ original_text: string; original_available?: boolean; reviewed_text: string | null }>(`/manage/users/${action.userId}/attempts/${action.object_id}/texts`, { method: "POST", body: values }); setTexts({ original_text: result.original_text, original_available: result.original_available ?? !!result.original_text, final_text: result.reviewed_text || "", mode: "attempt" }); }
       else if (action.name === "message_texts") setTexts(await api(`/manage/orders/${action.object_id}/texts`, { method: "POST", body: values }));
       else { await api("/manage/actions", { method: "POST", body: values }); onComplete(); }
     } catch (e) { setError(errorMessage(e)); onFailure(e); } finally { setBusy(false); }
   }
   return <dialog ref={ref} className={`manage-dialog${action.name === 'account_limits' ? ' manage-account-limits' : ''}`} aria-labelledby="manage-dialog-title" onCancel={e => { e.preventDefault(); if (!busy) onClose(); }}><div className="manage-section-heading"><h2 id="manage-dialog-title">{action.label}</h2><button className="manage-button secondary" onClick={onClose} disabled={busy} aria-label="بستن پنجره">بستن</button></div><p className="manage-muted">رکورد: <bdi className="manage-dialog-id">{action.object_id}</bdi></p>
     {error && <Failure message={error} />}
-    {texts ? <div className="manage-report"><span className="manage-badge">فقط مدیریت · {texts.mode === "ollama" ? "Ollama" : texts.mode === "gapgpt" ? "GapGPT" : "متن آماده"}</span><h3>متن اولیهٔ کاربر</h3><p>{texts.original_available ? texts.original_text : "متن اولیه برای این سابقه موجود نیست؛ ممکن است قدیمی یا پاک‌سازی‌شده باشد."}</p><h3>متن نهایی بررسی‌شده</h3><p>{texts.final_text || "متن طبق سیاست نگهداری حذف شده است."}</p><p className="manage-muted">مشاهدهٔ متن‌ها در سوابق مدیریت ثبت شد.</p></div> : report ? <div className="manage-report"><span className="manage-badge">{managementState(report.status)}</span><h3>موضوع گزارش</h3><p>{report.reason}</p><h3>توضیحات دریافت‌کننده</h3><p>{report.details || "توضیحی ثبت نشده است."}</p><h3>متن بررسی‌شدهٔ مرتبط</h3><p>{report.reviewed_text}</p><p className="manage-muted">مشاهدهٔ این پرونده در سوابق مدیریت ثبت شد.</p></div> : <form className="manage-form" onSubmit={submit}>
+    {texts ? <div className="manage-report"><span className="manage-badge">فقط مدیریت · {texts.mode === "ollama" ? "Ollama" : texts.mode === "gapgpt" ? "GapGPT" : texts.mode === "attempt" ? "تلاش ساخت پیام" : "متن آماده"}</span><h3>متن اولیهٔ کاربر</h3><p>{texts.original_available ? texts.original_text : "متن اولیه برای این سابقه موجود نیست؛ ممکن است قدیمی یا پاک‌سازی‌شده باشد."}</p><h3>متن نهایی بررسی‌شده</h3><p>{texts.final_text || (texts.mode === "attempt" ? "متن نهایی تأییدشده‌ای برای این سابقه موجود نیست." : "متن طبق سیاست نگهداری حذف شده است.")}</p><p className="manage-muted">مشاهدهٔ متن‌ها در سوابق مدیریت ثبت شد.</p></div> : report ? <div className="manage-report"><span className="manage-badge">{managementState(report.status)}</span><h3>موضوع گزارش</h3><p>{report.reason}</p><h3>توضیحات دریافت‌کننده</h3><p>{report.details || "توضیحی ثبت نشده است."}</p><h3>متن بررسی‌شدهٔ مرتبط</h3><p>{report.reviewed_text}</p><p className="manage-muted">مشاهدهٔ این پرونده در سوابق مدیریت ثبت شد.</p></div> : <form className="manage-form" onSubmit={submit}>
       {action.name === 'free_sending' && <p className="manage-notice">{action.value ? 'این حساب بدون مصرف هدیه یا اعتبار بسته ارسال می‌کند و هزینهٔ واقعی بر عهدهٔ سرویس است.' : 'ارسال‌های بعدی از هدیه و اعتبار بسته مصرف می‌کنند؛ سفارش‌های قبلی تغییر نمی‌کنند.'} سقف روزانه، کنترل گیرنده و محتوا مستقل‌اند.</p>}
       {action.name === 'account_limits' && <fieldset disabled={busy} className="manage-fieldset">
         <p className="manage-notice">تنظیم فقط برای همین حساب است. تعداد نامحدود، اعتبار پیام یا کنترل‌های محتوا، گیرنده و سقف کل بازنویسی را حذف نمی‌کند؛ مصرف قبلی هم پاک نمی‌شود.</p>
@@ -263,8 +261,7 @@ function ActionDialog({ action, onClose, onComplete, onFailure }: { action: Mana
         <AccountLimitInput name="rewrite_daily_limit" label="بازنویسی در روز" value={action.accountLimits?.rewrite_daily_limit ?? null} />
       </fieldset>}
       {action.name === "confirm_refund" && <><p className="manage-notice">ابتدا بازپرداخت را خارج از سایت انجام دهید؛ این اقدام فقط ثبت سند بازپرداخت است.</p><label>مرجع سند بازپرداخت<input name="reference" minLength={3} maxLength={100} required /></label></>}
-      <label>دلیل {action.name === "message_texts" ? "مشاهدهٔ متن‌ها" : action.name === "review" ? "مشاهدهٔ پرونده" : "اقدام"}<textarea name="reason" minLength={3} maxLength={200} rows={3} required placeholder="دلیل کوتاه؛ شماره یا اطلاعات خصوصی ننویسید" autoFocus /></label>
-      <button className="manage-button primary" disabled={busy}>{busy ? "در حال ثبت…" : action.name === "message_texts" ? "ثبت مشاهده و نمایش متن‌ها" : action.name === "review" ? "ثبت مشاهده و بازکردن پرونده" : "تأیید و ثبت اقدام"}</button>
+      <button className="manage-button primary" disabled={busy}>{busy ? "در حال ثبت…" : ["message_texts", "attempt_texts"].includes(action.name) ? "ثبت مشاهده و نمایش متن‌ها" : action.name === "review" ? "ثبت مشاهده و بازکردن پرونده" : "تأیید و ثبت اقدام"}</button>
     </form>}
   </dialog>;
 }
@@ -274,4 +271,73 @@ function AccountLimitInput({ name, label, value }: { name: string; label: string
   return <div className="manage-settings-grid"><label>{label}<select name={`${name}_mode`} value={mode} onChange={event => setMode(event.target.value)}>
     <option value="site">طبق تنظیم سایت</option><option value="custom">عدد اختصاصی</option><option value="unlimited">تعداد نامحدود</option>
   </select></label>{mode === 'custom' && <label>حداکثر {label}<DigitInput name={name} type="number" min={1} max={1000000} step={1} defaultValue={value || 1000} required /></label>}</div>;
+}
+
+function RowActions({ resource, row, permissions, onAction }: { resource: string; row: ManagementRow; permissions: string[]; onAction: (a: ManagementAction) => void }) {
+  const actions = managementActions(resource, row, permissions);
+  if (resource !== "accounts" && !actions.length) return null;
+  return <details className="manage-row-menu" onKeyDown={event => {
+    if (event.key === "Escape") { event.currentTarget.open = false; event.currentTarget.querySelector("summary")?.focus(); }
+  }}><summary aria-label={`عملیات رکورد ${row.record_id}`}><span aria-hidden="true">•••</span></summary>
+    <div className="manage-row-actions">
+      {resource === "accounts" && <>
+        <Link href={managementUserHref(row.record_id)}>پروندهٔ کاربر</Link>
+        <Link href={managementUserHref(row.record_id, "messages")}>پیام‌های کاربر</Link>
+        <Link href={managementUserHref(row.record_id, "invitations")}>دعوت‌های کاربر</Link>
+      </>}
+      {actions.map(item => <button key={item.name} onClick={event => { const details = event.currentTarget.closest("details"); if (details) { details.open = false; details.querySelector("summary")?.focus(); } onAction(item); }}>{item.label}</button>)}
+    </div>
+  </details>;
+}
+
+function UserActivity({ userId, permissions, resources, onAction, onFailure }: {
+  userId: string; permissions: string[]; resources: { key: string; title: string }[];
+  onAction: (a: ManagementAction) => void; onFailure: (e: unknown) => void;
+}) {
+  const searchParams = useSearchParams();
+  const section = searchParams.get("section") === "invitations" ? "invitations" : searchParams.get("section") === "messages" || resources.some(item => item.key === "orders") ? "messages" : "invitations";
+  const requestedPage = Number(searchParams.get("page"));
+  const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+  const [data, setData] = useState<ManagementActivity | null>(null);
+  const [account, setAccount] = useState<ManagementActivity["account"] | null>(null);
+  const [error, setError] = useState(""), [busy, setBusy] = useState(true), [epoch, setEpoch] = useState(0);
+  const canRead = resources.some(item => item.key === (section === "messages" ? "orders" : "invitations"));
+  useEffect(() => {
+    const controller = new AbortController();
+    void api<{ account: ManagementActivity["account"] }>(`/manage/users/${userId}`, { signal: controller.signal }).then(result => setAccount(result.account)).catch(e => { if (!controller.signal.aborted) { setError(errorMessage(e)); onFailure(e); } });
+    return () => controller.abort();
+  }, [userId, epoch, onFailure]);
+  useEffect(() => {
+    const controller = new AbortController(); setError(""); setData(null); setBusy(canRead);
+    if (canRead) void api<ManagementActivity>(`/manage/users/${userId}/activity`, { method: "POST", body: { section, page }, signal: controller.signal })
+      .then(result => { setData(result); setAccount(result.account); }).catch(e => { if (!controller.signal.aborted) { setError(errorMessage(e)); onFailure(e); } })
+      .finally(() => { if (!controller.signal.aborted) setBusy(false); });
+    return () => controller.abort();
+  }, [userId, section, page, canRead, epoch, onFailure]);
+  const pages = data ? Math.max(1, Math.ceil(data.total / data.page_size)) : 1;
+  const kinds: Record<string, string> = { order: "سفارش پیام", attempt: "تلاش ساخت پیام", moderation: "بررسی محتوای قدیمی", invitation: "دعوت" };
+  const pageHref = (number: number) => `${managementUserHref(userId, section)}&page=${number}`;
+  return <>
+    <Link className="manage-record-link" href="/manage/users">بازگشت به کاربران</Link>
+    <section className="manage-card"><div className="manage-section-heading"><div><p className="manage-kicker">پروندهٔ کاربر</p><h2>{account ? <bdi>{account.phone || account.phone_masked}</bdi> : `کاربر ${Number(userId).toLocaleString("fa-IR")}`}</h2></div><button className="manage-button secondary" disabled={busy} onClick={() => setEpoch(value => value + 1)}>تازه‌سازی</button></div>
+      {account && <p>شناسه: {managementNumber(account.id)} · <span className={`manage-badge ${account.suspended ? "warn" : "good"}`}>{account.suspended ? "تعلیق‌شده" : "فعال"}</span></p>}
+      <nav className="manage-user-tabs" aria-label="فعالیت کاربر">{([{ key: "messages", resource: "orders", title: "پیام‌ها" }, { key: "invitations", resource: "invitations", title: "دعوت‌ها" }] as const).filter(tab => resources.some(item => item.key === tab.resource)).map(tab => <Link className="manage-button secondary" key={tab.key} href={managementUserHref(userId, tab.key)} aria-current={section === tab.key ? "page" : undefined}>{tab.title}</Link>)}</nav>
+    </section>
+    {error && <Failure message={error} retry={() => setEpoch(value => value + 1)} />}
+    {!canRead && <p className="manage-notice">مجوز مشاهدهٔ این فعالیت را ندارید. از بخش‌های مجاز پرونده انتخاب کنید.</p>}
+    {busy && <Loading />}
+    {data && !busy && !error && <section className="manage-card"><div className="manage-table-info"><span>{managementNumber(data.total)} رکورد</span><span>صفحهٔ {managementNumber(data.page)} از {managementNumber(pages)}</span></div>
+      {!data.rows.length ? <p className="manage-empty">فعالیتی در این بخش ثبت نشده است.</p> : <div className="manage-activity-list">{data.rows.map(row => <article key={`${row.kind}-${row.record_id}`}>
+        <div className="manage-section-heading"><strong>{kinds[row.kind] || row.kind}</strong><span className="manage-badge">{managementState(row.status)}</span></div>
+        <p className="manage-muted">{managementDate(row.created_at)}</p>
+        {row.phone && <p>مخاطب: <bdi>{row.phone}</bdi></p>}
+        {row.reason_code && <p>علت: <bdi>{row.reason_code}</bdi></p>}
+        {row.kind === "invitation" && <><p>ثبت‌نام مخاطب: {row.registered_at ? managementDate(row.registered_at) : "هنوز ثبت‌نام نکرده است"}</p><p>جایزهٔ دعوت: {row.reward_awarded_at ? managementDate(row.reward_awarded_at) : "ثبت نشده است"}</p></>}
+        {row.kind === "moderation" && <p className="manage-muted">این سابقه فقط اطلاعات بررسی محتوا دارد.</p>}
+        <details><summary>شناسهٔ سابقه</summary><bdi className="manage-dialog-id">{row.id}</bdi></details>
+        {permissions.includes("view_private_message_text") && ["order", "attempt"].includes(row.kind) && <button className="manage-button secondary" onClick={() => onAction({ name: row.kind === "order" ? "message_texts" : "attempt_texts", label: "مشاهدهٔ متن‌ها", object_id: String(row.kind === "order" ? row.order_id || row.id : row.id), userId })}>مشاهدهٔ متن‌ها</button>}
+      </article>)}</div>}
+      <nav className="manage-pagination" aria-label="صفحه‌بندی فعالیت کاربر">{page > 1 && <Link className="manage-button secondary" href={pageHref(page - 1)}>صفحهٔ قبل</Link>}{page < pages && <Link className="manage-button secondary" href={pageHref(page + 1)}>صفحهٔ بعد</Link>}</nav>
+    </section>}
+  </>;
 }

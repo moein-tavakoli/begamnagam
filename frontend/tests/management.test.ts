@@ -21,3 +21,52 @@ test("report viewing and triage stay separate and no order replay action is expo
   assert.deepEqual(managementActions("orders", { record_id: "order1", status: "unknown" }, ["operate_safety", "confirm_refund"]), []);
   assert.deepEqual(managementActions("orders", { record_id: "order1" }, ["view_private_message_text"]).map(action => action.name), ["message_texts"]);
 });
+
+import * as management from "../lib/management.ts";
+
+test("management routes are stable deep links and accounts keep their API resource", () => {
+  assert.equal(management.managementHref("dashboard"), "/manage");
+  assert.equal(management.managementHref("accounts"), "/manage/users");
+  assert.equal(management.managementHref("support"), "/manage/support");
+  assert.deepEqual(management.managementRoute("/manage/users/17"), { resource: "accounts", userId: "17" });
+  assert.deepEqual(management.managementRoute("/manage/accounts"), { resource: "accounts" });
+  assert.deepEqual(management.managementRoute("/manage"), { resource: "dashboard" });
+});
+
+test("users follow overview and user activity leaves the global menu", () => {
+  const navigation = management.managementNavigation({ authenticated: true, permissions: ["view_operations"], resources: [
+    { key: "orders", title: "پیام‌ها" }, { key: "accounts", title: "حساب‌ها" }, { key: "invitations", title: "دعوت‌ها" }, { key: "alerts", title: "هشدارها" },
+  ] });
+  assert.deepEqual(navigation.slice(0, 2), [{ key: "dashboard", title: "نمای کلی" }, { key: "accounts", title: "کاربران" }]);
+  assert.ok(!navigation.some(item => ["orders", "invitations"].includes(item.key)));
+  assert.equal(management.managementUserHref("17", "invitations"), "/manage/users/17?section=invitations");
+});
+
+test("management audit reasons are fixed and specific to the selected action", () => {
+  assert.ok(management.managementReason("suspend").length >= 3);
+  assert.notEqual(management.managementReason("suspend"), management.managementReason("unsuspend"));
+  assert.equal(management.managementReason("reject_card"), "رسید بانکی تأیید نشد.");
+});
+
+import { readFileSync } from "node:fs";
+
+test("management forms keep audit context automatic while bank proof remains mandatory", () => {
+  for (const file of ["management-console", "ai-settings", "manual-payment-settings", "manual-payment-dialog", "package-settings", "example-settings"]) {
+    const source = readFileSync(new URL(`../components/${file}.tsx`, import.meta.url), "utf8");
+    assert.doesNotMatch(source, /<(?:input|textarea)[^>]*name=["']reason["']/);
+    assert.match(source, /reason:\s*managementReason\(/);
+  }
+  const payment = readFileSync(new URL("../components/manual-payment-dialog.tsx", import.meta.url), "utf8");
+  for (const field of ["bank_reference", "paid_date", "bank_verified", "amount_toman"]) {
+    assert.match(payment, new RegExp(`name="${field}"[^>]*required`));
+  }
+});
+
+
+test('staff without user access retain authorized order and invitation navigation', () => {
+  const resources = [{key:'orders',title:'پیام‌ها و سفارش‌ها'},{key:'invitations',title:'دعوت‌ها'}];
+  const nav = management.managementNavigation({authenticated:true,permissions:[],resources});
+  assert.ok(nav.some(item => item.key === 'orders'));
+  assert.ok(nav.some(item => item.key === 'invitations'));
+  assert.equal(nav.some(item => item.key === 'accounts'), false);
+});

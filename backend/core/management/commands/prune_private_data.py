@@ -7,7 +7,7 @@ from importlib import import_module
 from django.conf import settings
 from core.bot_conversations import reset_state
 from core.models import BotConversation, BotConversationEvent
-from core.models import Account, AbuseReport, ModerationAudit, OTPChallenge, Order, Preview, RecipientState, RecipientGrant, OperatorAudit, Invitation, InvitationSend, RewriteUsage, SupportMessage
+from core.models import MessageAttempt, Account, AbuseReport, ModerationAudit, OTPChallenge, Order, Preview, RecipientState, RecipientGrant, OperatorAudit, Invitation, InvitationSend, RewriteUsage, SupportMessage
 
 
 class Command(BaseCommand):
@@ -47,6 +47,9 @@ class Command(BaseCommand):
                 if not options['dry_run']:
                     Invitation.objects.filter(pk=invitation.pk).update(phone_cipher='', phone_masked='حذف‌شده')
                     invitation.sends.update(full_sms='')
+            attempts = MessageAttempt.objects.filter(Q(created_at__lt=now-timedelta(days=31)) |
+                Q(owner__account__deletion_requested_at__lt=now-timedelta(days=30))).exclude(original_text='', recipient_phone='')
+            counts['message_attempts_redacted'] = attempts.count()
             support = SupportMessage.objects.filter(Q(created_at__lt=now-timedelta(days=90)) | Q(conversation__account__deletion_requested_at__lt=now-timedelta(days=30))).filter(redacted_at__isnull=True)
             counts['support_redacted'] = support.count()
             bot_conversations = BotConversation.objects.filter(Q(last_seen_at__lt=now-timedelta(days=30)) |
@@ -65,6 +68,7 @@ class Command(BaseCommand):
                     reset_state(conversation, 'menu' if conversation.account_id else 'awaiting_phone')
                     conversation.save(update_fields=['step', 'data', 'revision', 'state_expires_at'])
                 BotConversationEvent.objects.filter(created_at__lt=now-timedelta(days=1)).delete()
+                attempts.update(original_text='', recipient_phone='')
                 support.update(text='', redacted_at=now)
                 otp.delete()
                 previews.delete()

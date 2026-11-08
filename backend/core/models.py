@@ -868,3 +868,20 @@ class SupportMessage(models.Model):
             models.CheckConstraint(condition=models.Q(role__in=['customer', 'staff']), name='support_known_role'),
         ]
         indexes = [models.Index(fields=['conversation', 'role', 'sequence'], name='support_role_sequence_idx')]
+
+
+class MessageAttempt(models.Model):
+    """Private preview history; raw input is never dispatchable message content."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    preview = models.ForeignKey(Preview, null=True, blank=True, on_delete=models.SET_NULL)
+    original_text = EncryptedTextField(blank=True, default='')
+    recipient_phone = EncryptedTextField(blank=True, default='')
+    message_tone = models.CharField(max_length=12, blank=True, default='')
+    status = models.CharField(max_length=12, choices=[('accepted', 'پذیرفته'), ('rejected', 'ردشده'), ('failed', 'ناموفق')])
+    reason_code = models.CharField(max_length=40, blank=True, default='')
+    moderation_event_id = models.UUIDField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=['owner', 'created_at'], name='message_attempt_owner_created')]

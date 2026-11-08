@@ -10,11 +10,11 @@ def catalog(request):
         'topics': [{'id': c['id'], 'label': c['label']} for c in CATEGORIES]}
 
 
-@staff_api(['POST'], 'core.manage_message_examples')
+@staff_api(['POST'], 'core.manage_message_examples', automatic_reason=True)
 def save(request, kind, record_id=None):
     return write_record(request.user, kind, body(request), record_id)
 
 
-@staff_api(['POST'], 'core.manage_message_examples')
+@staff_api(['POST'], 'core.manage_message_examples', automatic_reason=True)
 def delete(request, kind, record_id):
     return write_record(request.user, kind, body(request), record_id, delete=True)

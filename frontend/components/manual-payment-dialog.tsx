@@ -1,5 +1,7 @@
 "use client";
 
+import { managementReason } from "@/lib/management";
+
 import { DigitInput } from "./digit-input";
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
@@ -19,9 +21,9 @@ export function ManualPaymentDialog({action,onClose,onComplete,onFailure}:{actio
   async function submit(event:FormEvent<HTMLFormElement>){
     event.preventDefault();const form=new FormData(event.currentTarget);setBusy(true);setError('');setSubmitted(true);
     try{
-      const proof={reason:form.get('reason'),bank_reference:form.get('bank_reference'),paid_date:form.get('paid_date'),amount_toman:Number(form.get('amount_toman')),bank_verified:form.get('bank_verified')==='on'};
+      const proof={reason:managementReason(action.name),bank_reference:form.get('bank_reference'),paid_date:form.get('paid_date'),amount_toman:Number(form.get('amount_toman')),bank_verified:form.get('bank_verified')==='on'};
       if(grant){if(!chosen)throw new Error('بسته را انتخاب کن.');await api('/manage/manual-payments/grant',{method:'POST',idempotencyKey:key.current,body:{...proof,account_id:Number(action.object_id),package_id:chosen.id,package_revision:chosen.revision}});}
-      else await api(`/manage/manual-payments/${action.object_id}/${reject?'reject':'approve'}`,{method:'POST',body:reject?{reason:form.get('reason')}:proof});
+      else await api(`/manage/manual-payments/${action.object_id}/${reject?'reject':'approve'}`,{method:'POST',body:reject?{reason:managementReason(action.name)}:proof});
       onComplete();
     }catch(e){setError(errorMessage(e));onFailure(e);}finally{setBusy(false);}
   }
@@ -36,8 +38,7 @@ export function ManualPaymentDialog({action,onClose,onComplete,onFailure}:{actio
         <label>تاریخ واریز (میلادی)<DigitInput name="paid_date" type="date" dir="ltr" max={today()} defaultValue={today()} required/></label>
         <label className="checkbox-label"><input type="checkbox" name="bank_verified" required/>واریز قطعی، مبلغ و مرجع را در حساب بانک بررسی و با این خرید تطبیق دادم.</label>
       </>}
-      {reject && <p className="manage-notice">دلیل برای کاربر نمایش داده می‌شود؛ اطلاعات شخصی یا بانکی در آن ننویس. اگر وجهی دریافت شده، رد درخواست جای بازپرداخت را نمی‌گیرد.</p>}
-      <label>دلیل بررسی<textarea name="reason" minLength={3} maxLength={200} rows={3} required placeholder="دلیل کوتاه بدون اطلاعات خصوصی"/></label>
+      {reject && <p className="manage-notice">درخواست با پیام «رسید بانکی تأیید نشد» رد می‌شود. اگر وجهی دریافت شده، رد درخواست جای بازپرداخت را نمی‌گیرد.</p>}
       <button className={`manage-button ${reject?'danger':'primary'}`} disabled={busy || (grant && !chosen)}>{busy?'در حال ثبت…':reject?'ثبت رد رسید':'تأیید و فعال‌سازی بسته'}</button>
     </form>
   </dialog>;

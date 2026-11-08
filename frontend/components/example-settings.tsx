@@ -1,5 +1,7 @@
 "use client";
 
+import { managementReason } from "@/lib/management";
+
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { api, errorMessage } from "@/lib/api";
 import { DigitInput } from "./digit-input";
@@ -63,7 +65,7 @@ function CatalogEditor({ edit, data, onCancel, onSaved, onFailure }: { edit: Edi
     setBusy(true); setError("");
     try {
       await api(`/manage/message-examples/${edit.kind}${edit.value ? `/${edit.value.id}` : ""}${deleting ? "/delete" : ""}`, {
-        method: "POST", body: { ...(deleting ? {} : { values }), revision: edit.value?.revision ?? 0, reason: form.get("reason") },
+        method: "POST", body: { ...(deleting ? {} : { values }), revision: edit.value?.revision ?? 0, reason: managementReason(deleting ? "example_delete" : "example_save") },
       });
       await onSaved();
     } catch (e) { setError(errorMessage(e)); onFailure(e); }
@@ -85,7 +87,6 @@ function CatalogEditor({ edit, data, onCancel, onSaved, onFailure }: { edit: Edi
           <label>ترتیب نمایش<DigitInput type="number" name="sort_order" min={0} max={10000} required defaultValue={edit.value?.sort_order ?? 0} /></label>
           <label className="checkbox-label"><input type="checkbox" name="active" defaultChecked={edit.value?.active ?? true} />نمایش در سایت</label>
         </>}
-        <label>دلیل تغییر<input name="reason" required minLength={3} maxLength={200} /></label>
         <div className="example-admin-actions"><button type="submit" className="manage-button primary">{busy ? "در حال ذخیره…" : deleting ? "تأیید حذف" : "ذخیره"}</button>
           <button type="button" className="manage-button secondary" onClick={deleting ? () => setDeleting(false) : onCancel}>انصراف</button>
           {edit.value && !deleting && <button type="button" className="manage-button secondary" onClick={() => { setDeleting(true); setError(""); }}>حذف</button>}

@@ -166,7 +166,7 @@ class DemoLimitToolTests(TestCase):
         self.assertNotIn("09901234567", str(audit.after))
 
     def test_invalid_form_reason_or_unknown_sender_cannot_reset(self):
-        for changes in [{"sender_phone": "123"}, {"sender_phone": "09901234560"}, {"reason": ""}]:
+        for changes in [{"sender_phone": "123"}, {"sender_phone": "09901234560"}, {"reason": "x"}]:
             response = self.admin_client.post(self.url, {**self.payload, **changes})
             self.assertEqual(response.status_code, 200)
             self.assertTrue(response.context["form"].errors)

@@ -1,3 +1,4 @@
+from .admin_audit_forms import AutomaticReasonField
 from django import forms
 from django.contrib import admin, messages
 from django.http import HttpResponseRedirect
@@ -7,7 +8,7 @@ from .services import APIError
 
 
 class PackageForm(forms.ModelForm):
-    reason = forms.CharField(label='دلیل تغییر', min_length=3, max_length=200)
+    reason = AutomaticReasonField(audit_default="django_admin:package_admin", label='دلیل تغییر', min_length=3, max_length=200)
     source_revision = forms.IntegerField(widget=forms.HiddenInput)
 
     class Meta:
@@ -81,7 +82,7 @@ from .manual_payments import SETTING_FIELDS, save_settings
 
 
 class ManualSettingsForm(forms.ModelForm):
-    reason = forms.CharField(label='دلیل تغییر', min_length=3, max_length=200)
+    reason = AutomaticReasonField(audit_default="django_admin:package_admin", label='دلیل تغییر', min_length=3, max_length=200)
     source_revision = forms.IntegerField(widget=forms.HiddenInput)
 
     class Meta:

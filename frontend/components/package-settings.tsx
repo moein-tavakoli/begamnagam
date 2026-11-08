@@ -1,5 +1,7 @@
 "use client";
 
+import { managementReason } from "@/lib/management";
+
 import { DigitInput } from "./digit-input";
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
@@ -38,7 +40,7 @@ function PackageForm({ value, onSaved, onFailure }: { value: MessagePackage | nu
     try {
       await api(value ? `/manage/packages/${value.id}` : "/manage/packages", { method: "POST", body: {
         values: { name: String(data.get("name")), message_count: Number(data.get("message_count")), price_toman: Number(data.get("price_toman")), active: data.get("active") === "on", sort_order: Number(data.get("sort_order")) },
-        revision: value?.revision ?? 0, reason: data.get("reason"),
+        revision: value?.revision ?? 0, reason: managementReason("packages"),
       } });
       form.reset(); await onSaved();
     } catch (e) { setError(errorMessage(e)); onFailure(e); }
@@ -50,7 +52,6 @@ function PackageForm({ value, onSaved, onFailure }: { value: MessagePackage | nu
     <div className="manage-two-columns"><label>تعداد پیام<DigitInput name="message_count" type="number" inputMode="numeric" min={1} max={1000000} required defaultValue={value?.message_count ?? 3} /></label><label>قیمت کل بسته (تومان)<DigitInput name="price_toman" type="number" inputMode="numeric" min={1} max={2147483647} required defaultValue={value?.price_toman ?? 10000} /></label></div>
     <label>ترتیب نمایش<DigitInput name="sort_order" type="number" min={0} max={2147483647} required defaultValue={value?.sort_order ?? 0} /></label>
     <label className="checkbox-label"><input name="active" type="checkbox" defaultChecked={value?.active ?? false} />این بسته فعال باشد و به کاربران نمایش داده شود</label>
-    <label>دلیل تغییر<input name="reason" minLength={3} maxLength={200} required /></label>
     <button className="manage-button primary" disabled={busy}>{busy ? "در حال ذخیره…" : "ذخیرهٔ بسته"}</button>
   </form></section>;
 }

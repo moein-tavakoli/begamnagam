@@ -1,5 +1,7 @@
 "use client";
 
+import { managementReason } from "@/lib/management";
+
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { api, errorMessage } from '@/lib/api';
 
@@ -10,7 +12,7 @@ export function ManualPaymentSettings({onFailure}:{onFailure:(e:unknown)=>void})
   useEffect(()=>{void load();},[load]);
   async function save(event:FormEvent<HTMLFormElement>){
     event.preventDefault();const form=new FormData(event.currentTarget);if(!config)return;setBusy(true);setNotice('');setError('');
-    try{setConfig(await api<Configuration>('/manage/manual-payment-settings',{method:'POST',body:{revision:config.revision,reason:form.get('reason'),values:{enabled:form.get('enabled')==='on',card_number:String(form.get('card_number')||''),card_holder:String(form.get('card_holder')||''),bank_name:String(form.get('bank_name')||''),bale_username:String(form.get('bale_username')||''),telegram_username:String(form.get('telegram_username')||'')}}}));setNotice('تنظیمات ذخیره شد. کارت‌به‌کارت فقط با تأیید رسید توسط ادمین اعتبار می‌دهد.');}
+    try{setConfig(await api<Configuration>('/manage/manual-payment-settings',{method:'POST',body:{revision:config.revision,reason:managementReason("manual_settings"),values:{enabled:form.get('enabled')==='on',card_number:String(form.get('card_number')||''),card_holder:String(form.get('card_holder')||''),bank_name:String(form.get('bank_name')||''),bale_username:String(form.get('bale_username')||''),telegram_username:String(form.get('telegram_username')||'')}}}));setNotice('تنظیمات ذخیره شد. کارت‌به‌کارت فقط با تأیید رسید توسط ادمین اعتبار می‌دهد.');}
     catch(e){setError(errorMessage(e));onFailure(e);}finally{setBusy(false);}
   }
   return <section className="manage-card"><div className="manage-section-heading"><h2>کارت مقصد و دریافت رسید</h2><button className="manage-button secondary" disabled={busy} onClick={()=>void load()}>تازه‌سازی</button></div>
@@ -23,7 +25,6 @@ export function ManualPaymentSettings({onFailure}:{onFailure:(e:unknown)=>void})
       <div className="manage-two-columns"><label>شناسهٔ پشتیبان در بله<input name="bale_username" dir="ltr" autoComplete="off" maxLength={33} defaultValue={config.values.bale_username} placeholder="username"/></label><label>شناسهٔ پشتیبان در تلگرام<input name="telegram_username" dir="ltr" autoComplete="off" maxLength={33} defaultValue={config.values.telegram_username} placeholder="username"/></label></div>
       <p className="manage-muted">فقط شناسه، بدون لینک؛ حداقل یکی لازم است. شمارهٔ کارت و مرجع‌های بانکی در دیتابیس رمز‌شده‌اند. تغییر کارت، درخواست‌های قبلی را تغییر نمی‌دهد.</p>
       <label className="checkbox-label"><input name="enabled" type="checkbox" defaultChecked={config.values.enabled}/>خرید کارت‌به‌کارت در صفحهٔ پرداخت فعال باشد</label>
-      <label>دلیل تغییر<input name="reason" minLength={3} maxLength={200} required/></label>
       <button className="manage-button primary" disabled={busy}>{busy?'در حال ذخیره…':'ذخیرهٔ تنظیمات'}</button>
     </form>}
   </section>;

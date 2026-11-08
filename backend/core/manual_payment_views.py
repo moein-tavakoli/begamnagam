@@ -6,7 +6,7 @@ from .services import APIError, api
 from .views import body
 
 
-@staff_api(['GET','POST'],'core.manage_manual_payments')
+@staff_api(['GET','POST'],'core.manage_manual_payments',automatic_reason=True)
 def configuration(request):
     return save_settings(request.user,body(request)) if request.method=='POST' else settings_data()
 
@@ -26,16 +26,16 @@ def cancel(request,purchase_id):
     return purchase_data(cancel_purchase(request.user,purchase))
 
 
-@staff_api(['POST'],'core.approve_manual_payments')
+@staff_api(['POST'],'core.approve_manual_payments',automatic_reason=True)
 def approve_payment(request,manual_id):
     return purchase_data(approve(request.user,manual_id,body(request)))
 
 
-@staff_api(['POST'],'core.approve_manual_payments')
+@staff_api(['POST'],'core.approve_manual_payments',automatic_reason=True)
 def reject_payment(request,manual_id):
     return purchase_data(reject(request.user,manual_id,body(request)))
 
 
-@staff_api(['POST'],'core.approve_manual_payments')
+@staff_api(['POST'],'core.approve_manual_payments',automatic_reason=True)
 def manual_grant(request):
     return purchase_data(grant_package(request.user,body(request),request.headers.get('Idempotency-Key','')))

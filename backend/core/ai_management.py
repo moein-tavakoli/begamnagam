@@ -15,7 +15,7 @@ def payload(config):
             'synchronous': True, 'cloud_fallback': False}
 
 
-@staff_api(['GET', 'POST'], 'core.manage_ai')
+@staff_api(['GET', 'POST'], 'core.manage_ai', automatic_reason=True)
 def configuration(request):
     config = current()
     if request.method == 'POST':

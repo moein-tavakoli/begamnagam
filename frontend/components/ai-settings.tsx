@@ -1,5 +1,7 @@
 "use client";
 
+import { managementReason } from "@/lib/management";
+
 import { DigitInput } from "./digit-input";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
@@ -47,7 +49,7 @@ function Configuration({ data, onSaved, onFailure }: { data: Settings; onSaved: 
     for (const option of data.tone_options) values[option.field] = form.get(option.field) === 'on';
     setBusy(true); setError(""); setFields({});
     try {
-      const updated = await api<Settings>("/manage/ai", { method: "POST", body: { values, revision: data.revision, reason: form.get("reason") } });
+      const updated = await api<Settings>("/manage/ai", { method: "POST", body: { values, revision: data.revision, reason: managementReason("ai") } });
       onSaved(updated);
     } catch (failure) {
       setError(errorMessage(failure)); if (failure instanceof ApiError) setFields(failure.fields || {}); onFailure(failure);
@@ -78,7 +80,6 @@ function Configuration({ data, onSaved, onFailure }: { data: Settings; onSaved: 
         <label>مدل GapGPT<input name="gapgpt_model" dir="ltr" defaultValue={data.values.gapgpt_model} maxLength={100} aria-invalid={!!fields.gapgpt_model} /><small>{fields.gapgpt_model ? String(fields.gapgpt_model) : data.gapgpt_credentials_configured ? "کلید روی سرور تنظیم شده است." : "کلید روی سرور تنظیم نشده است."}</small></label>
         {numbers.map(([key, label, min, max]) => <label key={key}>{label}<DigitInput name={key} type="number" min={min} max={max} step={1} defaultValue={data.values[key]} required aria-invalid={!!fields[key]} />{fields[key] && <small className="manage-field-error">{String(fields[key])}</small>}</label>)}
       </div>
-      <label>دلیل تغییر<input name="reason" required minLength={3} maxLength={200} placeholder="دلیل کوتاه؛ اطلاعات خصوصی ننویسید" /></label>
       <button className="manage-button primary">{busy ? "در حال ذخیره…" : "ذخیرهٔ تنظیمات هوش مصنوعی"}</button>
     </fieldset>
   </form>;

@@ -169,3 +169,25 @@
 .example-admin-list p { margin:6px 0;font-size:13px; }
 .example-admin-list small { color:var(--muted); }
 @media(max-width:600px){.example-admin-list article{align-items:stretch;flex-direction:column}.example-admin-list button{align-self:flex-start}}
+
+.manage-sidebar nav a { display:flex; align-items:center; gap:8px; text-align:right; width:100%; padding:10px 13px; min-height:44px; border-radius:var(--button-radius); color:#5b506c; font-size:14px; text-decoration:none; }
+.manage-sidebar nav a:hover { background:#f7f4fc; }
+.manage-sidebar nav a[aria-current=page] { color:#392257; background:#ebe2ff; font-weight:700; }
+.manage-record-link { color:#56358b; text-underline-offset:4px; }
+.manage-app td { padding:10px 12px; vertical-align:middle; }
+.manage-app td:has(.manage-row-menu) { min-width:64px; width:64px; }
+.manage-app .manage-row-menu > summary { display:flex; align-items:center; justify-content:center; width:44px; height:44px; padding:0; border:1px solid #d8cbea; border-radius:12px; list-style:none; color:#56358b; font-size:16px; letter-spacing:2px; }
+.manage-row-menu > summary::-webkit-details-marker { display:none; }
+.manage-row-menu[open] > summary { background:#ebe2ff; }
+.manage-row-menu .manage-row-actions { min-width:200px; max-width:260px; padding:8px; margin-top:8px; border:1px solid #d8cbea; border-radius:12px; background:#faf7ff; }
+.manage-row-actions > a, .manage-row-actions > button { display:flex; align-items:center; min-height:44px; padding:8px 10px; border:0; border-radius:8px; color:#392257; text-align:right; text-decoration:none; background:transparent; white-space:normal; cursor:pointer; font:inherit; font-size:13px; }
+.manage-row-actions > a:hover, .manage-row-actions > button:hover { background:#ebe2ff; }
+.manage-user-tabs { display:flex; gap:10px; flex-wrap:wrap; }
+.manage-user-tabs [aria-current=page] { background:#ebe2ff; border-color:#7951c1; color:#392257; }
+.manage-activity-list { display:grid; gap:12px; }
+.manage-activity-list > article { display:grid; gap:8px; padding:16px; border:1px solid #e6deef; border-radius:14px; overflow-wrap:anywhere; }
+.manage-activity-list > article > .manage-button { justify-self:start; }
+.manage-activity-list article details { font-size:12px; color:#6e627d; }
+@media(max-width:699px) { .manage-app .manage-records { padding:14px; } .manage-activity-list > article { padding:12px; } }
+.manage-app .manage-action-column { position:sticky; inset-inline-end:0; background:#fff; border-inline-start:1px solid #e6deef; z-index:1; }
+.manage-app th.manage-action-column { background:#f7f4fd; }

@@ -23,6 +23,7 @@ from .services import APIError, api, is_product_authenticated, limited
 from .sms import compose_recipient_sms, SMSTooLong
 from .otp import OTP_LENGTH, valid_otp
 from .input_digits import canonical_input
+from .message_attempts import capture_preview_attempt, record_attempt
 
 logger = logging.getLogger(__name__)
 
@@ -235,8 +236,10 @@ def logout_view(request):
 
 
 @api(["POST"])
+@capture_preview_attempt
 def preview(request):
     data = body(request)
+    request._message_attempt_data = data
     if set(data) - {'text', 'category', 'recipient_phone', 'source_mode', 'payment_method', 'message_tone', 'alternative_token'}:
         raise APIError('invalid_input', 'فقط متن اولیه و شمارهٔ گیرنده را بفرست؛ نتیجهٔ بررسی در سرور تعیین می‌شود.', 422)
     owner = request.user if is_product_authenticated(request.user) else None
@@ -260,6 +263,7 @@ def preview(request):
     ai = ai_configuration()
     from .message_tones import resolve as resolve_tone
     tone = resolve_tone(data.get('message_tone'), ai)
+    request._message_attempt_tone = tone
     use_freeform = freeform_available(ai)
     source_mode = data.get('source_mode')
     if source_mode is not None and (not isinstance(source_mode, str) or source_mode not in {'suggestion', 'freeform', 'reviewed_alternative'}):
@@ -292,6 +296,7 @@ def preview(request):
             'برای آماده‌سازی متن، ابتدا وارد شو و شمارهٔ گیرنده را وارد کن.', 401 if not owner else 422)
     if owner and not unlimited:
         limited("preview-user", str(owner.pk), 20, 600)
+    request._message_attempt_admitted = True
     alternative_body = None
     if choosing_alternative:
         from .message_alternatives import resolve as resolve_alternative
@@ -315,7 +320,8 @@ def preview(request):
         else:
             rewritten, mode = rewrite(category, text, message_tone=tone, provider_mode='template')
     except ModerationRejected as exc:
-        ModerationAudit.objects.create(owner=owner, category=category[:32], outcome="rejected", reason_code=str(exc), content_digest=digest(json.dumps(text, ensure_ascii=True)))
+        event = ModerationAudit.objects.create(owner=owner, category=category[:32], outcome="rejected", reason_code=str(exc), content_digest=digest(json.dumps(text, ensure_ascii=True)))
+        request._message_attempt_moderation_event = event.event_id
         from .message_alternatives import feedback, offers
         code, message = feedback(text, str(exc))
         alternatives = offers(owner, session_key(request), recipient_hash, tone) if owner and recipient_hash and isinstance(text, str) and 0 < len(text) <= 280 else []
@@ -346,7 +352,9 @@ def preview(request):
         item.full_sms = full_sms
         item.review_signature = signature(item) if use_freeform else ''
         item.save(update_fields=["text", "full_sms", 'review_signature'])
-    ModerationAudit.objects.create(owner=owner, category=category, outcome="accepted", reason_code=mode + ('_' + tone if direct else ''), content_digest=digest(json.dumps(text, ensure_ascii=True)))
+        event = ModerationAudit.objects.create(owner=owner, category=category, outcome="accepted", reason_code=mode + ('_' + tone if direct else ''), content_digest=digest(json.dumps(text, ensure_ascii=True)))
+        request._message_attempt_moderation_event = event.event_id
+        record_attempt(request, preview=item)
     return {"preview_id": str(item.id), "payment_method": item.payment_method, "wallet_terms_version": item.wallet_policy_version,
         "rewritten_text": item.generated_body if use_freeform else item.text, "price_toman": item.price_toman, "is_free": item.is_free,
         "message_tone": item.message_tone,

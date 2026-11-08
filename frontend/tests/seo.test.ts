@@ -245,9 +245,17 @@ test("all page routes opt into public or private metadata and all public routes 
   const routes = readdirSync(root, { recursive: true })
     .filter((file): file is string => typeof file === "string" && /(^|\/)page\.tsx$/.test(file))
     .map(file => ({ path: `/${file.replace(/(^|\/)page\.tsx$/, "")}`, source: readFileSync(new URL(file, root), "utf8") }));
-  assert.deepEqual(routes.map(route => route.path).sort(), [...Object.keys(publicPages), ...Object.keys(privatePages)].sort());
+  assert.deepEqual(routes.filter(route => !route.path.startsWith("/manage/")).map(route => route.path).sort(), [...Object.keys(publicPages), ...Object.keys(privatePages)].sort());
+  const managementLayout = readFileSync(new URL("manage/layout.tsx", root), "utf8");
+  assert.match(managementLayout, /export const metadata = privateMetadata\("\/manage"\)/);
+  assert.ok(routes.some(route => route.path === "/manage/users/[id]"));
   for (const { path, source } of routes) {
     const isPublic = path in publicPages;
+    if (path.startsWith("/manage")) {
+      assert.ok(!source.includes("publicMetadata"), path);
+      assert.ok(!source.includes("<StructuredData"), path);
+      continue; // These routes inherit the noindex management layout.
+    }
     const factory = isPublic ? "publicMetadata" : "privateMetadata";
     // Public pages may extend their metadata with an approved verification tag.
     assert.match(source, new RegExp(`export const metadata = (?:\\{\\s*\\.\\.\\.)?${factory}\\(`), path);

@@ -42,7 +42,7 @@ export function managementDate(value: unknown): string {
   if (Number.isNaN(date.getTime())) return "—";
   return new Intl.DateTimeFormat("fa-IR", { dateStyle: "short", ...(String(value).length > 10 ? { timeStyle: "short" as const } : {}), timeZone: "Asia/Tehran" }).format(date);
 }
-export type ManagementAction = { name: string; label: string; object_id: string; value?: boolean; manualPayment?: { amount_toman: number }; accountLimits?: { sender_daily_limit: number | null; rewrite_daily_limit: number | null } };
+export type ManagementAction = { name: string; label: string; object_id: string; value?: boolean; manualPayment?: { amount_toman: number }; userId?: string; accountLimits?: { sender_daily_limit: number | null; rewrite_daily_limit: number | null } };
 export function managementActions(resource: string, row: ManagementRow, permissions: string[]): ManagementAction[] {
   const actions: ManagementAction[] = [];
   const add = (name: string, label: string, value?: boolean) => actions.push({ name, label, object_id: row.record_id, value });
@@ -57,7 +57,7 @@ export function managementActions(resource: string, row: ManagementRow, permissi
   }
   if (resource === 'manual-payments' && permissions.includes('approve_manual_payments') && ['awaiting_transfer','awaiting_review'].includes(String(row.status))) {
     actions.push({name:'approve_card',label:'تأیید و فعال‌سازی بسته',object_id:row.record_id,manualPayment:{amount_toman:Number(row.purchase__amount_toman)}});
-    add('reject_card','رد رسید با دلیل');
+    add('reject_card','رد رسید');
   }
   if (resource === "orders" && permissions.includes("view_private_message_text")) add("message_texts", "مشاهدهٔ متن‌ها");
   if (resource === "reports") {
@@ -71,3 +71,46 @@ export function managementActions(resource: string, row: ManagementRow, permissi
   if (resource === "refunds" && permissions.includes("confirm_refund") && row.status !== "refunded") add("confirm_refund", "ثبت بازپرداخت مستند");
   return actions;
 }
+
+export function managementHref(resource: string): string {
+  return resource === "dashboard" ? "/manage" : `/manage/${resource === "accounts" ? "users" : resource}`;
+}
+export function managementUserHref(id: string, section?: "messages" | "invitations"): string {
+  return `/manage/users/${encodeURIComponent(id)}${section ? `?section=${section}` : ""}`;
+}
+export function managementRoute(pathname: string): { resource: string; userId?: string } {
+  const [, , resource, userId] = pathname.split("/");
+  return { resource: !resource ? "dashboard" : resource === "users" ? "accounts" : resource,
+    ...(resource === "users" && userId ? { userId } : {}) };
+}
+export function managementNavigation(session: ManagementSession): { key: string; title: string }[] {
+  const permissions = session.permissions || [], resources = session.resources || [];
+  return [
+    ...(permissions.includes("view_operations") ? [{ key: "dashboard", title: "نمای کلی" }] : []),
+    ...(resources.some(item => item.key === "accounts") ? [{ key: "accounts", title: "کاربران" }] : []),
+    ...(session.authenticated ? [{ key: "support", title: "پشتیبانی" }] : []),
+    ...resources.filter(item => item.key !== "accounts" && (!resources.some(resource => resource.key === "accounts") || !["orders", "invitations", "invitation-deliveries", "invitation-sends"].includes(item.key))),
+    ...([ ["manage_site_limits", "limits", "تنظیمات سایت"], ["manage_message_packages", "packages", "بسته‌های پیام"],
+      ["manage_message_examples", "examples", "پیام‌های نمونه"], ["manage_manual_payments", "manual-settings", "کارت و دریافت رسید"],
+      ["manage_ai", "ai", "هوش مصنوعی"] ].filter(([permission]) => permissions.includes(permission)).map(([, key, title]) => ({ key, title }))),
+  ];
+}
+const auditReasons: Record<string, string> = {
+  suspend: "تعلیق کاربر از پنل مدیریت", unsuspend: "رفع تعلیق کاربر از پنل مدیریت", tone: "تغییر لحن کاربر از پنل مدیریت",
+  free_sending: "تغییر ارسال رایگان کاربر از پنل مدیریت", account_limits: "تغییر سقف اختصاصی کاربر از پنل مدیریت",
+  halt: "توقف ارسال از پنل مدیریت", resume: "ازسرگیری ارسال از پنل مدیریت", review: "بررسی پرونده از پنل مدیریت",
+  message_texts: "بررسی متن پیام از پنل مدیریت", attempt_texts: "بررسی متن تلاش پیام از پنل مدیریت",
+  close_report: "بستن گزارش از پنل مدیریت", hold_report: "نگهداری گزارش از پنل مدیریت", ack_alert: "بررسی هشدار از پنل مدیریت",
+  confirm_refund: "ثبت سند بازپرداخت از پنل مدیریت", grant_package: "فعال‌سازی بسته پس از بررسی واریز بانکی", approve_card: "تأیید رسید پس از بررسی واریز بانکی", reject_card: "رسید بانکی تأیید نشد.",
+  limits: "ذخیره تنظیمات سایت از پنل مدیریت", request_limits: "ذخیره کنترل درخواست از پنل مدیریت", ai: "ذخیره تنظیمات هوش مصنوعی از پنل مدیریت",
+  manual_settings: "ذخیره تنظیمات کارت و رسید از پنل مدیریت", packages: "ذخیره بسته پیام از پنل مدیریت",
+  example_save: "ذخیره پیام نمونه از پنل مدیریت", example_delete: "حذف پیام نمونه از پنل مدیریت",
+};
+export const managementReason = (action: string): string => auditReasons[action] || "ثبت اقدام از پنل مدیریت";
+
+export type ManagementActivity = {
+  account: { id: number; phone: string; phone_masked: string; suspended: boolean };
+  section: "messages" | "invitations";
+  rows: (ManagementRow & { kind: "order" | "attempt" | "moderation" | "invitation"; id: string; created_at: string; status: string; reason_code?: string; phone?: string; order_id?: string })[];
+  page: number; total: number; page_size: number;
+};

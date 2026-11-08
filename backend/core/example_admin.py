@@ -1,3 +1,4 @@
+from .admin_audit_forms import AutomaticReasonField
 from django import forms
 from django.contrib import admin, messages
 from django.http import HttpResponseRedirect
@@ -9,7 +10,7 @@ from .services import APIError
 
 
 class ExampleCategoryForm(forms.ModelForm):
-    reason = forms.CharField(label='دلیل تغییر', min_length=3, max_length=200)
+    reason = AutomaticReasonField(audit_default="django_admin:example_admin", label='دلیل تغییر', min_length=3, max_length=200)
     source_revision = forms.IntegerField(widget=forms.HiddenInput)
 
     class Meta:

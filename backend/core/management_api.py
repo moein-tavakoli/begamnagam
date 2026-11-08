@@ -1,4 +1,6 @@
 """Staff-only JSON API for the Next console. No generic model write endpoint."""
+import json
+import re
 from functools import wraps
 
 from django.conf import settings
@@ -14,13 +16,13 @@ from .account_options import update_account_options
 from .limit_defaults import REQUEST_LIMITS
 from .limit_services import LIMIT_SECTIONS, editable_values, update_limits, validate_reason
 from .limits import policy, request_limit
-from .privacy import digest, normalize_phone
+from .privacy import decrypt, digest, normalize_phone
 from .safety import operator_action, snapshot
 from .services import APIError, api, limited
 from .views import body, session_key
 
 
-def staff_api(methods, permission=None):
+def staff_api(methods, permission=None, *, automatic_reason=False):
     def decorate(view):
         @api(methods)
         @wraps(view)
@@ -30,6 +32,11 @@ def staff_api(methods, permission=None):
             if not request.user.is_active or not request.user.is_staff or (permission and not request.user.has_perm(permission)):
                 raise APIError("forbidden", "مجوز دسترسی به این بخش را ندارید.", 403)
             try:
+                if automatic_reason and request.method == 'POST' and request.content_type == 'application/json':
+                    data = body(request)
+                    if 'reason' not in data:
+                        data['reason'] = f'اقدام مدیر در پنل مدیریت: {view.__name__}'
+                        request._body = json.dumps(data, ensure_ascii=False).encode('utf-8')
                 return view(request, *args, **kwargs)
             except (ObjectDoesNotExist, ValidationError):
                 raise APIError("not_found", "رکورد پیدا نشد.", 404) from None
@@ -37,8 +44,8 @@ def staff_api(methods, permission=None):
     return decorate
 
 
-# Every exposed field is reviewed explicitly. Phones, message bodies, provider
-# references, recipient hashes, credentials and idempotency keys are excluded.
+# Every exposed field is reviewed explicitly. Account phones are available only
+# under view_account and audited; message bodies and provider secrets stay out.
 RESOURCES = {
     'manual-payments': (m.ManualPayment, 'رسیدهای کارت‌به‌کارت', 'created_at', 'status', [
         ('id','شناسهٔ درخواست','id'), ('purchase_id','شناسهٔ خرید','id'),
@@ -60,8 +67,8 @@ RESOURCES = {
     'credit-entries': (m.CreditEntry, 'دفتر اعتبار پیام', 'created_at', 'kind', [
         ('id', 'شناسه', 'id'), ('account_id', 'حساب', 'id'), ('kind', 'نوع', 'status'), ('units', 'تعداد', 'number'),
         ('environment', 'محیط', 'text'), ('created_at', 'ثبت', 'date')]),
-    "accounts": (m.Account, "حساب‌ها", "created_at", None, [
-        ("id", "شناسه", "id"), ("phone_masked", "موبایل", "text"),
+    "accounts": (m.Account, "کاربران", "created_at", None, [
+        ("id", "شناسه", "id"), ("phone", "موبایل", "text"),
         ("wallet_balance_toman", "موجودی کیف پول", "money"),
         ('unlimited_free_sends', 'ارسال رایگان نامحدود', 'bool'),
         ('sender_daily_limit', 'سقف اختصاصی ارسال / ۲۴ ساعت', 'number'),
@@ -183,7 +190,7 @@ def records(request, resource):
     if status and status_field:
         rows = rows.filter(**{status_field: status})
     query = query.strip()
-    if query:
+    if query and resource != 'accounts':
         if resource in {"accounts", "invitations"}:
             try:
                 rows = rows.filter(phone_hash=digest(normalize_phone(query)))
@@ -195,9 +202,14 @@ def records(request, resource):
                 if kind in {"status", "text"} and field not in {"reason", "object_id"}:
                     condition |= Q(**{field + "__icontains": query})
             rows = rows.annotate(search_id=Cast("pk", CharField())).filter(condition)
-    total = rows.count()
-    fields = list(dict.fromkeys([model._meta.pk.name] + [col[0] for col in columns]))
-    values = list(rows.order_by("-" + ordering, "-pk").values(*fields)[(page-1)*25:page*25])
+    if resource == 'accounts':
+        total, values = account_records(rows, query, page, columns)
+        m.OperatorAudit.objects.create(actor=request.user, action='account_phones_viewed', object_id='accounts',
+            reason='مشاهدهٔ شمارهٔ کاربران در پنل مدیریت', after={'page': page, 'returned': len(values)})
+    else:
+        total = rows.count()
+        fields = list(dict.fromkeys([model._meta.pk.name] + [col[0] for col in columns]))
+        values = list(rows.order_by("-" + ordering, "-pk").values(*fields)[(page-1)*25:page*25])
     for value in values:
         for money_field in ('balance_after_toman', 'wallet_balance_toman'):
             if money_field in value:
@@ -212,6 +224,84 @@ def records(request, resource):
             "reports": ["open", "closed"], "moderation": ["accepted", "rejected"]}.get(resource, [])]
     return {"title": title, "columns": [{"key": k, "label": label, "type": kind} for k, label, kind in columns],
         "rows": values, "total": total, "page": page, "page_size": 25, "statuses": choices}
+
+
+def account_records(rows, query, page, columns):
+    """Scan encrypted phones only after permission checks; retain one page."""
+    fields = ['phone_cipher' if key == 'phone' else key for key, _, _ in columns]
+    fields.append('phone_masked')
+    rows = rows.order_by('-created_at', '-pk')
+    partial = None
+    if query:
+        try:
+            rows = rows.filter(phone_hash=digest(normalize_phone(query)))
+        except ValueError:
+            partial = re.sub(r'[\s()\-]', '', query)
+    selected = []
+    if partial is None:
+        total = rows.count()
+        candidates = rows.values(*fields)[(page-1)*25:page*25]
+        for value in candidates:
+            cipher = value.pop('phone_cipher')
+            value['phone'] = decrypt(cipher) if cipher else ''
+            selected.append(value)
+        return total, selected
+    total = 0
+    # Only IDs and encrypted phones cross the scan; other fields are fetched
+    # for the bounded selected page after matching in memory.
+    ids = []
+    for value in rows.values('pk', 'phone_cipher').iterator(chunk_size=500):
+        phone = decrypt(value['phone_cipher']) if value['phone_cipher'] else ''
+        if (partial.isascii() and partial.isdigit() and partial in phone) or str(value['pk']) == query:
+            if (page-1)*25 <= total < page*25:
+                ids.append(value['pk'])
+            total += 1
+    for value in rows.filter(pk__in=ids).values(*fields):
+        cipher = value.pop('phone_cipher')
+        value['phone'] = decrypt(cipher) if cipher else ''
+        selected.append(value)
+    return total, selected
+
+
+@staff_api(['GET'], 'core.view_account')
+def user_summary(request, account_id):
+    from .user_activity import account_summary, audit_activity
+    account = m.Account.objects.get(pk=account_id)
+    result = account_summary(account)
+    audit_activity(request.user, account, 'account')
+    return {'account': result}
+
+
+@staff_api(['POST'], 'core.view_account')
+def user_activity(request, account_id):
+    from .user_activity import activity_payload, audit_activity
+    data = body(request)
+    section, page = data.get('section'), data.get('page', 1)
+    if not isinstance(section, str) or section not in {'messages', 'invitations'} or type(page) is not int or not 1 <= page <= 100000:
+        raise APIError('invalid_input', 'بخش و صفحهٔ سابقه معتبر نیست.', 422)
+    permission = 'core.view_order' if section == 'messages' else 'core.view_invitation'
+    if not request.user.has_perm(permission):
+        raise APIError('forbidden', 'مجوز مشاهدهٔ این سابقه را ندارید.', 403)
+    account = m.Account.objects.get(pk=account_id)
+    result = activity_payload(account, section, page)
+    audit_activity(request.user, account, section)
+    return result
+
+
+@staff_api(['POST'], 'core.view_account', automatic_reason=True)
+def review_attempt(request, account_id, attempt_id):
+    from .message_review import may_review_messages
+    if not may_review_messages(request.user):
+        raise APIError('forbidden', 'مجوز مشاهدهٔ متن پیام را ندارید.', 403)
+    reason = validate_reason(body(request).get('reason'))
+    account = m.Account.objects.get(pk=account_id)
+    attempt = m.MessageAttempt.objects.select_related('preview').get(pk=attempt_id, owner_id=account.user_id)
+    preview = attempt.preview
+    reviewed = (preview.generated_body or preview.text) if preview else None
+    m.OperatorAudit.objects.create(actor=request.user, action='message_attempt_text_viewed', object_id=str(attempt.pk), reason=reason)
+    return {'id': str(attempt.pk), 'original_text': attempt.original_text,
+        'original_available': bool(attempt.original_text), 'reviewed_text': reviewed, 'final_text': reviewed,
+        'mode': preview.moderation_mode if preview else None}
 
 
 def limits_payload():
@@ -231,7 +321,7 @@ def limits_payload():
         "gateway_problem": gateway_problem()}
 
 
-@staff_api(["GET", "POST"], "core.manage_site_limits")
+@staff_api(["GET", "POST"], "core.manage_site_limits", automatic_reason=True)
 def limits(request):
     if request.method == "POST":
         data = body(request)
@@ -239,14 +329,14 @@ def limits(request):
     return limits_payload()
 
 
-@staff_api(["POST"], "core.manage_site_limits")
+@staff_api(["POST"], "core.manage_site_limits", automatic_reason=True)
 def request_limits(request, scope):
     data = body(request)
     update_limits(request.user, "request", data.get("values"), data.get("revision"), data.get("reason"), scope=scope)
     return limits_payload()
 
 
-@staff_api(["POST"])
+@staff_api(["POST"], automatic_reason=True)
 def action(request):
     data = body(request)
     name, identifier = data.get("action"), data.get("object_id", "")
@@ -269,7 +359,7 @@ def action(request):
     return {"ok": True}
 
 
-@staff_api(["POST"], "core.view_abusereport")
+@staff_api(["POST"], "core.view_abusereport", automatic_reason=True)
 def review_report(request, report_id):
     reason = validate_reason(body(request).get("reason"))
     report = m.AbuseReport.objects.select_related("grant__preview").get(pk=report_id)
@@ -285,7 +375,7 @@ def review_report(request, report_id):
     return {"id": str(report.pk), "details": report.details, "reviewed_text": text, "reason": report.reason, "status": report.status}
 
 
-@staff_api(["POST"], "core.view_private_message_text")
+@staff_api(["POST"], "core.view_private_message_text", automatic_reason=True)
 def review_message(request, order_id):
     from .message_review import may_review_messages, message_texts, audit_review
     if not may_review_messages(request.user):

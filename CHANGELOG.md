@@ -9,6 +9,31 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.22.0 — 2026-11-08 — Routed management users workspace (local)
+
+### Added
+
+- Add real management subroutes with a persistent shared shell, Users immediately
+  after Overview, compact three-dot row actions and per-user messages/invitations.
+  Preserve authorized legacy navigation for staff without account permission.
+- Show full account phones only to authorized staff, audit disclosure and support
+  Persian-digit partial search by scanning encrypted phones in memory. Keep search
+  out of URLs/logs and retain only one page of 25 rows; scans remain linear in users.
+- Record new authenticated message preparation outcomes in encrypted MessageAttempt
+  history, including AI rejection/unavailability. Deduplicate orders/previews and
+  moderation events. Quota/early-invalid requests cannot write private histories.
+  Add scoped text review, 31-day redaction, account deletion cleanup and key rotation.
+- Remove manual administrative reason prompts in Next/Django forms; keep automatic
+  action/actor audits, permissions, CSRF, revisions and mandatory financial proof.
+
+Validation: 645 PostgreSQL tests, 87 frontend tests, TypeScript, Django checks,
+migration consistency and Compose configuration passed. Independent review findings
+on quota admission and limited-staff navigation were fixed and covered. Native Next
+route/compilation checks passed with the project CA; authenticated browser checks
+were blocked by untrusted localhost TLS and no certificate warning was bypassed.
+Old rejected drafts cannot be recovered if never stored. No provider calls, test SMS,
+push or server deployment; local commit only.
+
 ## 0.21.1 — 2026-11-08 — Keep AI review classification-only (local)
 
 ### Fixed

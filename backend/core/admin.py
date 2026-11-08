@@ -1,3 +1,4 @@
+from .admin_audit_forms import AutomaticReasonField
 from django import forms
 from django.contrib import admin
 from . import ai_admin  # noqa: F401 — register the shared AI configuration
@@ -11,7 +12,7 @@ from .account_options import OPTION_PERMISSIONS, update_account_options
 
 
 class AccountOptionsForm(forms.ModelForm):
-    settings_reason = forms.CharField(label="دلیل تغییر تنظیمات", required=False, max_length=200,
+    settings_reason = AutomaticReasonField(audit_default="django_admin:admin", label="دلیل تغییر تنظیمات", required=False, max_length=200,
         help_text="برای تغییر تنظیمات دلیل کوتاه بنویس؛ شماره، کد ورود یا اطلاعات خصوصی ننویس.")
 
     class Meta:
@@ -21,8 +22,6 @@ class AccountOptionsForm(forms.ModelForm):
     def clean(self):
         cleaned = super().clean()
         if any(key in self.changed_data for key in OPTION_PERMISSIONS):
-            if len(cleaned.get("settings_reason", "").strip()) < 3:
-                self.add_error("settings_reason", "دلیل تغییر را در حداقل ۳ نویسه بنویس.")
             from .demo_limits import test_tools_enabled
             if ("unlimited_demo_sends" in self.changed_data and cleaned.get("unlimited_demo_sends")
                     and not test_tools_enabled()):
@@ -218,7 +217,7 @@ class DemoLimitResetForm(forms.Form):
         widget=forms.TextInput(attrs={"type": "tel", "inputmode": "tel", "dir": "ltr", "autocomplete": "off", "data-normalize-digits": ""}))
     recipient_phone = forms.CharField(label="شمارهٔ گیرندهٔ تست", max_length=32,
         widget=forms.TextInput(attrs={"type": "tel", "inputmode": "tel", "dir": "ltr", "autocomplete": "off", "data-normalize-digits": ""}))
-    reason = forms.CharField(label="دلیل تست", min_length=3, max_length=200,
+    reason = AutomaticReasonField(audit_default="django_admin:admin", label="دلیل تست", min_length=3, max_length=200,
         help_text="فقط دلیل کوتاه بنویس؛ شماره، کد ورود یا اطلاعات خصوصی ننویس.")
 
     def clean_sender_phone(self):
@@ -251,7 +250,7 @@ class DemoLimitResetAdmin(ReadOnlyAdmin):
 
 
 class AuditedActionForm(ActionForm):
-    reason = forms.CharField(label='دلیل اقدام', required=False, max_length=200)
+    reason = AutomaticReasonField(audit_default="django_admin:admin", label='دلیل اقدام', required=False, max_length=200)
     reference = forms.CharField(label='مرجع مستند بازپرداخت', required=False, max_length=100)
 
 

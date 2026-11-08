@@ -1,3 +1,4 @@
+from .admin_audit_forms import AutomaticReasonField
 """Audited, versioned admin changes; application credentials are never editable."""
 from django import forms
 from django.contrib import admin
@@ -8,7 +9,7 @@ from .models import RequestLimit, SiteLimits
 
 
 class AuditedLimitForm(forms.ModelForm):
-    reason = forms.CharField(label="دلیل تغییر", min_length=3, max_length=200,
+    reason = AutomaticReasonField(audit_default="django_admin:limit_admin", label="دلیل تغییر", min_length=3, max_length=200,
         help_text="دلیل کوتاه؛ شماره، کد ورود یا اطلاعات خصوصی ننویسید.")
     source_revision = forms.IntegerField(widget=forms.HiddenInput)
 

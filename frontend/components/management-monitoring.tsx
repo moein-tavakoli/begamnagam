@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { useSearchParams } from 'next/navigation';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -17,8 +16,6 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import RefreshRounded from '@mui/icons-material/RefreshRounded';
-import TvOutlined from '@mui/icons-material/TvOutlined';
-import FullscreenExitRounded from '@mui/icons-material/FullscreenExitRounded';
 import ArrowForwardRounded from '@mui/icons-material/ArrowForwardRounded';
 import { alpha } from '@mui/material/styles';
 import GroupsOutlined from '@mui/icons-material/GroupsOutlined';
@@ -135,19 +132,17 @@ function Charts({data}:{data:MonitoringData}) {
   </Grid>;
 }
 export function ManagementMonitoring({onFailure}:{onFailure:(error:unknown)=>void}) {
-  const tv=useSearchParams().get('tv')==='1';
   const [interval,setInterval]=useState(30),[ready,setReady]=useState(false);
   useEffect(()=>{try{setInterval(monitoringInterval(localStorage.getItem(settingsKey)));}catch{}setReady(true);},[]);
   const changeInterval=useCallback((value:string)=>{const next=monitoringInterval(value);setInterval(next);try{localStorage.setItem(settingsKey,String(next));}catch{}},[]);
   const {data,error,busy,paused,reload}=useMonitoring(interval,ready,onFailure);
-  return <Stack spacing={tv?1.5:2} aria-label="مانیتورینگ سایت" sx={{[compactDesktop]:{'& > :not(style) ~ :not(style)':{mt:1.5}}}}>
+  return <Stack spacing={1.5} aria-label="مانیتورینگ سایت">
     <Card sx={{p:1.5}}><Stack direction={{xs:'column',sm:'row'}} useFlexGap sx={{justifyContent:'space-between',alignItems:{xs:'stretch',sm:'center'},gap:1.5}}>
-      <Stack spacing={.25}><Stack direction="row" spacing={1} sx={{alignItems:'center'}}><Box sx={{width:9,height:9,borderRadius:'50%',bgcolor:error||paused?'warning.main':data?'success.main':'grey.400'}}/><Typography component="h1" variant="subtitle1" sx={{fontWeight:700}}>{paused?'به‌روزرسانی متوقف':error?'داده‌ها به‌روز نیستند':data?'مانیتورینگ عملیاتی سایت':'در حال دریافت آمار'}</Typography></Stack><Typography variant="caption" color="text.secondary">{data?`آخرین دریافت: ${new Date(data.generated_at).toLocaleTimeString('fa-IR',{timeZone:'Asia/Tehran',hour:'2-digit',minute:'2-digit',second:'2-digit'})} · بازه: از ${new Date(data.window.start).toLocaleString('fa-IR',{timeZone:'Asia/Tehran',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})} تا اکنون`:'در انتظار نخستین پاسخ سرور'} · ساعت تهران</Typography></Stack>
+      <Stack spacing={.25}><Stack direction="row" spacing={1} sx={{alignItems:'center'}}><Box sx={{width:9,height:9,borderRadius:'50%',bgcolor:error||paused?'warning.main':data?'success.main':'grey.400'}}/><Typography component="h1" variant="subtitle1" sx={{fontWeight:700}}>بگم نگم</Typography></Stack><Typography variant="caption" color="text.secondary">{data?`آخرین دریافت: ${new Date(data.generated_at).toLocaleTimeString('fa-IR',{timeZone:'Asia/Tehran',hour:'2-digit',minute:'2-digit',second:'2-digit'})} · بازه: از ${new Date(data.window.start).toLocaleString('fa-IR',{timeZone:'Asia/Tehran',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})} تا اکنون`:'در انتظار نخستین پاسخ سرور'} · ساعت تهران</Typography></Stack>
       <Stack direction="row" useFlexGap sx={{gap:1,alignItems:'center',flexWrap:'wrap'}}>
         <Button component={Link} href="/manage" variant="outlined" startIcon={<ArrowForwardRounded/>}>بازگشت به مدیریت</Button>
         <TextField select label="دورهٔ به‌روزرسانی" value={interval} onChange={event=>changeInterval(event.target.value)} size="small" sx={{minWidth:155}}>{monitoringIntervals.map(seconds=><MenuItem key={seconds} value={seconds}>{seconds<60?`${number(seconds)} ثانیه`:`${number(seconds/60)} دقیقه`}</MenuItem>)}</TextField>
         <Button variant="outlined" onClick={reload} disabled={busy||!!paused||!ready} startIcon={<RefreshRounded/>}>تازه‌سازی</Button>
-        <Button component={Link} href={tv?'/manage/monitoring':'/manage/monitoring?tv=1'} variant={tv?'outlined':'contained'} startIcon={tv?<FullscreenExitRounded/>:<TvOutlined/>}>{tv?'خروج از حالت نمایشگر':'حالت نمایشگر'}</Button>
       </Stack>
     </Stack></Card>
     {busy&&<LinearProgress aria-label="دریافت آمار مانیتورینگ" sx={{height:2,mb:'-18px !important',zIndex:1}}/>}

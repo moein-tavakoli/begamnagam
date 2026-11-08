@@ -9,6 +9,17 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.29.1 — 2026-11-08 — Permanent monitoring display layout (local)
+
+### Changed
+
+- Use «بگم نگم» as the monitoring title and always use the display layout,
+  removing the display-mode switch. Legacy `?tv=1` links remain usable.
+
+Validation: 116 frontend tests, TypeScript and Persian changelog parity passed.
+Native Fast Refresh and the legacy display URL show the brand title without
+mode controls; Next.js reports no compilation or session errors. No deployment.
+
 ## 0.29.0 — 2026-11-08 — Today and total monitoring user cards (local)
 
 ### Added

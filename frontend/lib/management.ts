@@ -1,3 +1,4 @@
+export { managementExplanation, managementDisplayValue } from './management-copy.ts';
 export type ManagementSession = {
   authenticated: boolean;
   session_identity?: string;
@@ -33,8 +34,11 @@ const states: Record<string, string> = {
   created: "ایجادشده", requested: "درخواست‌شده", processing: "در حال بررسی", refunded: "مستردشده",
   purchase: "خرید بسته", reserve: "رزرو ارسال", release: "برگشت اعتبار",
   payment: "دریافت", refund: "استرداد", critical: "بحرانی", high: "مهم", warning: "نیازمند توجه",
+  archived: "بایگانی‌شده", blocked: "مسدود", unavailable: "در دسترس نیست",
+  credited: "اعتبار افزوده شد", wallet_returned: "برگشت به کیف پول", sending: "در حال ارسال", simulated: "ثبت آزمایشی",
+  topup: "شارژ کیف پول", order_debit: "برداشت هزینهٔ پیام", order_return: "برگشت هزینهٔ پیام", package_debit: "برداشت خرید بسته", payment_return: "برگشت پرداخت",
 };
-export const managementState = (value: unknown) => states[String(value)] || String(value);
+export const managementState = (value: unknown) => value ? states[String(value)] || "وضعیت ثبت‌شده نیاز به بررسی دارد" : "—";
 export const managementNumber = (value: unknown) => typeof value === "number" ? value.toLocaleString("fa-IR") : "—";
 export function managementDate(value: unknown): string {
   if (!value) return "—";

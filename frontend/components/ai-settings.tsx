@@ -1,8 +1,9 @@
 "use client";
+import Card from "@mui/material/Card";
+
+import { ManagementButton, ManagementInput, ManagementSelect, ManagementTextarea, ManagementDigitInput } from "./management-ui";
 
 import { managementReason } from "@/lib/management";
-
-import { DigitInput } from "./digit-input";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { api, ApiError, errorMessage } from "@/lib/api";
@@ -32,7 +33,7 @@ export function AISettings({ onFailure }: { onFailure: (error: unknown) => void 
       <Configuration key={data.revision} data={data} onSaved={updated => { setData(updated); setSaved(true); }} onFailure={onFailure} />
       <LocalTest key={`test-${data.revision}`} model={data.values.ollama_model} tones={data.tone_options.filter(option => data.values[option.field])} onFailure={onFailure} />
     </>}
-    <button type="button" className="manage-button secondary" onClick={() => void load()}>دریافت آخرین تنظیمات</button>
+    <ManagementButton type="button" className="manage-button secondary" onClick={() => void load()}>دریافت آخرین تنظیمات</ManagementButton>
   </>;
 }
 
@@ -61,28 +62,28 @@ function Configuration({ data, onSaved, onFailure }: { data: Settings; onSaved: 
     ["daily_limit", "سقف روزانهٔ بازنویسی محلی", 1, 100000],
     ["user_daily_limit", "سقف روزانهٔ محلی برای هر حساب", 1, 10000],
   ] as const;
-  return <form className="manage-card manage-form" onSubmit={save}>
+  return <Card component="form" className="manage-card manage-form" onSubmit={save}>
     <h2>سرویس فعال هوش مصنوعی</h2>
     {error && <p className="manage-error" role="alert">{error}</p>}
     <fieldset disabled={busy} className="manage-fieldset">
-      <label>سرویس<select value={provider} onChange={event => setProvider(event.target.value)} aria-describedby="ai-provider-help">
+      <label>سرویس<ManagementSelect value={provider} onChange={event => setProvider(event.target.value)} aria-describedby="ai-provider-help">
         <option value="template">خاموش — متن‌های آماده</option><option value="ollama">Ollama — مدل محلی</option><option value="gapgpt">GapGPT — سرویس بیرونی</option>
-      </select><small id="ai-provider-help">{fields.provider ? String(fields.provider) : provider === "ollama" ? "متن روی همین زیرساخت پردازش می‌شود." : provider === "gapgpt" ? "فعال‌سازی به کلید سرور، مدل و سهمیهٔ مثبت GapGPT نیاز دارد." : "بازنویسی دلخواه غیرفعال می‌شود."}</small></label>
+      </ManagementSelect><small id="ai-provider-help">{fields.provider ? String(fields.provider) : provider === "ollama" ? "متن روی همین زیرساخت پردازش می‌شود." : provider === "gapgpt" ? "فعال‌سازی به کلید سرور، مدل و سهمیهٔ مثبت GapGPT نیاز دارد." : "بازنویسی دلخواه غیرفعال می‌شود."}</small></label>
       <section className="manage-tone-settings" aria-labelledby="manage-tone-title"><h3 id="manage-tone-title">لحن‌های قابل انتخاب کاربران</h3>
         <p className="manage-muted">فقط گزینه‌های تیک‌خورده، زیر کادر متن کاربر نمایش داده می‌شوند. بدون تیک، انتخاب لحن پنهان و حالت مودبانه برقرار می‌شود. تغییر برای پیش‌نمایش‌های تازه است.</p>
         <div className="manage-tone-grid">{data.tone_options.map(option => <label className="manage-checkbox" key={option.id}>
-          <span>{option.label}</span><input type="checkbox" name={option.field} defaultChecked={data.values[option.field]} aria-describedby={`help-${option.field}`} aria-invalid={!!fields[option.field]} />
+          <span>{option.label}</span><ManagementInput type="checkbox" name={option.field} defaultChecked={data.values[option.field]} aria-describedby={`help-${option.field}`} aria-invalid={!!fields[option.field]} />
           <small id={`help-${option.field}`} className={fields[option.field] ? 'manage-field-error' : ''}>{fields[option.field] ? String(fields[option.field]) : option.description}</small>
         </label>)}</div><p className="manage-muted">در هر سه لحن، توهین، تهدید، نشانی و اطلاعات خصوصی رد می‌شوند. لحن سوم شدت بیان را بیشتر می‌کند.</p>
       </section>
       <div className="manage-settings-grid">
-        <label>مدل نصب‌شدهٔ Ollama<input name="ollama_model" dir="ltr" defaultValue={data.values.ollama_model} maxLength={100} required aria-invalid={!!fields.ollama_model} />{fields.ollama_model && <small className="manage-field-error">{String(fields.ollama_model)}</small>}</label>
-        <label>مدل GapGPT<input name="gapgpt_model" dir="ltr" defaultValue={data.values.gapgpt_model} maxLength={100} aria-invalid={!!fields.gapgpt_model} /><small>{fields.gapgpt_model ? String(fields.gapgpt_model) : data.gapgpt_credentials_configured ? "کلید روی سرور تنظیم شده است." : "کلید روی سرور تنظیم نشده است."}</small></label>
-        {numbers.map(([key, label, min, max]) => <label key={key}>{label}<DigitInput name={key} type="number" min={min} max={max} step={1} defaultValue={data.values[key]} required aria-invalid={!!fields[key]} />{fields[key] && <small className="manage-field-error">{String(fields[key])}</small>}</label>)}
+        <label>مدل نصب‌شدهٔ Ollama<ManagementInput name="ollama_model" dir="ltr" defaultValue={data.values.ollama_model} maxLength={100} required aria-invalid={!!fields.ollama_model} />{fields.ollama_model && <small className="manage-field-error">{String(fields.ollama_model)}</small>}</label>
+        <label>مدل GapGPT<ManagementInput name="gapgpt_model" dir="ltr" defaultValue={data.values.gapgpt_model} maxLength={100} aria-invalid={!!fields.gapgpt_model} /><small>{fields.gapgpt_model ? String(fields.gapgpt_model) : data.gapgpt_credentials_configured ? "کلید روی سرور تنظیم شده است." : "کلید روی سرور تنظیم نشده است."}</small></label>
+        {numbers.map(([key, label, min, max]) => <label key={key}>{label}<ManagementDigitInput name={key} type="number" min={min} max={max} step={1} defaultValue={data.values[key]} required aria-invalid={!!fields[key]} />{fields[key] && <small className="manage-field-error">{String(fields[key])}</small>}</label>)}
       </div>
-      <button className="manage-button primary">{busy ? "در حال ذخیره…" : "ذخیرهٔ تنظیمات هوش مصنوعی"}</button>
+      <ManagementButton className="manage-button primary">{busy ? "در حال ذخیره…" : "ذخیرهٔ تنظیمات هوش مصنوعی"}</ManagementButton>
     </fieldset>
-  </form>;
+  </Card>;
 }
 
 function LocalTest({ model, tones, onFailure }: { model: string; tones: MessageToneOption[]; onFailure: (error: unknown) => void }) {
@@ -96,12 +97,12 @@ function LocalTest({ model, tones, onFailure }: { model: string; tones: MessageT
     catch (failure) { setError(errorMessage(failure)); onFailure(failure); }
     finally { setBusy(false); }
   }
-  return <form className="manage-card manage-form" onSubmit={evaluate}>
+  return <Card component="form" className="manage-card manage-form" onSubmit={evaluate}>
     <h2>آزمایش واقعی مدل محلی</h2><p className="manage-muted">مدل ذخیره‌شده: <bdi>{model}</bdi>. این آزمایش فقط Ollama را صدا می‌زند؛ پیامکی ارسال و متن آزمایش ذخیره نمی‌شود.</p>
-    <label>متن نمونه؛ اطلاعات خصوصی ننویسید<textarea value={text} onChange={event => setText(event.target.value)} maxLength={280} rows={3} required /></label>
-    <label>لحن آزمایش<select value={tone} disabled={busy} onChange={event => setTone(event.target.value as MessageTone)}>{(tones.length ? tones : [{id:'polite',label:'مودبانه',description:''}]).map(option => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label>
-    <button className="manage-button secondary" disabled={busy}>{busy ? "در حال بازنویسی و بازبینی…" : "آزمایش بازنویسی محلی"}</button>
+    <label>متن نمونه؛ اطلاعات خصوصی ننویسید<ManagementTextarea value={text} onChange={event => setText(event.target.value)} maxLength={280} rows={3} required /></label>
+    <label>لحن آزمایش<ManagementSelect value={tone} disabled={busy} onChange={event => setTone(event.target.value as MessageTone)}>{(tones.length ? tones : [{id:'polite',label:'مودبانه',description:''}]).map(option => <option key={option.id} value={option.id}>{option.label}</option>)}</ManagementSelect></label>
+    <ManagementButton className="manage-button secondary" disabled={busy}>{busy ? "در حال بازنویسی و بازبینی…" : "آزمایش بازنویسی محلی"}</ManagementButton>
     {error && <p className="manage-error" role="alert">{error}</p>}
     <div aria-live="polite" aria-atomic="true">{result && <><p className={result.allowed ? "manage-success" : "manage-notice"}>{result.allowed ? result.message : "این متن به شکل امن و با حفظ منظور قابل آماده‌سازی نبود."}</p><small>زمان پاسخ: {managementNumber(result.elapsed_seconds)} ثانیه</small></>}</div>
-  </form>;
+  </Card>;
 }

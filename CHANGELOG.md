@@ -9,6 +9,30 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.23.1 — 2026-11-08 — MUI management controls and Persian explanations (local)
+
+### Fixed
+
+- Replace expanding in-row actions with an anchored, portalled MUI Menu and
+  IconButton. Use management-only MUI 9.5 components for navigation, cards,
+  tables, controls, tabs and action dialogs, with App Router CSS collection,
+  RTL styling and the local Farsi-Digits font. Public UI and Django admin retain
+  their existing layouts.
+- Explain stored moderation reasons, operational warnings, statuses, providers,
+  categories, payment modes and audit actions in Persian. Preserve canonical
+  API/database codes, identifiers, private content and sealed messages. Unknown
+  machine codes get an honest Persian fallback; no invented cause is inferred.
+- Preserve form names, numeric/date normalization and constraints, bank proof,
+  permissions, CSRF, automatic auditing, busy guards and keyboard focus restore.
+
+Validation: 93 frontend tests and TypeScript passed. Native authenticated browser
+checks at desktop and 375px verified row height 65px before/after menu opening,
+menu viewport bounds, Escape/focus, Persian reasons, canonical numeric input,
+required bank fields and invalid future-date rejection without submitting changes.
+Independent review found missing canonical wallet/audit translations; regression
+tests failed before the fix and the complete frontend suite passed afterward.
+No paid AI calls, OTP/message sends, account/payment mutations, push or deployment.
+
 ## 0.23.0 — 2026-11-08 — Active recipient blacklist (local)
 
 ### Added

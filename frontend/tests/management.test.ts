@@ -78,3 +78,44 @@ test('blacklist has its own route and no consent-override row actions', () => {
   assert.equal(nav.filter(item => item.key === 'blacklist').length, 1);
   assert.deepEqual(managementActions('blacklist', {record_id:'opaque-id',blocked:true}, ['operate_safety','view_recipientstate','view_account']), []);
 });
+
+test('moderation causes explain the actual rejection in Persian', () => {
+  assert.equal(management.managementExplanation('draft_without_intent'), 'پس از حذف عبارت‌های نامناسب، درخواست یا احساس مشخصی در متن باقی نمانده است.');
+  assert.equal(management.managementExplanation('unsafe_or_changed_intent'), 'بازبین نتوانسته هم ایمن‌بودن متن و هم حفظ منظور اولیه را تأیید کند.');
+  assert.match(management.managementExplanation('contact_details'), /اطلاعات تماس/);
+  assert.match(management.managementExplanation('queue_expired'), /صف/);
+  assert.match(management.managementExplanation('ai_unavailable'), /هوش مصنوعی/);
+});
+
+test('unknown machine codes have a Persian fallback without leaking raw codes', () => {
+  assert.equal(management.managementExplanation('new_vendor_error'), 'توضیح فارسی این علت هنوز ثبت نشده است؛ جزئیات فنی باید بررسی شود.');
+  assert.equal(management.managementExplanation(''), 'علتی ثبت نشده است.');
+  assert.equal(management.managementState('new_vendor_state'), 'وضعیت ثبت‌شده نیاز به بررسی دارد');
+});
+
+test('translations are field-aware and never rewrite identifiers or user content', () => {
+  assert.equal(management.managementDisplayValue('reason_code', 'draft_without_intent'), management.managementExplanation('draft_without_intent'));
+  assert.equal(management.managementDisplayValue('last_error_code', 'submission_uncertain'), management.managementExplanation('submission_uncertain'));
+  assert.equal(management.managementDisplayValue('payment_mode', 'free'), 'رایگان');
+  assert.equal(management.managementDisplayValue('category', 'custom'), 'متن دلخواه');
+  assert.equal(management.managementDisplayValue('original_text', 'draft_without_intent'), 'draft_without_intent');
+  assert.equal(management.managementDisplayValue('object_id', 'unknown'), 'unknown');
+  assert.equal(management.managementDisplayValue('reason', 'متن ثبت‌شدهٔ مدیر'), 'متن ثبت‌شدهٔ مدیر');
+});
+
+test('financial movement labels distinguish every current wallet movement', () => {
+  const kinds = ['topup', 'order_debit', 'order_return', 'package_debit', 'payment_return'];
+  const labels = kinds.map(management.managementState);
+  assert.equal(new Set(labels).size, kinds.length);
+  labels.forEach(label => assert.doesNotMatch(label, /نیاز به بررسی|[a-z_]/));
+  assert.equal(management.managementDisplayValue('payment_mode', 'credit_live'), 'اعتبار بستهٔ واقعی');
+  assert.equal(management.managementDisplayValue('payment_mode', 'credit_demo'), 'اعتبار بستهٔ آزمایشی');
+  assert.equal(management.managementDisplayValue('purchase__environment', 'live'), 'واقعی');
+});
+
+test('actual backend audit actions retain distinct Persian meaning', () => {
+  const actions = ['message_text_viewed', 'message_attempt_text_viewed', 'report_viewed', 'approve_manual_payment', 'reject_manual_payment', 'update_site_limits', 'update_ai_configuration', 'update_message_package', 'account_send_options'];
+  const labels = actions.map(action => management.managementDisplayValue('action', action));
+  assert.equal(new Set(labels).size, actions.length);
+  labels.forEach(label => assert.doesNotMatch(String(label), /اقدام مدیریتی ثبت‌شده|[a-z_]/));
+});

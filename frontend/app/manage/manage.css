@@ -175,13 +175,6 @@
 .manage-sidebar nav a[aria-current=page] { color:#392257; background:#ebe2ff; font-weight:700; }
 .manage-record-link { color:#56358b; text-underline-offset:4px; }
 .manage-app td { padding:10px 12px; vertical-align:middle; }
-.manage-app td:has(.manage-row-menu) { min-width:64px; width:64px; }
-.manage-app .manage-row-menu > summary { display:flex; align-items:center; justify-content:center; width:44px; height:44px; padding:0; border:1px solid #d8cbea; border-radius:12px; list-style:none; color:#56358b; font-size:16px; letter-spacing:2px; }
-.manage-row-menu > summary::-webkit-details-marker { display:none; }
-.manage-row-menu[open] > summary { background:#ebe2ff; }
-.manage-row-menu .manage-row-actions { min-width:200px; max-width:260px; padding:8px; margin-top:8px; border:1px solid #d8cbea; border-radius:12px; background:#faf7ff; }
-.manage-row-actions > a, .manage-row-actions > button { display:flex; align-items:center; min-height:44px; padding:8px 10px; border:0; border-radius:8px; color:#392257; text-align:right; text-decoration:none; background:transparent; white-space:normal; cursor:pointer; font:inherit; font-size:13px; }
-.manage-row-actions > a:hover, .manage-row-actions > button:hover { background:#ebe2ff; }
 .manage-user-tabs { display:flex; gap:10px; flex-wrap:wrap; }
 .manage-user-tabs [aria-current=page] { background:#ebe2ff; border-color:#7951c1; color:#392257; }
 .manage-activity-list { display:grid; gap:12px; }
@@ -191,3 +184,38 @@
 @media(max-width:699px) { .manage-app .manage-records { padding:14px; } .manage-activity-list > article { padding:12px; } }
 .manage-app .manage-action-column { position:sticky; inset-inline-end:0; background:#fff; border-inline-start:1px solid #e6deef; z-index:1; }
 .manage-app th.manage-action-column { background:#f7f4fd; }
+
+/* MUI owns control geometry. Keep native product styles away from its slots. */
+.manage-app .MuiInputBase-input:not([type=checkbox]),
+.manage-app select.MuiNativeSelect-select,
+.manage-app textarea.MuiInputBase-input {
+  margin:0; border:0; border-radius:0; background:transparent; min-height:0;
+  height:auto; padding:12px 14px; font-family:inherit; font-size:14px; line-height:1.7;
+}
+.manage-app .MuiInputBase-input[dir=ltr] { text-align:left; }
+.manage-app .MuiInputBase-input[data-number-input] { text-align:right; }
+.manage-app .MuiInputBase-inputMultiline { padding:0; }
+.manage-app .MuiInputBase-multiline { padding:12px 14px; }
+.manage-app .MuiInputBase-root { font-weight:400; }
+.manage-mui-field { margin-top:7px; }
+.manage-app .MuiCheckbox-root input, .manage-app .MuiSwitch-root input { width:100%; height:100%; min-height:0; margin:0; }
+.manage-app .MuiCheckbox-root, .manage-app .MuiSwitch-root { flex-shrink:0; }
+.manage-app .manage-checkbox .MuiCheckbox-root, .manage-app .manage-checkbox .MuiSwitch-root { flex:0 0 auto; }
+.manage-app .manage-button.MuiButton-root { font:inherit; font-size:14px; border-radius:12px; min-height:44px; }
+.manage-app .manage-button.MuiButton-contained { background:#6843ad; color:#fff; }
+.manage-app .manage-button.MuiButton-outlined { color:#56358b; border-color:#b6abc9; background:#fff; }
+.manage-app .manage-button.MuiButton-colorError { color:#8b2638; background:#fff2f3; border-color:#e6a7b4; }
+.manage-app .MuiButton-root.Mui-disabled { opacity:.55; }
+.manage-app .manage-row-trigger { border:1px solid #d8cbea; border-radius:12px; color:#56358b; }
+.manage-app .manage-row-trigger[aria-expanded=true] { background:#ebe2ff; }
+.manage-app .manage-action-column { min-width:68px; width:68px; }
+.manage-record-link { white-space:nowrap; }
+.manage-app .manage-menu.MuiButton-root { display:none; }
+@media(max-width:699px) { .manage-app .manage-menu.MuiButton-root { display:inline-flex; } }
+.manage-loading { display:flex; align-items:center; justify-content:center; gap:12px; }
+.manage-mui-dialog-title { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.manage-app.manage-mui-dialog-content { min-height:0; background:#fff; padding:8px 24px 24px; }
+.manage-mui-dialog-content > * + * { margin-top:20px; }
+.manage-mui-dialog-content .checkbox-label { display:flex; align-items:center; gap:8px; }
+@media(max-width:699px) { .manage-app.manage-mui-dialog-content { padding:8px 18px 20px; } }
+@media(prefers-reduced-motion:reduce) { .MuiPopover-root *, .MuiDialog-root * { transition:none !important; animation:none !important; } }

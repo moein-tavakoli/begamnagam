@@ -9,6 +9,29 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.24.0 — 2026-11-08 — Private Persian release history (local)
+
+### Added
+
+- Add `/manage/changelog` with Persian summaries for all 61 recorded versions,
+  Material cards, responsive layout and progressive reveal of older versions.
+  Show local changes separately from historical records without inventing
+  missing dates or asserting a server deployment.
+- Serve the packaged catalog only through active-staff GET
+  `/api/v1/manage/changelog`, with no-store and cookie variation. Deny anonymous,
+  inactive and ordinary product users; do not embed notes in public client code
+  or static assets.
+- Generate `CHANGELOG.fa.md` from the same private catalog. A check command
+  verifies exact Markdown parity, complete technical-changelog version coverage,
+  unique ordering and the synchronized application version. Document ongoing
+  Persian notes maintenance for future releases.
+
+Validation: 15 related PostgreSQL tests, 96 frontend tests and TypeScript passed.
+Catalog checks cover Persian text, version/date shape, ordering and uniqueness.
+Independent review found no material issues. Anonymous native HTTPS access
+returned 401; authenticated desktop/mobile UI checks and generator parity are
+recorded with this local change. No push or server deployment.
+
 ## 0.23.2 — 2026-11-08 — Complete Material management workspace (local)
 
 ### Fixed

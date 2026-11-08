@@ -3,6 +3,7 @@ from django.urls import include, path
 from core import views
 from core import invitations
 from core import management_api as management
+from core import management_changelog
 from core import ai_management
 from core import wallet_views
 from core import package_views
@@ -45,6 +46,7 @@ urlpatterns = [
     path("api/v1/manage/ai", ai_management.configuration),
     path("api/v1/manage/ai/test", ai_management.evaluate),
     path("api/v1/manage/session", management.session),
+    path("api/v1/manage/changelog", management_changelog.changelog),
     path("api/v1/manage/login", management.login_view),
     path("api/v1/manage/logout", management.logout_view),
     path("api/v1/manage/dashboard", management.dashboard),

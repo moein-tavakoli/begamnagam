@@ -33,7 +33,7 @@ const icons = {
   'invitation-deliveries':SmsOutlined, deliveries:SmsOutlined, outbox:OutboxOutlined,
   reports:ReportOutlined, moderation:FactCheckOutlined, payments:PaymentsOutlined,
   refunds:CurrencyExchangeOutlined, 'financial-events':AccountBalanceOutlined,
-  budgets:SavingsOutlined, alerts:NotificationsOutlined, audit:HistoryOutlined,
+  budgets:SavingsOutlined, alerts:NotificationsOutlined, audit:HistoryOutlined, changelog:HistoryOutlined,
   limits:SettingsOutlined, packages:Inventory2Outlined, examples:TextSnippetOutlined,
   'manual-settings':CreditCardOutlined, ai:AutoAwesomeOutlined,
 };

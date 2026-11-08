@@ -25,6 +25,11 @@ Django monolith with Next.js, PostgreSQL, Redis, RabbitMQ and Celery.
 - Synchronize `frontend/package.json` and both root-package version fields in
   `frontend/package-lock.json`; preserve dependency changes outside the task.
   Start from the latest recorded project version, not stale package metadata.
+- Maintain a Persian summary for every version in `backend/core/release_notes.fa.json`;
+  synchronize `catalog_version`, generate `CHANGELOG.fa.md` with
+  `python3 scripts/render_changelog_fa.py`, then run it with `--check` before
+  committing. Keep the catalog staff-only, outside public assets/client modules;
+  never infer unknown historical dates or deployment status.
 - After reviewing the task diff and passing checks appropriate to its scope,
   automatically make a local commit on `dev` containing the completed change,
   version metadata and release notes. Include the version and a meaningful

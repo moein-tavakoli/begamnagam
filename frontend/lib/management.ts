@@ -103,6 +103,7 @@ export function managementNavigation(session: ManagementSession): { key: string;
     ...(resources.some(item => item.key === "accounts") ? [{ key: "accounts", title: "کاربران" }] : []),
     ...(resources.some(item => item.key === "blacklist") ? [{ key: "blacklist", title: "لیست سیاه" }] : []),
     ...(session.authenticated ? [{ key: "support", title: "پشتیبانی" }] : []),
+    ...(session.authenticated ? [{ key: "changelog", title: "تاریخچهٔ تغییرات" }] : []),
     ...resources.filter(item => item.key !== "accounts" && item.key !== "blacklist" && (!resources.some(resource => resource.key === "accounts") || !["orders", "invitations", "invitation-deliveries", "invitation-sends"].includes(item.key))),
     ...([ ["manage_site_limits", "limits", "تنظیمات سایت"], ["manage_message_packages", "packages", "بسته‌های پیام"],
       ["manage_message_examples", "examples", "پیام‌های نمونه"], ["manage_manual_payments", "manual-settings", "کارت و دریافت رسید"],

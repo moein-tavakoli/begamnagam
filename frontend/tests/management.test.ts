@@ -132,3 +132,9 @@ test('breadcrumbs preserve the user route hierarchy without exposing phone data'
     {title:'مدیریت',href:'/manage'}, {title:'کاربران',href:'/manage/users'}, {title:'پروندهٔ کاربر ۱۷'},
   ]);
 });
+
+test('Persian release history navigation is limited to authenticated management sessions', () => {
+  assert.equal(management.managementNavigation({authenticated:false}).some(item=>item.key==='changelog'),false);
+  assert.equal(management.managementNavigation({authenticated:true}).find(item=>item.key==='changelog')?.title,'تاریخچهٔ تغییرات');
+  assert.equal(management.managementHref('changelog'),'/manage/changelog');
+});

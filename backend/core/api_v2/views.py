@@ -178,7 +178,8 @@ def recipient_validations(request):
 @resource(post=op('createMessagePreview', 'Messages', 'Review and seal an exact recipient-bound SMS preview', 'Preview',
                   request='PreviewInput', status=201,
                   description='Show full_sms and obtain explicit consent. Freeform uses minimal edits and preserves meaning and colloquial/formal register; '
-                              'safe suitable text can remain unchanged. An independent review must approve it. '
+                              'safe suitable text can remain unchanged. Public tones are polite, firm (default), and blunt (plain minimal edits). '
+                              'An independent review must approve meaning, register and selected tone; blunt never bypasses safety. '
                               'Freeform never silently falls back. Changing the phone or text requires a new preview.'))
 def previews(request):
     return delegate(request, legacy.preview)

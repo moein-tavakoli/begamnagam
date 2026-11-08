@@ -1,6 +1,6 @@
 {
   "name": "begamnagam-web",
-  "version": "0.20.2",
+  "version": "0.21.0",
   "private": true,
   "scripts": {
     "dev": "next dev --hostname 127.0.0.1",

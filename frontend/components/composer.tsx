@@ -60,7 +60,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
   const [category, setCategory] = useState("");
   const [exampleGroup, setExampleGroup] = useState<number | null>(null);
   const [text, setText] = useState("");
-  const [messageTone, setMessageTone] = useState<MessageTone>('polite');
+  const [messageTone, setMessageTone] = useState<MessageTone>('firm');
   const toneOptions = data?.message_tones ?? [];
   const tonesKey = toneOptions.map(item => item.id).join(',');
   const [preview, setPreview] = useState<Preview | null>(null);
@@ -102,7 +102,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
 
   useEffect(() => {
     if (!data || order || toneOptions.some(item => item.id === messageTone)) return;
-    const next = data.default_message_tone ?? 'polite';
+    const next = data.default_message_tone ?? 'firm';
     if (messageTone === next) return;
     setMessageTone(next); setPreview(null); setConsent(false); idempotencyKey.current = '';
   }, [tonesKey, data?.default_message_tone, messageTone, order?.id]);
@@ -338,7 +338,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
   }
   return (
     <section
-      data-update-blocked={busy || (!finished && !!(step > 0 || text || recipient || messageTone !== (data?.default_message_tone ?? 'polite')))}
+      data-update-blocked={busy || (!finished && !!(step > 0 || text || recipient || messageTone !== (data?.default_message_tone ?? 'firm')))}
       id="compose"
       className={`compose-section wrap ${!data?.authenticated ? "composer-auth-only" : ""}`}
       data-screen={finished ? "receipt" : step}

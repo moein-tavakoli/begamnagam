@@ -142,7 +142,7 @@ class BotConversationEvent(models.Model):
 
 
 class Preview(models.Model):
-    message_tone = models.CharField(max_length=12, choices=[('polite', 'مودبانه'), ('firm', 'کمی مودبانه'), ('angry', 'بی‌ادبانه')], default='polite', db_default='polite', editable=False)
+    message_tone = models.CharField(max_length=12, choices=[('polite', 'مودبانه'), ('firm', 'کمی مودبانه'), ('blunt', 'رُک'), ('angry', 'بی‌ادبانه')], default='polite', db_default='polite', editable=False)
     payment_method = models.CharField(max_length=12, default='credit', db_default='credit', editable=False)
     wallet_policy_version = models.CharField(max_length=24, blank=True, default='', db_default='', editable=False)
     original_text = EncryptedTextField("متن اولیهٔ کاربر", blank=True, default='', db_default='', editable=False)
@@ -534,7 +534,8 @@ class AIConfiguration(models.Model):
     provider = models.CharField("سرویس فعال", max_length=12, default="template", choices=[
         ("template", "متن آماده — هوش مصنوعی خاموش"), ("ollama", "Ollama — مدل محلی"), ("gapgpt", "GapGPT — سرویس بیرونی")])
     tone_polite_enabled = models.BooleanField('مودبانه', default=True, db_default=True)
-    tone_firm_enabled = models.BooleanField('کمی مودبانه', default=False, db_default=False)
+    tone_firm_enabled = models.BooleanField('کمی مودبانه', default=True, db_default=True)
+    tone_blunt_enabled = models.BooleanField('رُک — کمترین تغییر، بدون بی‌احترامی', default=True, db_default=True)
     tone_angry_enabled = models.BooleanField('بی‌ادبانه — خیلی جدی، بدون توهین و تهدید', default=False, db_default=False)
     ollama_model = models.CharField("مدل محلی", max_length=100, default="qwen3:4b-instruct-2507-q4_K_M")
     gapgpt_model = models.CharField("مدل GapGPT", max_length=100, blank=True)

@@ -9,6 +9,29 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.21.0 — 2026-11-08 — Blunt minimal-edit tone and firm default (local)
+
+### Added
+
+- Offer exactly three public choices: polite, firm (default) and blunt (`blunt`,
+  رُک). Preserve already civil colloquial messages with minimal edits; require
+  independent meaning, register and tone approval without relaxing moderation,
+  consent, privacy or sender/recipient controls. Reviewed templates remain the
+  only option when freeform is disabled; no unapproved raw-text dispatch.
+- Enable the three requested choices with an audited configuration revision;
+  preserve provider/budget settings, historical angry snapshots and guarded
+  legacy API support. Set the web composer's initial/default tone to firm and
+  expose the additive tone in REST/Swagger and bot schemas.
+
+Validation: 113 related PostgreSQL tests, 82 frontend tests, TypeScript, Django
+checks, migration consistency, Compose configuration and independent code review
+passed. Isolated tone-component checks passed at 375px/1440px (three choices,
+firm selected, blunt selectable, no overflow); authenticated live sending was not
+retested. New tests cover defaults, public/legacy choices, safe unchanged text,
+unsafe input/output, strict review and migration settings preservation. Provider
+responses were controlled; no paid model or SMS calls. This local version does
+not itself attest server deployment; release evidence is recorded separately.
+
 ## 0.20.2 — 2026-11-08 — Preserve colloquial intent and monthly login (local)
 
 ### Fixed

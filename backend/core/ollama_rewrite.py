@@ -109,7 +109,7 @@ def rewrite_message(cleaned_text, *, max_units, direct=False, message_tone=None,
         raise GapGPTRejected('invalid_input')
     if type(max_units) is not int or not 1 <= max_units <= 201 or type(direct) is not bool:
         raise GapGPTRejected('invalid_input')
-    if message_tone is not None and (not isinstance(message_tone, str) or message_tone not in {'polite', 'firm', 'angry'}):
+    if message_tone is not None and (not isinstance(message_tone, str) or message_tone not in {'polite', 'firm', 'blunt', 'angry'}):
         raise GapGPTRejected('invalid_tone')
     from .message_tones import instruction as tone_instruction
     tone = message_tone or ('firm' if direct else 'polite')
@@ -120,11 +120,11 @@ def rewrite_message(cleaned_text, *, max_units, direct=False, message_tone=None,
         'message': {'type': 'string', 'maxLength': max_units}}, 'required': ['allowed', 'message'], 'additionalProperties': False}
     result = _chat(opener, config, REWRITE + extra,
         {'text': cleaned_text, 'max_utf16_units': max_units,
-         'tone': {'polite': 'warm and respectful', 'firm': 'clear and respectful', 'angry': 'terse, frustrated, non-abusive'}[tone]}, schema, deadline, 200)
+         'tone': {'polite': 'warm and respectful', 'firm': 'clear and respectful', 'blunt': 'plain direct minimal edits', 'angry': 'terse, frustrated, non-abusive'}[tone]}, schema, deadline, 200)
     candidate = _candidate(result, max_units)
     from .draft_guard import validate_polite_body
     validate_polite_body(candidate, max_units=max_units)
-    checks = (*REVIEW_KEYS, 'tone_matched') if message_tone in {'firm', 'angry'} else REVIEW_KEYS
+    checks = (*REVIEW_KEYS, 'tone_matched') if message_tone in {'firm', 'blunt', 'angry'} else REVIEW_KEYS
     if 'tone_matched' in checks:
         extra += '\nAlso require tone_matched: candidate follows the server-selected tone without adding hostility or facts absent from the source. Any uncertainty is false.'
     schema = {'type': 'object', 'properties': {key: {'type': 'boolean'} for key in checks},

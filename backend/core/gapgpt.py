@@ -263,7 +263,7 @@ def rewrite_message(cleaned_text, *, max_units, direct=False, message_tone=None,
             or type(max_units) is not int or not 1 <= max_units <= 201
             or type(direct) is not bool):
         raise GapGPTRejected('invalid_input')
-    if message_tone is not None and (not isinstance(message_tone, str) or message_tone not in {'polite', 'firm', 'angry'}):
+    if message_tone is not None and (not isinstance(message_tone, str) or message_tone not in {'polite', 'firm', 'blunt', 'angry'}):
         raise GapGPTRejected('invalid_tone')
     from .message_tones import instruction as tone_instruction
     tone = message_tone or ('firm' if direct else 'polite')
@@ -284,7 +284,7 @@ def rewrite_message(cleaned_text, *, max_units, direct=False, message_tone=None,
         raise GapGPTUnavailable('configuration_unavailable') from None
     result = _completion(opener, key, model, _REWRITE_INSTRUCTION + extra,
         {'text': cleaned_text, 'max_utf16_units': max_units,
-         'tone': {'polite': 'warm_and_respectful', 'firm': 'clear_and_respectful', 'angry': 'terse_frustrated_non_abusive'}[tone]},
+         'tone': {'polite': 'warm_and_respectful', 'firm': 'clear_and_respectful', 'blunt': 'plain_direct_minimal_edits', 'angry': 'terse_frustrated_non_abusive'}[tone]},
         deadline, total_timeout, output_tokens=GENERATION_MAX_TOKENS)
     try:
         body = _candidate(result, max_units)
@@ -307,7 +307,7 @@ def rewrite_message(cleaned_text, *, max_units, direct=False, message_tone=None,
         raise GapGPTRejected('candidate_rejected') from None
     checks = {'safe', 'intent_preserved', 'no_added_claims', 'no_private_data', 'only_message', 'register_preserved'}
     review_extra = extra
-    if message_tone in {'firm', 'angry'}:
+    if message_tone in {'firm', 'blunt', 'angry'}:
         checks.add('tone_matched')
         review_extra += '\nAlso return tone_matched: true only for the server tone without new hostility, accusations, anger or facts; uncertainty=false.'
     verdict = _completion(opener, key, model, _REVIEW_INSTRUCTION + review_extra,

@@ -16,7 +16,7 @@ from core.models import Account, CreditEntry, Invitation, InvitationSend, Messag
 from core.otp import OTP_LENGTH
 from core.packages import balance_field, checkout_enabled, credit_environment, package_data, purchase_data
 from core.payment_options import options as payment_options
-from core.privacy import digest, mask, normalize_phone
+from core.privacy import decrypt, digest, mask, normalize_phone
 from core.services import APIError, is_product_authenticated
 from core.wallet import balance_field as wallet_balance_field, summary as wallet_summary, topup_data
 
@@ -50,6 +50,7 @@ def session_data(request):
 def me_data(request):
     account = Account.objects.get(user=request.user)
     return {'id': str(account.pk), 'phone_masked': account.phone_masked, 'suspended': account.suspended,
+            'phone': decrypt(account.phone_cipher) if account.phone_cipher else '',
             'deletion_requested_at': account.deletion_requested_at.isoformat() if account.deletion_requested_at else None,
             'recent_auth': recent_auth(request)}
 

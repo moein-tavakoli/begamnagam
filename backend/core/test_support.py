@@ -144,7 +144,7 @@ class SupportTests(SupportFixture,TestCase):
         self.assertEqual([m['sequence'] for m in previous['messages']],list(range(1,6)))
         self.assertFalse(previous['has_older'])
         result=self.post('/manage/support/inbox',{'query':'09123456789','filter':'all'},self.staff)
-        self.assertEqual(result.json()['total'],1);self.assertNotIn('09123456789',result.content.decode())
+        self.assertEqual(result.json()['total'],1);self.assertEqual(result.json()['conversations'][0]['phone'],'09123456789')
         self.assertNotIn('پیام شماره',result.content.decode())
         account=Account.objects.get(user=self.user)
         from .privacy import DIGITS

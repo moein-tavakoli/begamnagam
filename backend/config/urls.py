@@ -3,6 +3,10 @@ from django.urls import include, path
 from core import views
 from core import invitations
 from core import management_api as management
+from core import management_changelog
+from core import management_monitoring
+from core import monitoring_access
+from core import staff_management
 from core import ai_management
 from core import wallet_views
 from core import package_views
@@ -13,6 +17,11 @@ handler404 = "core.views.not_found"
 handler500 = "core.views.server_error"
 
 urlpatterns = [
+    path('api/v1/manage/staff/catalog', staff_management.catalog),
+    path('api/v1/manage/staff/roles', staff_management.role_list),
+    path('api/v1/manage/staff/roles/<int:role_id>', staff_management.role_detail),
+    path('api/v1/manage/staff/employees', staff_management.employee_list),
+    path('api/v1/manage/staff/employees/<int:user_id>', staff_management.employee_detail),
     path('api/v2/', include('core.api_v2.urls')),
     path('api/v1/manage/message-examples', example_views.catalog),
     path('api/v1/manage/message-examples/<str:kind>', example_views.save),
@@ -45,10 +54,17 @@ urlpatterns = [
     path("api/v1/manage/ai", ai_management.configuration),
     path("api/v1/manage/ai/test", ai_management.evaluate),
     path("api/v1/manage/session", management.session),
+    path("api/v1/manage/changelog", management_changelog.changelog),
     path("api/v1/manage/login", management.login_view),
     path("api/v1/manage/logout", management.logout_view),
     path("api/v1/manage/dashboard", management.dashboard),
+    path("api/v1/manage/monitoring", management_monitoring.monitoring),
+    path('api/v1/manage/monitoring/access', monitoring_access.access),
+    path('api/v1/manage/monitoring/settings', monitoring_access.configuration),
     path("api/v1/manage/records/<slug:resource>", management.records),
+    path("api/v1/manage/users/<int:account_id>", management.user_summary),
+    path("api/v1/manage/users/<int:account_id>/activity", management.user_activity),
+    path("api/v1/manage/users/<int:account_id>/attempts/<uuid:attempt_id>/texts", management.review_attempt),
     path("api/v1/manage/limits", management.limits),
     path("api/v1/manage/request-limits/<slug:scope>", management.request_limits),
     path("api/v1/manage/actions", management.action),

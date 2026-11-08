@@ -208,7 +208,7 @@ export function History() {
                     <div className="history-message-top">
                       <span className="recipient-label">
                         <Icon name="phone" size={17} /> برای{" "}
-                        <bdi>{message.recipient_masked}</bdi>
+                        <bdi>{message.recipient_phone||'شماره در دسترس نیست'}</bdi>
                       </span>
                       <span
                         className={`status-pill ${message.status === "failed" ? "failed" : ""}`}

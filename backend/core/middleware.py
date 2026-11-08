@@ -23,6 +23,7 @@ class TrustedProxyClientIP(MiddlewareMixin):
     def process_request(self, request):
         peer = request.META.get("REMOTE_ADDR", "")
         trusted = getattr(settings, "TRUSTED_CLIENT_PROXY_IPS", set())
+        request.verified_proxy_client_ip = None
         request.META.pop("HTTP_X_VERIFIED_CLIENT_IP", None)
         chain = request.META.get("HTTP_X_FORWARDED_FOR", "")
         if peer not in trusted or not chain or len(chain) > 2048:
@@ -34,6 +35,7 @@ class TrustedProxyClientIP(MiddlewareMixin):
         for address in reversed(addresses):
             if address not in trusted:
                 request.META["REMOTE_ADDR"] = address
+                request.verified_proxy_client_ip = address
                 break
 
 

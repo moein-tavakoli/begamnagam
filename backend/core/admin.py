@@ -1,3 +1,4 @@
+from .admin_audit_forms import AutomaticReasonField
 from django import forms
 from django.contrib import admin
 from . import ai_admin  # noqa: F401 — register the shared AI configuration
@@ -11,7 +12,7 @@ from .account_options import OPTION_PERMISSIONS, update_account_options
 
 
 class AccountOptionsForm(forms.ModelForm):
-    settings_reason = forms.CharField(label="دلیل تغییر تنظیمات", required=False, max_length=200,
+    settings_reason = AutomaticReasonField(audit_default="django_admin:admin", label="دلیل تغییر تنظیمات", required=False, max_length=200,
         help_text="برای تغییر تنظیمات دلیل کوتاه بنویس؛ شماره، کد ورود یا اطلاعات خصوصی ننویس.")
 
     class Meta:
@@ -21,8 +22,6 @@ class AccountOptionsForm(forms.ModelForm):
     def clean(self):
         cleaned = super().clean()
         if any(key in self.changed_data for key in OPTION_PERMISSIONS):
-            if len(cleaned.get("settings_reason", "").strip()) < 3:
-                self.add_error("settings_reason", "دلیل تغییر را در حداقل ۳ نویسه بنویس.")
             from .demo_limits import test_tools_enabled
             if ("unlimited_demo_sends" in self.changed_data and cleaned.get("unlimited_demo_sends")
                     and not test_tools_enabled()):
@@ -39,6 +38,13 @@ class ReadOnlyAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return False
+
+
+class ReadOnlyPhoneAdmin(ReadOnlyAdmin):
+    @admin.display(description='موبایل')
+    def full_phone(self, obj):
+        from .privacy import decrypt
+        return decrypt(obj.phone_cipher) if obj.phone_cipher else 'شماره در سوابق موجود نیست'
 
 
 @admin.register(Order)
@@ -74,13 +80,13 @@ class OrderAdmin(ReadOnlyAdmin):
 
 
 @admin.register(Account)
-class AccountAdmin(ReadOnlyAdmin):
+class AccountAdmin(ReadOnlyPhoneAdmin):
     form = AccountOptionsForm
     change_list_template = "admin/core/account/change_list.html"
-    list_display = ("id", "phone_masked", "unlimited_free_sends", "free_sends_remaining", "sender_daily_limit", "rewrite_daily_limit", "unlimited_demo_sends", "direct_message_tone", "created_at")
+    list_display = ("id", "full_phone", "unlimited_free_sends", "free_sends_remaining", "sender_daily_limit", "rewrite_daily_limit", "unlimited_demo_sends", "direct_message_tone", "created_at")
     list_filter = ("unlimited_free_sends", "unlimited_demo_sends", "direct_message_tone", ('sender_daily_limit', admin.EmptyFieldListFilter), ('rewrite_daily_limit', admin.EmptyFieldListFilter))
     search_fields = ("phone_masked",)
-    fields = ("id", "phone_masked", "free_sends_remaining", "free_sends_earned_total", "purchased_sends_remaining", "demo_sends_remaining", "created_at")
+    fields = ("id", "full_phone", "free_sends_remaining", "free_sends_earned_total", "purchased_sends_remaining", "demo_sends_remaining", "created_at")
     readonly_fields = fields
 
 
@@ -218,7 +224,7 @@ class DemoLimitResetForm(forms.Form):
         widget=forms.TextInput(attrs={"type": "tel", "inputmode": "tel", "dir": "ltr", "autocomplete": "off", "data-normalize-digits": ""}))
     recipient_phone = forms.CharField(label="شمارهٔ گیرندهٔ تست", max_length=32,
         widget=forms.TextInput(attrs={"type": "tel", "inputmode": "tel", "dir": "ltr", "autocomplete": "off", "data-normalize-digits": ""}))
-    reason = forms.CharField(label="دلیل تست", min_length=3, max_length=200,
+    reason = AutomaticReasonField(audit_default="django_admin:admin", label="دلیل تست", min_length=3, max_length=200,
         help_text="فقط دلیل کوتاه بنویس؛ شماره، کد ورود یا اطلاعات خصوصی ننویس.")
 
     def clean_sender_phone(self):
@@ -251,7 +257,7 @@ class DemoLimitResetAdmin(ReadOnlyAdmin):
 
 
 class AuditedActionForm(ActionForm):
-    reason = forms.CharField(label='دلیل اقدام', required=False, max_length=200)
+    reason = AutomaticReasonField(audit_default="django_admin:admin", label='دلیل اقدام', required=False, max_length=200)
     reference = forms.CharField(label='مرجع مستند بازپرداخت', required=False, max_length=100)
 
 
@@ -368,8 +374,8 @@ class SpendBudgetAdmin(ReadOnlyAdmin):
 
 
 @admin.register(Invitation)
-class InvitationAdmin(ReadOnlyAdmin):
-    list_display = ('id', 'phone_masked', 'created_at', 'registered_at', 'reward_awarded_at')
+class InvitationAdmin(ReadOnlyPhoneAdmin):
+    list_display = ('id', 'full_phone', 'created_at', 'registered_at', 'reward_awarded_at')
     fields = list_display
     readonly_fields = fields
 

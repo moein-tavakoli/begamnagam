@@ -113,7 +113,7 @@ export function Invitations() {
         <div className="history-toolbar"><h2>دعوت‌های من</h2><BusyButton className="button ghost compact" busy={loading} disabled={!!busy} onClick={() => void load()}><Icon name="refresh" size={17} /> تازه‌سازی</BusyButton></div>
         {loading && !list && <p role="status" className="service-loading"><span className="spinner" /> در حال دریافت دعوت‌ها…</p>}
         {list && (list.results.length ? <div className="message-list">{list.results.map(item => <article key={item.id} className="history-message invitation-item">
-          <div className="history-message-top"><span className="recipient-label"><Icon name="phone" size={17} /><bdi>{item.phone_masked}</bdi></span>
+          <div className="history-message-top"><span className="recipient-label"><Icon name="phone" size={17} /><bdi>{item.phone||'شماره در دسترس نیست'}</bdi></span>
             <span className={`status-pill ${item.status === "registered" ? "invitation-registered" : ""}`}>{item.status === "registered" ? "ثبت‌نام کرد" : item.status === "expired" ? "مهلت دعوت تمام شده" : "منتظر ثبت‌نام"}</span></div>
           <p>{item.registered_at ? `ثبت‌نام و دریافت سهمیهٔ اولیه در ${date(item.registered_at)}` : invitationDeliveryLabel(item.delivery_status)}</p>
           {item.reward_credits > 0 && <p className="invitation-reward"><Icon name="sparkle" size={17} /> {number(item.reward_credits)} ارسال جایزه به سهمیه‌ات اضافه شد.</p>}

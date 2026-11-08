@@ -30,13 +30,13 @@ def purchase_detail(request, purchase_id):
     return purchase_data(purchase)
 
 
-@staff_api(['GET', 'POST'], 'core.manage_message_packages')
+@staff_api(['GET', 'POST'], 'core.manage_message_packages', automatic_reason=True)
 def packages(request):
     if request.method == 'POST':
         return package_data(save_package(request.user, body(request)))
     return {'packages': [package_data(p) for p in MessagePackage.objects.all()]}
 
 
-@staff_api(['POST'], 'core.manage_message_packages')
+@staff_api(['POST'], 'core.manage_message_packages', automatic_reason=True)
 def package_update(request, package_id):
     return package_data(save_package(request.user, body(request), package_id))

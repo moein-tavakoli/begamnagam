@@ -1,11 +1,11 @@
 "use client";
 
-import { useLayoutEffect, useRef, type InputHTMLAttributes } from "react";
+import { useLayoutEffect, useRef, type InputHTMLAttributes, type Ref } from "react";
 import { latinDigits } from "@/lib/format";
 
-type Props = Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & { type?: "number" | "date" };
+type Props = Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & { type?: "number" | "date"; inputRef?: Ref<HTMLInputElement> };
 
-export function DigitInput({ type = "number", min, max, step = 1, required, value, defaultValue, onChange, onBlur, ...props }: Props) {
+export function DigitInput({ type = "number", min, max, step = 1, required, value, defaultValue, onChange, onBlur, inputRef, ...props }: Props) {
   const ref = useRef<HTMLInputElement>(null);
   function normalize(input: HTMLInputElement) {
     const original = input.value;
@@ -49,7 +49,7 @@ export function DigitInput({ type = "number", min, max, step = 1, required, valu
     return () => form?.removeEventListener("reset", reset);
   }, [type, min, max, step, required, value, defaultValue]);
 
-  return <input {...props} ref={ref} type="text" inputMode={type === "number" && step !== 1 ? "decimal" : "numeric"}
+  return <input {...props} ref={node => { ref.current = node; if (typeof inputRef === 'function') inputRef(node); else if (inputRef) inputRef.current = node; }} type="text" inputMode={type === "number" && step !== 1 ? "decimal" : "numeric"}
     data-number-input={type === "number" ? "" : undefined} data-date-input={type === "date" ? "" : undefined}
     dir={props.dir ?? "ltr"} min={min} max={max} step={step} required={required}
     value={value === undefined ? undefined : latinDigits(String(value))}

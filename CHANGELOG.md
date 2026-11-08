@@ -9,6 +9,323 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.30.1 — 2026-11-08 — Align release smoke with owner phone display
+
+### Fixed
+
+- Update the demo smoke journey to expect the full destination phone only in
+  the owner's history, as authorized in 0.27.0. Keep order ownership checks,
+  check that another account cannot list the order, and verify logout removes
+  history access. Do not expose encryption/hash storage fields.
+
+Validation: all three GitHub backend/frontend/compose checks passed after the
+smoke correction. The exact Linux image passed 720 PostgreSQL tests, encrypted
+backup/restore and migration rehearsal; frontend tests116, TypeScript, production
+build, candidate routes and445 runtime file hashes passed. Six frontends and13
+services are healthy. Server rollout on2026-11-09 Tehran preserved user data,
+credentials and private Swagger access. Browser navigation from this device
+returned the offline fallback; verified domain HTTPS used the internal Nginx
+route. No live provider tests or IP grants. [Deployment evidence](docs/deployments/ct115-0.30.1.json),
+[release report and limits](docs/release-v0.30.1.fa.md).
+
+## 0.30.0 — 2026-11-08 — Exact-IP monitoring access (local)
+
+### Added
+
+- Owner-managed exact IP allowlist for unauthenticated, read-only monitoring only.
+  Other networks retain staff login and operations permission requirements.
+- Persist empty-by-default IPv4/IPv6 settings with CSRF, transactional audit and
+  optimistic revisions; reject networks, proxy addresses and non-client IPs.
+  Each read rechecks access; malformed/unverified forwarding and unavailable
+  settings never grant anonymous access. No staff/product credential is issued.
+- Add the MUI form to site settings, preserve staff-only management entry,
+  private Swagger and sensitive APIs, and document trusted proxy requirements.
+
+Validation: 720 PostgreSQL tests (15 new IP-access tests), 116 frontend tests,
+TypeScript, migration consistency and Persian catalog parity passed. Native
+owner settings/monitoring display verified at desktop and 375px (no horizontal
+overflow); anonymous native API correctly denies the empty allowlist. Next.js
+reports no compilation/session errors; independent security review found no
+material issues. Real-network IP grants/revocation were tested only against the
+isolated test database. No live IP grants, provider calls, push or deployment.
+
+## 0.29.1 — 2026-11-08 — Permanent monitoring display layout (local)
+
+### Changed
+
+- Use «بگم نگم» as the monitoring title and always use the display layout,
+  removing the display-mode switch. Legacy `?tv=1` links remain usable.
+
+Validation: 116 frontend tests, TypeScript and Persian changelog parity passed.
+Native Fast Refresh and the legacy display URL show the brand title without
+mode controls; Next.js reports no compilation or session errors. No deployment.
+
+## 0.29.0 — 2026-11-08 — Today and total monitoring user cards (local)
+
+### Added
+
+- Split the user metric into Persian "users today" and "all users" cards. Add
+  accounts_today from Tehran midnight (inclusive) to now (exclusive) and
+  accounts_total for all product Accounts, excluding staff-only login records.
+  Preserve accounts_new and the existing hourly chart window; use eight desktop
+  columns and show unavailable values safely during an older API response.
+
+Validation: 10 related PostgreSQL tests including two new midnight/boundary
+regressions, 116 frontend tests, TypeScript and Persian changelog parity passed.
+Native display verified at 1466×827 (single screen) and 375px (no horizontal
+overflow); scoped review found no material issues. No live sends, account
+changes, push or deployment.
+
+## 0.28.0 — 2026-11-08 — Owner-managed staff roles and standalone monitoring (local)
+
+### Added
+
+- Add owner-only `/manage/staff` and `/manage/staff/roles` with Persian server-
+  paginated MUI DataGrids, compact menus, employee forms and six-section role
+  editor. Seed support/finance/operations/admin roles without creating or
+  reassigning any existing user. A managed employee has exactly one role;
+  assignment replaces prior groups/direct permissions and protects superusers.
+- Add strict owner API CRUD with CSRF, bounded queries, password validation/hash,
+  version conflicts, transaction/row locks, audit metadata and assigned-role
+  deletion protection. No auth administration privileges are granted. Managed
+  support/changelog access is checked in the service and API; legacy staff keep
+  current rights until assigned. Navigation, support polling and first landing
+  follow actual capabilities; forbidden refresh clears old private view state.
+
+### Fixed
+
+- Give every monitoring route a dedicated layout with no management header,
+  sidebar or footer and an explicit return link. Fit the normal monitoring view
+  at 1466×827, keep the 1920×1080 presentation and mobile scrolling. Long alerts
+  scroll within their bounded panel instead of expanding the compact page.
+- Color unanswered support 1–9 warning/10+ error and oldest queue 120–599 seconds
+  warning/600+ error, with Persian severity text. Highlight new accounts with
+  a primary accent and larger value. Keep real metrics, empty states and polling.
+
+Validation: 703 PostgreSQL tests, including 18 staff authorization/CRUD/revision/
+concurrency regressions, 116 frontend tests, TypeScript, migration consistency
+and Persian changelog parity passed. Independent security review found no
+material issues. Native owner lists/dialogs and four seeded roles were inspected
+at desktop/mobile; monitoring shell absence and compact fit were measured.
+No real employee/credential mutation, support/SMS/payment or paid AI test was
+performed. Local version only; no push or server deployment.
+
+## 0.27.0 — 2026-11-08 — Full authorized phone display throughout the site (local)
+
+### Added
+
+- Add full `phone` fields for the authenticated account, owned invitations and
+  staff support threads, plus `recipient_phone` for owned message history/receipts.
+  Extend v2 Me/Message/Invitation schemas and private integration docs additively;
+  legacy masked payload fields remain for existing consumers.
+- Display full phones across profile/header, message/invitation history, support
+  inbox/thread titles, management invitation/manual-payment grids and Django
+  account/invitation read-only views. Remove every UI masked-field fallback;
+  pruned or missing numbers stay unavailable rather than reconstructed.
+- Preserve owner/staff guards, anonymous sender secrecy, encrypted storage,
+  redacted logs/audits, current pagination and private Swagger access. Generic
+  management decrypts only its bounded page and maps virtual phone search fields
+  to existing database fields. Update privacy text to describe actual display.
+
+Validation: 685 PostgreSQL tests (including 14 new access/display regressions),
+104 frontend tests, TypeScript and Persian changelog parity passed. Update legacy
+masked-response expectations while preserving post-logout redaction checks.
+Independent review found no material issues. Authenticated native support checks
+at 1280px and 375px confirmed full phones in list/thread titles and no horizontal
+overflow; owner UI paths are covered by serializer access tests and source review,
+without creating a fresh product session. No real OTP, support message, recipient
+SMS, payment or AI call was sent. Local version only; no push or deployment.
+
+## 0.26.0 — 2026-11-08 — Private TV monitoring and support composer (local)
+
+### Added
+
+- Add `/manage/monitoring` for operations staff with MUI X Community line, bar
+  and donut charts, compact live-operation cards and a TV layout without the
+  sidebar. Default refresh is 30 seconds; 30/60/120/300-second selections persist
+  in the browser. Pause hidden/offline requests, prevent overlap, cancel on exit,
+  preserve clearly marked stale data after failure and clear data on auth loss.
+- Add read-only `/api/v1/manage/monitoring` with bounded 24 Tehran hour buckets,
+  delivery creation cohorts, moderation partitions, current queues, unanswered
+  support and five prioritized active alerts. No private text/phone/IDs, provider
+  probes or reporting writes; provider balances remain overview-only.
+
+### Fixed
+
+- Reverse public/staff support composer field and button placement and orient
+  both send icons right; preserve draft, limits, retry and submit behavior.
+- Label delivery/demo and time/cohort scopes explicitly; critical alerts stay
+  errors, queue-age alerts use time units and payment labels identify the provider
+  without claiming effective checkout availability or infrastructure health.
+
+Validation: 671 PostgreSQL tests (including eight new monitoring tests), 104
+frontend tests, TypeScript and Persian changelog parity passed. Independent
+review findings were resolved. Native checks cover 1920×1080 TV fit, 375px bounds,
+Persian axes/controls, saved interval, refreshing timestamps and support composer
+placement at mobile/desktop. The real local window had no new delivery/moderation
+rows; empty charts were observed and nonempty partitions tested in isolation.
+Public composer styling was inspected without creating a fresh OTP session.
+No support messages, SMS, paid AI calls, payment actions, push or deployment.
+
+
+## 0.25.0 — 2026-11-08 — Persian management DataGrid pagination (local)
+
+### Added
+
+- Move every management records table to MUI X Community DataGrid with Persian
+  controls, row ranges and total counts; offer 10/25/50/100 rows on desktop and
+  mobile. Use server pagination and reset to the first page on search/status/size
+  changes. Keep page-only sorting/filtering disabled in favor of server search.
+- Accept optional integer `page_size` or `limit` on management records, default
+  25 and bounded to 1–100. Reject invalid/conflicting sizes with 422. Apply sizes
+  consistently to normal records and encrypted account/blacklist search while
+  preserving permission checks, bounded retained rows and audit privacy.
+- Exclude identifier columns from tables while preserving internal keys, user
+  links and row action targets. Keep actions first in RTL, accessible cell focus
+  and JSON value dialogs without increasing row height.
+
+Validation: 663 PostgreSQL tests, 99 frontend tests, TypeScript and Persian
+changelog parity passed. Independent review found no material issues. Native
+browser checks cover desktop/375px, page transitions without duplicate rows,
+size changes resetting pages, visible Persian mobile size controls, hidden
+identifier columns, row menus and value-dialog focus. No live sends, account or
+financial changes were submitted. Local version only; no push or deployment.
+
+## 0.24.1 — 2026-11-08 — Simplify management navigation and show version (local)
+
+### Fixed
+
+- Remove the advanced Django management item from the shared desktop/mobile
+  navigation. Show the build's canonical package version in the management
+  footer using MUI Typography and the local Farsi-Digits font.
+- Update the Persian release catalog and generated changelog for this version.
+
+Validation: 96 frontend tests, TypeScript and Persian changelog parity passed.
+Authenticated browser checks at 1280px and 375px confirm the removed navigation
+item, package version 0.24.1 in the footer, Farsi-Digits font and no page overflow.
+Local version only; no push or server deployment.
+
+## 0.24.0 — 2026-11-08 — Private Persian release history (local)
+
+### Added
+
+- Add `/manage/changelog` with Persian summaries for all 61 recorded versions,
+  Material cards, responsive layout and progressive reveal of older versions.
+  Show local changes separately from historical records without inventing
+  missing dates or asserting a server deployment.
+- Serve the packaged catalog only through active-staff GET
+  `/api/v1/manage/changelog`, with no-store and cookie variation. Deny anonymous,
+  inactive and ordinary product users; do not embed notes in public client code
+  or static assets.
+- Generate `CHANGELOG.fa.md` from the same private catalog. A check command
+  verifies exact Markdown parity, complete technical-changelog version coverage,
+  unique ordering and the synchronized application version. Document ongoing
+  Persian notes maintenance for future releases.
+
+Validation: 15 related PostgreSQL tests, 96 frontend tests and TypeScript passed.
+Catalog checks cover Persian text, version/date shape, ordering and uniqueness.
+Independent review found no material issues. Anonymous native HTTPS access
+returned 401; authenticated desktop/mobile UI checks and generator parity are
+recorded with this local change. No push or server deployment.
+
+## 0.23.2 — 2026-11-08 — Complete Material management workspace (local)
+
+### Fixed
+
+- Complete the `/manage` migration to MUI layouts, Typography, Grid/Stack,
+  labeled TextFields, Material icons, Breadcrumbs, badges, buttons and menus.
+  Replace the bespoke sidebar with an RTL permanent/temporary Drawer and keep
+  card/table overflow bounded on mobile. Remove the old management layout CSS.
+- Mount provider balances only on the authorized overview. Settings, catalogs,
+  bank-proof dialogs and the complete staff support inbox/thread use Material
+  components; public support retains its renderer and shared conversation logic.
+  Preserve drafts across management routes, retry keys, read/poll behavior,
+  permissions, CSRF, auditing, form names, digit normalization and constraints.
+- Keep AI-rejected/unavailable inputs inspectable in per-user history. Verify
+  existing encrypted capture across website, API v2 and bot-owned sessions with
+  integration tests; no backend production behavior change was necessary.
+  Legacy unstored text cannot be recovered; existing retention still applies.
+
+Validation: 95 frontend tests, TypeScript and 28 related PostgreSQL tests passed.
+Authenticated browser checks covered all 24 menu routes at desktop, representative
+pages at 375px, overview-only balances, Drawer Escape/focus, row height 57px before
+and after menu opening, native constraints/date rejection and support draft
+retention across routes. Independent review found explicit-ID label association
+broken in the new field adapters; browser regression failed before and passed
+after forwarding IDs to TextField. No SMS/AI calls or account/payment changes
+were submitted for QA. Local version only; no push or server deployment.
+
+## 0.23.1 — 2026-11-08 — MUI management controls and Persian explanations (local)
+
+### Fixed
+
+- Replace expanding in-row actions with an anchored, portalled MUI Menu and
+  IconButton. Use management-only MUI 9.5 components for navigation, cards,
+  tables, controls, tabs and action dialogs, with App Router CSS collection,
+  RTL styling and the local Farsi-Digits font. Public UI and Django admin retain
+  their existing layouts.
+- Explain stored moderation reasons, operational warnings, statuses, providers,
+  categories, payment modes and audit actions in Persian. Preserve canonical
+  API/database codes, identifiers, private content and sealed messages. Unknown
+  machine codes get an honest Persian fallback; no invented cause is inferred.
+- Preserve form names, numeric/date normalization and constraints, bank proof,
+  permissions, CSRF, automatic auditing, busy guards and keyboard focus restore.
+
+Validation: 93 frontend tests and TypeScript passed. Native authenticated browser
+checks at desktop and 375px verified row height 65px before/after menu opening,
+menu viewport bounds, Escape/focus, Persian reasons, canonical numeric input,
+required bank fields and invalid future-date rejection without submitting changes.
+Independent review found missing canonical wallet/audit translations; regression
+tests failed before the fix and the complete frontend suite passed afterward.
+No paid AI calls, OTP/message sends, account/payment mutations, push or deployment.
+
+## 0.23.0 — 2026-11-08 — Active recipient blacklist (local)
+
+### Added
+
+- Add `/manage/blacklist` for active recipient opt-outs, including nonmembers.
+  Require both staff account-view and recipient-state-view permissions; audit
+  access without phone/search text. Never expose recipient hashes, cipher,
+  sender identity or unsubscribe capabilities, and provide no unblock action.
+- Resolve full phones from surviving encrypted accounts/orders/invitations;
+  retain entries with an explicit unavailable label after source data deletion.
+  Support full/partial Persian-digit phone search and bounded pagination.
+  Opening the cancellation link alone remains distinct from confirmed opt-out.
+
+Validation: 28 related PostgreSQL tests, 88 frontend tests, TypeScript, Django
+checks, version/diff checks and independent review passed. Tests cover permissions,
+nonmembers, cancellation/resumption, unavailable phones, partial search and page 2.
+Authenticated local browser checks covered the blacklist empty state, full-phone
+user table, Persian partial search, compact actions and invitation deep-link reload.
+The local page loaded without a certificate warning; no warning was bypassed.
+No paid AI calls, OTP/message sends, consent changes, push or server deployment;
+local commit only.
+
+## 0.22.0 — 2026-11-08 — Routed management users workspace (local)
+
+### Added
+
+- Add real management subroutes with a persistent shared shell, Users immediately
+  after Overview, compact three-dot row actions and per-user messages/invitations.
+  Preserve authorized legacy navigation for staff without account permission.
+- Show full account phones only to authorized staff, audit disclosure and support
+  Persian-digit partial search by scanning encrypted phones in memory. Keep search
+  out of URLs/logs and retain only one page of 25 rows; scans remain linear in users.
+- Record new authenticated message preparation outcomes in encrypted MessageAttempt
+  history, including AI rejection/unavailability. Deduplicate orders/previews and
+  moderation events. Quota/early-invalid requests cannot write private histories.
+  Add scoped text review, 31-day redaction, account deletion cleanup and key rotation.
+- Remove manual administrative reason prompts in Next/Django forms; keep automatic
+  action/actor audits, permissions, CSRF, revisions and mandatory financial proof.
+
+Validation: 645 PostgreSQL tests, 87 frontend tests, TypeScript, Django checks,
+migration consistency and Compose configuration passed. Independent review findings
+on quota admission and limited-staff navigation were fixed and covered. Native Next
+route/compilation checks passed with the project CA; authenticated browser checks
+were blocked by untrusted localhost TLS and no certificate warning was bypassed.
+Old rejected drafts cannot be recovered if never stored. No provider calls, test SMS,
+push or server deployment; local commit only.
+
 ## 0.21.1 — 2026-11-08 — Keep AI review classification-only (local)
 
 ### Fixed

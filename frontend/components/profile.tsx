@@ -43,7 +43,7 @@ export function Profile() {
               <span className="profile-avatar"><Icon name="user" size={32} /></span>
               <div>
                 <h2>شمارهٔ تأییدشده</h2>
-                <bdi className="profile-phone">{data.phone_masked}</bdi>
+                <bdi className="profile-phone">{data.phone||'شماره در دسترس نیست'}</bdi>
                 <span className="profile-verified"><Icon name="shield" size={15} /> حساب تأییدشده</span>
               </div>
             </div>

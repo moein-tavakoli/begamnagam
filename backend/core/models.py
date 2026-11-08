@@ -7,6 +7,36 @@ from django.utils import timezone
 from .fields import EncryptedTextField
 
 
+class MonitoringAccessSettings(models.Model):
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    ips = models.JSONField(default=list)
+    revision = models.PositiveIntegerField(default=0, editable=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        default_permissions = ()
+        constraints = [models.CheckConstraint(condition=models.Q(id=1), name='single_monitoring_access_settings')]
+
+
+class StaffRole(models.Model):
+    name = models.CharField(max_length=80, unique=True)
+    group = models.OneToOneField('auth.Group', on_delete=models.PROTECT, related_name='staff_role')
+    sections = models.JSONField(default=list)
+    revision = models.PositiveIntegerField(default=0, editable=False)
+
+    class Meta:
+        default_permissions = ()
+
+
+class StaffMembership(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='staff_membership')
+    role = models.ForeignKey(StaffRole, on_delete=models.PROTECT, related_name='memberships')
+    revision = models.PositiveIntegerField(default=0, editable=False)
+
+    class Meta:
+        default_permissions = ()
+
+
 class ExampleCategory(models.Model):
     name = models.CharField('نام دسته', max_length=60, unique=True)
     active = models.BooleanField('نمایش در سایت', default=True)
@@ -868,3 +898,20 @@ class SupportMessage(models.Model):
             models.CheckConstraint(condition=models.Q(role__in=['customer', 'staff']), name='support_known_role'),
         ]
         indexes = [models.Index(fields=['conversation', 'role', 'sequence'], name='support_role_sequence_idx')]
+
+
+class MessageAttempt(models.Model):
+    """Private preview history; raw input is never dispatchable message content."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    preview = models.ForeignKey(Preview, null=True, blank=True, on_delete=models.SET_NULL)
+    original_text = EncryptedTextField(blank=True, default='')
+    recipient_phone = EncryptedTextField(blank=True, default='')
+    message_tone = models.CharField(max_length=12, blank=True, default='')
+    status = models.CharField(max_length=12, choices=[('accepted', 'پذیرفته'), ('rejected', 'ردشده'), ('failed', 'ناموفق')])
+    reason_code = models.CharField(max_length=40, blank=True, default='')
+    moderation_event_id = models.UUIDField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=['owner', 'created_at'], name='message_attempt_owner_created')]

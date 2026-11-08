@@ -1,0 +1,97 @@
+{
+  "version": "0.30.1",
+  "source_commit": "b93cb3732d4d7469a34f7b30ac51b0845c686e1c",
+  "promoted": true,
+  "checked_at_utc": "2026-11-08T20:48:33.343342+00:00",
+  "frontend_image": "sha256:0db05ebe67fa1df4297553cd646061ba43ae163a3b2d5661ee4ca6e6e4aa8bbe",
+  "backend_image": "sha256:110252e3c5869ff754e29190ebce117622e3390360e414ec7161baef725f1172",
+  "services": {
+    "backend": "healthy",
+    "worker": "running",
+    "beat": "running",
+    "frontend": "healthy",
+    "frontend2": "healthy",
+    "frontend3": "healthy",
+    "frontend4": "healthy",
+    "frontend5": "healthy",
+    "frontend6": "healthy",
+    "postgres": "healthy",
+    "redis": "healthy",
+    "rabbitmq": "healthy",
+    "proxy": "healthy"
+  },
+  "frontends": 6,
+  "postgresql_tests": 720,
+  "frontend_tests": 116,
+  "migration": "0043_monitoring_access_settings",
+  "migration_product_fields_preserved": true,
+  "pre_and_post_backup_restore": "PASS",
+  "existing_env_and_credentials_preserved": true,
+  "existing_private_swagger_access": "PASS",
+  "ci": {
+    "pr": "https://github.com/moein-tavakoli/begamnagam/actions/runs/42519644315"
+  },
+  "https": {
+    "version": "0.30.1",
+    "https": "PASS",
+    "tls_certificate_verified": true,
+    "transport": "domain_https_via_internal_nginx_192.168.1.6",
+    "private_documentation": "PASS",
+    "anonymous_entry": "login redirect",
+    "anonymous_private_files": 404,
+    "operations": 50,
+    "new_bot_operations": 6,
+    "otp_session_cookie_contract": "PASS",
+    "monthly_login_documented": true,
+    "public_tones": [
+      "polite",
+      "firm",
+      "blunt"
+    ],
+    "default_tone": "firm",
+    "n8n_otp_guide": "PASS",
+    "client_origin_header": "PASS",
+    "bot_api_without_key": "denied",
+    "previous_documentation_credentials": "accepted",
+    "documentation_login_and_logout_csrf": "PASS",
+    "secure_httponly_cookie": true,
+    "documentation_account_product_access": "denied",
+    "documentation_account_management_support_access": "denied",
+    "live_otp_sms_profile": "preserved",
+    "paid_checkout": "disabled",
+    "real_sms_sent": 0,
+    "model_calls": 0
+  },
+  "features": {
+    "classification_only_review": true,
+    "backend_files": 249,
+    "product_session_days": 30,
+    "default_tone": "firm",
+    "public_tones": [
+      "polite",
+      "firm",
+      "blunt"
+    ],
+    "provider_budgets_limits_preserved": true,
+    "data_counts_preserved": true,
+    "private_documentation_enabled": true,
+    "paid_checkout": "disabled"
+  },
+  "test_sms_sent": 0,
+  "model_test_calls": 0,
+  "resends": 0,
+  "live_ip_grants": 0,
+  "limitations": [
+    "Exact IP grants and revocation were verified only in isolated tests; the live list starts empty.",
+    "No live message send, paid model or payment was invoked for deployment verification.",
+    "Legacy queue records were preserved without archival or replay."
+  ],
+  "browser_verification": {
+    "status": "offline_fallback_on_local_device",
+    "public_external_probe": "not_available",
+    "https_verified_via_internal_nginx": true,
+    "native_desktop_mobile_before_deployment": "PASS"
+  },
+  "promotion_pr": "https://github.com/moein-tavakoli/begamnagam/pull/11",
+  "prod_merge_status_at_deployment": "Pending PR merge after the verified rollout, as requested"
+}

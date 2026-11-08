@@ -41,7 +41,7 @@ class InvitationTests(TestCase):
         InvitationSend.objects.update(created_at=timezone.now()-timedelta(hours=25))
         RecipientState.objects.update(last_sent_at=timezone.now()-timedelta(hours=25))
 
-    def test_add_is_encrypted_masked_consented_idempotent_and_no_gift_consumed(self):
+    def test_add_is_encrypted_with_full_owned_display_consented_idempotent_and_no_gift_consumed(self):
         key = str(uuid.uuid4())
         response = self.invite('۰۹۹۰۱۲۳۴۵۶۷', key)
         self.assertEqual(response.status_code, 200, response.content)
@@ -49,7 +49,7 @@ class InvitationTests(TestCase):
         self.assertEqual(InvitationSend.objects.count(), 1)
         invitation, send = Invitation.objects.get(), InvitationSend.objects.get()
         self.assertEqual(decrypt(invitation.phone_cipher), '09901234567')
-        self.assertNotIn('09901234567', response.content.decode())
+        self.assertEqual(response.json()['phone'], '09901234567')
         self.assertEqual(Account.objects.get(user=self.user).free_sends_remaining, 3)
         with connection.cursor() as cursor:
             cursor.execute('SELECT full_sms FROM core_invitationsend')

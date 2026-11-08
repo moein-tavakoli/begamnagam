@@ -79,7 +79,7 @@ class ManagementTests(TestCase):
         self.account.refresh_from_db()
         self.assertFalse(self.account.suspended)
 
-    def test_resource_permissions_are_independent_and_output_is_masked(self):
+    def test_resource_permissions_are_independent_and_account_phone_is_staff_scoped(self):
         self.permit("view_account")
         context = self.client.get("/api/v1/manage/session").json()
         self.assertEqual([r["key"] for r in context["resources"]], ["accounts"])
@@ -87,7 +87,8 @@ class ManagementTests(TestCase):
         self.assertEqual(response.status_code, 200)
         row = response.json()["rows"][0]
         self.assertEqual(row["phone_masked"], mask(self.phone))
-        for secret in (self.phone, digest(self.phone), encrypt(self.phone), "phone_cipher", "phone_hash", "username"):
+        self.assertEqual(row["phone"], self.phone)
+        for secret in (digest(self.phone), encrypt(self.phone), "phone_cipher", "phone_hash", "username"):
             self.assertNotIn(secret, response.content.decode())
         self.assertEqual(self.post("records/orders").status_code, 403)
         self.assertEqual(self.post("records/not-a-model").status_code, 404)
@@ -120,6 +121,7 @@ class ManagementTests(TestCase):
         m.OperatorAudit.objects.create(actor=self.admin, action="test", reason="audit fixture")
         grant = m.RecipientGrant.objects.create(preview=preview, token_digest="private-grant", recipient_hash=digest("09999999999"))
         m.AbuseReport.objects.create(grant=grant, reason="other", details="private-report-details")
+        m.RecipientState.objects.create(phone_hash=self.account.phone_hash, blocked=True)
         for resource in RESOURCES:
             with self.subTest(resource=resource):
                 response = self.post("records/" + resource)
@@ -151,7 +153,7 @@ class ManagementTests(TestCase):
         self.assertEqual(self.post("limits", {"revision": current["revision"], "reason": "Stale form", "values": {"sender_limit": 8}}).status_code, 409)
         for values in ({"sender_limit": True}, {"otp_max_attempts": 0}, {"is_superuser": True}, {"sender_window_hours": -1}):
             self.assertEqual(self.post("limits", {"revision": revision, "reason": "Invalid change", "values": values}).status_code, 422)
-        self.assertEqual(self.post("limits", {"revision": revision, "values": {"sender_limit": 8}}).status_code, 422)
+        self.assertEqual(self.post("limits", {"revision": revision, "values": {"sender_limit": 8}}).status_code, 200)
         self.assertEqual(self.post("request-limits/manage-login-ip", {"revision": 0, "reason": "Disable protection", "values": {"enabled": False}}).status_code, 422)
         self.assertEqual(self.post("request-limits/manage-login-ip", {"revision": 0, "reason": "Adjust login count", "values": {"maximum": 25}}).status_code, 200)
         self.assertEqual(m.Account.objects.get(pk=self.account.pk).free_sends_remaining, 3)
@@ -199,7 +201,7 @@ class ManagementTests(TestCase):
         self.assertEqual(self.post(path, {"reason": "Investigate case"}).status_code, 403)
         self.permit("view_abusereport")
         self.assertNotIn("case details", self.post("records/reports").content.decode())
-        self.assertEqual(self.post(path, {}).status_code, 422)
+        self.assertEqual(self.post(path, {"reason": ""}).status_code, 422)
         response = self.post(path, {"reason": "Investigate case"})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["reviewed_text"], "reviewed-case-text")

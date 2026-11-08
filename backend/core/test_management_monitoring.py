@@ -2,6 +2,7 @@
 import re
 import uuid
 from datetime import datetime, timedelta, timezone as datetime_timezone
+from zoneinfo import ZoneInfo
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -72,7 +73,7 @@ class ManagementMonitoringTests(TestCase):
                                      'queue', 'operations', 'alerts', 'environment'})
         self.assertEqual(data['window'], {'start': '2026-11-07T13:00:00+03:30',
             'end': '2026-11-08T12:47:00+03:30', 'timezone': 'Asia/Tehran'})
-        self.assertEqual(data['totals'], {'accounts_new': 0, 'requests': 0, 'delivered': 0, 'support_unanswered': 0})
+        self.assertEqual(data['totals'], {'accounts_new': 0, 'accounts_today': 0, 'accounts_total': 0, 'requests': 0, 'delivered': 0, 'support_unanswered': 0})
         self.assertEqual(len(data['hourly']), 24)
         self.assertEqual(data['hourly'][0], {'at': '2026-11-07T13:00:00+03:30', 'accounts': 0, 'requests': 0})
         self.assertEqual(data['hourly'][-1], {'at': '2026-11-08T12:00:00+03:30', 'accounts': 0, 'requests': 0})
@@ -97,6 +98,24 @@ class ManagementMonitoringTests(TestCase):
         self.assertEqual(data['hourly'][-1]['accounts'], 1)
         self.assertEqual(sum(row['accounts'] for row in data['hourly']), 3)
         self.assertEqual(sum(row['requests'] for row in data['hourly']), 3)
+
+    def test_today_accounts_use_tehran_midnight_and_total_includes_all_accounts(self):
+        midnight = NOW.astimezone(ZoneInfo('Asia/Tehran')).replace(hour=0, minute=0, second=0, microsecond=0)
+        for at in (midnight - timedelta(microseconds=1), midnight,
+                   NOW - timedelta(microseconds=1), NOW + timedelta(seconds=1)):
+            self.account(at)
+        data = self.get_data()
+        self.assertEqual(data['totals'].get('accounts_today'), 2)
+        self.assertEqual(data['totals'].get('accounts_total'), 4)
+        self.assertEqual(data['totals']['accounts_new'], 3)
+
+    def test_today_accounts_reset_at_tehran_midnight_without_losing_total(self):
+        midnight = NOW.astimezone(ZoneInfo('Asia/Tehran')).replace(hour=0, minute=0, second=0, microsecond=0)
+        self.account(midnight - timedelta(microseconds=1))
+        with patch('django.utils.timezone.now', return_value=midnight):
+            data = self.client.get(self.path).json()
+        self.assertEqual(data['totals'].get('accounts_today'), 0)
+        self.assertEqual(data['totals'].get('accounts_total'), 1)
 
     def test_delivery_partition_uses_delivery_creation_cohort_not_order_or_resolution(self):
         for created, status in ((START - timedelta(microseconds=1), 'delivered'), (START, 'delivered'),

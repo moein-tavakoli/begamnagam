@@ -9,6 +9,22 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.29.0 — 2026-11-08 — Today and total monitoring user cards (local)
+
+### Added
+
+- Split the user metric into Persian "users today" and "all users" cards. Add
+  accounts_today from Tehran midnight (inclusive) to now (exclusive) and
+  accounts_total for all product Accounts, excluding staff-only login records.
+  Preserve accounts_new and the existing hourly chart window; use eight desktop
+  columns and show unavailable values safely during an older API response.
+
+Validation: 10 related PostgreSQL tests including two new midnight/boundary
+regressions, 116 frontend tests, TypeScript and Persian changelog parity passed.
+Native display verified at 1466×827 (single screen) and 375px (no horizontal
+overflow); scoped review found no material issues. No live sends, account
+changes, push or deployment.
+
 ## 0.28.0 — 2026-11-08 — Owner-managed staff roles and standalone monitoring (local)
 
 ### Added

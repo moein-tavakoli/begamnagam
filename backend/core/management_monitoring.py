@@ -83,6 +83,10 @@ def monitoring(request):
         'window': {'start': start.isoformat(), 'end': end.isoformat(), 'timezone': 'Asia/Tehran'},
         'totals': {
             'accounts_new': sum(accounts.values()),
+            'accounts_today': m.Account.objects.filter(
+                created_at__gte=end.replace(hour=0, minute=0, second=0, microsecond=0),
+                created_at__lt=now).count(),
+            'accounts_total': m.Account.objects.count(),
             'requests': sum(requests.values()),
             # This is a delivery-creation cohort, not a resolution-time event count.
             'delivered': next((row['count'] for row in delivery if row['status'] == 'delivered'), 0),

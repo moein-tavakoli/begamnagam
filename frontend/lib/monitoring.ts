@@ -11,7 +11,7 @@ export function monitoringMetricSeverity(metric:'support_unanswered'|'oldest_que
 export type MonitoringData = {
   generated_at:string;
   window:{start:string;end:string;timezone:string};
-  totals:{accounts_new:number;requests:number;delivered:number;support_unanswered:number};
+  totals:{accounts_today:number;accounts_total:number;accounts_new:number;requests:number;delivered:number;support_unanswered:number};
   hourly:{at:string;accounts:number;requests:number}[];
   delivery:{status:string;count:number}[];
   moderation:{status:string;count:number}[];

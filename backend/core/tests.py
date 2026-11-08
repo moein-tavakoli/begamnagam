@@ -15,7 +15,7 @@ from django.test import Client, TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 
 from .models import Account, ModerationAudit, OTPChallenge, Order, Outbox, Preview, RecipientState
-from .moderation import ModerationRejected, RewriteUnavailable, CATEGORIES, TEMPLATES, moderate, normalized, rewrite
+from .moderation import ModerationRejected, RewriteUnavailable, CATEGORIES, TEMPLATES, DIRECT_TEMPLATES, moderate, normalized, rewrite
 from .privacy import decrypt, digest, encrypt, mask, normalize_phone
 from .services import APIError, create_order, pay_order
 from .tasks import deliver_message, reconcile_outbox
@@ -66,7 +66,8 @@ class APITestCase(TestCase):
         self.authenticate()
         for index, category in enumerate(["appreciation", "encouragement", "congratulations"]):
             preview = self.preview(category=category, text="برای تو روزهای خوبی آرزو می‌کنم")
-            self.assertIn(preview["rewritten_text"], TEMPLATES[category])
+            self.assertEqual(preview["message_tone"], "firm")
+            self.assertIn(preview["rewritten_text"], DIRECT_TEMPLATES[category])
             order = self.order(recipient=f"0990123456{index}", preview=preview).json()
             with self.captureOnCommitCallbacks(execute=True):
                 response = self.post(f"/orders/{order['id']}/pay-demo")
@@ -329,7 +330,8 @@ class APITestCase(TestCase):
         self.assertEqual(Preview.objects.count(), 0)
         self.assertEqual(ModerationAudit.objects.filter(outcome="rejected").count(), 6)
         preview = self.preview()
-        self.assertIn(preview["rewritten_text"], TEMPLATES["body"])
+        self.assertEqual(preview["message_tone"], "firm")
+        self.assertIn(preview["rewritten_text"], DIRECT_TEMPLATES["body"])
         self.assertEqual(preview["moderation_mode"], "template")
 
     def test_worker_rejects_tampered_template(self):

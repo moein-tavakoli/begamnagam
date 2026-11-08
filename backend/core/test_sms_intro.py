@@ -36,7 +36,7 @@ class SMSIntroTests(TestCase):
     def test_long_reviewed_model_choice_uses_a_fitting_reviewed_body_without_truncating(self):
         long_body = max(TEMPLATES['body'], key=len)
         with patch('core.views.rewrite', return_value=(long_body, 'ollama_curated')):
-            response = self.post('/messages/preview', {'category':'body', 'text':'یک یادآوری دوستانه', 'recipient_phone':'09901234567'})
+            response = self.post('/messages/preview', {'category':'body', 'text':'یک یادآوری دوستانه', 'recipient_phone':'09901234567', 'message_tone':'polite'})
         self.assertEqual(response.status_code, 200, response.content)
         quote = response.json()
         self.assertNotEqual(quote['rewritten_text'], long_body)

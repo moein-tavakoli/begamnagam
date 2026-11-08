@@ -9,7 +9,7 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
-## 0.30.1 — 2026-11-08 — Align release smoke with owner phone display (local)
+## 0.30.1 — 2026-11-08 — Align release smoke with owner phone display
 
 ### Fixed
 
@@ -18,9 +18,15 @@ Historical release reports below contain deployment evidence and limitations.
   check that another account cannot list the order, and verify logout removes
   history access. Do not expose encryption/hash storage fields.
 
-Validation: initial GitHub backend/frontend checks passed; Compose smoke caught
-the obsolete masked-number expectation. Python syntax and scoped ownership
-tests are checked before retrying the full release CI; no live provider calls.
+Validation: all three GitHub backend/frontend/compose checks passed after the
+smoke correction. The exact Linux image passed 720 PostgreSQL tests, encrypted
+backup/restore and migration rehearsal; frontend tests116, TypeScript, production
+build, candidate routes and445 runtime file hashes passed. Six frontends and13
+services are healthy. Server rollout on2026-11-09 Tehran preserved user data,
+credentials and private Swagger access. Browser navigation from this device
+returned the offline fallback; verified domain HTTPS used the internal Nginx
+route. No live provider tests or IP grants. [Deployment evidence](docs/deployments/ct115-0.30.1.json),
+[release report and limits](docs/release-v0.30.1.fa.md).
 
 ## 0.30.0 — 2026-11-08 — Exact-IP monitoring access (local)
 

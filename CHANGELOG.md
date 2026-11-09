@@ -9,6 +9,23 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.31.0 — 2026-11-09 — Localized API input, credit errors and blacklist count (local)
+
+### Added
+
+- Count currently blocked recipients in the monitoring dashboard.
+
+### Fixed
+
+- Remove phone spacing before validating the canonical number and accept localized
+  digit strings in integer API fields. Preserve leading zeroes in phone and OTP strings.
+- Return `409 credit_required` before creating a v2 preview when gift and package
+  credits are exhausted and unlimited sending is off. Check credit again during
+  reservation and document how n8n should handle errors and delivery statuses.
+
+Validation passed for 724 PostgreSQL tests, 116 frontend tests, TypeScript,
+migration consistency, and the monitoring card at 1466px and 375px.
+
 ## 0.30.1 — 2026-11-08 — Align release smoke with owner phone display
 
 ### Fixed

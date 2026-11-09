@@ -28,8 +28,11 @@ class CanonicalInputTests(SimpleTestCase):
         self.assertEqual(canonical_input(original), original)
 
     def test_json_ingress_normalizes_escaped_and_literal_input_before_use(self):
-        request = RequestFactory().post('/api/v1/support/messages', {'text': 'رسید ۰۰۱۲', 'values': {'name': 'بسته ۴'}}, content_type='application/json')
-        self.assertEqual(body(request), {'text': 'رسید 0012', 'values': {'name': 'بسته 4'}})
+        data = {'text': 'رسید ۰۰۱۲', 'preview_id': 'A۱۲', 'code': '٠٠۱۲',
+                'values': {'name': 'بسته ۴', 'price_toman': '\u00a0۱۲٣\u00a0', 'message_count': '12', 'sort_order': True}}
+        request = RequestFactory().post('/api/v1/support/messages', data, content_type='application/json')
+        self.assertEqual(body(request), {'text': 'رسید 0012', 'preview_id': 'A۱۲', 'code': '0012',
+                         'values': {'name': 'بسته 4', 'price_toman': 123, 'message_count': '12', 'sort_order': True}})
 
     def test_admin_preserves_repeated_fields_csrf_and_password(self):
         request = RequestFactory().post('/admin/core/account/', {'reason': 'آزمون ۱۲', '_selected_action': ['۱', '۲'], 'password': 'رمز۱۲', 'csrfmiddlewaretoken': 'Ab۱۲'})
@@ -59,9 +62,9 @@ class CanonicalStorageTests(TestCase):
         self.assertEqual(message.text_digest, digest('support-text-v1:' + message.text))
 
     def test_api_package_name_is_canonical_before_persistence(self):
-        response = self.staff.post('/api/v1/manage/packages', {'values': {'name': 'بسته ۱۲', 'message_count': 12, 'price_toman': 10000, 'active': True, 'sort_order': 0}, 'revision': 0, 'reason': 'ثبت بسته ۱۲'}, content_type='application/json')
+        response = self.staff.post('/api/v1/manage/packages', {'values': {'name': 'بسته ۱۲', 'message_count': '١٢', 'price_toman': '۱۰۰۰۰', 'active': True, 'sort_order': '۰'}, 'revision': '۰', 'reason': 'ثبت بسته ۱۲'}, content_type='application/json')
         self.assertEqual(response.status_code, 200, response.content)
-        self.assertTrue(MessagePackage.objects.filter(name='بسته 12', message_count=12).exists())
+        self.assertTrue(MessagePackage.objects.filter(name='بسته 12', message_count=12, price_toman=10000).exists())
 
     def test_admin_form_converts_persian_and_arabic_fields_before_save(self):
         response = self.staff.post('/admin/core/messagepackage/add/', {'name': 'بسته ۳۴', 'message_count': '٣٤', 'price_toman': '۱۰۰۰۰', 'active': 'on', 'sort_order': '۲', 'source_revision': '۰', 'reason': 'ثبت بسته ۳۴', '_save': 'ذخیره'})

@@ -66,7 +66,8 @@ def specification():
                            'All mutations require CSRF. No messenger id, contact, admin session or API documentation permission replaces phone verification. '
                            'Trusted bot adapters can persist/resume isolated sessions and encrypted conversation stages. '
                            'Every request using a bot-owned session additionally requires its X-Bot-Key. '
-                           'Integer toman amounts; wallet balances are decimal strings to preserve precision. '
+                           'Send integer JSON values for amounts and counts. Integer fields also accept digit strings containing Persian or Arabic digits. '
+                           'Wallet balances are decimal strings to preserve precision. '
                            'See /api/v2/document/guide for the Persian integration walkthrough. '
                            'The specification version is independent of the project release version.'},
             'servers': [{'url': '/api/v2', 'description': 'Same-origin API'}],

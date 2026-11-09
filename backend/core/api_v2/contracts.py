@@ -6,6 +6,7 @@ from functools import wraps
 from django.http import JsonResponse
 
 from core.input_digits import ascii_digits
+from core.privacy import MAX_PHONE_INPUT_LENGTH
 from core.services import APIError, api, error_response, is_product_authenticated, limited
 from core.views import body
 
@@ -42,7 +43,9 @@ UUID = string(format='uuid')
 DATE = string(format='date-time')
 NULL_DATE = {**DATE, 'nullable': True}
 NULL_STRING = string(nullable=True)
-PHONE = string(minLength=11, maxLength=32, description='Iran mobile; Persian/Arabic digits and +98 are accepted.', example='09123456789')
+PHONE = string(minLength=11, maxLength=MAX_PHONE_INPUT_LENGTH,
+               description='Iran mobile as a string. Whitespace, parentheses and hyphens are ignored. Persian/Arabic digits and +98 are accepted.',
+               example='09123456789')
 TONE = string(enum=['polite', 'firm', 'blunt', 'angry'])
 TEXT = string(minLength=1, maxLength=280)
 TOKEN = string(minLength=1, maxLength=4096, description='Opaque capability. Preserve exactly; never put in a URL or log.')

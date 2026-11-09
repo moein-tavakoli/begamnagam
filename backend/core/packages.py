@@ -235,12 +235,16 @@ def verify_purchase(attempt_id):
             status='unknown', checked_at=timezone.now(), lease_until=None)
 
 
+def credit_required():
+    return APIError('credit_required', 'اعتبار کافی برای ارسال پیام نداری.', 409)
+
+
 def reserve_credit(user, order):
     """Called in the order transaction. Conditional UPDATE prevents overspending."""
     field, environment = balance_field(), credit_environment()
     account = Account.objects.get(user=user)
     if not Account.objects.filter(pk=account.pk, **{field + '__gt': 0}).update(**{field: F(field)-1}):
-        raise APIError('credit_required', 'اعتبار پیام تمام شده؛ یک بسته بخر و دوباره تأیید کن.', 409)
+        raise credit_required()
     CreditEntry.objects.create(account=account, order=order, kind='reserve', units=-1, environment=environment)
 
 

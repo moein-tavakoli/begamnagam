@@ -8,10 +8,11 @@ from .input_digits import ascii_digits
 
 
 DIGITS = str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789")
+MAX_PHONE_INPUT_LENGTH = 8192
 
 
 def normalize_phone(value):
-    if not isinstance(value, str) or len(value) > 32:
+    if not isinstance(value, str) or len(value) > MAX_PHONE_INPUT_LENGTH:
         raise ValueError("شماره موبایل معتبر ایران را وارد کنید.")
     value = re.sub(r"[\s()\-]", "", ascii_digits(value))
     if value.startswith("0098"):

@@ -249,7 +249,7 @@ def create_order(user, session_key, data, idempotency_key):
         if preview.is_free and not sponsored:
             from django.db.models import F
             if not Account.objects.filter(user=user, free_sends_remaining__gt=0).update(free_sends_remaining=F("free_sends_remaining")-1):
-                raise APIError("free_quota_changed", "سهمیهٔ رایگان تغییر کرده؛ متن نهایی و هزینه را دوباره آماده کن.", 409)
+                raise APIError("free_quota_changed", "اعتبار هدیه برای این پیش‌نمایش کافی نیست. متن نهایی را دوباره آماده کن.", 409)
         order = Order.objects.create(owner=user, preview=preview, idempotency_key=key,
             payment_method='credit', wallet_refund_consent=False,
             consent_at=now if consent else None, terms_version=preview.terms_version if consent else "",

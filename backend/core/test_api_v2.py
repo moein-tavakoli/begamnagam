@@ -20,7 +20,7 @@ from core.api_v2.documentation import ASSETS
 from core.api_v2.openapi import specification
 from core.models import (Account, CreditPurchase, Invitation, MessageDelivery, MessagePackage,
                          OTPChallenge, Order, Outbox, Preview, RecipientState, SupportMessage)
-from core.privacy import digest
+from core.privacy import digest, normalize_phone
 
 
 @override_settings(DEMO_MODE=True, OTP_BACKEND='demo', SMS_BACKEND='console',
@@ -62,7 +62,7 @@ class IntegrationAPITests(TestCase):
         self.assertEqual(verified.status_code, 201, verified.content)
         self.assertNotEqual(old_token, verified.json()['csrf_token'])
         self.assertTrue(verified.json()['authenticated'])
-        return Account.objects.get(phone_hash=digest(phone)).user
+        return Account.objects.get(phone_hash=digest(normalize_phone(phone))).user
 
     def make_preview(self, phone='09901234567'):
         catalog = self.client.get('/api/v2/catalog').json()
@@ -95,8 +95,47 @@ class IntegrationAPITests(TestCase):
         self.assertEqual(data['me']['phone'], '09123456789')
         self.assertNotIn('phone_hash', json.dumps(data))
 
+    def test_spaced_localized_phones_normalize_before_schema_and_storage(self):
+        self.login('۰۹۱۲' + ' \u00a0' * 16 + '٣٤٥۶۷۸۹')
+        self.assertEqual(self.client.get('/api/v2/me').json()['phone'], '09123456789')
+        phone = '+۹۸ (٩٩٠)' + ' \t' * 16 + '۱۲۳-٤٥٦٧'
+        self.assertEqual(self.mutate('/recipients/validations', {'phone': phone}).json()['phone'], '09901234567')
+        preview = self.make_preview(phone)
+        order = self.reserve(preview, phone=phone)
+        self.assertEqual(order.status_code, 200, order.content)
+        self.assertEqual(order.json()['recipient_phone'], '09901234567')
+        self.assertEqual(Order.objects.get().recipient_hash, digest('09901234567'))
+
+    def test_empty_credit_stops_preview_before_review_or_queueing(self):
+        from core.views import rewrite
+
+        user = self.login()
+        Account.objects.filter(user=user).update(free_sends_remaining=0, demo_sends_remaining=0)
+        example = next(item for item in self.client.get('/api/v2/catalog').json()['examples'] if item['topic'] == 'appreciation')
+        with patch('core.views.rewrite', wraps=rewrite) as review:
+            response = self.mutate('/message-previews', {'recipient_phone': '09901234567', 'source_mode': 'suggestion',
+                                   'category': example['topic'], 'text': example['text']})
+        self.assertEqual(response.status_code, 409, response.content)
+        self.assertEqual(response.json()['error'], {'code': 'credit_required', 'message': 'اعتبار کافی برای ارسال پیام نداری.'})
+        review.assert_not_called()
+        self.assertFalse(Preview.objects.exists())
+        self.assertFalse(Order.objects.exists())
+        self.assertFalse(Outbox.objects.exists())
+
+    def test_reservation_rechecks_credit_after_successful_preview(self):
+        user = self.login()
+        Account.objects.filter(user=user).update(free_sends_remaining=0, demo_sends_remaining=1)
+        preview = self.make_preview()
+        Account.objects.filter(user=user).update(demo_sends_remaining=0)
+        response = self.reserve(preview)
+        self.assertEqual(response.status_code, 409, response.content)
+        self.assertEqual(response.json()['error']['code'], 'credit_required')
+        self.assertFalse(Order.objects.exists())
+        self.assertFalse(Outbox.objects.exists())
+
     def test_complete_review_reserve_submit_poll_and_retry_journey(self):
         user = self.login()
+        Account.objects.filter(user=user).update(free_sends_remaining=1)
         valid = self.mutate('/recipients/validations', {'phone': '+۹۸۹۹۰۱۲۳۴۵۶۷'})
         self.assertEqual(valid.json()['phone'], '09901234567')
         preview = self.make_preview()
@@ -106,7 +145,7 @@ class IntegrationAPITests(TestCase):
         message_id = response.json()['id']
         self.assertEqual(response.json()['status'], 'awaiting_payment')
         self.assertEqual(self.reserve(preview, key=key).json()['id'], message_id)
-        self.assertEqual(Account.objects.get(user=user).free_sends_remaining, 2)
+        self.assertEqual(Account.objects.get(user=user).free_sends_remaining, 0)
         for _ in range(2):
             with self.captureOnCommitCallbacks(execute=True):
                 result = self.mutate(f'/messages/{message_id}/submission', method='PUT')
@@ -472,11 +511,14 @@ class IntegrationAPITests(TestCase):
         payload = {'package_id': package.pk, 'package_revision': package.revision, 'payment_method': 'gateway',
                    'wallet_consent': True, 'wallet_terms_version': 'wallet-credit-v1'}
         key = uuid.uuid4()
-        response = self.mutate('/credit-purchases', payload, key=key)
+        localized = dict(payload, package_id=str(package.pk).translate(str.maketrans('0123456789', '۰۱۲۳۴۵۶۷۸۹')),
+                         package_revision='٠')
+        response = self.mutate('/credit-purchases', localized, key=key)
         self.assertEqual(response.status_code, 200, response.content)
         purchase_id = response.json()['id']
         self.assertEqual(self.mutate('/credit-purchases', payload, key=key).json()['id'], purchase_id)
         self.assertEqual(CreditPurchase.objects.filter(owner=user).count(), 1)
+        self.assertEqual(CreditPurchase.objects.get(owner=user).package_id, package.pk)
         self.assertEqual(self.client.get('/api/v2/me/credits').json()['purchased_remaining'], 5)
         self.assertEqual(len(self.client.get('/api/v2/me/credit-entries').json()['results']), 1)
         CreditPurchase.objects.filter(pk=purchase_id).update(environment='live')

@@ -73,7 +73,7 @@ class ManagementMonitoringTests(TestCase):
                                      'queue', 'operations', 'alerts', 'environment'})
         self.assertEqual(data['window'], {'start': '2026-11-07T13:00:00+03:30',
             'end': '2026-11-08T12:47:00+03:30', 'timezone': 'Asia/Tehran'})
-        self.assertEqual(data['totals'], {'accounts_new': 0, 'accounts_today': 0, 'accounts_total': 0, 'requests': 0, 'delivered': 0, 'support_unanswered': 0})
+        self.assertEqual(data['totals'], {'accounts_new': 0, 'accounts_today': 0, 'accounts_total': 0, 'requests': 0, 'delivered': 0, 'support_unanswered': 0, 'blacklist_total': 0})
         self.assertEqual(len(data['hourly']), 24)
         self.assertEqual(data['hourly'][0], {'at': '2026-11-07T13:00:00+03:30', 'accounts': 0, 'requests': 0})
         self.assertEqual(data['hourly'][-1], {'at': '2026-11-08T12:00:00+03:30', 'accounts': 0, 'requests': 0})
@@ -116,6 +116,12 @@ class ManagementMonitoringTests(TestCase):
             data = self.client.get(self.path).json()
         self.assertEqual(data['totals'].get('accounts_today'), 0)
         self.assertEqual(data['totals'].get('accounts_total'), 1)
+
+    def test_blacklist_counts_only_active_opt_outs_including_without_accounts(self):
+        for number, blocked in [('09901234567', True), ('09901234568', True), ('09901234569', False)]:
+            m.RecipientState.objects.create(phone_hash=digest(number), blocked=blocked)
+        totals = self.get_data()['totals']
+        self.assertEqual(totals.get('blacklist_total'), 2)
 
     def test_delivery_partition_uses_delivery_creation_cohort_not_order_or_resolution(self):
         for created, status in ((START - timedelta(microseconds=1), 'delivered'), (START, 'delivered'),

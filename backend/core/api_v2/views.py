@@ -14,7 +14,7 @@ from core.message_examples import public_catalog
 from core.message_tones import choices as tone_choices, resolve as resolve_tone
 from core.models import Account, CreditEntry, Invitation, InvitationSend, MessagePackage, Order, Preview, WalletEntry, WalletTopup
 from core.otp import OTP_LENGTH
-from core.packages import balance_field, checkout_enabled, credit_environment, package_data, purchase_data
+from core.packages import balance_field, checkout_enabled, credit_environment, credit_required, package_data, purchase_data
 from core.payment_options import options as payment_options
 from core.privacy import decrypt, digest, mask, normalize_phone
 from core.services import APIError, is_product_authenticated
@@ -178,11 +178,16 @@ def recipient_validations(request):
 
 @resource(post=op('createMessagePreview', 'Messages', 'Review and seal an exact recipient-bound SMS preview', 'Preview',
                   request='PreviewInput', status=201,
-                  description='Show full_sms and obtain explicit consent. Freeform uses minimal edits and preserves meaning and colloquial/formal register; '
+                  description='Returns 409 credit_required when no gift, purchased or sponsored sends are available. '
+                              'A 201 response only prepares the preview. Show full_sms and obtain explicit consent. '
+                              'Freeform uses minimal edits and preserves meaning and colloquial/formal register; '
                               'safe suitable text can remain unchanged. Public tones are polite, firm (default), and blunt (plain minimal edits). '
                               'An independent review must approve meaning, register and selected tone; blunt never bypasses safety. '
                               'Freeform never silently falls back. Changing the phone or text requires a new preview.'))
 def previews(request):
+    account = Account.objects.get(user=request.user)
+    if not account.unlimited_free_sends and account.free_sends_remaining == 0 and getattr(account, balance_field()) == 0:
+        raise credit_required()
     return delegate(request, legacy.preview)
 
 

@@ -89,6 +89,7 @@ def monitoring(request):
                 created_at__gte=end.replace(hour=0, minute=0, second=0, microsecond=0),
                 created_at__lt=now).count(),
             'accounts_total': m.Account.objects.count(),
+            'blacklist_total': m.RecipientState.objects.filter(blocked=True).count(),
             'requests': sum(requests.values()),
             # This is a delivery-creation cohort, not a resolution-time event count.
             'delivered': next((row['count'] for row in delivery if row['status'] == 'delivered'), 0),

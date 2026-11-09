@@ -104,14 +104,14 @@ class ManagementPaginationTests(TestCase):
         self.alerts(26)
         self.accounts(26, blocked=True)
         for resource in ('alerts', 'accounts', 'blacklist'):
-            for data in ({'limit': 10}, {'limit': 10, 'page_size': 10}):
+            for data in ({'limit': 10}, {'limit': 10, 'page_size': 10}, {'limit': '۱۰', 'page_size': '١٠'}):
                 with self.subTest(resource=resource, data=data):
                     result = self.post(f'records/{resource}', {**data, 'page': 2}).json()
                     self.assertEqual((result['page_size'], len(result['rows'])), (10, 10))
 
     def test_invalid_sizes_are_rejected_before_resource_fetch_or_audit(self):
         self.permit('view_account', 'view_recipientstate', 'view_operationalalert')
-        invalid = (True, False, '10', '۱۰', None, 0, -1, 101, 1.5, [], {})
+        invalid = (True, False, '10', '۱٫۵', '۱۰۱', None, 0, -1, 101, 1.5, [], {})
         payloads = [{field: value} for field in ('page_size', 'limit') for value in invalid]
         payloads += [{'page_size': 10, 'limit': 25}, {'page_size': 10, 'limit': True}, {'page_size': False, 'limit': 10}]
         for resource in ('alerts', 'accounts', 'blacklist'):

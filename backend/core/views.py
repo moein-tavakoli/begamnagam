@@ -52,7 +52,7 @@ def body(request):
         raise APIError("invalid_input", "ساختار درخواست معتبر نیست.")
     if not isinstance(data, dict):
         raise APIError("invalid_input", "ساختار درخواست معتبر نیست.")
-    return canonical_input(data)
+    return canonical_input(data, json_numbers=True)
 
 
 def session_key(request):

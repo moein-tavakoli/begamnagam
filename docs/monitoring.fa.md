@@ -85,6 +85,12 @@ link-local، multicast، unspecified و IP پراکسیِ معتمد پذیرف�
 API خصوصی دو فیلد افزودهٔ `totals.accounts_today` و `totals.accounts_total`
 دارد؛ `accounts_new` برای سازگاری و نمودار حفظ شده است.
 
+## شمارش بلک لیست از۰٫۳۱٫۰
+
+کارت «بلک لیست» تعداد کل شماره‌هایی را نشان می‌دهد که دریافت را لغو کرده‌اند
+و هنوز مسدودند. با رفع مسدودی، شماره از شمارش خارج می‌شود. فیلد
+`totals.blacklist_total` با هر تازه‌سازی به‌روز می‌شود و به بازهٔ نمودار وابسته نیست.
+
 ## رنگ شاخص‌ها از۰٫۲۸٫۰
 
 پشتیبانی بی‌پاسخ: صفر عادی،۱تا۹نارنجی و۱۰به‌بالا قرمز است. عمر قدیمی‌ترین
@@ -130,7 +136,7 @@ API خصوصی دو فیلد افزودهٔ `totals.accounts_today` و `totals.a
 `Vary: Cookie`. نشست نامعتبر۴۰۱، نبود مجوز۴۰۳ و روش نامجاز۴۰۵است.
 
 فیلدها: `generated_at`، `window` با `start/end/timezone`،
-`totals` با `accounts_new/accounts_today/accounts_total/requests/delivered/support_unanswered`،
+`totals` با `accounts_new/accounts_today/accounts_total/requests/delivered/support_unanswered/blacklist_total`،
 `hourly[{at,accounts,requests}]`، `delivery/moderation[{status,count}]`،
 `queue[{kind,status,count}]`، `operations`، `alerts[{code,severity,count}]` و
 `environment`. `queue.kind` برابر `messages` یا `invitations` است. گروه‌های

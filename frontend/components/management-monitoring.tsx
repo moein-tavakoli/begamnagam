@@ -19,6 +19,7 @@ import RefreshRounded from '@mui/icons-material/RefreshRounded';
 import ArrowForwardRounded from '@mui/icons-material/ArrowForwardRounded';
 import { alpha } from '@mui/material/styles';
 import GroupsOutlined from '@mui/icons-material/GroupsOutlined';
+import BlockOutlined from '@mui/icons-material/BlockOutlined';
 import PeopleOutlined from '@mui/icons-material/PeopleOutlined';
 import SmsOutlined from '@mui/icons-material/SmsOutlined';
 import MarkEmailReadOutlined from '@mui/icons-material/MarkEmailReadOutlined';
@@ -148,9 +149,10 @@ export function ManagementMonitoring({onFailure}:{onFailure:(error:unknown)=>voi
     {busy&&<LinearProgress aria-label="دریافت آمار مانیتورینگ" sx={{height:2,mb:'-18px !important',zIndex:1}}/>}
     {(error||paused)&&<Alert severity="warning">{paused||error}{data?' · آخرین دادهٔ موفق نمایش داده می‌شود؛ ممکن است قدیمی باشد.':' · هنوز اطلاعاتی دریافت نشده است.'}</Alert>}
     {data&&<>
-      <Box sx={{display:'grid',gridTemplateColumns:{xs:'repeat(2,minmax(0,1fr))',sm:'repeat(3,minmax(0,1fr))',lg:'repeat(8,minmax(0,1fr))'},gap:1.5}}>
+      <Box sx={{display:'grid',gridTemplateColumns:{xs:'repeat(2,minmax(0,1fr))',sm:'repeat(3,minmax(0,1fr))',lg:'repeat(9,minmax(0,1fr))'},gap:1.5}}>
         <Metric title="کاربران امروز" value={number(data.totals.accounts_today??null)} detail="از ساعت صفر به وقت تهران" icon={<PeopleOutlined/>} accent/>
         <Metric title="کل کاربران" value={number(data.totals.accounts_total??null)} detail="تمام حساب‌های محصول" icon={<GroupsOutlined/>} accent/>
+        <Metric title="بلک لیست" value={number(data.totals.blacklist_total??null)} detail="شماره‌های مسدود فعال" icon={<BlockOutlined/>}/>
         <Metric title="درخواست پیام" value={number(data.totals.requests)} detail="سفارش ثبت‌شده در بازه" icon={<SmsOutlined/>}/>
         <Metric title="رسیده به گیرنده" value={number(data.totals.delivered)} detail="از رکوردهای تحویل این بازه" icon={<MarkEmailReadOutlined/>}/>
         <Metric title="در انتظار ارسال" value={number(Number(data.operations.outbox_pending||0))} detail="پیام‌ها و دعوت‌ها · اکنون" icon={<HourglassEmptyRounded/>}/>

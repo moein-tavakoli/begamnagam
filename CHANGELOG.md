@@ -9,7 +9,7 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
-## 0.35.0 — 2026-11-10 — Monitoring signup and activity counts (local)
+## 0.35.0 — 2026-11-10 — Monitoring signup and activity counts
 
 - Show four cards below the main monitoring metrics for today's bot and
   direct API signups, known bot signups by platform, accounts without a
@@ -20,6 +20,13 @@ Historical release reports below contain deployment evidence and limitations.
 
 Validation covered PostgreSQL, frontend tests and TypeScript, the signup
 source migration, and browser checks at 375px and 1440px.
+
+Deployed to all six frontend replicas. Migration `0047` preserved existing
+fields on the restored backup and applied on the server. The production
+monitoring endpoint returned the new counts under the existing access rules.
+The isolated Compose smoke test used the same release artifacts; private
+Swagger access was verified over the internal HTTPS route.
+[Deployment evidence](docs/deployments/ct115-0.35.0.json)
 
 ## 0.34.0 — 2026-11-09 — Anonymous SMS replies and length warnings
 

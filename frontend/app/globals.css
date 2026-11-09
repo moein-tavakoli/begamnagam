@@ -423,7 +423,9 @@ input.phone-number-input[type="tel"] { font-size:19px; text-align:center; }
 .message-alternative { display: flex; align-items: flex-start; gap: 12px; margin-top: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; }
 .message-alternative input { flex: 0 0 20px; width: 20px; height: 20px; margin: 4px 0; accent-color: var(--ink); }
 .message-alternative > span { display: grid; gap: 8px; min-width: 0; overflow-wrap: anywhere; }
-.message-alternative:has(input:checked) { border-color: var(--ink); background: var(--yellow); }
+.message-alternative:has(input:checked) { border-color: var(--ink); background: var(--yellow); color: #201c29; }
+.message-alternative input:checked { accent-color: #201c29; }
+.message-alternatives > .text-button { margin-block-start: 12px; min-height: 44px; }
 .message-alternative:focus-within { outline: 2px solid var(--ink); outline-offset: 3px; }
 .manage-dialog.manage-account-limits .manage-form > .manage-button:last-child { position: sticky; bottom: 0; z-index: 1; box-shadow: 0 -8px 0 var(--surface); }
 

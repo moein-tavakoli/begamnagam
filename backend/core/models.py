@@ -581,6 +581,7 @@ class AIConfiguration(models.Model):
     tone_angry_enabled = models.BooleanField('بی‌ادبانه — خیلی جدی، بدون توهین و تهدید', default=False, db_default=False)
     ollama_model = models.CharField("مدل محلی", max_length=100, default="qwen3:4b-instruct-2507-q4_K_M")
     gapgpt_model = models.CharField("مدل GapGPT", max_length=100, blank=True)
+    rewrite_prompt = models.TextField('راهنمای بازنویسی (پرامپت)', max_length=600, blank=True, default='', db_default='')
     timeout_seconds = models.PositiveSmallIntegerField("مهلت کل بازنویسی و بازبینی محلی (ثانیه)", default=20)
     parallel_requests = models.PositiveSmallIntegerField("درخواست محلی هم‌زمان؛ بدون صف", default=2)
     daily_limit = models.PositiveIntegerField("سقف روزانهٔ بازنویسی محلی", default=10000)
@@ -599,6 +600,7 @@ class AIConfiguration(models.Model):
 
     def clean(self):
         import re
+        import unicodedata
         from django.core.exceptions import ValidationError
         errors = {}
         if (not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._:/-]{0,99}', self.ollama_model)
@@ -606,6 +608,12 @@ class AIConfiguration(models.Model):
             errors['ollama_model'] = "نام یک مدل نصب‌شدهٔ محلی وارد کن؛ مدل ابری مجاز نیست."
         if self.gapgpt_model and not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._:/-]{0,99}', self.gapgpt_model):
             errors['gapgpt_model'] = "نام مدل معتبر نیست."
+        prompt = self.rewrite_prompt or ''
+        if len(prompt) > self._meta.get_field('rewrite_prompt').max_length:
+            errors['rewrite_prompt'] = 'راهنمای بازنویسی باید حداکثر ۶۰۰ نویسه باشد.'
+        elif any(unicodedata.category(char).startswith('C') and char not in '\n\r\t\u200c'
+                 for char in prompt):
+            errors['rewrite_prompt'] = 'راهنما را بدون نویسهٔ کنترلی وارد کنید.'
         for name, low, high in [('timeout_seconds', 2, 20), ('parallel_requests', 1, 2),
                               ('daily_limit', 1, 100000), ('user_daily_limit', 1, 10000)]:
             if not low <= getattr(self, name) <= high:

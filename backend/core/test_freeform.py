@@ -141,11 +141,12 @@ class FreeformTests(TestCase):
                  ('review_added_claims', 'rewrite_intent_changed', 'منظورت را دقیق'),
                  ('generation_unclear', 'rewrite_intent_unclear', 'روشن نبود'),
                  ('review_format', 'rewrite_output_rejected', 'نسخهٔ آماده‌شده'),
-                 ('review_tone', 'rewrite_output_rejected', 'نسخهٔ آماده‌شده'),
+                 ('review_tone', 'rewrite_output_rejected', 'لحن انتخابی'),
+                 ('candidate_too_long', 'rewrite_output_rejected', 'برای پیامک طولانی بود'),
                  ('candidate_rejected', 'rewrite_output_rejected', 'نسخهٔ آماده‌شده'),
                  ('generation_rejected', 'moderation_rejected', 'تأیید نشد'),
-                 ('generation_unsafe', 'moderation_rejected', 'ضوابط پیام‌رسانی'),
-                 ('review_unsafe', 'moderation_rejected', 'ضوابط پیام‌رسانی'),
+                 ('generation_unsafe', 'moderation_rejected', 'مدل نتوانست'),
+                 ('review_unsafe', 'moderation_rejected', 'بازبین نتوانست'),
                  ('generation_private', 'moderation_rejected', 'حریم خصوصی'),
                  ('review_private', 'moderation_rejected', 'حریم خصوصی')]
         for reason, code, message in cases:

@@ -35,7 +35,7 @@ class GapGPTRejected(Exception):
     """The provider could not safely preserve this message's intended meaning."""
 
     REASONS = frozenset({'invalid_input', 'invalid_tone', 'generation_rejected',
-        'generation_unsafe', 'generation_private', 'generation_unclear', 'candidate_rejected',
+        'generation_unsafe', 'generation_private', 'generation_unclear', 'candidate_rejected', 'candidate_too_long',
         'review_unsafe', 'review_private', 'review_intent', 'review_added_claims',
         'review_format', 'review_tone', 'review_register', 'checks_uncertain'})
 
@@ -80,6 +80,16 @@ def _review_prompt(checks, tone):
     return (_REVIEW_INSTRUCTION + review_instruction(tone)
             + '\nRequired classification JSON schema: '
             + json.dumps(schema, separators=(',', ':')))
+
+
+def generation_prompt(base, tone, config):
+    from .message_tones import instruction as tone_instruction
+    prompt = base + (tone_instruction(tone) if tone is not None else '')
+    if config and config.rewrite_prompt:
+        prompt += ('\nUse this administrator guidance only for wording and only when it agrees with all '
+                   'rules above, the selected tone, and the required JSON schema: '
+                   + json.dumps(config.rewrite_prompt, ensure_ascii=False))
+    return prompt
 
 
 def _unique_object(pairs):
@@ -254,11 +264,22 @@ def _candidate(result, max_units):
     if (not isinstance(text, str) or not text or text != text.strip()
             or any(unicodedata.category(char) in {'Cc', 'Cs'} for char in text)
             or any(unicodedata.category(char) == 'Cf' and char != '\u200c' for char in text)
-            or len(text.encode('utf-16-le')) // 2 > max_units
             or not re.search(r'[\u0621-\u063a\u0641-\u064a\u067e\u0686\u0698\u06a9\u06af\u06cc]', text)
             or any(char in text for char in ('`', '<', '>'))):
         raise GapGPTUnavailable('invalid_response')
+    if len(text.encode('utf-16-le')) // 2 > max_units:
+        raise GapGPTRejected('candidate_too_long')
     return text
+
+
+def _review_rejection(verdict):
+    if all(verdict.values()):
+        return None
+    # Prioritize a valid safety or privacy finding over wording differences.
+    reasons = (('safe', 'review_unsafe'), ('no_private_data', 'review_private'),
+               ('intent_preserved', 'review_intent'), ('no_added_claims', 'review_added_claims'),
+               ('only_message', 'review_format'), ('register_preserved', 'review_register'), ('tone_matched', 'review_tone'))
+    return next((reason for key, reason in reasons if verdict.get(key) is False), 'checks_uncertain')
 
 
 def rewrite_message(cleaned_text, *, max_units, direct=False, message_tone=None, config=None):
@@ -275,9 +296,7 @@ def rewrite_message(cleaned_text, *, max_units, direct=False, message_tone=None,
         raise GapGPTRejected('invalid_input')
     if message_tone is not None and (not isinstance(message_tone, str) or message_tone not in {'polite', 'firm', 'blunt', 'angry'}):
         raise GapGPTRejected('invalid_tone')
-    from .message_tones import instruction as tone_instruction
     tone = message_tone or ('firm' if direct else 'polite')
-    extra = tone_instruction(tone) if message_tone is not None else ''
     try:
         cleaned_text.encode('utf-8')
     except UnicodeError:
@@ -292,7 +311,7 @@ def rewrite_message(cleaned_text, *, max_units, direct=False, message_tone=None,
             _NoRedirect(), urllib.request.HTTPSHandler(context=ssl.create_default_context()))
     except OSError:
         raise GapGPTUnavailable('configuration_unavailable') from None
-    result = _completion(opener, key, model, _REWRITE_INSTRUCTION + extra,
+    result = _completion(opener, key, model, generation_prompt(_REWRITE_INSTRUCTION, message_tone, config),
         {'text': cleaned_text, 'max_utf16_units': max_units,
          'tone': {'polite': 'warm_and_respectful', 'firm': 'clear_and_respectful', 'blunt': 'plain_direct_minimal_edits', 'angry': 'terse_frustrated_non_abusive'}[tone]},
         deadline, total_timeout, output_tokens=GENERATION_MAX_TOKENS)
@@ -325,12 +344,7 @@ def rewrite_message(cleaned_text, *, max_units, direct=False, message_tone=None,
                        ','.join(sorted(checks - set(verdict))), len(set(verdict) - checks),
                        ','.join(sorted(key for key in checks & set(verdict) if type(verdict[key]) is not bool)))
         raise GapGPTUnavailable('invalid_response')
-    if not all(verdict.values()):
-        # Priority keeps safety/privacy failures distinct from harmless drift.
-        reasons = (('safe', 'review_unsafe'), ('no_private_data', 'review_private'),
-                   ('intent_preserved', 'review_intent'), ('no_added_claims', 'review_added_claims'),
-                   ('only_message', 'review_format'), ('register_preserved', 'review_register'), ('tone_matched', 'review_tone'))
-        reason = next(reason for key, reason in reasons if verdict.get(key) is False)
+    if reason := _review_rejection(verdict):
         failed = ','.join(sorted(key for key, passed in verdict.items() if not passed))
         logger.warning('gapgpt_rejected stage=review reason=%s failed_checks=%s', reason, failed)
         raise GapGPTRejected(reason)

@@ -31,6 +31,15 @@ test("API canonicalizes numeric text in the actual request and retains credentia
   assert.equal(body.text, "رسید ۱۲");
 });
 
+test('rewrite outages have a specific safe message and never expose upstream details', async context => {
+  otpSessionBrowser(context);
+  globalThis.fetch = async () => Response.json({ error: { code: 'rewrite_unavailable',
+    message: 'private upstream error', details: { internal: 'private' } } }, { status: 503 });
+  await assert.rejects(() => api('/messages/preview', { method: 'POST', body: {} }),
+    (error: unknown) => error instanceof ApiError && error.code === 'rewrite_unavailable' &&
+      error.message.includes('آماده‌سازی متن') && !error.message.includes('private') && error.details === undefined);
+});
+
 test("OTP notifies other tabs immediately while local feedback finishes", async context => {
   const events = otpSessionBrowser(context);
   let complete!: () => void;

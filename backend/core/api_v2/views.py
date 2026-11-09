@@ -183,6 +183,8 @@ def recipient_validations(request):
                               'Freeform uses minimal edits and preserves meaning and colloquial/formal register; '
                               'safe suitable text can remain unchanged. Public tones are polite, firm (default), and blunt (plain minimal edits). '
                               'An independent review must approve meaning, register and selected tone; blunt never bypasses safety. '
+                              'Show error.message on rejection. A content 422 may include two reviewed choices in error.details.alternatives. '
+                              'Use the chosen token with source_mode=reviewed_alternative to prepare a fresh preview. '
                               'Freeform never silently falls back. Changing the phone or text requires a new preview.'))
 def previews(request):
     account = Account.objects.get(user=request.user)

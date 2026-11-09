@@ -1,10 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { alternativeRequest, messageAlternatives } from '../lib/message-alternatives.ts';
 import { managementActions } from '../lib/management.ts';
 
 const offer = { id: 'conversation', label: 'گفت‌وگو', text: 'با احترام صحبت کنیم.',
   token: 'synthetic-token', message_tone: 'polite', expires_at: '2026-10-28T20:00:00Z' };
+
+test('the composer receipt shows the public delivery explanation', () => {
+  const source = readFileSync(new URL('../components/composer.tsx', import.meta.url), 'utf8');
+  assert.match(source.slice(source.indexOf('className="receipt-panel compact-receipt"')), /<DeliveryReason order=\{order\}/);
+});
 
 test('only bounded complete alternative records enter the selection UI', () => {
   assert.equal(messageAlternatives(undefined).length, 0);

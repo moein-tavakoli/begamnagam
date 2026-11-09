@@ -322,41 +322,46 @@ def preview(request):
             category = 'custom'
         else:
             rewritten, mode = rewrite(category, text, message_tone=tone, provider_mode='template')
-    except ModerationRejected as exc:
-        event = ModerationAudit.objects.create(owner=owner, category=category[:32], outcome="rejected", reason_code=str(exc), content_digest=digest(json.dumps(text, ensure_ascii=True)))
-        request._message_attempt_moderation_event = event.event_id
-        from .message_alternatives import feedback, offers
-        code, message = feedback(text, str(exc))
-        alternatives = offers(owner, session_key(request), recipient_hash, tone, layout=layout) if owner and recipient_hash and isinstance(text, str) and 0 < len(text) <= 280 else []
-        raise APIError(code, message, 422, details={'alternatives': alternatives})
-    except RewriteUnavailable:
-        raise APIError("rewrite_unavailable", "آماده‌سازی متن موقتاً در دسترس نیست؛ کمی بعد تلاش کنید.", 503)
-    from .limits import policy
-    expires_at = timezone.now() + timedelta(seconds=policy().preview_validity_seconds)
-    is_free = bool(owner and (owner.account.unlimited_free_sends or owner.account.free_sends_remaining > 0))
-    with transaction.atomic():
-        item = Preview.objects.create(owner=owner, session_key=session_key(request), category=category,
-            message_tone=tone,
-            payment_method='credit', wallet_policy_version='',
-            original_text=text,
-            text='' if use_freeform else rewritten, generated_body=rewritten if use_freeform else '', recipient_hash=recipient_hash, terms_version=settings.TERMS_VERSION, moderation_mode=mode, expires_at=expires_at, is_free=is_free, price_toman=0)
-        token = ""
-        if recipient_hash:
-            from .recipient import issue_grant
-            token = issue_grant(item, recipient_hash)
-        try:
+        from .limits import policy
+        expires_at = timezone.now() + timedelta(seconds=policy().preview_validity_seconds)
+        is_free = bool(owner and (owner.account.unlimited_free_sends or owner.account.free_sends_remaining > 0))
+        with transaction.atomic():
+            item = Preview.objects.create(owner=owner, session_key=session_key(request), category=category,
+                message_tone=tone, payment_method='credit', wallet_policy_version='', original_text=text,
+                text='' if use_freeform else rewritten, generated_body=rewritten if use_freeform else '',
+                recipient_hash=recipient_hash, terms_version=settings.TERMS_VERSION, moderation_mode=mode,
+                expires_at=expires_at, is_free=is_free, price_toman=0)
+            token = ''
+            if recipient_hash:
+                from .recipient import issue_grant
+                token = issue_grant(item, recipient_hash)
             if use_freeform:
                 full_sms = compose_freeform_sms(rewritten, origin, token, layout=layout)
             else:
-                item.text, full_sms = compose_recipient_sms(category, rewritten, origin, token, message_tone=tone, layout=layout)
-        except SMSTooLong:
-            raise APIError("message_too_long", "متن نهایی بیش از سه بخش پیامک است؛ موضوع دیگری انتخاب کن.", 422)
-        item.full_sms = full_sms
-        item.review_signature = signature(item) if use_freeform else ''
-        item.save(update_fields=["text", "full_sms", 'review_signature'])
-        event = ModerationAudit.objects.create(owner=owner, category=category, outcome="accepted", reason_code=mode + ('_' + tone if direct else ''), content_digest=digest(json.dumps(text, ensure_ascii=True)))
+                item.text, full_sms = compose_recipient_sms(category, rewritten, origin, token, message_tone=tone,
+                                                           layout=layout, exact=choosing_alternative)
+            item.full_sms = full_sms
+            item.review_signature = signature(item) if use_freeform else ''
+            item.save(update_fields=['text', 'full_sms', 'review_signature'])
+            event = ModerationAudit.objects.create(owner=owner, category=category, outcome='accepted',
+                reason_code=mode + ('_' + tone if direct else ''), content_digest=digest(json.dumps(text, ensure_ascii=True)))
+            request._message_attempt_moderation_event = event.event_id
+            record_attempt(request, preview=item)
+    except ModerationRejected as exc:
+        reason = str(exc)
+        event = ModerationAudit.objects.create(owner=owner, category=category[:32], outcome='rejected',
+            reason_code=reason, content_digest=digest(json.dumps(text, ensure_ascii=True)))
         request._message_attempt_moderation_event = event.event_id
-        record_attempt(request, preview=item)
+        from .message_alternatives import feedback, offers
+        code, message = feedback(text, reason)
+        alternatives = []
+        if not choosing_alternative and owner and recipient_hash:
+            alternatives = offers(owner, session_key(request), recipient_hash, tone, text, reason, layout=layout)
+        raise APIError(code, message, 422, details={'alternatives': alternatives})
+    except SMSTooLong:
+        raise APIError('message_too_long', 'متن نهایی بیش از سه بخش پیامک می‌شود. متن کوتاه‌تری را امتحان کن.', 422)
+    except RewriteUnavailable:
+        raise APIError("rewrite_unavailable", "آماده‌سازی متن موقتاً در دسترس نیست؛ کمی بعد تلاش کنید.", 503)
     return {"preview_id": str(item.id), "payment_method": item.payment_method, "wallet_terms_version": item.wallet_policy_version,
         "rewritten_text": item.generated_body if use_freeform else item.text, "price_toman": item.price_toman, "is_free": item.is_free,
         "message_tone": item.message_tone,

@@ -57,8 +57,9 @@ def api(methods, authenticated=False):
 
 
 def error_response(exc):
-    from .status_reasons import REQUEST_UNAVAILABLE
-    error = {"code": exc.code, "message": REQUEST_UNAVAILABLE if exc.status >= 500 else exc.message}
+    from .status_reasons import PUBLIC_SERVICE_ERRORS, REQUEST_UNAVAILABLE
+    message = PUBLIC_SERVICE_ERRORS.get(exc.code, REQUEST_UNAVAILABLE) if exc.status >= 500 else exc.message
+    error = {"code": exc.code, "message": message}
     if exc.fields and exc.status < 500:
         error["fields"] = exc.fields
     if exc.details and exc.status < 500:

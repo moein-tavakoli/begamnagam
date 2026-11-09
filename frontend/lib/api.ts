@@ -90,6 +90,7 @@ export class ApiError extends Error {
 }
 
 const requestUnavailable = "درخواست فعلاً انجام نشد؛ کمی بعد دوباره تلاش کن.";
+const rewriteUnavailable = "آماده‌سازی متن موقتاً در دسترس نیست. کمی بعد دوباره تلاش کن.";
 
 // randomUUID is unavailable on a phone opening a local HTTP LAN address.
 // getRandomValues remains available there and keeps retry keys unpredictable.
@@ -156,10 +157,12 @@ export async function api<T>(
     });
     const data = await response.json().catch(() => null);
     if (!response.ok) {
+      const code = data?.error?.code || "service_error";
+      const safeServiceMessage = code === 'rewrite_unavailable' ? rewriteUnavailable : requestUnavailable;
       throw new ApiError(
-        (response.status >= 500 ? requestUnavailable : data?.error?.message) ||
+        (response.status >= 500 ? safeServiceMessage : data?.error?.message) ||
           "سرویس در دسترس نیست. چند لحظه دیگر دوباره تلاش کنید.",
-        data?.error?.code || "service_error",
+        code,
         response.status >= 500 ? undefined : data?.error?.fields,
         response.status >= 500 ? undefined : data?.error?.details,
       );

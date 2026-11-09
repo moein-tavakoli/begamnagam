@@ -2,6 +2,7 @@ import time
 from unittest.mock import patch
 from django.test import Client, TestCase, override_settings
 from . import test_freeform as freeform_tests
+from .gapgpt import GapGPTRejected, GapGPTUnavailable
 from .models import Account, ModerationAudit, Order, Outbox, Preview, RewriteUsage
 from .message_alternatives import MAX_AGE
 
@@ -13,9 +14,13 @@ class MessageAlternativeTests(TestCase):
     quote, make_order = freeform_tests.FreeformTests.quote, freeform_tests.FreeformTests.make_order
 
     def offer(self):
-        response = self.quote('میکشمت')
+        with override_settings(AI_MODE='template'):
+            response = self.quote('احمق، لطفاً جلوی در پارک نکن', category='parking')
         self.assertEqual(response.status_code, 422, response.content)
-        return response.json()['error']['details']['alternatives'][0]
+        choices = response.json()['error']['details']['alternatives']
+        self.assertEqual(len({item['text'] for item in choices}), 2)
+        self.assertTrue(all('پارک' in item['text'] for item in choices))
+        return choices[-1]
 
     def choose(self, offer, **extra):
         return self.post('/messages/preview', {'source_mode': 'reviewed_alternative',
@@ -74,17 +79,69 @@ class MessageAlternativeTests(TestCase):
     def test_known_bad_phrase_is_reported_but_model_only_rejection_never_invents_a_word(self):
         response = self.quote('میکشمت')
         self.assertIn('«میکشمت»', response.json()['error']['message'])
-        from .gapgpt import GapGPTRejected
         with patch('core.gapgpt.rewrite_message', side_effect=GapGPTRejected('review_intent')):
             response = self.quote('رفیق پولدار منی')
         self.assertEqual(response.json()['error']['code'], 'rewrite_intent_changed')
         self.assertNotIn('«', response.json()['error']['message'])
         self.assertNotIn('تهدید', response.json()['error']['message'])
+        self.assertEqual(response.json()['error']['details']['alternatives'], [])
+
+    def test_unsafe_purpose_and_private_data_do_not_produce_unrelated_options(self):
+        with patch('core.gapgpt.rewrite_message') as model:
+            for text in ('اگه جلوی در پارک کنی میکشمت', 'لطفاً به 09123456780 زنگ بزن و جلوی در پارک نکن'):
+                response = self.quote(text)
+                self.assertEqual(response.status_code, 422, response.content)
+                error = response.json()['error']
+                self.assertEqual(error['details']['alternatives'], [])
+                self.assertNotIn('09123456780', error['message'])
+        model.assert_not_called()
+
+    def test_v2_review_failure_offers_two_choices_related_to_safe_intent(self):
+        with patch('core.gapgpt.rewrite_message', side_effect=GapGPTRejected('review_register')) as model:
+            response = self.client.post('/api/v2/message-previews', {
+                'source_mode': 'freeform', 'text': 'بیشعور جلوی ورودی پارک نکن',
+                'recipient_phone': '09901234567', 'message_tone': 'blunt',
+            }, content_type='application/json')
+        self.assertEqual(response.status_code, 422, response.content)
+        model.assert_called_once()
+        error = response.json()['error']
+        self.assertIn('زبان', error['message'])
+        self.assertEqual(error['code'], 'rewrite_output_rejected')
+        choices = error['details']['alternatives']
+        self.assertEqual(len({item['id'] for item in choices}), 2)
+        self.assertTrue(all('پارک' in item['text'] and item['message_tone'] == 'blunt' for item in choices))
+        self.assertFalse(Preview.objects.exists())
+
+    def test_choices_preserve_repayment_and_water_conservation(self):
+        with patch('core.gapgpt.rewrite_message', side_effect=GapGPTRejected('review_intent')):
+            response = self.quote('لطفاً پولم رو پس بده')
+            water = self.quote('آب هدر نده').json()['error']['details']['alternatives']
+        choices = response.json()['error']['details']['alternatives']
+        self.assertEqual(len(choices), 2)
+        self.assertTrue(all('پولم' in item['text'] for item in choices))
+        self.assertEqual(len(water), 2)
+        self.assertTrue(all('آب' in item['text'] and 'زباله' not in item['text'] for item in water))
+        selected = self.choose(choices[0])
+        self.assertEqual(selected.status_code, 200, selected.content)
+        self.assertEqual(selected.json()['rewritten_text'], choices[0]['text'])
+        from .freeform import validate_order
+        order = self.make_order(selected.json())
+        self.assertEqual(order.status_code, 200, order.content)
+        validate_order(Order.objects.get(pk=order.json()['id']))
+
+    def test_opposite_reported_and_ambiguous_requests_do_not_produce_choices(self):
+        with patch('core.gapgpt.rewrite_message', side_effect=GapGPTRejected('review_intent')):
+            for draft in ('لطفاً جلوی در پارک کن', 'نگفتم جلوی در پارک نکن، لطفاً همین جا پارک کن',
+                          'پولم رو برگردوندم', 'متأسفم که بازی را باختی', 'لباست رو عوض کن'):
+                with self.subTest(draft=draft):
+                    response = self.quote(draft)
+                    self.assertEqual(response.status_code, 422, response.content)
+                    self.assertEqual(response.json()['error']['details']['alternatives'], [])
 
     def test_provider_failure_does_not_silently_offer_or_prepare_a_template(self):
-        from .gapgpt import GapGPTUnavailable
         with patch('core.gapgpt.rewrite_message', side_effect=GapGPTUnavailable()):
             response = self.quote('از دوستی با تو خوشحالم')
         self.assertEqual(response.status_code, 503)
+        self.assertIn('آماده‌سازی متن', response.json()['error']['message'])
         self.assertNotIn('details', response.json()['error'])
         self.assertFalse(Preview.objects.exists())

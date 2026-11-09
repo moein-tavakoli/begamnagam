@@ -22,7 +22,7 @@ import { managementNumber } from "@/lib/management";
 import type { MessageTone, MessageToneOption } from '@/lib/message-tones';
 
 type ToneFlag = 'tone_polite_enabled' | 'tone_firm_enabled' | 'tone_blunt_enabled' | 'tone_angry_enabled';
-type Values = { provider: string; ollama_model: string; gapgpt_model: string; timeout_seconds: number; parallel_requests: number; daily_limit: number; user_daily_limit: number } & Record<ToneFlag, boolean>;
+type Values = { provider: string; ollama_model: string; gapgpt_model: string; rewrite_prompt: string; timeout_seconds: number; parallel_requests: number; daily_limit: number; user_daily_limit: number } & Record<ToneFlag, boolean>;
 type Settings = { values: Values; revision: number; gapgpt_credentials_configured: boolean; tone_options: (MessageToneOption & {field: ToneFlag})[] };
 type Result = { allowed: boolean; message: string; elapsed_seconds: number };
 
@@ -56,7 +56,7 @@ function Configuration({ data, onSaved, onFailure }: { data: Settings; onSaved: 
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const values = { ...data.values, provider };
-    for (const key of ["ollama_model", "gapgpt_model"] as const) values[key] = String(form.get(key) || "").trim();
+    for (const key of ["ollama_model", "gapgpt_model", "rewrite_prompt"] as const) values[key] = String(form.get(key) || "").trim();
     for (const key of ["timeout_seconds", "parallel_requests", "daily_limit", "user_daily_limit"] as const) values[key] = Number(form.get(key));
     for (const option of data.tone_options) values[option.field] = form.get(option.field) === 'on';
     setBusy(true); setError(""); setFields({});
@@ -92,6 +92,10 @@ function Configuration({ data, onSaved, onFailure }: { data: Settings; onSaved: 
           </Grid>)}</Grid>
           <Typography color="text.secondary" variant="body2">در هر سه لحن، توهین، تهدید، نشانی و اطلاعات خصوصی رد می‌شوند. لحن سوم شدت بیان را بیشتر می‌کند.</Typography>
         </Stack>
+        <ManagementTextarea label="پرامپت بازنویسی" name="rewrite_prompt" rows={4} maxLength={600}
+          defaultValue={data.values.rewrite_prompt ?? ""} error={!!fields.rewrite_prompt}
+          placeholder="مثلاً واژه‌های روزمرهٔ کاربر را نگه دار و جمله را فقط در صورت نیاز کوتاه کن."
+          helperText={fields.rewrite_prompt ? String(fields.rewrite_prompt) : "راهنمای اختیاری سبک و جمله‌بندی، تا ۶۰۰ نویسه. با کادر خالی، مدل از پرامپت پایه استفاده می‌کند. بازبین مستقل طبق قواعد ثابت عمل می‌کند."} />
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, md: 6 }}><ManagementInput label="مدل نصب‌شدهٔ Ollama" name="ollama_model" dir="ltr" defaultValue={data.values.ollama_model} maxLength={100} required error={!!fields.ollama_model} helperText={fields.ollama_model ? String(fields.ollama_model) : undefined} /></Grid>
           <Grid size={{ xs: 12, md: 6 }}><ManagementInput label="مدل GapGPT" name="gapgpt_model" dir="ltr" defaultValue={data.values.gapgpt_model} maxLength={100} error={!!fields.gapgpt_model} helperText={fields.gapgpt_model ? String(fields.gapgpt_model) : data.gapgpt_credentials_configured ? "کلید روی سرور تنظیم شده است." : "کلید روی سرور تنظیم نشده است."} /></Grid>

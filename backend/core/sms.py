@@ -1,7 +1,7 @@
 """Build the reviewed recipient SMS snapshot before the sender confirms it."""
 from django.conf import settings
 
-from .moderation import DIRECT_TEMPLATES, TEMPLATES, ModerationRejected, moderate
+from .moderation import DIRECT_TEMPLATES, TEMPLATES, ModerationRejected, is_reviewed_template, moderate
 
 SMS_INTRO = 'نمیدونم بهت بگم یا نگم؟'
 MESSAGE_SLOT = '{{message}}'
@@ -32,17 +32,23 @@ def render_recipient_sms(body, origin, token, *, layout=DEFAULT_SMS_TEMPLATE):
     return layout.replace(OPT_OUT_SLOT, 'بگم نگم | لغو: ' + link).replace(MESSAGE_SLOT, body)
 
 
-def compose_recipient_sms(category, body, origin, token, *, direct=False, message_tone=None, layout=DEFAULT_SMS_TEMPLATE):
-    if message_tone is None:
-        templates = (DIRECT_TEMPLATES if direct else TEMPLATES)[category]
+def compose_recipient_sms(category, body, origin, token, *, direct=False, message_tone=None,
+                          layout=DEFAULT_SMS_TEMPLATE, exact=False):
+    if exact:
+        if not is_reviewed_template(category, body):
+            raise ModerationRejected('unreviewed_template')
+        candidates = (body,)
     else:
-        from .message_tones import templates as tone_templates
-        templates = tone_templates(category, message_tone)
-    if body not in templates:
-        raise ModerationRejected('unreviewed_template')
-    # Keep the selected text when it fits. A longer legacy/model choice can use
-    # another reviewed text in the same category and tone, never truncation.
-    for candidate in [body, *templates]:
+        if message_tone is None:
+            templates = (DIRECT_TEMPLATES if direct else TEMPLATES)[category]
+        else:
+            from .message_tones import templates as tone_templates
+            templates = tone_templates(category, message_tone)
+        if body not in templates:
+            raise ModerationRejected('unreviewed_template')
+        # Legacy selection can use a fitting reviewed variant in the same tone.
+        candidates = (body, *templates)
+    for candidate in candidates:
         full_sms = render_recipient_sms(candidate, origin, token, layout=layout)
         if sms_units(full_sms) <= MAX_SMS_UNITS:
             moderate(candidate)

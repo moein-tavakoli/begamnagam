@@ -237,7 +237,7 @@ class GapGPTClientTests(SimpleTestCase):
 
     def test_candidate_is_not_truncated_or_accepted_over_sms_limit(self):
         self.opener.open.side_effect = [_Response(_completion({'allowed': True, 'message': BODY}))]
-        with self.assertRaises(GapGPTUnavailable):
+        with self.assertRaisesRegex(GapGPTRejected, 'candidate_too_long'):
             rewrite_message(SOURCE, max_units=10)
         self.assertEqual(self.opener.open.call_count, 1)
 

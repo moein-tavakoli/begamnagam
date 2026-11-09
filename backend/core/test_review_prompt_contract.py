@@ -5,6 +5,10 @@ from unittest.mock import Mock, patch
 from django.test import SimpleTestCase, override_settings
 from . import test_gapgpt as fixtures
 from .gapgpt import rewrite_message
+from .models import AIConfiguration
+
+
+STYLE_GUIDANCE = 'واژه‌های روزمرهٔ کاربر را نگه دار.'
 
 
 @override_settings(
@@ -27,14 +31,19 @@ class ReviewPromptContractTests(SimpleTestCase):
         ]
         with patch('core.gapgpt.urllib.request.build_opener', return_value=opener):
             self.assertEqual(
-                rewrite_message(source, max_units=140, message_tone='blunt'), source
+                rewrite_message(source, max_units=140, message_tone='blunt',
+                                config=AIConfiguration(provider='gapgpt', rewrite_prompt=STYLE_GUIDANCE)), source
             )
+        generation = json.loads(opener.open.call_args_list[0].args[0].data)['messages'][0]['content']
+        self.assertIn(STYLE_GUIDANCE, generation)
+        self.assertIn('Preserve the source purpose', generation)
         prompt = json.loads(opener.open.call_args_list[1].args[0].data)['messages'][0][
             'content'
         ]
         self.assertNotIn('return it unchanged', prompt)
         self.assertNotIn('Preserve the exact cleaned source whenever', prompt)
         self.assertIn('Do not rewrite', prompt)
+        self.assertNotIn(STYLE_GUIDANCE, prompt)
         marker = 'Required classification JSON schema: '
         self.assertIn(marker, prompt)
         schema = json.loads(prompt.split(marker)[1])
@@ -80,7 +89,6 @@ class ReviewPromptContractTests(SimpleTestCase):
     def test_local_provider_uses_same_classifier_without_generation_commands(self):
         from . import test_ollama_rewrite as local_fixtures
         from .ollama_rewrite import rewrite_message as local_rewrite
-        from .models import AIConfiguration
 
         source = 'حلالم کن داداش'
         verdict = {**fixtures.VERDICT, 'tone_matched': True}
@@ -97,7 +105,7 @@ class ReviewPromptContractTests(SimpleTestCase):
                     source,
                     max_units=140,
                     message_tone='blunt',
-                    config=AIConfiguration(provider='ollama'),
+                    config=AIConfiguration(provider='ollama', rewrite_prompt=STYLE_GUIDANCE),
                 ),
                 source,
             )
@@ -105,6 +113,9 @@ class ReviewPromptContractTests(SimpleTestCase):
         prompt = payload['messages'][0]['content']
         self.assertNotIn('return it unchanged', prompt)
         self.assertNotIn('Preserve the exact cleaned source whenever', prompt)
+        self.assertNotIn(STYLE_GUIDANCE, prompt)
+        generation = json.loads(opener.open.call_args_list[0].args[0].data)['messages'][0]['content']
+        self.assertIn(STYLE_GUIDANCE, generation)
         schema = json.loads(prompt.split('Required classification JSON schema: ')[1])
         self.assertEqual(set(schema['required']), set(payload['format']['required']))
         self.assertFalse(schema['additionalProperties'])

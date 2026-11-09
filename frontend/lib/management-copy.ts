@@ -9,6 +9,7 @@ const explanations: Record<string, string> = {
   invalid_polite_body: 'متن بازنویسی‌شده شرایط لازم برای ارسال را نداشته است.',
   checks_uncertain: 'نتیجهٔ بررسی ایمنی یا حفظ منظور قطعی نیست؛ متن تأیید نشده است.',
   candidate_rejected: 'متن پیشنهادی در بررسی محلی تأیید نشده است.',
+  candidate_too_long: 'متن بازنویسی‌شده از ظرفیت پیامک با قالب فعلی بیشتر بود.',
   review_rejected: 'بازبین مستقل متن پیشنهادی را تأیید نکرده است.',
   generation_unsafe: 'مدل، متن اولیه را از نظر ایمنی نامناسب تشخیص داده و بازنویسی نکرده است.',
   generation_private: 'مدل وجود اطلاعات خصوصی را تشخیص داده و بازنویسی نکرده است.',
@@ -82,7 +83,8 @@ export function managementExplanation(value: unknown): string {
 
 const values: Record<string, Record<string, string>> = {
   payment_mode: { free: 'رایگان', gift: 'هدیه', sponsored: 'رایگان با هزینهٔ سرویس', wallet: 'کیف پول', gateway: 'درگاه بانکی', card: 'کارت‌به‌کارت', demo: 'آزمایشی', zarinpal: 'زرین‌پال' },
-  category: {"appreciation": "تشکر و قدردانی", "encouragement": "دلگرمی و تشویق", "congratulations": "تبریک و شادی", "body": "بهداشت فردی", "breath": "بهداشت دهان", "noise": "آرامش و صدا", "shared_space": "فضای مشترک", "punctuality": "خوش‌قولی", "listening": "خوب گوش‌دادن", "conversation": "ادب در گفت‌وگو", "personal_space": "حریم شخصی", "phone_etiquette": "استفاده از تلفن", "neighbor": "حقوق همسایه", "parking": "پارک خودرو", "teamwork": "همکاری گروهی", "apology": "عذرخواهی", "good_wishes": "آرزوی روز خوب", "environment": "مراقبت از محیط", "custom": "متن دلخواه"},
+  category: {"appreciation": "تشکر و قدردانی", "encouragement": "دلگرمی و تشویق", "congratulations": "تبریک و شادی", "body": "بهداشت فردی", "breath": "بهداشت دهان", "noise": "آرامش و صدا", "shared_space": "فضای مشترک", "punctuality": "خوش‌قولی", "listening": "خوب گوش‌دادن", "conversation": "ادب در گفت‌وگو", "personal_space": "حریم شخصی", "phone_etiquette": "استفاده از تلفن", "neighbor": "حقوق همسایه", "parking": "پارک خودرو", "teamwork": "همکاری گروهی", "apology": "عذرخواهی", "good_wishes": "آرزوی روز خوب", "environment": "مراقبت از محیط", "custom": "متن دلخواه",
+    repayment: 'درخواست برگرداندن پول', save_water: 'صرفه‌جویی در آب', save_electricity: 'صرفه‌جویی در برق'},
   provider: { kavenegar: 'کاوه‌نگار', zarinpal: 'زرین‌پال', console: 'ثبت آزمایشی', demo: 'آزمایشی', gapgpt: 'گپ‌جی‌پی‌تی', ollama: 'مدل محلی', template: 'متن آماده' },
   environment: { demo: 'آزمایشی', live: 'واقعی', sandbox: 'آزمایشی درگاه', production: 'واقعی' },
   action: { suspend: 'تعلیق کاربر', unsuspend: 'رفع تعلیق', tone: 'تغییر لحن', free_sending: 'تغییر ارسال رایگان', account_limits: 'تغییر سقف کاربر', halt: 'توقف ارسال', resume: 'ازسرگیری ارسال', message_texts: 'مشاهدهٔ متن پیام', attempt_texts: 'مشاهدهٔ متن درخواست', blacklist_viewed: 'مشاهدهٔ لیست سیاه', account_phones_viewed: 'مشاهدهٔ شمارهٔ کاربران', user_activity_viewed: 'مشاهدهٔ فعالیت کاربر', review: 'بررسی گزارش', close_report: 'بستن گزارش', hold_report: 'نگهداری گزارش', ack_alert: 'ثبت بررسی هشدار', confirm_refund: 'ثبت بازپرداخت', grant_package: 'فعال‌سازی بسته', approve_card: 'تأیید رسید', reject_card: 'رد رسید' },

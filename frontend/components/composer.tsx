@@ -18,7 +18,7 @@ import {
 } from "@/lib/format";
 import { useApp } from "./app-provider";
 import { AuthGate } from "./auth-gate";
-import { BusyButton, ErrorBox, ServiceState } from "./feedback";
+import { BusyButton, DeliveryReason, ErrorBox, ServiceState } from "./feedback";
 import { Icon, type IconName } from "./icons";
 import { TermsDialog } from "./terms-dialog";
 import { CreditPackages } from "./credit-packages";
@@ -90,12 +90,6 @@ export function Composer({ onExit }: { onExit?: () => void }) {
   const idempotencyKey = useRef("");
   const heading = useRef<HTMLHeadingElement>(null);
   const previousStage = useRef(`${step}:${awaitingPayment}:${finished}`);
-  const alternativesPanel = useRef<HTMLFieldSetElement>(null);
-
-  useEffect(() => {
-    if (alternatives.length > 0) alternativesPanel.current?.focus();
-  }, [alternatives]);
-
   useEffect(() => {
     setAlternatives([]); setSelectedAlternative(null);
   }, [text, recipient, messageTone, step, data?.session_identity]);
@@ -321,6 +315,13 @@ export function Composer({ onExit }: { onExit?: () => void }) {
     setError("");
     setFields({});
   }
+
+  function editRejectedMessage() {
+    setOrder(null);
+    setPreview(null);
+    idempotencyKey.current = '';
+    goBack();
+  }
   function renderActions(primary: ReactNode, disableBack = busy || !!order) {
     return (
       <div className="form-actions composer-actions" role="group" aria-label="ادامه یا بازگشت"
@@ -357,13 +358,14 @@ export function Composer({ onExit }: { onExit?: () => void }) {
           </div>
           <ServiceState />
           <ErrorBox message={error} />
-          {step === 1 && !preview && alternatives.length > 0 && <fieldset ref={alternativesPanel} tabIndex={-1} className="message-alternatives" disabled={busy}>
-            <legend>به‌جایش می‌توانی یک پیام تازه انتخاب کنی</legend>
-            <p className="small muted">متن اولیه تأیید نشد. این پیشنهادها پیام‌های آمادهٔ جداگانه‌اند؛ فقط اگر منظورت را می‌رسانند انتخابشان کن. پیش از ارسال، متن کامل را دوباره می‌بینی.</p>
+          {step === 1 && !preview && alternatives.length > 0 && <fieldset className="message-alternatives" disabled={busy}>
+            <legend>پیشنهادهای مرتبط با پیامت</legend>
+            <p className="small muted">اگر یکی از پیشنهادها منظورت را می‌رساند، انتخابش کن. پیش از ارسال متن کامل را می‌بینی.</p>
             {alternatives.map(item => <label className="message-alternative" key={item.id}>
               <input type="radio" name="message-alternative" checked={selectedAlternative === item.token} onChange={() => setSelectedAlternative(item.token)} />
               <span><strong>{item.label}</strong><span>{item.text}</span></span>
             </label>)}
+            <button type="button" className="text-button" onClick={goBack}>ویرایش متن اولیه</button>
           </fieldset>}
           {step === 0 && !data?.authenticated && <AuthGate renderActions={renderActions} />}
           {step === 0 && data?.authenticated && (
@@ -554,6 +556,8 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                   : data?.demo_mode ? "درخواست آزمایشی ثبت شد."
                   : "پیام شما با موفقیت در صف ارسال قرار گرفت."}
               </h2>
+              <DeliveryReason order={order} />
+              {order.status_reason?.code === 'moderation_rejected' && <button type="button" className="button secondary" onClick={editRejectedMessage}>ویرایش و آماده‌سازی دوباره</button>}
               <Link className="button primary composer-next" href="/history">پیام‌های من</Link>
             </div>
           )}

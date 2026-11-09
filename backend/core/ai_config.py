@@ -3,9 +3,11 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from .models import AIConfiguration, OperatorAudit
+from .privacy import digest
 from .services import APIError
 
-FIELDS = ('provider', 'ollama_model', 'gapgpt_model', 'timeout_seconds',
+TEXT_FIELDS = ('provider', 'ollama_model', 'gapgpt_model', 'rewrite_prompt')
+FIELDS = (*TEXT_FIELDS, 'timeout_seconds',
           'parallel_requests', 'daily_limit', 'user_daily_limit',
           'tone_polite_enabled', 'tone_firm_enabled', 'tone_blunt_enabled', 'tone_angry_enabled')
 
@@ -18,6 +20,11 @@ def current():
 
 def values(config):
     return {name: getattr(config, name) for name in FIELDS}
+
+
+def _audit_values(data):
+    prompt = data['rewrite_prompt']
+    return {**data, 'rewrite_prompt': digest('rewrite-prompt:' + prompt) if prompt else ''}
 
 
 def available(config=None):
@@ -48,10 +55,10 @@ def update(actor, incoming, revision, reason):
         raise APIError('settings_changed', 'تنظیمات تغییر کرده است؛ تازه‌سازی کن.', 409)
     before = values(config)
     for name, value in incoming.items():
-        expected = bool if name.startswith('tone_') else str if name in FIELDS[:3] else int
+        expected = bool if name.startswith('tone_') else str if name in TEXT_FIELDS else int
         if type(value) is not expected:
             raise APIError('invalid_settings', 'نوع مقدار معتبر نیست.', 422, {name: ['مقدار معتبر وارد کن.']})
-        setattr(config, name, value)
+        setattr(config, name, value.strip() if name == 'rewrite_prompt' else value)
     try:
         config.full_clean()
         if config.provider == 'gapgpt' and not available(config):
@@ -62,5 +69,5 @@ def update(actor, incoming, revision, reason):
         config.revision += 1
         config.save()
         OperatorAudit.objects.create(actor=actor, action='update_ai_configuration', object_id='ai:1',
-                                     reason=reason, before=before, after=values(config))
+                                     reason=reason, before=_audit_values(before), after=_audit_values(values(config)))
     return config

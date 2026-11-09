@@ -9,6 +9,26 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.33.0 — 2026-11-09 — Clear rejection reasons and editable AI guidance (local)
+
+### Added
+
+- Add optional wording guidance to AI settings for authorized staff. The
+  generation stage for GapGPT and Ollama reads the saved guidance. Independent
+  review applies the fixed safety, intent and tone checks.
+
+### Fixed
+
+- Explain rejection causes in Persian during preparation and on failed receipts.
+  Let the sender return to editing after a failed final review.
+- Offer two reviewed texts for a recognized safe request. Match the whole
+  request to preserve its direction and intent. Selecting a choice prepares an
+  exact preview for explicit confirmation.
+- Describe error handling and reviewed choices in the API and bot guides.
+
+Validation covered 736 PostgreSQL tests, 119 frontend tests, TypeScript,
+migration consistency and isolated browser checks at 375px and 1440px.
+
 ## 0.32.0 — 2026-11-09 — Recipient SMS template editor (local)
 
 ### Added

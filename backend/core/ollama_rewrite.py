@@ -11,7 +11,8 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import connection
 from .gapgpt import (GapGPTRejected, GapGPTUnavailable, _NoRedirect, _candidate,
-                     _json_object, _read_response, _REWRITE_INSTRUCTION, _REVIEW_INSTRUCTION, _review_prompt)
+                     _json_object, _read_response, _REWRITE_INSTRUCTION, _REVIEW_INSTRUCTION,
+                     _review_prompt, _review_rejection, generation_prompt)
 
 _locks = [Lock(), Lock()]
 _LOCK_NAMESPACE = 18476112
@@ -111,26 +112,27 @@ def rewrite_message(cleaned_text, *, max_units, direct=False, message_tone=None,
         raise GapGPTRejected('invalid_input')
     if message_tone is not None and (not isinstance(message_tone, str) or message_tone not in {'polite', 'firm', 'blunt', 'angry'}):
         raise GapGPTRejected('invalid_tone')
-    from .message_tones import instruction as tone_instruction
     tone = message_tone or ('firm' if direct else 'polite')
-    extra = tone_instruction(tone) if message_tone is not None else ''
     deadline = time.monotonic() + config.timeout_seconds
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect())
     schema = {'type': 'object', 'properties': {'allowed': {'type': 'boolean'},
         'message': {'type': 'string', 'maxLength': max_units}}, 'required': ['allowed', 'message'], 'additionalProperties': False}
-    result = _chat(opener, config, REWRITE + extra,
+    result = _chat(opener, config, generation_prompt(REWRITE, message_tone, config),
         {'text': cleaned_text, 'max_utf16_units': max_units,
          'tone': {'polite': 'warm and respectful', 'firm': 'clear and respectful', 'blunt': 'plain direct minimal edits', 'angry': 'terse, frustrated, non-abusive'}[tone]}, schema, deadline, 200)
     candidate = _candidate(result, max_units)
     from .draft_guard import validate_polite_body
-    validate_polite_body(candidate, max_units=max_units)
+    from .moderation import ModerationRejected
+    try:
+        validate_polite_body(candidate, max_units=max_units)
+    except ModerationRejected:
+        raise GapGPTRejected('candidate_rejected') from None
     checks = (*REVIEW_KEYS, 'tone_matched') if message_tone in {'firm', 'blunt', 'angry'} else REVIEW_KEYS
     schema = {'type': 'object', 'properties': {key: {'type': 'boolean'} for key in checks},
         'required': list(checks), 'additionalProperties': False}
     verdict = _chat(opener, config, _review_prompt(checks, message_tone), {'source': cleaned_text, 'candidate': candidate}, schema, deadline, 100)
     if set(verdict) != set(checks) or any(type(value) is not bool for value in verdict.values()):
         raise GapGPTUnavailable('invalid_local_review')
-    if not all(verdict.values()):
-        raise GapGPTRejected('review_register' if verdict.get('register_preserved') is False and all(
-            value for key, value in verdict.items() if key != 'register_preserved') else 'checks_uncertain')
+    if reason := _review_rejection(verdict):
+        raise GapGPTRejected(reason)
     return candidate

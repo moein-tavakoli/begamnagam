@@ -14,17 +14,15 @@ from .models import OperatorAudit, SMSTemplateSettings
 from .moderation import ANGRY_TEMPLATES, DIRECT_TEMPLATES, TEMPLATES, ModerationRejected
 from .privacy import digest
 from .services import APIError
-from .sms import (DEFAULT_SMS_TEMPLATE, MESSAGE_SLOT, OPT_OUT_SLOT, freeform_body_limit,
+from .sms import (DEFAULT_SMS_TEMPLATE, MESSAGE_SLOT, OPT_OUT_SLOT, SMS_WARNING_SEGMENTS,
                   render_recipient_sms, sms_origin, sms_segments, sms_units)
 from .views import body
 
 
 VARIABLE_NAME = r'[a-z][a-z0-9_]{0,23}'
 PLACEHOLDER = re.compile(r'\{\{ *(' + VARIABLE_NAME + r') *\}\}')
-REQUIRED_NAMES = {'message', 'opt_out'}
-MAX_TEMPLATE_LENGTH = 600
+SYSTEM_NAMES = {'message', 'opt_out'}
 MAX_VARIABLES = 8
-MAX_VALUE_LENGTH = 80
 SAMPLE_TOKEN = 'Sample-X'  # Cannot match the recipient capability format.
 SAMPLE_MESSAGE = 'از اینکه با مهربانی کنارم بودی، ممنونم.'
 MIN_BODY_UNITS = max(min(map(sms_units, choices))
@@ -36,9 +34,9 @@ def invalid(field, message):
     raise APIError('invalid_sms_template', message, 422, {field: [message]})
 
 
-def plain_text(text, maximum, field):
-    if not isinstance(text, str) or not 0 < len(text) <= maximum:
-        invalid(field, f'متن باید بین ۱ و {fa_number(maximum)} نویسه داشته باشد.')
+def plain_text(text, field):
+    if not isinstance(text, str):
+        invalid(field, 'مقدار باید متن باشد.')
     text = text.replace('\r\n', '\n').translate(str.maketrans('\r\u2028\u2029', '\n\n\n'))
     text = ascii_digits(text).strip()
     if not text or any(unicodedata.category(char).startswith('C') and char not in '\n\u200c' for char in text):
@@ -54,7 +52,7 @@ def check_decoration(text, field):
 
 
 def compile_layout(template, variables):
-    template = plain_text(template, MAX_TEMPLATE_LENGTH, 'template')
+    template = plain_text(template, 'template')
     template = '\n'.join(line.strip() for line in template.split('\n'))
     template = PLACEHOLDER.sub(lambda match: '{{' + match[1] + '}}', template)
     text_without_slots = PLACEHOLDER.sub('', template)
@@ -74,17 +72,18 @@ def compile_layout(template, variables):
         if not isinstance(item, dict) or set(item) != {'name', 'value'} or not isinstance(item['name'], str):
             invalid('variables', 'نام و مقدار متغیر را وارد کنید.')
         name = item['name'].strip()
-        if not re.fullmatch(VARIABLE_NAME, name) or name in REQUIRED_NAMES or name in values:
+        if not re.fullmatch(VARIABLE_NAME, name) or name in SYSTEM_NAMES or name in values:
             invalid('variables', 'نام متغیر باید یکتا باشد و با حرف کوچک انگلیسی شروع شود. ارقام و زیرخط هم مجازند.')
-        value = plain_text(item['value'], MAX_VALUE_LENGTH, 'variables')
+        value = plain_text(item['value'], 'variables')
         if '\n' in value:
             invalid('variables', 'مقدار متغیر باید در یک خط باشد.')
         check_decoration(value, 'variables')
         values[name] = value
-    if set(names) - REQUIRED_NAMES - values.keys():
+    if set(names) - SYSTEM_NAMES - values.keys():
         invalid('template', 'همهٔ متغیرهای استفاده‌شده در قالب باید تعریف شوند.')
     layout = PLACEHOLDER.sub(lambda match: values.get(match[1], match[0]), template)
-    check_decoration(layout.replace(MESSAGE_SLOT, '').replace(OPT_OUT_SLOT, ''), 'template')
+    decoration = layout.replace(MESSAGE_SLOT, '').replace(OPT_OUT_SLOT, '')
+    check_decoration(decoration, 'template')
     return template, [{'name': name, 'value': value} for name, value in values.items()], layout
 
 
@@ -100,25 +99,21 @@ def current_sms_layout():
 
 def sample_preview(layout):
     origin = sms_origin()
-    full_sms = render_recipient_sms(SAMPLE_MESSAGE, origin, SAMPLE_TOKEN, layout=layout)
-    body_units = freeform_body_limit(origin, SAMPLE_TOKEN, layout=layout)
+    full_sms = render_recipient_sms(SAMPLE_MESSAGE, origin, SAMPLE_TOKEN, reply_token=SAMPLE_TOKEN, layout=layout)
+    body_units = max(0, SMS_WARNING_SEGMENTS * 67 - sms_units(full_sms) + sms_units(SAMPLE_MESSAGE))
     return {'full_sms': full_sms, 'sms_units': sms_units(full_sms),
-            'sms_segments': sms_segments(full_sms), 'body_units': body_units}
+            'sms_segments': sms_segments(full_sms), 'body_units': body_units,
+            'length_warning': body_units < MIN_BODY_UNITS}
 
 
 def draft(data):
     template, variables, layout = compile_layout(data['template'], data['variables'])
-    sample = sample_preview(layout)
-    # Account for the legacy anonymous preview's slightly longer preferences link.
-    if min(sample['body_units'], freeform_body_limit(sms_origin(), '', layout=layout)) < MIN_BODY_UNITS:
-        invalid('template', f'قالب را کوتاه‌تر کنید تا دست‌کم {fa_number(MIN_BODY_UNITS)} واحد برای متن پیام جا بماند.')
-    return template, variables, sample
+    return template, variables, sample_preview(layout)
 
 
 def settings_data(template, variables, revision, preview):
     return {'template': template, 'variables': variables, 'revision': revision, 'preview': preview,
-            'default_template': DEFAULT_SMS_TEMPLATE, 'max_template_length': MAX_TEMPLATE_LENGTH,
-            'max_variables': MAX_VARIABLES, 'max_value_length': MAX_VALUE_LENGTH}
+            'default_template': DEFAULT_SMS_TEMPLATE, 'max_variables': MAX_VARIABLES}
 
 
 def audit_value(item):

@@ -33,13 +33,13 @@ class PhaseTwoTests(TestCase):
         result=self.post('/messages/preview',{'category':'appreciation','text':'تشکر از تو','recipient_phone':'09901234567'})
         self.assertEqual(result.status_code,401)
 
-    def test_all_topics_have_three_segment_or_smaller_final_snapshot(self):
+    def test_all_topics_keep_the_reviewed_body_and_recipient_links(self):
         self.authenticate()
         for category in TEMPLATES:
             quote=self.preview(category=category,text='یک پیام محترمانه')
-            self.assertLessEqual(quote['sms_segments'],3)
             self.assertTrue(quote['full_sms'].startswith('نمیدونم بهت بگم یا نگم؟\n' + quote['rewritten_text']))
-            self.assertIn('بگم نگم | لغو:',quote['full_sms'])
+            self.assertIn('\nپاسخ: ', quote['full_sms'])
+            self.assertIn('\nلغو: ', quote['full_sms'])
 
     def test_pair_limit_survives_global_cooldown_and_cache_loss(self):
         user=self.authenticate()

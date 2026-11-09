@@ -53,8 +53,13 @@ const categoryIcons: Record<string, IconName> = {
 };
 const stepLabels = ["حرفت رو بنویس", "متن نهایی و ارسال"];
 
-export function Composer({ onExit }: { onExit?: () => void }) {
+export function Composer({ onExit, replyToken, onReplyUnavailable }: {
+  onExit?: () => void;
+  replyToken?: string;
+  onReplyUnavailable?: (message: string) => void;
+}) {
   const { data, reload } = useApp();
+  const isReply = !!replyToken;
   const [step, setStep] = useState(0);
   const activeStep = Math.min(step, stepLabels.length - 1);
   const [category, setCategory] = useState("");
@@ -136,6 +141,10 @@ export function Composer({ onExit }: { onExit?: () => void }) {
   }, [order?.id, order?.status]);
 
   function handleError(error: unknown) {
+    if (onReplyUnavailable && error instanceof ApiError && error.code === 'reply_unavailable') {
+      onReplyUnavailable(errorMessage(error));
+      return;
+    }
     setError(errorMessage(error));
     setAlternatives(messageAlternatives(error instanceof ApiError ? error.details : undefined));
     setSelectedAlternative(null);
@@ -206,7 +215,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
     setError("");
     setFields({});
     if (!data?.authenticated) { setError("اول شماره خودت رو تأیید کن."); return; }
-    if (!validPhone(recipient)) {
+    if (!isReply && !validPhone(recipient)) {
       setFields({ recipient_phone: "شماره موبایل گیرنده را با ۰۹ و ۱۱ رقم وارد کن." });
       document.getElementById("quote-recipient")?.focus();
       return;
@@ -225,7 +234,10 @@ export function Composer({ onExit }: { onExit?: () => void }) {
     try {
       const result = await api<Preview>("/messages/preview", {
         method: "POST",
-        body: alternative ? alternativeRequest(alternative, normalizePhone(recipient)) : { category, text: text.trim(), recipient_phone: normalizePhone(recipient), source_mode: freeformRewrite ? 'freeform' : 'suggestion', message_tone: messageTone },
+        body: isReply
+          ? { reply_token: replyToken, text: text.trim(), source_mode: 'freeform', message_tone: messageTone }
+          : alternative ? alternativeRequest(alternative, normalizePhone(recipient))
+          : { category, text: text.trim(), recipient_phone: normalizePhone(recipient), source_mode: freeformRewrite ? 'freeform' : 'suggestion', message_tone: messageTone },
       });
       setPreview(result);
       setAlternatives([]); setSelectedAlternative(null);
@@ -245,7 +257,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
     if (busy || orderInFlight.current) return;
     setError("");
     setFields({});
-    if (!validPhone(recipient)) {
+    if (!isReply && !validPhone(recipient)) {
       setFields({
         recipient_phone: "شماره موبایل گیرنده را با ۰۹ و ۱۱ رقم وارد کن.",
       });
@@ -260,7 +272,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
     if (!preview || !data?.authenticated) return;
     if (!order && Date.parse(preview.expires_at) <= Date.now()) {
       setError(
-        "مهلت پیش‌نمایش تمام شده. شماره یا متن را ویرایش کن تا پیش‌نمایش تازه ساخته شود.",
+        "مهلت پیش‌نمایش تمام شده. به مرحلهٔ قبل برگرد و متن نهایی را دوباره آماده کن.",
       );
       return;
     }
@@ -277,7 +289,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
           method: "POST",
           body: {
             preview_id: preview.preview_id,
-            recipient_phone: normalizePhone(recipient),
+            ...(!isReply && { recipient_phone: normalizePhone(recipient) }),
             consent, terms_version: preview.terms_version,
           },
           idempotencyKey: idempotencyKey.current,
@@ -351,7 +363,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
       <div className="compose-layout">
         <div className="compose-panel">
           <div className="panel-top">
-            <span>یک پیام، یک فرصت برای حال بهتر</span>
+            <span>{isReply ? "پاسخ ناشناس" : "یک پیام، یک فرصت برای حال بهتر"}</span>
             <span className="step-count">
               {new Intl.NumberFormat("fa-IR").format(activeStep + 1)} از ۲
             </span>
@@ -459,6 +471,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
           {step > 0 && !finished && !data?.authenticated && <AuthGate renderActions={renderActions} />}
           {step > 0 && !finished && data?.authenticated && (
             <form className="review-form" aria-labelledby="compose-title" onSubmit={preview ? createOrder : makePreview} noValidate>
+              {!isReply && <>
               <label htmlFor="quote-recipient">شماره موبایل گیرنده</label>
               <input id="quote-recipient" className="phone-number-input" type="tel" inputMode="numeric" dir="ltr"
                 maxLength={11} minLength={11} pattern="09[0-9]{9}"
@@ -477,15 +490,16 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                 aria-invalid={!!fields.recipient_phone}
                 aria-describedby={fields.recipient_phone ? "quote-recipient-error" : undefined} />
               {fields.recipient_phone && <p className="field-error" id="quote-recipient-error">{fields.recipient_phone}</p>}
+              </>}
               {preview ? <>
               <div className="final-message">
                 <div className="final-message-header">
                   <Icon name="leaf" size={19} />
-                  <span>متن کامل پیامک؛ همین متن ارسال می‌شه</span>
+                  <span>{isReply ? "متن پاسخ پیش از ارسال" : "متن کامل پیامک؛ همین متن ارسال می‌شه"}</span>
                 </div>
                 <p>{preview.full_sms || preview.rewritten_text}</p>
                 <div className="final-message-footer">
-                  <Icon name="shield" size={15} /> هویت فرستنده پنهانه؛ پاسخ مستقیم فعال نیست.
+                  <Icon name="shield" size={15} /> {isReply ? "نشانی لینک‌ها فقط در پیامک دیده می‌شه." : "اسم و شمارهٔ شما در پیامک دیده نمی‌شه."}
                 </div>
               </div>
               <div className="preview-info">
@@ -494,9 +508,10 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                   {preview.moderation_mode === "gapgpt" || preview.moderation_mode === "ollama" ? "متن بازنویسی و بررسی‌شده" : "متن آمادهٔ بررسی‌شده"}
                 </span>
                 <span>
-                  مصرف: <b>{isFree ? "ارسال رایگان" : "یک اعتبار از بسته"}</b> · {preview.sms_segments || "—"} بخش پیامک
+                  مصرف: <b>{isFree ? "ارسال رایگان" : "یک اعتبار از بسته"}</b> · {preview.sms_segments ? new Intl.NumberFormat("fa-IR").format(preview.sms_segments) : "—"} بخش پیامک
                 </span>
               </div>
+              {(preview.sms_segments ?? 0) > 3 && <p className="small muted" role="note">این متن بیش از ۳ بخش پیامک می‌شود. می‌تونی همین متن رو تأیید کنی یا قبل از ارسال کوتاهش کنی.</p>}
               <label className="checkbox-label" htmlFor="respect-consent">
                 <input id="respect-consent" type="checkbox" checked={consent}
                   disabled={busy || !!order}
@@ -504,7 +519,9 @@ export function Composer({ onExit }: { onExit?: () => void }) {
                   aria-invalid={!!fields.consent}
                   aria-describedby={fields.consent ? "consent-error" : undefined} />
                 <span>
-                  متن نهایی رو خوندم و منظورم رو می‌رسونه. این فرد رو می‌شناسم؛ هدفم کمک و یادآوریه، نه تحقیر، تهدید یا مزاحمت.
+                  {isReply
+                    ? "متن نهایی رو خوندم و منظورم رو می‌رسونه. پاسخ رو با احترام و بدون تحقیر، تهدید یا مزاحمت می‌فرستم."
+                    : "متن نهایی رو خوندم و منظورم رو می‌رسونه. این فرد رو می‌شناسم؛ هدفم کمک و یادآوریه، نه تحقیر، تهدید یا مزاحمت."}
                   {" "}<TermsDialog /> رو می‌پذیرم.
                 </span>
               </label>
@@ -523,7 +540,7 @@ export function Composer({ onExit }: { onExit?: () => void }) {
               </> : <>
                 <div className="review-placeholder" role="note">
                   <Icon name="chat" size={24} />
-                  <p>{alternatives.length > 0 ? "یکی از پیشنهادهای بالا را انتخاب کن تا پیش‌نمایش کامل آن را ببینی." : freeformRewrite ? "شماره رو وارد کن تا متن نهایی آماده بشه. قبل از ارسال، متن کامل پیامک رو می‌بینی." : "شماره رو وارد کن تا متن نهایی آماده بشه. هر ارسال یک اعتبار مصرف می‌کنه."}</p>
+                  <p>{isReply ? "متن پاسخ با لحن انتخابی بررسی می‌شه. قبل از ارسال، متن نهایی رو می‌بینی." : alternatives.length > 0 ? "یکی از پیشنهادهای بالا را انتخاب کن تا پیش‌نمایش کامل آن را ببینی." : freeformRewrite ? "شماره رو وارد کن تا متن نهایی آماده بشه. قبل از ارسال، متن کامل پیامک رو می‌بینی." : "شماره رو وارد کن تا متن نهایی آماده بشه. هر ارسال یک اعتبار مصرف می‌کنه."}</p>
                 </div>
                 {data?.authenticated && renderActions(
                   <BusyButton type="submit" className="button primary composer-next" busy={busy} disabled={!data?.authenticated || (alternatives.length > 0 && !selectedAlternative)}>

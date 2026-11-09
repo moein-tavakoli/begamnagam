@@ -71,25 +71,16 @@ def _category_allowed(category):
             and (not settings.PILOT_POSITIVE_ONLY or category in {'appreciation', 'encouragement'}))
 
 
-def _fitting_bodies(category, candidates, layout):
-    from .sms import compose_recipient_sms, sms_origin, SMSTooLong
-    origin = sms_origin()
-    fitting = []
-    for candidate in candidates:
-        try:
-            compose_recipient_sms(category, candidate, origin, 'Ab12Cd34', layout=layout, exact=True)
-        except (ModerationRejected, SMSTooLong):
-            continue
-        fitting.append(candidate)
-    return fitting
-
-
-def offers(owner, session, recipient_hash, tone, text, reason, *, layout):
+def offers(owner, session, recipient_hash, tone, text, reason):
+    from .moderation import moderate
     category = _topic(text, reason)
     if not _category_allowed(category):
         return []
-    bodies = _fitting_bodies(category, RELATED_TEMPLATE_CHOICES[category], layout)
-    if len(bodies) != 2:
+    bodies = RELATED_TEMPLATE_CHOICES[category]
+    try:
+        for body in bodies:
+            moderate(body)
+    except ModerationRejected:
         return []
     result = []
     for index, body in enumerate(bodies, start=1):
@@ -101,7 +92,8 @@ def offers(owner, session, recipient_hash, tone, text, reason, *, layout):
     return result
 
 
-def resolve(token, *, owner, session, recipient_hash, tone, layout):
+def resolve(token, *, owner, session, recipient_hash, tone):
+    from .moderation import moderate
     try:
         if not isinstance(token, str) or not 1 <= len(token) <= 4096 or not owner or not recipient_hash:
             raise ValueError
@@ -118,8 +110,7 @@ def resolve(token, *, owner, session, recipient_hash, tone, layout):
         text = next((body for body in candidates if payload.get('body') == digest(body)), None)
         if text is None:
             raise ValueError
-        if not _fitting_bodies(category, (text,), layout):
-            raise ValueError
+        moderate(text)
     except Exception:
         # Never echo cryptographic errors, tokens, payloads or private input.
         raise APIError('alternative_expired', 'پیشنهاد جایگزین معتبر نیست یا منقضی شده؛ متن را دوباره بررسی کن.', 409) from None

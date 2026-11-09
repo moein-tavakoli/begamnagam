@@ -145,6 +145,14 @@ OTP به نشست درخواست‌کننده متصل، زمان‌دار و م
 
 پیش‌نمایش به نشست سازنده متصل است و پس از تأیید شماره در همان نشست قابل استفاده می‌ماند. متن و مبلغ قابل تغییر از سمت کلاینت نیستند. تغییر موضوع یا متن نیازمند پیش‌نمایش تازه است.
 
+برای پاسخ ناشناس، ابتدا شمارهٔ دریافت‌کننده را تأیید کنید.
+`POST /recipient/actions/reply` با `{token}` نوبت فعال را بررسی می‌کند.
+`POST /messages/preview` با `reply_token`، `text`، `message_tone` و
+`source_mode: "freeform"` پیش‌نمایش می‌سازد. برای رزرو همان پیش‌نمایش در
+`POST /orders` شمارهٔ گیرنده را حذف کنید. سرور مقصد را تعیین می‌کند.
+پاسخ و رسید `is_reply: true` دارند و شماره‌های مقصد و نشانی‌های فعال را
+نمایش نمی‌دهند. جزئیات نسخهٔ دوم در [راهنمای خصوصی API](../backend/core/api_v2/integration/guide.fa.md) آمده است.
+
 ## سفارش و تأیید ارسال
 
 ### سهمیهٔ رایگان۰٫۸٫۹
@@ -201,7 +209,8 @@ OTP به نشست درخواست‌کننده متصل، زمان‌دار و م
 recipient-bound quote requires a verified sender and cannot be retargeted at
 checkout. The UI always uses this bound form. Response adds `full_sms` and
 `sms_segments`; `rewritten_text` remains the reviewed body for existing clients.
-The server rejects final messages over three Unicode SMS segments.
+Starting in 0.34.0, the segment estimate is advisory and longer reviewed
+snapshots can be confirmed.
 
 Order responses add `financial_status` and `delivery_status`. `text` now exposes
 the frozen full SMS including the service/footer URL; internal reviewed body is

@@ -7,11 +7,8 @@ SMS_INTRO = 'نمیدونم بهت بگم یا نگم؟'
 MESSAGE_SLOT = '{{message}}'
 OPT_OUT_SLOT = '{{opt_out}}'
 DEFAULT_SMS_TEMPLATE = '\n'.join((SMS_INTRO, MESSAGE_SLOT, OPT_OUT_SLOT))
-MAX_SMS_UNITS = 201
-
-
-class SMSTooLong(Exception):
-    pass
+SMS_WARNING_SEGMENTS = 3
+MAX_REWRITE_BODY_UNITS = 201
 
 
 def sms_origin():
@@ -27,17 +24,31 @@ def sms_segments(text):
     return 1 if units <= 70 else (units + 66) // 67
 
 
-def render_recipient_sms(body, origin, token, *, layout=DEFAULT_SMS_TEMPLATE):
-    link = origin + ('/r/' + token if token else '/preferences')
-    return layout.replace(OPT_OUT_SLOT, 'بگم نگم | لغو: ' + link).replace(MESSAGE_SLOT, body)
+def render_recipient_sms(body, origin, token, *, reply_token='', layout=DEFAULT_SMS_TEMPLATE):
+    stop_path = '/r/' + token if token else '/preferences'
+    footer = 'لغو: ' + origin + stop_path
+    if reply_token:
+        footer = 'پاسخ: ' + origin + '/r/p' + reply_token + '\n' + footer
+    return layout.replace(OPT_OUT_SLOT, footer).replace(MESSAGE_SLOT, body)
+
+
+def sender_sms(full_sms, *, is_reply):
+    if not is_reply or not full_sms:
+        return full_sms
+    # Reply snapshots end in the stop link, optionally preceded by a reply link.
+    # The copy sent to the recipient is sealed and retains both capabilities.
+    lines = full_sms.split('\n')
+    lines[-1] = 'لینک لغو دریافت'
+    if len(lines) >= 2 and lines[-2].startswith('پاسخ: ') and '/r/p' in lines[-2]:
+        lines[-2] = 'لینک پاسخ'
+    return '\n'.join(lines)
 
 
 def compose_recipient_sms(category, body, origin, token, *, direct=False, message_tone=None,
-                          layout=DEFAULT_SMS_TEMPLATE, exact=False):
+                          reply_token='', layout=DEFAULT_SMS_TEMPLATE, exact=False):
     if exact:
         if not is_reviewed_template(category, body):
             raise ModerationRejected('unreviewed_template')
-        candidates = (body,)
     else:
         if message_tone is None:
             templates = (DIRECT_TEMPLATES if direct else TEMPLATES)[category]
@@ -46,24 +57,11 @@ def compose_recipient_sms(category, body, origin, token, *, direct=False, messag
             templates = tone_templates(category, message_tone)
         if body not in templates:
             raise ModerationRejected('unreviewed_template')
-        # Legacy selection can use a fitting reviewed variant in the same tone.
-        candidates = (body, *templates)
-    for candidate in candidates:
-        full_sms = render_recipient_sms(candidate, origin, token, layout=layout)
-        if sms_units(full_sms) <= MAX_SMS_UNITS:
-            moderate(candidate)
-            return candidate, full_sms
-    raise SMSTooLong()
+    moderate(body)
+    return body, render_recipient_sms(body, origin, token, reply_token=reply_token, layout=layout)
 
 
-def freeform_body_limit(origin, token='Ab12Cd34', *, layout=DEFAULT_SMS_TEMPLATE):
-    return MAX_SMS_UNITS - sms_units(render_recipient_sms('', origin, token, layout=layout))
-
-
-def compose_freeform_sms(body, origin, token, *, layout=DEFAULT_SMS_TEMPLATE):
+def compose_freeform_sms(body, origin, token, *, reply_token='', layout=DEFAULT_SMS_TEMPLATE):
     from .draft_guard import validate_polite_body
-    limit = freeform_body_limit(origin, token, layout=layout)
-    if limit < 1:
-        raise SMSTooLong()
-    body = validate_polite_body(body, max_units=limit)
-    return render_recipient_sms(body, origin, token, layout=layout)
+    body = validate_polite_body(body, max_units=MAX_REWRITE_BODY_UNITS)
+    return render_recipient_sms(body, origin, token, reply_token=reply_token, layout=layout)

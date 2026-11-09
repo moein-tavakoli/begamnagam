@@ -3,6 +3,7 @@ import secrets
 import string
 from datetime import timedelta
 from django.db import IntegrityError, transaction
+from django.db.models import Q
 from django.utils import timezone
 from .models import RecipientGrant, RecipientState, AbuseReport
 from .privacy import digest
@@ -13,29 +14,33 @@ def generate_short_code():
     return ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(8))
 
 
-def issue_grant(preview, recipient_hash, *, invitation_send=None):
+def issue_grant(preview, recipient_hash, *, invitation_send=None, with_reply=False):
     # A uniqueness constraint arbitrates collisions across concurrent workers.
     # Savepoints keep a rare collision from poisoning the enclosing preview tx.
     for _ in range(5):
         token = generate_short_code()
         token_digest = digest('recipient-token:' + token)
+        reply_token = generate_short_code() if with_reply else ''
+        reply_digest = digest('reply-token:' + reply_token) if reply_token else None
         try:
             with transaction.atomic():
                 RecipientGrant.objects.create(preview=preview, invitation_send=invitation_send, token_digest=token_digest,
-                                              recipient_hash=recipient_hash)
+                                              recipient_hash=recipient_hash, reply_token_digest=reply_digest)
         except IntegrityError:
-            if (not RecipientGrant.objects.filter(token_digest=token_digest).exists()
-                    or (RecipientGrant.objects.filter(invitation_send=invitation_send).exists() if invitation_send
-                        else RecipientGrant.objects.filter(preview=preview).exists())):
+            collisions = Q(token_digest=token_digest)
+            if reply_digest:
+                collisions |= Q(reply_token_digest=reply_digest)
+            source = {'invitation_send': invitation_send} if invitation_send else {'preview': preview}
+            if RecipientGrant.objects.filter(**source).exists() or not RecipientGrant.objects.filter(collisions).exists():
                 raise
         else:
-            return token
+            return token, reply_token
     raise APIError('link_generation_unavailable', 'ساخت لینک موقتاً ممکن نیست؛ دوباره تلاش کنید.', 503)
 
 
 def activate_grant(order):
     now = timezone.now()
-    RecipientGrant.objects.filter(preview=order.preview, activated_at__isnull=True).update(
+    RecipientGrant.objects.filter(preview_id=order.preview_id, recipient_hash=order.recipient_hash, activated_at__isnull=True).update(
         activated_at=now, stop_expires_at=now+timedelta(days=365), report_expires_at=now+timedelta(days=30))
 
 

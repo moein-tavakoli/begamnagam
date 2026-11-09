@@ -52,6 +52,7 @@ export type Order = {
   payment_method?: 'legacy' | 'credit' | 'wallet' | 'gateway';
   uses_purchased_credit?: boolean;
   is_free?: boolean;
+  is_reply?: boolean;
   id: string;
   status: string;
   amount_toman: number;

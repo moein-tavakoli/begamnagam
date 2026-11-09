@@ -60,8 +60,7 @@ class ShortRecipientLinkTests(TestCase):
     def test_existing_long_links_and_frozen_snapshots_remain_valid(self):
         quote = self.quote().json()
         legacy = secrets.token_urlsafe(32)
-        current = quote['full_sms'].split('/r/')[1]
-        old_sms = quote['full_sms'].split('\n', 1)[1].replace('/r/'+current, '/r#'+legacy).replace('لغو: ', 'لغو: https://')
+        old_sms = quote['rewritten_text'] + '\nبگم نگم | لغو: https://begamnagam.ir/r#' + legacy
         Preview.objects.filter(pk=quote['preview_id']).update(full_sms=old_sms)
         RecipientGrant.objects.filter(preview_id=quote['preview_id']).update(token_digest=digest('recipient-token:'+legacy))
         self.deliver(quote)
@@ -79,14 +78,16 @@ class ShortRecipientLinkTests(TestCase):
         self.assertEqual(Order.objects.get().full_sms, old_sms)
 
     def test_collision_retries_without_replacing_an_existing_grant(self):
-        with patch('core.recipient.generate_short_code', return_value='AbCd1234'):
+        with patch('core.recipient.generate_short_code', side_effect=['AbCd1234', 'Reply001']):
             first = self.quote().json()
         original = RecipientGrant.objects.get(preview_id=first['preview_id'])
-        with patch('core.recipient.generate_short_code', side_effect=['AbCd1234', 'XyZ98765']) as generate:
+        with patch('core.recipient.generate_short_code', side_effect=[
+            'AbCd1234', 'Reply002', 'NewSt001', 'Reply001', 'XyZ98765', 'Reply003',
+        ]) as generate:
             second = self.quote()
         self.assertEqual(second.status_code, 200, second.content)
         self.assertTrue(second.json()['full_sms'].endswith('/r/XyZ98765'))
-        self.assertEqual(generate.call_count, 2)
+        self.assertEqual(generate.call_count, 6)
         original.refresh_from_db()
         self.assertEqual(original.token_digest, digest('recipient-token:AbCd1234'))
         self.assertEqual(RecipientGrant.objects.count(), 2)
@@ -101,7 +102,7 @@ class ShortRecipientLinkTests(TestCase):
 
     def test_expired_delivered_codes_are_not_reassigned_after_private_data_cleanup(self):
         quote = self.quote().json()
-        token = quote['full_sms'].split('/r/')[1]
+        token = quote['full_sms'].rsplit('/r/', 1)[1]
         self.deliver(quote)
         RecipientGrant.objects.update(stop_expires_at=timezone.now()-timedelta(days=1),
                                       report_expires_at=timezone.now()-timedelta(days=1))
@@ -109,7 +110,7 @@ class ShortRecipientLinkTests(TestCase):
         original = RecipientGrant.objects.get()
         self.assertEqual(original.recipient_hash, '')
         self.assertEqual(original.token_digest, digest('recipient-token:'+token))
-        with patch('core.recipient.generate_short_code', side_effect=[token, 'Fresh123']):
+        with patch('core.recipient.generate_short_code', side_effect=[token, 'Reply004', 'Fresh123', 'Reply005']):
             response = self.quote()
         self.assertEqual(response.status_code, 200, response.content)
         self.assertTrue(response.json()['full_sms'].endswith('/r/Fresh123'))

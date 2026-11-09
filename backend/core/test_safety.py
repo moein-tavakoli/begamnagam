@@ -25,7 +25,7 @@ class RecipientSafetyTests(TestCase):
         self.client = Client()
         self.user = self.authenticate()
         self.quote = self.post('/messages/preview', {'category':'appreciation','text':'ممنون از همراهی تو','recipient_phone':'09901234567'}).json()
-        self.token = self.quote['full_sms'].split('/r/')[1]
+        self.token = self.quote['full_sms'].rsplit('/r/', 1)[1]
         self.o = self.order(recipient='09901234567', preview=self.quote).json()
 
     def deliver(self):
@@ -38,7 +38,7 @@ class RecipientSafetyTests(TestCase):
         self.assertNotIn('http://', self.quote['full_sms'])
         self.assertEqual(RecipientGrant.objects.get().token_digest, digest('recipient-token:'+self.token))
         with connection.cursor() as cursor:
-            cursor.execute('SELECT full_sms FROM core_order WHERE id=%s', [self.o['id']])
+            cursor.execute('SELECT full_sms FROM core_order')
             raw = cursor.fetchone()[0]
         self.assertTrue(raw.startswith('enc:v1:'))
         self.assertNotIn(self.token, raw)

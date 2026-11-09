@@ -207,8 +207,9 @@ export function History() {
                   <article key={message.id} className="history-message">
                     <div className="history-message-top">
                       <span className="recipient-label">
-                        <Icon name="phone" size={17} /> برای{" "}
-                        <bdi>{message.recipient_phone||'شماره در دسترس نیست'}</bdi>
+                        {message.is_reply
+                          ? <><Icon name="chat" size={17} /> پاسخ ناشناس</>
+                          : <><Icon name="phone" size={17} /> برای <bdi>{message.recipient_phone||'شماره در دسترس نیست'}</bdi></>}
                       </span>
                       <span
                         className={`status-pill ${message.status === "failed" ? "failed" : ""}`}

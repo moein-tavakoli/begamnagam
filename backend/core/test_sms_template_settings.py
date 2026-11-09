@@ -40,7 +40,7 @@ class SMSTemplateSettingsTests(TestCase):
         self.assertEqual(preview.status_code, 200, preview.content)
         sample = preview.json()
         self.assertTrue(sample['full_sms'].startswith('درود از بگم نگم\n'))
-        self.assertTrue(sample['full_sms'].endswith('\nبگم نگم | لغو: begamnagam.ir/r/Sample-X'))
+        self.assertTrue(sample['full_sms'].endswith('\nلغو: begamnagam.ir/r/Sample-X'))
         self.assertEqual(sample['sms_units'], len(sample['full_sms'].encode('utf-16-le')) // 2)
         self.assertFalse(m.SMSTemplateSettings.objects.exists())
         self.assertFalse(m.RecipientGrant.objects.exists())
@@ -79,7 +79,6 @@ class SMSTemplateSettingsTests(TestCase):
             (TEMPLATE, [{'name': 'intro', 'value': 'tel:1234'}]),
             (TEMPLATE, [{'name': 'intro', 'value': 'سلام\u2028از بگم نگم'}]),
             (TEMPLATE, [{'name': 'intro', 'value': '{{opt_out}}'}]),
-            ('نکته‌ای کوتاه و دوستانه برای شما ' * 4 + '\n{{message}}\n{{opt_out}}', []),
             ('\u202eپیام\n{{message}}\n{{opt_out}}', []),
         ]
         for template, variables in cases:
@@ -88,6 +87,16 @@ class SMSTemplateSettingsTests(TestCase):
                 self.assertEqual(response.status_code, 422, response.content)
         self.assertFalse(m.SMSTemplateSettings.objects.exists())
         self.assertFalse(m.OperatorAudit.objects.filter(action='update_sms_template').exists())
+
+    def test_long_template_warns_and_saves(self):
+        template = 'نکته‌ای کوتاه و دوستانه برای شما ' * 24 + '\n{{message}}\n{{opt_out}}'
+        response = save_template(self.client, template=template, variables=[])
+        self.assertEqual(response.status_code, 200, response.content)
+        preview = response.json()['preview']
+        self.assertTrue(preview['length_warning'])
+        self.assertGreater(preview['sms_segments'], 3)
+        self.assertIn('پاسخ:', preview['full_sms'])
+        self.assertEqual(m.SMSTemplateSettings.objects.get().template, template.replace(' \n', '\n'))
 
     def test_save_normalizes_digits_and_conflicts_preserve_last_saved_template(self):
         localized = [{'name': 'intro', 'value': 'پیام شمارهٔ ۱۲'}]
@@ -120,7 +129,8 @@ class SMSTemplateFlowTests(TestCase):
         first = self.preview(category='appreciation', text='ممنون از همراهی تو')
         editor = Client()
         editor.force_login(get_user_model().objects.create_superuser('sms-editor'))
-        response = save_template(editor)
+        intro = ('درود از بگم نگم و آرزوی یک روز آرام برای شما. ' * 14).strip()
+        response = save_template(editor, variables=[{'name': 'intro', 'value': intro}])
         self.assertEqual(response.status_code, 200, response.content)
         examples = self.client.get('/api/v2/catalog').json()['examples']
         example = next(item for item in examples if item['topic'] == 'appreciation')
@@ -128,8 +138,9 @@ class SMSTemplateFlowTests(TestCase):
             'recipient_phone': '09901234568', 'source_mode': 'suggestion'}, content_type='application/json')
         self.assertEqual(new.status_code, 201, new.content)
         second = new.json()
-        self.assertTrue(second['full_sms'].startswith('درود از بگم نگم\n' + second['rewritten_text'] + '\n'))
-        self.assertRegex(second['full_sms'], r'\nبگم نگم \| لغو: begamnagam\.ir/r/[A-Za-z0-9]{8}$')
+        self.assertTrue(second['full_sms'].startswith(intro + '\n' + second['rewritten_text'] + '\n'))
+        self.assertGreater(second['sms_segments'], 3)
+        self.assertRegex(second['full_sms'], r'\nلغو: begamnagam\.ir/r/[A-Za-z0-9]{8}$')
         self.assertEqual(m.Preview.objects.get(pk=first['preview_id']).full_sms, first['full_sms'])
         for phone, quote in [('09901234567', first), ('09901234568', second)]:
             order = self.make_order(recipient=phone, quote=quote).json()

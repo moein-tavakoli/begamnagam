@@ -335,18 +335,20 @@ test("admin forms retain same-origin context for CSRF while private links omit r
     .find(header => header.key === "Referrer-Policy")?.value, "no-referrer");
 });
 
-test("plain SMS links accept only eight English letters or digits and keep the recipient screen private", async () => {
+test("short stop and reply links redirect into the private recipient screen", async () => {
   const request = new Request('https://begamnagam.ir/r/Ab12Cd34?untrusted=ignored');
-  for (const method of [recipientRedirect, recipientHead]) {
-    const response = await method(request, { params: Promise.resolve({ code: 'Ab12Cd34' }) });
-    assert.equal(response.status, 307);
-    assert.equal(response.headers.get('location'), '/r#Ab12Cd34');
-    assert.ok(response.headers.get('cache-control')?.includes('no-store'));
-    assert.equal(response.headers.get('referrer-policy'), 'no-referrer');
-    assert.ok(response.headers.get('x-robots-tag')?.includes('noindex'));
-    assert.equal(await response.text(), '');
+  for (const code of ['Ab12Cd34', 'pAb12Cd34']) {
+    for (const method of [recipientRedirect, recipientHead]) {
+      const response = await method(request, { params: Promise.resolve({ code }) });
+      assert.equal(response.status, 307);
+      assert.equal(response.headers.get('location'), '/r#'+code);
+      assert.ok(response.headers.get('cache-control')?.includes('no-store'));
+      assert.equal(response.headers.get('referrer-policy'), 'no-referrer');
+      assert.ok(response.headers.get('x-robots-tag')?.includes('noindex'));
+      assert.equal(await response.text(), '');
+    }
   }
-  for (const code of ['abc', 'Abcd_123', 'Abcd-123', 'AB۱۲cd34', 'A'.repeat(43), 'Ab12Cd34/extra']) {
+  for (const code of ['abc', 'Abcd_123', 'Abcd-123', 'AB۱۲cd34', 'xAb12Cd34', 'pAb12Cd3_', 'A'.repeat(43), 'Ab12Cd34/extra']) {
     const response = await recipientRedirect(request, { params: Promise.resolve({ code }) });
     assert.equal(response.status, 404);
     assert.equal(response.headers.get('location'), null);

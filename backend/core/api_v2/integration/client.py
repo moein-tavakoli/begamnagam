@@ -173,18 +173,21 @@ class BotAPI:
     def validate_recipient(self, phone):
         return self.call('POST', '/recipients/validations', {'phone': phone})
 
-    def preview(self, phone, *, source_mode, text=None, category=None, message_tone=None, alternative_token=None):
-        values = {'recipient_phone': phone, 'source_mode': source_mode}
+    def preview(self, phone=None, *, source_mode, text=None, category=None, message_tone=None, alternative_token=None,
+                reply_token=None):
+        values = {'source_mode': source_mode}
         values.update({name: value for name, value in {
-            'text': text, 'category': category, 'message_tone': message_tone,
+            'recipient_phone': phone, 'reply_token': reply_token, 'text': text, 'category': category, 'message_tone': message_tone,
             'alternative_token': alternative_token}.items() if value is not None})
         return self.call('POST', '/message-previews', values)
 
-    def reserve_message(self, preview, phone, *, key, consent):
+    def reserve_message(self, preview, phone=None, *, key, consent):
         if consent is not True:
             raise ValueError('An explicit user confirmation of full_sms is required.')
-        return self.call('POST', '/messages', {'preview_id': preview['preview_id'], 'recipient_phone': phone,
-                         'consent': True, 'terms_version': preview['terms_version']}, key=key)
+        values = {'preview_id': preview['preview_id'], 'consent': True, 'terms_version': preview['terms_version']}
+        if phone is not None:
+            values['recipient_phone'] = phone
+        return self.call('POST', '/messages', values, key=key)
 
     def submit_message(self, message_id):
         if self.require_real_delivery and self.refresh_session()['demo_mode']:

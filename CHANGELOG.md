@@ -9,6 +9,27 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.34.0 — 2026-11-09 — Anonymous SMS replies and length warnings (local)
+
+### Added
+
+- Put short reply and opt-out links in new recipient messages. The verified
+  recipient can use the normal tone, AI review, consent and credit flow. An
+  exchange closes after three replies to the initial message.
+- Resolve reply destinations on the server and omit the counterpart’s phone
+  and active recipient links from sender-facing reply previews and receipts.
+  Extend the private API guide and schemas for reply previews and submission.
+
+### Changed
+
+- Allow longer SMS templates and reviewed messages. Display estimated parts
+  and a length warning in the template editor and composer. Provider cost
+  controls still apply.
+
+Validation covered 743 PostgreSQL tests, 119 frontend tests, TypeScript, Django
+migration checks, Compose configuration, and isolated browser flows at 375px
+and 1440px. Provider transport was mocked.
+
 ## 0.33.0 — 2026-11-09 — Clear rejection reasons and editable AI guidance
 
 ### Added

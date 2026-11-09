@@ -28,14 +28,12 @@ import { managementNumber as number } from '@/lib/management';
 type Variable = { name: string; value: string };
 type Draft = { template: string; variables: Variable[] };
 export type SmsTemplateDraftMemory = { draft: Draft; revision: number } | null;
-type Preview = { full_sms: string; sms_units: number; sms_segments: number; body_units: number };
+type Preview = { full_sms: string; sms_units: number; sms_segments: number; body_units: number; length_warning: boolean };
 type Settings = Draft & {
   revision: number;
   preview: Preview;
   default_template: string;
-  max_template_length: number;
   max_variables: number;
-  max_value_length: number;
 };
 
 const path = '/manage/sms-template';
@@ -43,7 +41,7 @@ const variableName = '[a-z][a-z0-9_]{0,23}';
 const validName = new RegExp(`^${variableName}$`);
 const requiredSlots = [
   { token: '{{message}}', label: 'متن تأییدشدهٔ پیام', hint: 'یک بار در یک خط جدا' },
-  { token: '{{opt_out}}', label: 'نام سرویس و لینک لغو دریافت', hint: 'یک بار در آخرین خط' },
+  { token: '{{opt_out}}', label: 'لینک لغو دریافت', hint: 'یک بار در آخرین خط؛ لینک پاسخ در نوبت‌های مجاز درست قبل از آن می‌آید' },
 ];
 
 function draftFrom({ template, variables }: Draft): Draft {
@@ -116,7 +114,6 @@ export function SmsTemplateSettings({ onFailure, memory }: {
     const end = input?.selectionEnd ?? start;
     const token = `{{${name}}}`;
     const template = draft.template.slice(0, start) + token + draft.template.slice(end);
-    if (!settings || template.length > settings.max_template_length) return;
     edit({ ...draft, template });
     requestAnimationFrame(() => {
       input?.focus();
@@ -187,7 +184,7 @@ export function SmsTemplateSettings({ onFailure, memory }: {
               value={draft.template} disabled={disabled} onChange={event => edit({ ...draft, template: event.target.value })}
               error={!!fieldErrors?.template}
               helperText={fieldErrors?.template || 'متن ثابت و متغیرها را به ترتیبی که در پیامک دیده می‌شوند وارد کنید.'}
-              slotProps={{ htmlInput: { maxLength: settings.max_template_length, spellCheck: false, dir: 'rtl' } }}/>
+              slotProps={{ htmlInput: { spellCheck: false, dir: 'rtl' } }}/>
             <Stack spacing={.75}>
               {requiredSlots.map(slot => <Stack key={slot.token} direction="row" useFlexGap sx={{ gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
                 <Chip size="small" color="primary" variant="outlined" label={<Box component="code" dir="ltr">{slot.token}</Box>}/>
@@ -214,7 +211,7 @@ export function SmsTemplateSettings({ onFailure, memory }: {
                 </Grid>
                 <Grid size={{ xs: 12, sm: 8 }}>
                   <TextField id={`sms-variable-value-${index}`} label="مقدار ثابت" fullWidth required disabled={disabled} value={variable.value}
-                    onChange={event => updateVariable(index, 'value', event.target.value)} slotProps={{ htmlInput: { maxLength: settings.max_value_length } }}/>
+                    onChange={event => updateVariable(index, 'value', event.target.value)}/>
                 </Grid>
               </Grid>
               <Stack direction="row" spacing={.5} sx={{ mt: .5, alignItems: 'center', justifyContent: 'flex-end' }}>
@@ -247,7 +244,8 @@ export function SmsTemplateSettings({ onFailure, memory }: {
               <Chip size="small" color="primary" label={`${number(preview.sms_segments)} بخش پیامک`}/>
               <Chip size="small" variant="outlined" label={`${number(preview.sms_units)} واحد در نمونه`}/>
             </Stack>
-            <Typography variant="caption" color="text.secondary">تا {number(preview.body_units)} واحد برای متن پیام جا دارد. این نمونه با لینک آزمایشی نمایش داده می‌شود.</Typography>
+            {preview.length_warning && <Alert severity="warning" variant="outlined">فضای متن برای ماندن در ۳ بخش کمتر از اندازهٔ پیشنهادی است. می‌توانید قالب را با همین طول ذخیره کنید. پیام‌های چندبخشی ممکن است هزینهٔ بیشتری برای سرویس داشته باشند.</Alert>}
+            <Typography variant="caption" color="text.secondary">برای ماندن در ۳ بخش، حدود {number(preview.body_units)} واحد برای متن پیام باقی می‌ماند. نشانی‌ها در این نمونه آزمایشی‌اند.</Typography>
           </Stack>
         </Card>
       </Grid>}

@@ -20,7 +20,7 @@ from .moderation import ModerationRejected, RewriteUnavailable, rewrite
 from .message_examples import public_catalog, is_current_suggestion
 from .privacy import DIGITS, decrypt, digest, encrypt, mask, normalize_phone
 from .services import APIError, api, is_product_authenticated, limited
-from .sms import compose_freeform_sms, compose_recipient_sms, freeform_body_limit, sms_origin, sms_segments, SMSTooLong
+from .sms import compose_freeform_sms, compose_recipient_sms, MAX_REWRITE_BODY_UNITS, sender_sms, sms_origin, sms_segments
 from .otp import OTP_LENGTH, valid_otp
 from .input_digits import canonical_input
 from .message_attempts import capture_preview_attempt, record_attempt
@@ -242,7 +242,7 @@ def logout_view(request):
 def preview(request):
     data = body(request)
     request._message_attempt_data = data
-    if set(data) - {'text', 'category', 'recipient_phone', 'source_mode', 'payment_method', 'message_tone', 'alternative_token'}:
+    if set(data) - {'text', 'category', 'recipient_phone', 'reply_token', 'source_mode', 'payment_method', 'message_tone', 'alternative_token'}:
         raise APIError('invalid_input', 'فقط متن اولیه و شمارهٔ گیرنده را بفرست؛ نتیجهٔ بررسی در سرور تعیین می‌شود.', 422)
     owner = request.user if is_product_authenticated(request.user) else None
     from .demo_limits import unlimited_demo_sends
@@ -271,6 +271,14 @@ def preview(request):
     if source_mode is not None and (not isinstance(source_mode, str) or source_mode not in {'suggestion', 'freeform', 'reviewed_alternative'}):
         raise APIError('invalid_input', 'روش آماده‌سازی متن معتبر نیست.')
     choosing_alternative = source_mode == 'reviewed_alternative'
+    is_reply = 'reply_token' in data
+    if is_reply:
+        if not owner:
+            raise APIError('authentication_required', 'ابتدا شماره‌ای را که پیامک را دریافت کرده تأیید کن.', 401)
+        if 'recipient_phone' in data or source_mode != 'freeform':
+            raise APIError('invalid_input', 'پاسخ ناشناس با بازبینی متن و بدون وارد کردن شمارهٔ مقصد آماده می‌شود.', 422)
+        if not use_freeform:
+            raise APIError('freeform_unavailable', 'بازبینی پاسخ فعلاً در دسترس نیست؛ کمی بعد دوباره تلاش کن.', 409)
     if 'alternative_token' in data and not choosing_alternative:
         raise APIError('invalid_input', 'روش انتخاب پیشنهاد معتبر نیست.', 422)
     if choosing_alternative:
@@ -286,8 +294,15 @@ def preview(request):
         raise APIError('freeform_unavailable', 'بازنویسی متن دلخواه فعلاً فعال نیست؛ از پیشنهاد آماده استفاده کن.', 409)
     if settings.PILOT_POSITIVE_ONLY and not choosing_alternative and (use_freeform or category not in {"appreciation", "encouragement", "congratulations"}):
         raise APIError("category_unavailable", "این موضوع فعلاً فعال نیست.", 422)
-    recipient_hash = ''
-    if data.get('recipient_phone'):
+    if owner and not unlimited:
+        limited("preview-user", str(owner.pk), 20, 600)
+    recipient_hash, parent, with_reply = '', None, True
+    if is_reply:
+        from .anonymous_replies import MAX_REPLIES, check_turn, counterpart_phone, parent_for_token
+        parent = parent_for_token(owner, data['reply_token'])
+        with_reply = check_turn(parent, owner) < MAX_REPLIES
+        recipient_hash = digest(counterpart_phone(parent, owner))
+    elif data.get('recipient_phone'):
         if not owner:
             raise APIError('authentication_required', 'ابتدا شماره خودت را تأیید کن.', 401)
         recipient_hash = digest(normalize_phone(data['recipient_phone']))
@@ -296,8 +311,6 @@ def preview(request):
     if (use_freeform or choosing_alternative) and (not owner or not recipient_hash):
         raise APIError('authentication_required' if not owner else 'recipient_required',
             'برای آماده‌سازی متن، ابتدا وارد شو و شمارهٔ گیرنده را وارد کن.', 401 if not owner else 422)
-    if owner and not unlimited:
-        limited("preview-user", str(owner.pk), 20, 600)
     from .sms_template_settings import current_sms_layout
     layout = current_sms_layout()
     origin = sms_origin()
@@ -306,7 +319,7 @@ def preview(request):
     if choosing_alternative:
         from .message_alternatives import resolve as resolve_alternative
         category, alternative_body = resolve_alternative(data.get('alternative_token'), owner=owner,
-            session=session_key(request), recipient_hash=recipient_hash, tone=tone, layout=layout)
+            session=session_key(request), recipient_hash=recipient_hash, tone=tone)
         text = alternative_body
     direct = tone != 'polite'
     try:
@@ -315,10 +328,7 @@ def preview(request):
             moderate(alternative_body)
             rewritten, mode = alternative_body, 'template'
         elif use_freeform:
-            limit = freeform_body_limit(origin, layout=layout)
-            if limit < 20:
-                raise RewriteUnavailable()
-            rewritten, mode = prepare(owner, text, max_units=limit, message_tone=tone, config=ai), ai.provider
+            rewritten, mode = prepare(owner, text, max_units=MAX_REWRITE_BODY_UNITS, message_tone=tone, config=ai), ai.provider
             category = 'custom'
         else:
             rewritten, mode = rewrite(category, text, message_tone=tone, provider_mode='template')
@@ -329,17 +339,15 @@ def preview(request):
             item = Preview.objects.create(owner=owner, session_key=session_key(request), category=category,
                 message_tone=tone, payment_method='credit', wallet_policy_version='', original_text=text,
                 text='' if use_freeform else rewritten, generated_body=rewritten if use_freeform else '',
-                recipient_hash=recipient_hash, terms_version=settings.TERMS_VERSION, moderation_mode=mode,
+                recipient_hash=recipient_hash, reply_to=parent, terms_version=settings.TERMS_VERSION, moderation_mode=mode,
                 expires_at=expires_at, is_free=is_free, price_toman=0)
-            token = ''
-            if recipient_hash:
-                from .recipient import issue_grant
-                token = issue_grant(item, recipient_hash)
+            from .recipient import issue_grant
+            token, reply_token = issue_grant(item, recipient_hash, with_reply=with_reply)
             if use_freeform:
-                full_sms = compose_freeform_sms(rewritten, origin, token, layout=layout)
+                full_sms = compose_freeform_sms(rewritten, origin, token, reply_token=reply_token, layout=layout)
             else:
                 item.text, full_sms = compose_recipient_sms(category, rewritten, origin, token, message_tone=tone,
-                                                           layout=layout, exact=choosing_alternative)
+                    reply_token=reply_token, layout=layout, exact=choosing_alternative)
             item.full_sms = full_sms
             item.review_signature = signature(item) if use_freeform else ''
             item.save(update_fields=['text', 'full_sms', 'review_signature'])
@@ -355,17 +363,21 @@ def preview(request):
         from .message_alternatives import feedback, offers
         code, message = feedback(text, reason)
         alternatives = []
-        if not choosing_alternative and owner and recipient_hash:
-            alternatives = offers(owner, session_key(request), recipient_hash, tone, text, reason, layout=layout)
+        if not choosing_alternative and not is_reply and owner and recipient_hash:
+            alternatives = offers(owner, session_key(request), recipient_hash, tone, text, reason)
         raise APIError(code, message, 422, details={'alternatives': alternatives})
-    except SMSTooLong:
-        raise APIError('message_too_long', 'متن نهایی بیش از سه بخش پیامک می‌شود. متن کوتاه‌تری را امتحان کن.', 422)
     except RewriteUnavailable:
         raise APIError("rewrite_unavailable", "آماده‌سازی متن موقتاً در دسترس نیست؛ کمی بعد تلاش کنید.", 503)
+    return preview_data(item)
+
+
+def preview_data(item):
+    is_reply = item.reply_to_id is not None
     return {"preview_id": str(item.id), "payment_method": item.payment_method, "wallet_terms_version": item.wallet_policy_version,
-        "rewritten_text": item.generated_body if use_freeform else item.text, "price_toman": item.price_toman, "is_free": item.is_free,
-        "message_tone": item.message_tone,
-        "expires_at": expires_at.isoformat(), "moderation_mode": mode, "terms_version": item.terms_version, "full_sms": item.full_sms, "sms_segments": sms_segments(full_sms)}
+        "rewritten_text": item.generated_body if item.moderation_mode in {'gapgpt', 'ollama'} else item.text,
+        "price_toman": item.price_toman, "is_free": item.is_free, "is_reply": is_reply, "message_tone": item.message_tone,
+        "expires_at": item.expires_at.isoformat(), "moderation_mode": item.moderation_mode, "terms_version": item.terms_version,
+        "full_sms": sender_sms(item.full_sms, is_reply=is_reply), "sms_segments": sms_segments(item.full_sms)}
 
 
 @api(["POST"], authenticated=True)
@@ -468,6 +480,12 @@ def recipient_action(request, action):
     limited('recipient-action-session', session_key(request), 30, 600)
     limited('recipient-action-ip', request.META.get('REMOTE_ADDR', 'unknown'), 120, 600)
     limited('recipient-action-token', digest(str(token)[:100]), 30, 600)
+    if action == 'reply':
+        if not is_product_authenticated(request.user):
+            raise APIError('authentication_required', 'ابتدا شماره‌ای را که پیامک را دریافت کرده تأیید کن.', 401)
+        from .anonymous_replies import check_turn, parent_for_token
+        check_turn(parent_for_token(request.user, token), request.user)
+        return {'active': True}
     if action == 'inspect': return recipient.inspect(token)
     if action == 'stop': return recipient.stop(token)
     if action == 'report': return recipient.report(token, data.get('reason'), data.get('details', ''))

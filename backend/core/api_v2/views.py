@@ -185,7 +185,9 @@ def recipient_validations(request):
                               'An independent review must approve meaning, register and selected tone; blunt never bypasses safety. '
                               'Show error.message on rejection. A content 422 may include two reviewed choices in error.details.alternatives. '
                               'Use the chosen token with source_mode=reviewed_alternative to prepare a fresh preview. '
-                              'Freeform never silently falls back. Changing the phone or text requires a new preview.'))
+                              'Freeform never silently falls back. Changing the phone or text requires a new preview. '
+                              'For an anonymous reply use reply_token instead of recipient_phone and source_mode=freeform. '
+                              'The session must belong to the SMS recipient. An inactive reply turn returns 404 reply_unavailable.'))
 def previews(request):
     account = Account.objects.get(user=request.user)
     if not account.unlimited_free_sends and account.free_sends_remaining == 0 and getattr(account, balance_field()) == 0:
@@ -201,20 +203,15 @@ def preview(request, preview_id):
         raise APIError('not_found', 'پیش‌نمایش پیدا نشد.', 404)
     if item.expires_at <= timezone.now():
         raise APIError('preview_expired', 'پیش‌نمایش منقضی شده است؛ دوباره متن را آماده کن.', 409)
-    units = len(item.full_sms.encode('utf-16-le')) // 2
-    return {'preview_id': str(item.pk), 'payment_method': item.payment_method,
-            'wallet_terms_version': item.wallet_policy_version,
-            'rewritten_text': item.generated_body if item.moderation_mode in {'gapgpt', 'ollama'} else item.text,
-            'price_toman': item.price_toman, 'is_free': item.is_free, 'message_tone': item.message_tone,
-            'expires_at': item.expires_at.isoformat(), 'moderation_mode': item.moderation_mode,
-            'terms_version': item.terms_version, 'full_sms': item.full_sms,
-            'sms_segments': 1 if units <= 70 else (units + 66) // 67}
+    return legacy.preview_data(item)
 
 
 @resource(get=op('listMessages', 'Messages', 'List the current account’s message history', 'MessagePage',
                  query={**PAGE_QUERY, 'status': STATUS}),
           post=op('createMessage', 'Messages', 'Reserve one credit for a reviewed message', 'Message', request='MessageInput', key=True,
-                  description='Does not send yet. Store the returned id, then PUT its submission resource. Retries return the same message and never reserve a second credit.'))
+                  description='Does not send yet. Store the returned id, then PUT its submission resource. '
+                              'Omit recipient_phone for anonymous replies. Their receipts leave both recipient fields empty. '
+                              'Retries return the same message and never reserve a second credit.'))
 def messages(request):
     if request.method == 'POST':
         return delegate(request, legacy.create_order)

@@ -13,6 +13,7 @@ from .moderation import ModerationRejected
 from .gapgpt import GapGPTRejected, GapGPTUnavailable
 from .privacy import digest, encrypt, mask
 from .services import APIError
+from .sms import MAX_REWRITE_BODY_UNITS
 
 BODY = 'لطفاً پولی را که قرض گرفته‌اید، در زمان توافق‌شده برگردانید. از توجهتان ممنونم.'
 
@@ -60,12 +61,13 @@ class FreeformTests(TestCase):
         path = '/api/v1/manage/sms-template'
         editor = Client()
         editor.force_login(get_user_model().objects.create_superuser('freeform-sms-editor'))
-        first = editor.put(path, {'template': 'درود از بگم نگم\n{{message}}\n{{opt_out}}',
+        intro = 'درود از بگم نگم و آرزوی یک روز آرام برای شما. ' * 12
+        first = editor.put(path, {'template': intro + '\n{{message}}\n{{opt_out}}',
             'variables': [], 'revision': 0}, content_type='application/json')
         self.assertEqual(first.status_code, 200, first.content)
 
         def review(*args, **options):
-            self.assertEqual(options['max_units'], first.json()['preview']['body_units'])
+            self.assertEqual(options['max_units'], MAX_REWRITE_BODY_UNITS)
             updated = editor.put(path, {'template': 'سلام\n{{message}}\n{{opt_out}}',
                 'variables': [], 'revision': 1}, content_type='application/json')
             self.assertEqual(updated.status_code, 200, updated.content)
@@ -74,7 +76,8 @@ class FreeformTests(TestCase):
         with patch('core.gapgpt.rewrite_message', side_effect=review):
             result = self.quote()
         self.assertEqual(result.status_code, 200, result.content)
-        self.assertTrue(result.json()['full_sms'].startswith('درود از بگم نگم\n' + BODY + '\n'))
+        self.assertTrue(result.json()['full_sms'].startswith(intro.strip() + '\n' + BODY + '\n'))
+        self.assertGreater(result.json()['sms_segments'], 3)
         validate_preview(Preview.objects.get(pk=result.json()['preview_id']))
 
     def test_threat_contact_pure_insult_and_invalid_recipient_never_reach_api_or_budget(self):

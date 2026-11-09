@@ -20,7 +20,7 @@ class MonitoringAccessSettings(models.Model):
 
 class SMSTemplateSettings(models.Model):
     id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
-    template = models.TextField(max_length=600)
+    template = models.TextField()
     variables = models.JSONField(default=list)
     revision = models.PositiveIntegerField(default=0, editable=False)
     updated_at = models.DateTimeField(auto_now=True)
@@ -184,6 +184,7 @@ class BotConversationEvent(models.Model):
 
 
 class Preview(models.Model):
+    reply_to = models.ForeignKey('Order', null=True, blank=True, on_delete=models.PROTECT, related_name='+')
     message_tone = models.CharField(max_length=12, choices=[('polite', 'مودبانه'), ('firm', 'کمی مودبانه'), ('blunt', 'رُک'), ('angry', 'بی‌ادبانه')], default='polite', db_default='polite', editable=False)
     payment_method = models.CharField(max_length=12, default='credit', db_default='credit', editable=False)
     wallet_policy_version = models.CharField(max_length=24, blank=True, default='', db_default='', editable=False)
@@ -242,6 +243,8 @@ class DemoLimitReset(models.Model):
 
 
 class Order(models.Model):
+    reply_to = models.ForeignKey('self', null=True, blank=True, on_delete=models.PROTECT, related_name='replies')
+    reply_depth = models.PositiveSmallIntegerField(default=0, db_default=0, editable=False)
     payment_method = models.CharField(max_length=12, default='legacy', db_default='legacy', editable=False)
     wallet_refund_consent = models.BooleanField(default=False, db_default=False, editable=False)
     is_sponsored = models.BooleanField(default=False, db_default=False, editable=False)
@@ -282,6 +285,8 @@ class Order(models.Model):
     class Meta:
         permissions = [("view_private_message_text", "View original and reviewed message text with an audit trail")]
         constraints = [models.UniqueConstraint(fields=["owner", "idempotency_key"], name="unique_owner_idempotency"),
+            models.UniqueConstraint(fields=['reply_to'], condition=models.Q(reply_to__isnull=False) &
+                ~models.Q(status__in=['failed', 'cancelled']), name='one_active_reply_per_order'),
             models.CheckConstraint(condition=models.Q(is_free=True, amount_toman=0, uses_purchased_credit=False) | models.Q(is_free=False, amount_toman__gt=0, uses_purchased_credit=False) | models.Q(is_free=False, amount_toman=0, uses_purchased_credit=True, payment_mode__in=['credit_live', 'credit_demo']), name="order_free_or_positive_price")]
         indexes = [models.Index(fields=["owner", "created_at"]), models.Index(fields=["recipient_hash", "status"])]
 
@@ -512,6 +517,7 @@ class RecipientGrant(models.Model):
     preview = models.OneToOneField(Preview, null=True, blank=True, on_delete=models.CASCADE, related_name='recipient_grant')
     invitation_send = models.OneToOneField('InvitationSend', null=True, blank=True, on_delete=models.CASCADE, related_name='recipient_grant')
     token_digest = models.CharField(max_length=64, unique=True)
+    reply_token_digest = models.CharField(max_length=64, unique=True, null=True, blank=True)
     recipient_hash = models.CharField(max_length=64, db_index=True)
     activated_at = models.DateTimeField(null=True, blank=True)
     stop_expires_at = models.DateTimeField(null=True, blank=True)

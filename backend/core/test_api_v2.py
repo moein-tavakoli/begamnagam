@@ -85,6 +85,7 @@ class IntegrationAPITests(TestCase):
         self.assertNotIn('credits', response.json())
         self.assertFalse(response.json()['session']['authenticated'])
         user = self.login()
+        self.assertEqual(Account.objects.get(user=user).signup_source, 'api')
         Account.objects.filter(user=user).update(demo_sends_remaining=7, purchased_sends_remaining=99, demo_wallet_balance_toman=321)
         data = self.client.get('/api/v2/bootstrap').json()
         self.assertEqual(data['credits']['gift_remaining'], 3)

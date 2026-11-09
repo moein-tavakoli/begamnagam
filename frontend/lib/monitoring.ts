@@ -12,6 +12,10 @@ export type MonitoringData = {
   generated_at:string;
   window:{start:string;end:string;timezone:string};
   totals:{accounts_today:number;accounts_total:number;accounts_new:number;requests:number;delivered:number;support_unanswered:number;blacklist_total:number};
+  account_activity?:{
+    bots_today:number;api_today:number;telegram_total:number;bale_total:number;unknown_sources:number;
+    without_successful_send:number;sent_three_gifts:number;sent_three_gifts_without_package:number;
+  };
   hourly:{at:string;accounts:number;requests:number}[];
   delivery:{status:string;count:number}[];
   moderation:{status:string;count:number}[];
@@ -41,6 +45,10 @@ export function startMonitoringPoll<T>({request,active,intervalMs,onData,onError
   return {refresh,pause:()=>{clear();controller?.abort();},stop};
 }
 export const monitoringNumber=(value:number|null)=>value===null?'—':value.toLocaleString('fa-IR');
+const percentFormat = new Intl.NumberFormat('fa-IR', {style:'percent', maximumFractionDigits:1});
+export function monitoringPercent(count:number,total:number):string {
+  return total === 0 ? '—' : percentFormat.format(count / total);
+}
 export function monitoringTime(value:string):string {
   return new Date(value).toLocaleTimeString('fa-IR',{timeZone:'Asia/Tehran',hour:'2-digit',minute:'2-digit'});
 }

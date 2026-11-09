@@ -89,6 +89,15 @@ class MessageExample(models.Model):
 
 
 class Account(models.Model):
+    class SignupSource(models.TextChoices):
+        UNKNOWN = "unknown", "نامشخص"
+        WEB = "web", "وب"
+        API = "api", "API"
+        TELEGRAM = "telegram", "تلگرام"
+        BALE = "bale", "بله"
+
+    signup_source = models.CharField(max_length=8, choices=SignupSource, default=SignupSource.UNKNOWN,
+        db_default=SignupSource.UNKNOWN, editable=False)
     wallet_balance_toman = models.PositiveBigIntegerField('موجودی کیف پول (تومان)', default=0, db_default=0, editable=False)
     demo_wallet_balance_toman = models.PositiveBigIntegerField(default=0, db_default=0, editable=False)
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="account")

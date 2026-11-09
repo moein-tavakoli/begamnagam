@@ -9,6 +9,18 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.35.0 — 2026-11-10 — Monitoring signup and activity counts (local)
+
+- Show four cards below the main monitoring metrics for today's bot and
+  direct API signups, known bot signups by platform, accounts without a
+  successful send, and users who sent three gifts without a credited package
+  purchase. Display the counts behind both percentages.
+- Record the signup channel on first verified account creation. Existing
+  accounts with no recorded channel are shown as unknown.
+
+Validation covered PostgreSQL, frontend tests and TypeScript, the signup
+source migration, and browser checks at 375px and 1440px.
+
 ## 0.34.0 — 2026-11-09 — Anonymous SMS replies and length warnings
 
 ### Added

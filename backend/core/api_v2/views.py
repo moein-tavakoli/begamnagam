@@ -125,7 +125,9 @@ def otp_challenges(request):
                               'Logout revokes it. Sensitive-action recent authentication remains five minutes. '
                               'A messenger contact alone does not authenticate.'))
 def sessions(request):
-    result = delegate(request, legacy.verify_otp)
+    conversation = getattr(request, 'bot_conversation', None)
+    source = conversation.integration.platform if conversation else Account.SignupSource.API
+    result = delegate(request, legacy.verify_otp, signup_source=source)
     return session_data(request) if isinstance(result, dict) else result
 
 

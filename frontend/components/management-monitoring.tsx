@@ -22,6 +22,10 @@ import { alpha, type Theme } from '@mui/material/styles';
 import GroupsOutlined from '@mui/icons-material/GroupsOutlined';
 import BlockOutlined from '@mui/icons-material/BlockOutlined';
 import PeopleOutlined from '@mui/icons-material/PeopleOutlined';
+import PersonAddAltOutlined from '@mui/icons-material/PersonAddAltOutlined';
+import SmartToyOutlined from '@mui/icons-material/SmartToyOutlined';
+import ChatBubbleOutlineRounded from '@mui/icons-material/ChatBubbleOutlineRounded';
+import RedeemOutlined from '@mui/icons-material/RedeemOutlined';
 import SmsOutlined from '@mui/icons-material/SmsOutlined';
 import MarkEmailReadOutlined from '@mui/icons-material/MarkEmailReadOutlined';
 import MonitorHeartOutlined from '@mui/icons-material/MonitorHeartOutlined';
@@ -41,7 +45,7 @@ import { axisClasses } from '@mui/x-charts/ChartsAxis';
 import { chartsGridClasses } from '@mui/x-charts/ChartsGrid';
 import { api, ApiError, errorMessage } from '@/lib/api';
 import { managementExplanation } from '@/lib/management';
-import { monitoringIntervals, monitoringInterval, monitoringNumber as number, monitoringTime, monitoringDuration, monitoringAlertValue, monitoringMetricSeverity, startMonitoringPoll, type MonitoringData, type MonitoringMetricSeverity } from '@/lib/monitoring';
+import { monitoringIntervals, monitoringInterval, monitoringNumber as number, monitoringPercent, monitoringTime, monitoringDuration, monitoringAlertValue, monitoringMetricSeverity, startMonitoringPoll, type MonitoringData, type MonitoringMetricSeverity } from '@/lib/monitoring';
 
 const settingsKey='management-monitoring-interval';
 const compactDesktopQuery='(min-width:1200px) and (max-height:900px)';
@@ -213,6 +217,7 @@ export function ManagementMonitoring({onFailure}:{onFailure:(error:unknown)=>voi
   useEffect(()=>{try{setInterval(monitoringInterval(localStorage.getItem(settingsKey)));}catch{}setReady(true);},[]);
   const changeInterval=useCallback((value:string)=>{const next=monitoringInterval(value);setInterval(next);try{localStorage.setItem(settingsKey,String(next));}catch{}},[]);
   const {data,error,busy,paused,reload}=useMonitoring(interval,ready,onFailure);
+  const activity = data?.account_activity;
   const signalTone=error||paused?'warning':data?'success':'info';
   const signalText=error||paused?(data?'دادهٔ قدیمی':'وقفه در دریافت'):data?'داده به‌روز':'در انتظار داده';
   return <Stack spacing={1.5} aria-label="مانیتورینگ سایت">
@@ -286,6 +291,26 @@ export function ManagementMonitoring({onFailure}:{onFailure:(error:unknown)=>voi
         <Metric title="نتیجهٔ نامعلوم" value={number(Number(data.operations.payment_unknown||0)+Number(data.operations.delivery_unknown||0))} detail="پرداخت و تحویل · اکنون" icon={<RuleOutlined/>} severity={Number(data.operations.payment_unknown||0)+Number(data.operations.delivery_unknown||0)>0?'warning':undefined}/>
         <Metric title="پشتیبانی بی‌پاسخ" value={number(data.totals.support_unanswered)} detail="گفت‌وگوهای منتظر پاسخ" icon={<SupportAgentOutlined/>} severity={monitoringMetricSeverity('support_unanswered',data.totals.support_unanswered)}/>
       </Box>
+      {activity && <Stack component="section" spacing={.75} aria-label="ثبت‌نام و فعالیت کاربران">
+        <Box sx={{display:'grid',gridTemplateColumns:{xs:'repeat(2,minmax(0,1fr))',md:'repeat(4,minmax(0,1fr))'},gap:1.5}}>
+          <Metric title="ثبت‌نام امروز از ربات و API" value={number(activity.bots_today + activity.api_today)}
+            detail={`ربات ${number(activity.bots_today)} · API مستقیم ${number(activity.api_today)}`}
+            icon={<PersonAddAltOutlined/>}/>
+          <Metric title="کل ثبت‌نام با مبدأ ربات" value={number(activity.telegram_total + activity.bale_total)}
+            detail={`تلگرام ${number(activity.telegram_total)} · بله ${number(activity.bale_total)}`}
+            icon={<SmartToyOutlined/>}/>
+          <Metric title="ثبت‌نام بدون ارسال موفق" value={monitoringPercent(activity.without_successful_send,data.totals.accounts_total)}
+            detail={`${number(activity.without_successful_send)} از ${number(data.totals.accounts_total)} حساب محصول`}
+            icon={<ChatBubbleOutlineRounded/>}/>
+          <Metric title="۳ ارسال هدیه، بدون خرید بسته"
+            value={monitoringPercent(activity.sent_three_gifts_without_package,activity.sent_three_gifts)}
+            detail={`${number(activity.sent_three_gifts_without_package)} از ${number(activity.sent_three_gifts)} حساب با دست‌کم ۳ ارسال هدیه`}
+            icon={<RedeemOutlined/>}/>
+        </Box>
+        {activity.unknown_sources > 0 && <Typography variant="caption" color="text.secondary">
+          مبدأ ثبت‌نام {number(activity.unknown_sources)} حساب ثبت نشده است.
+        </Typography>}
+      </Stack>}
       <Charts data={data}/>
     </>}
   </Stack>;

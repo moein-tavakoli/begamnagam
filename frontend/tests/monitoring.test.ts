@@ -49,3 +49,8 @@ test('alert measurements keep queue age in time units and budget flag is not an 
   assert.equal(monitoring.monitoringAlertValue('delivery_unknown',3),'۳ مورد');
   assert.equal(monitoring.monitoringAlertValue('budget_80_percent',1),'بررسی بودجه');
 });
+test('account rates show Persian percentages and distinguish zero from no cohort',()=>{
+  assert.equal(monitoring.monitoringPercent(2,3),'۶۶٫۷٪');
+  assert.equal(monitoring.monitoringPercent(0,3),'۰٪');
+  assert.equal(monitoring.monitoringPercent(0,0),'—');
+});

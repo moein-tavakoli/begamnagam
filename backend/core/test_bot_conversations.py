@@ -78,6 +78,24 @@ SETTINGS = dict(DEMO_MODE=True, OTP_BACKEND='demo', SMS_BACKEND='console', AI_MO
 
 @override_settings(**SETTINGS)
 class BotConversationTests(BotHelpers, TestCase):
+    def test_bale_signup_source_is_recorded_without_relabeling_existing_accounts(self):
+        direct = Client(enforce_csrf_checks=True)
+        existing = self.login(client=direct)
+        self.assertEqual(existing.signup_source, 'api')
+
+        integration = BotIntegration(platform='bale', bot_id='123456')
+        key = new_credential(integration)
+        integration.save()
+        self.resume(key=key)
+        linked = self.login(key=key)
+        self.assertEqual(linked.pk, existing.pk)
+        self.assertEqual(linked.signup_source, 'api')
+
+        new_client = Client(enforce_csrf_checks=True)
+        self.resume(user='888', chat='888', client=new_client, key=key)
+        new_account = self.login('09123456788', client=new_client, key=key)
+        self.assertEqual(new_account.signup_source, 'bale')
+
     def test_restart_discovery_is_bounded_scoped_and_contains_no_private_draft_or_session(self):
         first = self.resume()['conversation']
         self.checkpoint(first, data={'recipient_phone': '09901234567', 'text': 'متن خصوصی'}, step='awaiting_text')
@@ -105,6 +123,7 @@ class BotConversationTests(BotHelpers, TestCase):
     def test_restart_restores_same_session_account_and_private_draft(self):
         initial = self.resume()
         account = self.login()
+        self.assertEqual(account.signup_source, 'telegram')
         conversation = self.get('/bot/conversations/' + initial['conversation']['id']).json()
         self.assertEqual(conversation['account_id'], str(account.pk))
         draft = {'recipient_phone': '+۹۸۹۹۰۱۲۳۴۵۶۷', 'text': 'متن ۱۲۳', 'message_tone': 'polite'}

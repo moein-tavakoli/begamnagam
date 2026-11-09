@@ -171,7 +171,7 @@ def request_otp(request):
 
 
 @api(["POST"])
-def verify_otp(request):
+def verify_otp(request, *, signup_source=Account.SignupSource.WEB):
     data = body(request)
     try:
         challenge_id = uuid.UUID(str(data.get("challenge_id", "")))
@@ -207,7 +207,7 @@ def verify_otp(request):
                 user.set_unusable_password()
                 user.save(update_fields=["password"])
             account, account_created = Account.objects.get_or_create(user=user, defaults={"phone_hash": challenge.phone_hash,
-                "phone_cipher": challenge.phone_cipher, "phone_masked": mask(phone)})
+                "phone_cipher": challenge.phone_cipher, "phone_masked": mask(phone), "signup_source": signup_source})
             if account_created and user.is_active:
                 record_registration(account)
             challenge.phone_cipher = ""

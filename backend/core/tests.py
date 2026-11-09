@@ -85,6 +85,7 @@ class APITestCase(TestCase):
         challenge = response.json()
         response = self.post("/auth/verify-otp", {"challenge_id": challenge["challenge_id"], "code": challenge["debug_code"]}, client, HTTP_X_CSRFTOKEN=token)
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(Account.objects.get().signup_source, "web")
         self.assertNotEqual(client.cookies["csrftoken"].value, token)
 
     def test_auth_flow_and_anonymous_preview_survives_login(self):

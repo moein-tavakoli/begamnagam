@@ -30,22 +30,23 @@ class ManagementMonitoringTests(TestCase):
         self.member = get_user_model().objects.create_user('monitor-member')
         self.client.force_login(self.staff)
 
-    def account(self, at):
+    def account(self, at, **fields):
         user = get_user_model().objects.create_user('account-' + uuid.uuid4().hex)
         phone = '09123456789'
         value = m.Account.objects.create(user=user, phone_hash=digest(uuid.uuid4().hex),
-            phone_cipher=encrypt(phone), phone_masked=mask(phone))
+            phone_cipher=encrypt(phone), phone_masked=mask(phone), **fields)
         m.Account.objects.filter(pk=value.pk).update(created_at=at)
         return value
 
-    def order(self, at):
-        preview = m.Preview.objects.create(owner=self.member, session_key='private-session', category='appreciation',
+    def order(self, at, *, owner=None, amount_toman=2000, **fields):
+        owner = owner or self.member
+        preview = m.Preview.objects.create(owner=owner, session_key='private-session', category='appreciation',
             text='private-preview-text', generated_body='private-reviewed-text', price_toman=2000,
             moderation_mode='template', expires_at=NOW + timedelta(minutes=5))
-        value = m.Order.objects.create(owner=self.member, preview=preview, idempotency_key=uuid.uuid4(),
+        value = m.Order.objects.create(owner=owner, preview=preview, idempotency_key=uuid.uuid4(),
             recipient_hash=digest('09999999999'), recipient_cipher=encrypt('09999999999'),
             recipient_masked=mask('09999999999'), text='private-order-text', full_sms='private-order-sms',
-            category='appreciation', amount_toman=2000)
+            category='appreciation', amount_toman=amount_toman, **fields)
         m.Order.objects.filter(pk=value.pk).update(created_at=at)
         return value
 
@@ -69,11 +70,13 @@ class ManagementMonitoringTests(TestCase):
 
     def test_empty_window_has_24_zero_filled_tehran_hours_and_private_cache_headers(self):
         data = self.get_data()
-        self.assertEqual(set(data), {'generated_at', 'window', 'totals', 'hourly', 'delivery', 'moderation',
+        self.assertEqual(set(data), {'generated_at', 'window', 'totals', 'account_activity', 'hourly', 'delivery', 'moderation',
                                      'queue', 'operations', 'alerts', 'environment'})
         self.assertEqual(data['window'], {'start': '2026-11-07T13:00:00+03:30',
             'end': '2026-11-08T12:47:00+03:30', 'timezone': 'Asia/Tehran'})
         self.assertEqual(data['totals'], {'accounts_new': 0, 'accounts_today': 0, 'accounts_total': 0, 'requests': 0, 'delivered': 0, 'support_unanswered': 0, 'blacklist_total': 0})
+        self.assertTrue(data['account_activity'])
+        self.assertTrue(all(value == 0 for value in data['account_activity'].values()))
         self.assertEqual(len(data['hourly']), 24)
         self.assertEqual(data['hourly'][0], {'at': '2026-11-07T13:00:00+03:30', 'accounts': 0, 'requests': 0})
         self.assertEqual(data['hourly'][-1], {'at': '2026-11-08T12:00:00+03:30', 'accounts': 0, 'requests': 0})
@@ -116,6 +119,63 @@ class ManagementMonitoringTests(TestCase):
             data = self.client.get(self.path).json()
         self.assertEqual(data['totals'].get('accounts_today'), 0)
         self.assertEqual(data['totals'].get('accounts_total'), 1)
+
+    def test_account_activity_counts_verified_signup_channels(self):
+        midnight = NOW.astimezone(ZoneInfo('Asia/Tehran')).replace(hour=0, minute=0, second=0, microsecond=0)
+        self.account(midnight, signup_source='telegram')
+        self.account(midnight - timedelta(seconds=1), signup_source='telegram')
+        self.account(NOW - timedelta(seconds=1), signup_source='bale')
+        self.account(NOW - timedelta(seconds=1), signup_source='api')
+        self.account(NOW, signup_source='api')
+        self.account(midnight, signup_source='web')
+        self.account(START)
+        activity = self.get_data()['account_activity']
+        self.assertEqual(
+            {key: activity[key] for key in ('bots_today', 'api_today', 'telegram_total', 'bale_total', 'unknown_sources')},
+            {'bots_today': 2, 'api_today': 1, 'telegram_total': 2, 'bale_total': 1, 'unknown_sources': 1},
+        )
+
+    @override_settings(DEMO_MODE=False)
+    def test_account_activity_counts_successful_gifts_and_credited_packages_per_account(self):
+        idle, sponsored, gift_only, purchaser, two_gifts, demo_only = (self.account(START) for _ in range(6))
+        at = NOW - timedelta(minutes=30)
+
+        def gift(account, status='delivered', environment='live', *, accepted_at=None, **fields):
+            order = self.order(at, owner=account.user, amount_toman=0, is_free=True, status=status, **fields)
+            m.MessageDelivery.objects.create(order=order, status=status, environment=environment, accepted_at=accepted_at,
+                provider='demo' if environment == 'demo' else 'kavenegar')
+
+        gift(idle, 'failed')
+        gift(idle, 'unknown')
+        for _ in range(3):
+            gift(sponsored, is_sponsored=True)
+            gift(purchaser)
+            gift(demo_only, 'delivered_demo', 'demo')
+        gift(gift_only, 'accepted')
+        gift(gift_only, 'accepted')
+        gift(gift_only, 'unknown', accepted_at=at)
+        gift(two_gifts)
+        gift(two_gifts)
+        gift(two_gifts, 'failed', free_credit_released_at=at)
+        package = m.MessagePackage.objects.create(name='Test', message_count=3, price_toman=1000)
+        for account, environment, credited_at in (
+            (gift_only, 'live', None), (gift_only, 'demo', at),
+            (purchaser, 'live', at), (purchaser, 'live', at),
+        ):
+            m.CreditPurchase.objects.create(owner=account.user, package=package, idempotency_key=uuid.uuid4(),
+                package_name=package.name, message_count=3, amount_toman=1000,
+                environment=environment, credited_at=credited_at)
+        data = self.get_data()
+        activity = data['account_activity']
+        self.assertEqual(data['totals']['accounts_total'], 6)
+        self.assertEqual(activity['without_successful_send'], 2)
+        self.assertEqual(activity['sent_three_gifts'], 2)
+        self.assertEqual(activity['sent_three_gifts_without_package'], 1)
+        with override_settings(DEMO_MODE=True):
+            demo_activity = self.get_data()['account_activity']
+        self.assertEqual(demo_activity['without_successful_send'], 5)
+        self.assertEqual(demo_activity['sent_three_gifts'], 1)
+        self.assertEqual(demo_activity['sent_three_gifts_without_package'], 1)
 
     def test_blacklist_counts_only_active_opt_outs_including_without_accounts(self):
         for number, blocked in [('09901234567', True), ('09901234568', True), ('09901234569', False)]:

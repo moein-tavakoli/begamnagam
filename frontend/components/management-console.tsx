@@ -92,15 +92,17 @@ function MonitoringEntry({children}:{children:ReactNode}) {
     return()=>{generation.current++;window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',visible);};
   },[load]);
   const failed=useCallback(()=>{void load();},[load]);
-  return allowed?<ManagementMonitoringLayout><ManagementMonitoring onFailure={failed}/>{children}</ManagementMonitoringLayout>:
-    <Stack sx={{maxWidth:500,mx:'auto',px:2,py:{xs:4,sm:7},gap:3}}><ManagementBrand/><ContentCard>
-      <Stack direction="row" spacing={1} sx={{alignItems:'center'}}><ShieldOutlined color="primary"/><Typography component="h1" variant="h5">ورود به مانیتورینگ</Typography></Stack>
-      {error?<Failure message={error} retry={()=>void load()}/>:allowed===null?<Loading/>:<>
-        <Typography color="text.secondary">با نام کاربری و رمز حساب دارای مجوز مانیتورینگ وارد شوید.</Typography>
-        <Login onLogin={current=>{if(!current.permissions?.includes('view_operations'))setError('این حساب مجوز مشاهدهٔ مانیتورینگ را ندارد.');else void load();}}/>
-      </>}
-      <Button component={Link} href="/manage" startIcon={<ArrowForwardRounded/>}>ورود به مدیریت</Button>
-    </ContentCard></Stack>;
+  return <ManagementMonitoringLayout active={allowed === true}>
+    {allowed ? <><ManagementMonitoring onFailure={failed}/>{children}</> :
+      <Stack sx={{maxWidth:500,mx:'auto',px:2,py:{xs:4,sm:7},gap:3}}><ManagementBrand/><ContentCard>
+        <Stack direction="row" spacing={1} sx={{alignItems:'center'}}><ShieldOutlined color="primary"/><Typography component="h1" variant="h5">ورود به مانیتورینگ</Typography></Stack>
+        {error?<Failure message={error} retry={()=>void load()}/>:allowed===null?<Loading/>:<>
+          <Typography color="text.secondary">با نام کاربری و رمز حساب دارای مجوز مانیتورینگ وارد شوید.</Typography>
+          <Login onLogin={current=>{if(!current.permissions?.includes('view_operations'))setError('این حساب مجوز مشاهدهٔ مانیتورینگ را ندارد.');else void load();}}/>
+        </>}
+        <Button component={Link} href="/manage" startIcon={<ArrowForwardRounded/>}>ورود به مدیریت</Button>
+      </ContentCard></Stack>}
+  </ManagementMonitoringLayout>;
 }
 
 function StaffConsole({children,supportIdentity,supportMemory}:{children:ReactNode;supportIdentity:{current:string|undefined};supportMemory:{current:SupportWorkspaceMemory}}) {

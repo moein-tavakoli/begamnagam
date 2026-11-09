@@ -9,6 +9,18 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.31.1 — 2026-11-09 — Cyberpunk monitoring display (local)
+
+### Changed
+
+- Give monitoring its own dark MUI theme with a layered grid, neon metric accents,
+  a chart palette for dark surfaces, and a status pulse that respects reduced motion.
+- Style the monitoring access screen and update-period menu with the same palette.
+
+Validation passed for 116 frontend tests and TypeScript. Browser checks covered
+full-screen layouts at 1466×827 and 1920×1080, reflow from 375px, menu and refresh
+controls, reduced motion, and theme isolation on the users page.
+
 ## 0.31.0 — 2026-11-09 — Localized API input, credit errors and blacklist count (local)
 
 ### Added

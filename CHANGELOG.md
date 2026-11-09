@@ -9,7 +9,7 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
-## 0.34.0 — 2026-11-09 — Anonymous SMS replies and length warnings (local)
+## 0.34.0 — 2026-11-09 — Anonymous SMS replies and length warnings
 
 ### Added
 
@@ -29,6 +29,12 @@ Historical release reports below contain deployment evidence and limitations.
 Validation covered 743 PostgreSQL tests, 119 frontend tests, TypeScript, Django
 migration checks, Compose configuration, and isolated browser flows at 375px
 and 1440px. Provider transport was mocked.
+
+Deployed to all six frontend replicas. Migration `0046` preserved existing
+data on the restored backup and passed on the server. The isolated Compose
+smoke test used images built from the same release artifacts. The internal
+HTTPS check verified the short reply and opt-out routes and private API
+documentation. [Deployment evidence](docs/deployments/ct115-0.34.0.json)
 
 ## 0.33.0 — 2026-11-09 — Clear rejection reasons and editable AI guidance
 
@@ -50,7 +56,7 @@ and 1440px. Provider transport was mocked.
 Validation covered 736 PostgreSQL tests, 119 frontend tests, TypeScript,
 migration consistency and isolated browser checks at 375px and 1440px.
 
-The server runs this release on all six frontend replicas. The deployed images
+This release ran on all six frontend replicas. The deployed images
 passed the isolated Compose smoke test. Migrations `0044` and `0045` passed on
 the restored backup before rollout. HTTPS and the existing private Swagger
 login were verified via the internal edge. The external probe was unavailable.

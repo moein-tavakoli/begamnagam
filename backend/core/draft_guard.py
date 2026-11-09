@@ -113,6 +113,17 @@ def _check_intent(value):
         raise ModerationRejected('unsafe_content')
 
 
+def validate_sms_decoration(text):
+    """Check fixed, operator-authored SMS text without modifying the wording."""
+    value = _normal(text)
+    _check_intent(value)
+    if re.search(r'://|[\w-][.\u3002\uff61][\w-]|\b(?:tel|sms|smsto|mms|mailto|geo|sip|callto)\s*:', value, re.I):
+        raise ModerationRejected('contact_details')
+    if _INSULTS.search(value) or _MASKED_INSULTS.search(value):
+        raise ModerationRejected('unsafe_content')
+    moderate(value)
+
+
 _FILLER = frozenset('تو شما او من ما یک یه این آن اون خیلی واقعا واقعاً هستی هستید هست هستم است بود هستن هستین چقدر چرا چه هم و را رو به از با که فقط دیگه لعنت بر نیست نیستی نیستید'.split())
 
 

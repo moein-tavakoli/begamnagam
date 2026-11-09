@@ -9,6 +9,23 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.32.0 — 2026-11-09 — Recipient SMS template editor (local)
+
+### Added
+
+- Add a management page for a recipient SMS template with fixed custom variables,
+  a sample preview, segment count and reset to the default template.
+- Require the reviewed message and the recipient opt-out footer. Validate the
+  rendering budget and record revisioned settings updates in the operator audit.
+
+### Changed
+
+- Use the current template for new web and API previews. The worker sends the
+  exact stored snapshot, including when the template changes after a preview.
+
+Validation passed for 730 PostgreSQL tests, 117 frontend tests, TypeScript,
+migration consistency, and desktop and mobile checks of the editor and preview.
+
 ## 0.31.1 — 2026-11-09 — Cyberpunk monitoring display (local)
 
 ### Changed

@@ -53,12 +53,14 @@ import { ManualPaymentDialog } from './manual-payment-dialog';
 import { SupportInbox, useSupportBadge } from './support-inbox';
 import { PackageSettings } from './package-settings';
 import { ExampleSettings } from './example-settings';
+import type { SmsTemplateDraftMemory } from './sms-template-settings';
 import { ManagementChangelog } from './management-changelog';
 import { ManagementDataGrid } from './management-data-grid';
 
 const ManagementStaff=dynamic(()=>import('./management-staff').then(module=>module.ManagementStaff),{loading:()=> <Loading/>});
 const ManagementMonitoring=dynamic(()=>import('./management-monitoring').then(module=>module.ManagementMonitoring),{loading:()=> <Loading/>});
 const MonitoringAccessSettings=dynamic(()=>import('./monitoring-access-settings').then(module=>module.MonitoringAccessSettings),{loading:()=> <Loading/>});
+const SmsTemplateSettings=dynamic(()=>import('./sms-template-settings').then(module=>module.SmsTemplateSettings),{loading:()=> <Loading/>});
 
 function ContentCard({children}: {children:ReactNode}) { return <Card sx={{p:{xs:2,sm:3},minWidth:0}}><Stack spacing={2.5}>{children}</Stack></Card>; }
 function SectionTitle({title,icon,action}: {title:string;icon:string;action?:ReactNode}) { return <Stack direction="row" sx={{alignItems:'center',justifyContent:'space-between',gap:1,flexWrap:'wrap'}}><Stack direction="row" spacing={1} sx={{alignItems:'center'}}><ManagementIcon name={icon} color="primary"/><Typography component="h2" variant="h6">{title}</Typography></Stack>{action}</Stack>; }
@@ -114,6 +116,7 @@ function StaffConsole({children,supportIdentity,supportMemory}:{children:ReactNo
   const [busy, setBusy] = useState(false);
   const [epoch, setEpoch] = useState(0);
   const [action, setAction] = useState<ManagementAction | null>(null);
+  const smsTemplateMemory = useRef<SmsTemplateDraftMemory>(null);
   const sessionGeneration = useRef(0);
   const loadSession = useCallback(async () => {
     const generation = ++sessionGeneration.current;
@@ -121,6 +124,7 @@ function StaffConsole({children,supportIdentity,supportMemory}:{children:ReactNo
     try {
       const current = await api<ManagementSession>("/manage/session");
       if (generation === sessionGeneration.current) {
+        if (!current.authenticated || !current.permissions?.includes('manage_site_limits') || supportIdentity.current !== current.session_identity) smsTemplateMemory.current = null;
         if (!current.authenticated || !current.permissions?.includes('support_chat') || supportIdentity.current !== current.session_identity) supportMemory.current={thread:null,composer:{draft:"",pending:null}};
         supportIdentity.current=current.session_identity;
         setSession(current);
@@ -142,13 +146,14 @@ function StaffConsole({children,supportIdentity,supportMemory}:{children:ReactNo
   }, [loadSession]);
   const failed = useCallback((e: unknown) => {
     if (e instanceof ApiError && ['management_login_required','forbidden'].includes(e.code)) {
+      smsTemplateMemory.current = null;
       supportMemory.current={thread:null,composer:{draft:"",pending:null}}; supportIdentity.current=undefined; setAction(null);
       if(e.code==='management_login_required')setSession({authenticated:false});else void loadSession();
     }
   }, [loadSession]);
   async function signOut() {
     setBusy(true); setError("");
-    try { await api("/manage/logout", { method: "POST", body: {} }); supportMemory.current={thread:null,composer:{draft:"",pending:null}}; supportIdentity.current=undefined; setSession({ authenticated: false }); }
+    try { await api("/manage/logout", { method: "POST", body: {} }); smsTemplateMemory.current = null; supportMemory.current={thread:null,composer:{draft:"",pending:null}}; supportIdentity.current=undefined; setSession({ authenticated: false }); }
     catch (e) { setError(errorMessage(e)); }
     finally { setBusy(false); }
   }
@@ -165,7 +170,7 @@ function StaffConsole({children,supportIdentity,supportMemory}:{children:ReactNo
       {managementShowsBalances(active,permissions)&&<ProviderBalances onFailure={failed}/>}
       {error&&<Failure message={error}/>}
       {!allowed&&<Alert severity="warning" action={<Button component={Link} href={managementLanding(session||{authenticated:false})||'/manage'}>بازگشت به بخش مجاز</Button>}>این بخش برای حساب شما در دسترس نیست. از فهرست بخش‌های مجاز انتخاب کنید.</Alert>}
-      {allowed&&(route.userId?<UserActivity key={`${route.userId}-${epoch}`} userId={route.userId} permissions={permissions} resources={session?.resources||[]} onAction={setAction} onFailure={failed}/>:active==='staff'?<ManagementStaff view={pathname.endsWith('/roles')?'roles':'employees'} onFailure={failed}/>:active==='changelog'?<ManagementChangelog onFailure={failed}/>:active==='examples'?<ExampleSettings onFailure={failed}/>:active==='support'?<SupportInbox onFailure={supportFailure} memory={supportMemory}/>:active==='dashboard'?<Dashboard key={`dashboard-${epoch}`} canOperate={permissions.includes('operate_safety')} onAction={setAction} onFailure={failed}/>:active==='limits'?<Limits canManageMonitoringAccess={permissions.includes('manage_monitoring_access')} onFailure={failed}/>:active==='ai'?<AISettings onFailure={failed}/>:active==='manual-settings'?<ManualPaymentSettings onFailure={failed}/>:active==='packages'?<PackageSettings onFailure={failed}/>:active&&<Records key={`${active}-${epoch}`} resource={active} permissions={permissions} onAction={setAction} onFailure={failed}/>)}
+      {allowed&&(route.userId?<UserActivity key={`${route.userId}-${epoch}`} userId={route.userId} permissions={permissions} resources={session?.resources||[]} onAction={setAction} onFailure={failed}/>:active==='staff'?<ManagementStaff view={pathname.endsWith('/roles')?'roles':'employees'} onFailure={failed}/>:active==='changelog'?<ManagementChangelog onFailure={failed}/>:active==='examples'?<ExampleSettings onFailure={failed}/>:active==='support'?<SupportInbox onFailure={supportFailure} memory={supportMemory}/>:active==='dashboard'?<Dashboard key={`dashboard-${epoch}`} canOperate={permissions.includes('operate_safety')} onAction={setAction} onFailure={failed}/>:active==='limits'?<Limits canManageMonitoringAccess={permissions.includes('manage_monitoring_access')} onFailure={failed}/>:active==='sms-template'?<SmsTemplateSettings onFailure={failed} memory={smsTemplateMemory}/>:active==='ai'?<AISettings onFailure={failed}/>:active==='manual-settings'?<ManualPaymentSettings onFailure={failed}/>:active==='packages'?<PackageSettings onFailure={failed}/>:active&&<Records key={`${active}-${epoch}`} resource={active} permissions={permissions} onAction={setAction} onFailure={failed}/>)}
       {children}
       {action&&(['grant_package','approve_card','reject_card'].includes(action.name)?<ManualPaymentDialog action={action} onClose={()=>setAction(null)} onComplete={()=>{setAction(null);setEpoch(v=>v+1);}} onFailure={failed}/>:<ActionDialog action={action} onClose={()=>setAction(null)} onComplete={()=>{setAction(null);setEpoch(v=>v+1);}} onFailure={failed}/>)}
   </>;

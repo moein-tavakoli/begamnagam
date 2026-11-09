@@ -15,18 +15,18 @@ SALT = 'reviewed-message-alternative-v1'
 MAX_AGE = 300
 
 
-def offers(owner, session, recipient_hash, tone):
+def offers(owner, session, recipient_hash, tone, *, layout):
     from .message_tones import templates
-    from .sms import compose_recipient_sms, SMSTooLong
+    from .sms import compose_recipient_sms, sms_origin, SMSTooLong
     from .moderation import ModerationRejected
     categories = [('conversation', 'گفت‌وگوی محترمانه'), ('good_wishes', 'آرزوی حال خوب')]
     if settings.PILOT_POSITIVE_ONLY:
         categories = [('appreciation', 'قدردانی'), ('encouragement', 'دلگرمی')]
-    origin = settings.APP_BASE_URL.removeprefix('https://').removeprefix('http://')
+    origin = sms_origin()
     result = []
     for category, label in categories:
         try:
-            text, _ = compose_recipient_sms(category, templates(category, tone)[0], origin, 'Ab12Cd34', message_tone=tone)
+            text, _ = compose_recipient_sms(category, templates(category, tone)[0], origin, 'Ab12Cd34', message_tone=tone, layout=layout)
         except (ModerationRejected, SMSTooLong):
             continue
         payload = {'owner': owner.pk, 'session': digest(session), 'recipient': recipient_hash,
@@ -37,9 +37,9 @@ def offers(owner, session, recipient_hash, tone):
     return result
 
 
-def resolve(token, *, owner, session, recipient_hash, tone):
+def resolve(token, *, owner, session, recipient_hash, tone, layout):
     from .message_tones import templates
-    from .sms import compose_recipient_sms
+    from .sms import compose_recipient_sms, sms_origin
     try:
         if not isinstance(token, str) or not 1 <= len(token) <= 4096 or not owner or not recipient_hash:
             raise ValueError
@@ -51,8 +51,7 @@ def resolve(token, *, owner, session, recipient_hash, tone):
         category = payload['category']
         if settings.PILOT_POSITIVE_ONLY and category not in {'appreciation', 'encouragement'}:
             raise ValueError
-        origin = settings.APP_BASE_URL.removeprefix('https://').removeprefix('http://')
-        text, _ = compose_recipient_sms(category, templates(category, tone)[0], origin, 'Ab12Cd34', message_tone=tone)
+        text, _ = compose_recipient_sms(category, templates(category, tone)[0], sms_origin(), 'Ab12Cd34', message_tone=tone, layout=layout)
         if payload.get('body') != digest(text):
             raise ValueError
     except Exception:

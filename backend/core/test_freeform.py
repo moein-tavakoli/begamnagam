@@ -56,6 +56,27 @@ class FreeformTests(TestCase):
         self.assertEqual(Account.objects.get(user=self.user).free_sends_remaining, 3)
         validate_preview(preview, recipient_hash=digest('09901234567'))
 
+    def test_preview_uses_the_same_layout_before_and_after_model_review(self):
+        path = '/api/v1/manage/sms-template'
+        editor = Client()
+        editor.force_login(get_user_model().objects.create_superuser('freeform-sms-editor'))
+        first = editor.put(path, {'template': 'درود از بگم نگم\n{{message}}\n{{opt_out}}',
+            'variables': [], 'revision': 0}, content_type='application/json')
+        self.assertEqual(first.status_code, 200, first.content)
+
+        def review(*args, **options):
+            self.assertEqual(options['max_units'], first.json()['preview']['body_units'])
+            updated = editor.put(path, {'template': 'سلام\n{{message}}\n{{opt_out}}',
+                'variables': [], 'revision': 1}, content_type='application/json')
+            self.assertEqual(updated.status_code, 200, updated.content)
+            return BODY
+
+        with patch('core.gapgpt.rewrite_message', side_effect=review):
+            result = self.quote()
+        self.assertEqual(result.status_code, 200, result.content)
+        self.assertTrue(result.json()['full_sms'].startswith('درود از بگم نگم\n' + BODY + '\n'))
+        validate_preview(Preview.objects.get(pk=result.json()['preview_id']))
+
     def test_threat_contact_pure_insult_and_invalid_recipient_never_reach_api_or_budget(self):
         with patch('core.gapgpt.rewrite_message') as model:
             for text in ['می کشمت اگر پولم را ندهی', 'احمق لعنتی', 'به 09123456789 زنگ بزن']:

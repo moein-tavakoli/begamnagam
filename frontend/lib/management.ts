@@ -123,7 +123,7 @@ export function managementNavigation(session: ManagementSession): { key: string;
     ...(permissions.includes("manage_staff") ? [{ key: "staff", title: "کارمندان سامانه" }] : []),
     ...(permissions.includes("view_changelog") ? [{ key: "changelog", title: "تاریخچهٔ تغییرات" }] : []),
     ...resources.filter(item => item.key !== "accounts" && item.key !== "blacklist" && (!resources.some(resource => resource.key === "accounts") || !["orders", "invitations", "invitation-deliveries", "invitation-sends"].includes(item.key))),
-    ...([ ["manage_site_limits", "limits", "تنظیمات سایت"], ["manage_message_packages", "packages", "بسته‌های پیام"],
+    ...([ ["manage_site_limits", "limits", "تنظیمات سایت"], ["manage_site_limits", "sms-template", "قالب پیامک"], ["manage_message_packages", "packages", "بسته‌های پیام"],
       ["manage_message_examples", "examples", "پیام‌های نمونه"], ["manage_manual_payments", "manual-settings", "کارت و دریافت رسید"],
       ["manage_ai", "ai", "هوش مصنوعی"] ].filter(([permission]) => permissions.includes(permission)).map(([, key, title]) => ({ key, title }))),
   ];

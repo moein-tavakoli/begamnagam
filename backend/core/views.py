@@ -20,7 +20,7 @@ from .moderation import ModerationRejected, RewriteUnavailable, rewrite
 from .message_examples import public_catalog, is_current_suggestion
 from .privacy import DIGITS, decrypt, digest, encrypt, mask, normalize_phone
 from .services import APIError, api, is_product_authenticated, limited
-from .sms import compose_recipient_sms, SMSTooLong
+from .sms import compose_freeform_sms, compose_recipient_sms, freeform_body_limit, sms_origin, sms_segments, SMSTooLong
 from .otp import OTP_LENGTH, valid_otp
 from .input_digits import canonical_input
 from .message_attempts import capture_preview_attempt, record_attempt
@@ -298,23 +298,24 @@ def preview(request):
             'برای آماده‌سازی متن، ابتدا وارد شو و شمارهٔ گیرنده را وارد کن.', 401 if not owner else 422)
     if owner and not unlimited:
         limited("preview-user", str(owner.pk), 20, 600)
+    from .sms_template_settings import current_sms_layout
+    layout = current_sms_layout()
+    origin = sms_origin()
     request._message_attempt_admitted = True
     alternative_body = None
     if choosing_alternative:
         from .message_alternatives import resolve as resolve_alternative
         category, alternative_body = resolve_alternative(data.get('alternative_token'), owner=owner,
-            session=session_key(request), recipient_hash=recipient_hash, tone=tone)
+            session=session_key(request), recipient_hash=recipient_hash, tone=tone, layout=layout)
         text = alternative_body
     direct = tone != 'polite'
-    sms_origin = settings.APP_BASE_URL.removeprefix('https://').removeprefix('http://')
     try:
         if choosing_alternative:
             from .moderation import moderate
             moderate(alternative_body)
             rewritten, mode = alternative_body, 'template'
         elif use_freeform:
-            from .sms import freeform_body_limit
-            limit = freeform_body_limit(sms_origin)
+            limit = freeform_body_limit(origin, layout=layout)
             if limit < 20:
                 raise RewriteUnavailable()
             rewritten, mode = prepare(owner, text, max_units=limit, message_tone=tone, config=ai), ai.provider
@@ -326,7 +327,7 @@ def preview(request):
         request._message_attempt_moderation_event = event.event_id
         from .message_alternatives import feedback, offers
         code, message = feedback(text, str(exc))
-        alternatives = offers(owner, session_key(request), recipient_hash, tone) if owner and recipient_hash and isinstance(text, str) and 0 < len(text) <= 280 else []
+        alternatives = offers(owner, session_key(request), recipient_hash, tone, layout=layout) if owner and recipient_hash and isinstance(text, str) and 0 < len(text) <= 280 else []
         raise APIError(code, message, 422, details={'alternatives': alternatives})
     except RewriteUnavailable:
         raise APIError("rewrite_unavailable", "آماده‌سازی متن موقتاً در دسترس نیست؛ کمی بعد تلاش کنید.", 503)
@@ -345,10 +346,9 @@ def preview(request):
             token = issue_grant(item, recipient_hash)
         try:
             if use_freeform:
-                from .sms import compose_freeform_sms
-                full_sms = compose_freeform_sms(rewritten, sms_origin, token)
+                full_sms = compose_freeform_sms(rewritten, origin, token, layout=layout)
             else:
-                item.text, full_sms = compose_recipient_sms(category, rewritten, sms_origin, token, message_tone=tone)
+                item.text, full_sms = compose_recipient_sms(category, rewritten, origin, token, message_tone=tone, layout=layout)
         except SMSTooLong:
             raise APIError("message_too_long", "متن نهایی بیش از سه بخش پیامک است؛ موضوع دیگری انتخاب کن.", 422)
         item.full_sms = full_sms
@@ -360,7 +360,7 @@ def preview(request):
     return {"preview_id": str(item.id), "payment_method": item.payment_method, "wallet_terms_version": item.wallet_policy_version,
         "rewritten_text": item.generated_body if use_freeform else item.text, "price_toman": item.price_toman, "is_free": item.is_free,
         "message_tone": item.message_tone,
-        "expires_at": expires_at.isoformat(), "moderation_mode": mode, "terms_version": item.terms_version, "full_sms": item.full_sms, "sms_segments": 1 if len(full_sms.encode("utf-16-le")) // 2 <= 70 else (len(full_sms.encode("utf-16-le")) // 2 + 66) // 67}
+        "expires_at": expires_at.isoformat(), "moderation_mode": mode, "terms_version": item.terms_version, "full_sms": item.full_sms, "sms_segments": sms_segments(full_sms)}
 
 
 @api(["POST"], authenticated=True)

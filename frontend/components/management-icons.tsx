@@ -36,7 +36,7 @@ const icons = {
   reports:ReportOutlined, moderation:FactCheckOutlined, payments:PaymentsOutlined,
   refunds:CurrencyExchangeOutlined, 'financial-events':AccountBalanceOutlined,
   budgets:SavingsOutlined, alerts:NotificationsOutlined, audit:HistoryOutlined, changelog:HistoryOutlined,
-  limits:SettingsOutlined, packages:Inventory2Outlined, examples:TextSnippetOutlined,
+  limits:SettingsOutlined, 'sms-template':SmsOutlined, packages:Inventory2Outlined, examples:TextSnippetOutlined,
   'manual-settings':CreditCardOutlined, ai:AutoAwesomeOutlined,
 };
 export function ManagementIcon({name,...props}:SvgIconProps & {name:string}) {

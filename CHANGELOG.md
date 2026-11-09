@@ -9,7 +9,7 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
-## 0.33.0 — 2026-11-09 — Clear rejection reasons and editable AI guidance (local)
+## 0.33.0 — 2026-11-09 — Clear rejection reasons and editable AI guidance
 
 ### Added
 
@@ -28,6 +28,12 @@ Historical release reports below contain deployment evidence and limitations.
 
 Validation covered 736 PostgreSQL tests, 119 frontend tests, TypeScript,
 migration consistency and isolated browser checks at 375px and 1440px.
+
+The server runs this release on all six frontend replicas. The deployed images
+passed the isolated Compose smoke test. Migrations `0044` and `0045` passed on
+the restored backup before rollout. HTTPS and the existing private Swagger
+login were verified via the internal edge. The external probe was unavailable.
+[Deployment evidence](docs/deployments/ct115-0.33.0.json).
 
 ## 0.32.0 — 2026-11-09 — Recipient SMS template editor (local)
 

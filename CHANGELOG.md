@@ -9,6 +9,12 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.37.1 — 2026-11-10 — Clear messenger registration counts (local)
+
+- Place the Telegram, Bale, and Rubika registration cards in one row above
+  the summary, with separately labeled daily and total counts.
+- Verified the card layout and values at 320px, 375px, and 1440px.
+
 ## 0.37.0 — 2026-11-10 — Anonymous replies and messenger registration cards
 
 - Show the tone picker for anonymous replies when several tones are active.

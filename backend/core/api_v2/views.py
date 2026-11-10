@@ -120,8 +120,9 @@ def otp_challenges(request):
                   request='LoginInput', auth=False, status=201,
                   description='Send challenge_id from the matching OTP response and the code as a four-digit string, '
                               'using the same sessionid that requested that challenge. Valid CSRF alone does not restore a lost session. '
-                              'An adapter using ordinary cookies can optionally send signup_source (telegram or bale) '
-                              'with a matching X-Bot-Key. It is recorded only for a newly created account. '
+                              'An adapter using ordinary cookies can send signup_source (telegram, bale or rubika) '
+                              'with a matching X-Bot-Key. An empty value uses the usual login flow. '
+                              'The platform is recorded only for a newly created account. '
                               'invalid_otp can mean a different session, an expired/consumed challenge, exhausted attempts or an incorrect code. '
                               'On success merge Set-Cookie and replace csrf_token before the next request. Do not automatically replay login. '
                               'Verified product login lasts a fixed 30 days from successful OTP verification, including browser restarts; reads/writes do not renew it. '
@@ -131,7 +132,7 @@ def sessions(request):
     conversation = getattr(request, 'bot_conversation', None)
     source = conversation.integration.platform if conversation else Account.SignupSource.API
     declared = request.api_data.get('signup_source')
-    if declared is not None:
+    if declared:
         integration = authenticate_bot(request)
         if integration.platform != declared:
             raise APIError('signup_source_mismatch', 'مبدأ ثبت‌نام باید با پلتفرم کلید ربات یکی باشد.', 403)

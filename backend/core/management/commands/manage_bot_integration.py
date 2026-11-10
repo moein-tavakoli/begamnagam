@@ -5,14 +5,14 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from core.bot_conversations import new_credential
-from core.models import BotIntegration, OperatorAudit
+from core.models import BotIntegration, BotPlatform, OperatorAudit
 
 
 class Command(BaseCommand):
-    help = 'Create, rotate or disable a private Telegram/Bale adapter key. No provider network calls.'
+    help = 'Create, rotate or disable a private messenger adapter key. No provider network calls.'
 
     def add_arguments(self, parser):
-        parser.add_argument('--platform', choices=['telegram', 'bale'], required=True)
+        parser.add_argument('--platform', choices=BotPlatform.values, required=True)
         parser.add_argument('--bot-id', required=True)
         modes = parser.add_mutually_exclusive_group()
         modes.add_argument('--rotate', action='store_true')

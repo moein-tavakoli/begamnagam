@@ -60,15 +60,18 @@ export function Composer({ onExit, replyToken, onReplyUnavailable }: {
 }) {
   const { data, reload } = useApp();
   const isReply = !!replyToken;
-  const [step, setStep] = useState(0);
-  const activeStep = Math.min(step, stepLabels.length - 1);
+  const [draftStep, setDraftStep] = useState(0);
   const [category, setCategory] = useState("");
   const [exampleGroup, setExampleGroup] = useState<number | null>(null);
   const [text, setText] = useState("");
-  const [messageTone, setMessageTone] = useState<MessageTone>('firm');
   const toneOptions = data?.message_tones ?? [];
-  const tonesKey = toneOptions.map(item => item.id).join(',');
+  const defaultTone = toneOptions.find(item => item.id === data?.default_message_tone)?.id
+    ?? toneOptions[0]?.id ?? data?.default_message_tone ?? 'firm';
+  const [chosenTone, setMessageTone] = useState<MessageTone>(defaultTone);
+  const messageTone = toneOptions.some(item => item.id === chosenTone) ? chosenTone : defaultTone;
   const [preview, setPreview] = useState<Preview | null>(null);
+  const step = isReply ? (preview ? 1 : 0) : draftStep;
+  const activeStep = Math.min(step, stepLabels.length - 1);
   const [recipient, setRecipient] = useState("");
   const [consent, setConsent] = useState(false);
   const [order, setOrder] = useState<Order | null>(null);
@@ -83,6 +86,9 @@ export function Composer({ onExit, replyToken, onReplyUnavailable }: {
   const [selectedAlternative, setSelectedAlternative] = useState<string | null>(null);
   const [fields, setFields] = useState<Record<string, string>>({});
   const freeformRewrite = data?.rewrite_mode === "gapgpt" || data?.rewrite_mode === "ollama";
+  const shortDraftMessage = isReply
+    ? "پاسخت را در حداقل ۳ حرف بنویس."
+    : "منظورت را در حداقل ۳ حرف بنویس یا از یک مثال کمک بگیر.";
   const activeGroup = data?.category_groups?.some(group => group.id === exampleGroup) ? exampleGroup : null;
   const visibleExamples = (data?.categories ?? []).filter(item => activeGroup === null || item.group_id === activeGroup);
   const awaitingPayment =
@@ -100,11 +106,9 @@ export function Composer({ onExit, replyToken, onReplyUnavailable }: {
   }, [text, recipient, messageTone, step, data?.session_identity]);
 
   useEffect(() => {
-    if (!data || order || toneOptions.some(item => item.id === messageTone)) return;
-    const next = data.default_message_tone ?? 'firm';
-    if (messageTone === next) return;
-    setMessageTone(next); setPreview(null); setConsent(false); idempotencyKey.current = '';
-  }, [tonesKey, data?.default_message_tone, messageTone, order?.id]);
+    if (!data || order || chosenTone === messageTone) return;
+    setMessageTone(messageTone); setPreview(null); setConsent(false); idempotencyKey.current = '';
+  }, [data, chosenTone, messageTone, order?.id]);
 
   useEffect(() => {
     const stage = `${step}:${awaitingPayment}:${finished}`;
@@ -149,7 +153,7 @@ export function Composer({ onExit, replyToken, onReplyUnavailable }: {
     setAlternatives(messageAlternatives(error instanceof ApiError ? error.details : undefined));
     setSelectedAlternative(null);
     if (error instanceof ApiError && error.code === 'tone_unavailable') {
-      setStep(0); setPreview(null); setConsent(false); idempotencyKey.current = ''; void reload();
+      setDraftStep(0); setPreview(null); setConsent(false); idempotencyKey.current = ''; void reload();
     }
     if (error instanceof ApiError && error.code === "free_quota_changed") {
       setPreview(null);
@@ -160,7 +164,7 @@ export function Composer({ onExit, replyToken, onReplyUnavailable }: {
     if (error instanceof ApiError && error.code === "authentication_required")
       void reload();
     if (error instanceof ApiError && error.code === "freeform_unavailable") {
-      setStep(0);
+      setDraftStep(0);
       setPreview(null);
       setConsent(false);
       idempotencyKey.current = "";
@@ -180,17 +184,23 @@ export function Composer({ onExit, replyToken, onReplyUnavailable }: {
 
   function advanceDraft(event: React.FormEvent) {
     event.preventDefault();
+    if (previewInFlight.current || busy) return;
     setError("");
     setFields({});
     const problem = draftProblem(text, category, data?.categories ?? [], freeformRewrite);
     if (problem) {
       setFields({ text: problem === "too_short"
-        ? "منظورت را در حداقل ۳ حرف بنویس یا از یک مثال کمک بگیر."
-        : "بازنویسی متن دلخواه هنوز فعال نیست؛ فعلاً یکی از مثال‌های پیشنهادی رو انتخاب کن." });
+        ? shortDraftMessage
+        : isReply ? "بازبینی پاسخ موقتاً در دسترس نیست."
+          : "بازنویسی متن دلخواه هنوز فعال نیست؛ فعلاً یکی از مثال‌های پیشنهادی رو انتخاب کن." });
       document.getElementById("message-text")?.focus();
       return;
     }
-    setStep(1);
+    if (isReply) {
+      void makePreview();
+      return;
+    }
+    setDraftStep(1);
     setPreview(null);
     setConsent(false);
     idempotencyKey.current = "";
@@ -209,8 +219,8 @@ export function Composer({ onExit, replyToken, onReplyUnavailable }: {
     setError("");
   }
 
-  async function makePreview(event: React.FormEvent) {
-    event.preventDefault();
+  async function makePreview(event?: React.FormEvent) {
+    event?.preventDefault();
     if (previewInFlight.current || busy) return;
     setError("");
     setFields({});
@@ -222,9 +232,7 @@ export function Composer({ onExit, replyToken, onReplyUnavailable }: {
     }
     const alternative = alternatives.find(item => item.token === selectedAlternative);
     if (!alternative && text.trim().length < 3) {
-      setFields({
-        text: "منظورت را در حداقل ۳ حرف بنویس یا از یک مثال کمک بگیر.",
-      });
+      setFields({ text: shortDraftMessage });
       document.getElementById("message-text")?.focus();
       return;
     }
@@ -322,7 +330,11 @@ export function Composer({ onExit, replyToken, onReplyUnavailable }: {
 
 
   function goBack() {
-    setStep(0);
+    setDraftStep(0);
+    if (isReply) {
+      setPreview(null);
+      idempotencyKey.current = "";
+    }
     setConsent(false);
     setError("");
     setFields({});
@@ -351,7 +363,7 @@ export function Composer({ onExit, replyToken, onReplyUnavailable }: {
   }
   return (
     <section
-      data-update-blocked={busy || (!finished && !!(step > 0 || text || recipient || messageTone !== (data?.default_message_tone ?? 'firm')))}
+      data-update-blocked={busy || (!finished && !!(step > 0 || text || recipient || messageTone !== defaultTone))}
       id="compose"
       className={`compose-section wrap ${!data?.authenticated ? "composer-auth-only" : ""}`}
       data-screen={finished ? "receipt" : step}
@@ -383,7 +395,8 @@ export function Composer({ onExit, replyToken, onReplyUnavailable }: {
           {step === 0 && data?.authenticated && (
             <form className="draft-form" onSubmit={advanceDraft} noValidate>
               <p className="muted form-intro">
-                {freeformRewrite
+                {isReply ? "پاسخت رو با کلمه‌های خودت بنویس."
+                  : freeformRewrite
                   ? "منظورت رو با کلمه‌های خودت بنویس."
                   : "فعلاً می‌تونی از مثال‌های آماده استفاده کنی."}
               </p>
@@ -394,13 +407,14 @@ export function Composer({ onExit, replyToken, onReplyUnavailable }: {
                 onChange={(event) => {
                   const value = event.target.value;
                   setText(value);
-                  setCategory(draftTopicHint(category, value, data.categories));
+                  if (!isReply) setCategory(draftTopicHint(category, value, data.categories));
                   setFields({});
                   setError("");
                 }}
                 maxLength={280}
                 rows={4}
-                placeholder={freeformRewrite
+                placeholder={isReply ? "پاسخت رو بنویس…"
+                  : freeformRewrite
                   ? "مثلاً: می‌خوام قبل از قرض گرفتن وسایلم از خودم اجازه بگیره…"
                   : "برای شروع یکی از مثال‌های پایین رو انتخاب کن…"}
                 aria-describedby={`message-hint message-count${fields.text ? " message-error" : ""}`}
@@ -417,15 +431,15 @@ export function Composer({ onExit, replyToken, onReplyUnavailable }: {
                   {new Intl.NumberFormat("fa-IR").format(text.length)} / ۲۸۰
                 </span>
               </div>
-              <MessageTonePicker options={toneOptions} value={messageTone} disabled={busy || !!order} onChange={tone => {
+              {(!isReply || toneOptions.length > 1) && <MessageTonePicker options={toneOptions} value={messageTone} disabled={busy || !!order} onChange={tone => {
                 setMessageTone(tone); setPreview(null); setConsent(false); setFields({}); setError(''); idempotencyKey.current = '';
-              }} />
+              }} />}
               {fields.text && (
                 <p className="field-error" id="message-error">
                   {fields.text}
                 </p>
               )}
-              {data.categories.length > 0 && <fieldset className="category-fieldset suggested-topics">
+              {!isReply && data.categories.length > 0 && <fieldset className="category-fieldset suggested-topics">
                 <legend className="sr-only">مثال‌های پیشنهادی برای شروع</legend>
                 {!!data.category_groups?.length && <ExampleFilters groups={data.category_groups} value={activeGroup} onChange={setExampleGroup} />}
                 <div className="category-grid" id="message-categories">
@@ -540,7 +554,7 @@ export function Composer({ onExit, replyToken, onReplyUnavailable }: {
               </> : <>
                 <div className="review-placeholder" role="note">
                   <Icon name="chat" size={24} />
-                  <p>{isReply ? "متن پاسخ با لحن انتخابی بررسی می‌شه. قبل از ارسال، متن نهایی رو می‌بینی." : alternatives.length > 0 ? "یکی از پیشنهادهای بالا را انتخاب کن تا پیش‌نمایش کامل آن را ببینی." : freeformRewrite ? "شماره رو وارد کن تا متن نهایی آماده بشه. قبل از ارسال، متن کامل پیامک رو می‌بینی." : "شماره رو وارد کن تا متن نهایی آماده بشه. هر ارسال یک اعتبار مصرف می‌کنه."}</p>
+                  <p>{alternatives.length > 0 ? "یکی از پیشنهادهای بالا را انتخاب کن تا پیش‌نمایش کامل آن را ببینی." : freeformRewrite ? "شماره رو وارد کن تا متن نهایی آماده بشه. قبل از ارسال، متن کامل پیامک رو می‌بینی." : "شماره رو وارد کن تا متن نهایی آماده بشه. هر ارسال یک اعتبار مصرف می‌کنه."}</p>
                 </div>
                 {data?.authenticated && renderActions(
                   <BusyButton type="submit" className="button primary composer-next" busy={busy} disabled={!data?.authenticated || (alternatives.length > 0 && !selectedAlternative)}>

@@ -88,13 +88,20 @@ class MessageExample(models.Model):
         return self.label
 
 
+class BotPlatform(models.TextChoices):
+    TELEGRAM = "telegram", "Telegram"
+    BALE = "bale", "Bale"
+    RUBIKA = "rubika", "Rubika"
+
+
 class Account(models.Model):
     class SignupSource(models.TextChoices):
         UNKNOWN = "unknown", "نامشخص"
         WEB = "web", "وب"
         API = "api", "API"
-        TELEGRAM = "telegram", "تلگرام"
-        BALE = "bale", "بله"
+        TELEGRAM = BotPlatform.TELEGRAM.value, "تلگرام"
+        BALE = BotPlatform.BALE.value, "بله"
+        RUBIKA = BotPlatform.RUBIKA.value, "روبیکا"
 
     signup_source = models.CharField(max_length=8, choices=SignupSource, default=SignupSource.UNKNOWN,
         db_default=SignupSource.UNKNOWN, editable=False)
@@ -145,9 +152,9 @@ class OTPChallenge(models.Model):
 
 
 class BotIntegration(models.Model):
-    """A trusted server-side adapter; never a Telegram/Bale vendor token."""
+    """A trusted server-side messenger adapter."""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    platform = models.CharField(max_length=12, choices=[('telegram', 'Telegram'), ('bale', 'Bale')])
+    platform = models.CharField(max_length=12, choices=BotPlatform)
     bot_id = models.CharField(max_length=32)
     secret_digest = models.CharField(max_length=64, editable=False)
     active = models.BooleanField(default=True)

@@ -125,14 +125,18 @@ class ManagementMonitoringTests(TestCase):
         self.account(midnight, signup_source='telegram')
         self.account(midnight - timedelta(seconds=1), signup_source='telegram')
         self.account(NOW - timedelta(seconds=1), signup_source='bale')
+        self.account(midnight - timedelta(seconds=1), signup_source='rubika')
+        self.account(midnight, signup_source='rubika')
         self.account(NOW - timedelta(seconds=1), signup_source='api')
         self.account(NOW, signup_source='api')
         self.account(midnight, signup_source='web')
         self.account(START)
         activity = self.get_data()['account_activity']
         self.assertEqual(
-            {key: activity[key] for key in ('bots_today', 'api_today', 'telegram_total', 'bale_total', 'unknown_sources')},
-            {'bots_today': 2, 'api_today': 1, 'telegram_total': 2, 'bale_total': 1, 'unknown_sources': 1},
+            {key: activity.get(key) for key in ('bots_today', 'api_today', 'telegram_total', 'bale_total',
+                                                'rubika_total', 'telegram_today', 'bale_today', 'rubika_today', 'unknown_sources')},
+            {'bots_today': 3, 'api_today': 1, 'telegram_total': 2, 'bale_total': 1, 'rubika_total': 2,
+             'telegram_today': 1, 'bale_today': 1, 'rubika_today': 1, 'unknown_sources': 1},
         )
 
     @override_settings(DEMO_MODE=False)

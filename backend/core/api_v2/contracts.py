@@ -6,6 +6,7 @@ from functools import wraps
 from django.http import JsonResponse
 
 from core.input_digits import ascii_digits
+from core.models import BotPlatform
 from core.privacy import MAX_PHONE_INPUT_LENGTH
 from core.services import APIError, api, error_response, is_product_authenticated, limited
 from core.views import body
@@ -101,8 +102,8 @@ SCHEMAS = {
                          'debug_code': string(description='Isolated demo tests only; never returned by the real OTP provider.')},
                         ['challenge_id', 'expires_in', 'demo_mode']),
     'LoginInput': obj({'challenge_id': UUID, 'code': string(pattern='^[0-9]{4}$', description='Keep leading zeroes; Persian/Arabic digits are canonicalized.'),
-                       'signup_source': string(enum=['telegram', 'bale'],
-                           description='Optional adapter declaration. Requires a matching X-Bot-Key; recorded only when OTP creates an account.')},
+                       'signup_source': string(enum=['', *BotPlatform.values], default='',
+                           description='Leave empty for the usual login flow. A platform requires a matching X-Bot-Key and is recorded on account creation.')},
                       ['challenge_id', 'code'], closed=True),
     'RecipientValidation': obj({'valid': BOOL, 'phone': string(pattern='^09[0-9]{9}$'), 'phone_masked': string()},
                                ['valid', 'phone', 'phone_masked']),
@@ -218,7 +219,7 @@ SCHEMAS.update({
         'preview_id': UUID, 'message_id': UUID, 'idempotency_key': UUID, 'challenge_id': UUID,
         'last_message_id': BOT_ID, 'last_notified_status': STATUS}, [], closed=True),
     'BotIdentityInput': obj({'user_id': BOT_ID, 'chat_id': BOT_ID, 'chat_type': string(enum=['private'])}, closed=True),
-    'BotConversation': obj({'id': UUID, 'platform': string(enum=['telegram', 'bale']), 'bot_id': BOT_ID,
+    'BotConversation': obj({'id': UUID, 'platform': string(enum=BotPlatform.values), 'bot_id': BOT_ID,
         'user_id': BOT_ID, 'chat_id': BOT_ID, 'account_id': string(nullable=True), 'step': BOT_STEP,
         'resume_action': string(enum=['authenticate', 'enter_otp', 'continue', 'refresh_preview', 'reconcile_message']),
         'data': ref('BotFlowData'), 'revision': integer(minimum=0), 'state_expires_at': NULL_DATE}),

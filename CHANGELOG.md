@@ -9,6 +9,21 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.37.0 — 2026-11-10 — Anonymous replies and messenger registration cards (local)
+
+- Show the tone picker for anonymous replies when several tones are active.
+  A single active tone is applied automatically. The reply form opens as a
+  free-text editor and starts review when the user selects Next.
+- Accept `rubika` alongside `telegram` and `bale` as a signup source. An
+  empty or omitted field follows the regular login flow. A declared platform
+  requires its matching adapter key.
+- Show today's and lifetime registrations separately for each messenger in
+  monitoring, and include Rubika in the bot totals.
+
+Validation passed 750 PostgreSQL tests, 120 frontend tests and TypeScript.
+Browser checks at 375px and 1440px covered reply preview and retry, sending,
+history, preferences and all three registration cards.
+
 ## 0.36.0 — 2026-11-10 — Trusted bot signup source (local)
 
 - Let Telegram and Bale workflows using ordinary API cookies declare

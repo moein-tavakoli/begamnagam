@@ -14,6 +14,7 @@ export type MonitoringData = {
   totals:{accounts_today:number;accounts_total:number;accounts_new:number;requests:number;delivered:number;support_unanswered:number;blacklist_total:number};
   account_activity?:{
     bots_today:number;api_today:number;telegram_total:number;bale_total:number;unknown_sources:number;
+    rubika_total?:number;telegram_today?:number;bale_today?:number;rubika_today?:number;
     without_successful_send:number;sent_three_gifts:number;sent_three_gifts_without_package:number;
   };
   hourly:{at:string;accounts:number;requests:number}[];

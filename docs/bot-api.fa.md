@@ -45,7 +45,8 @@ Swagger به فرم ورود هدایت می‌شود. تمام assetها و ر�
 اتصال زندهٔ تلگرام/بله جدا از انتشار API است. شواهد فعلی سرور در
 [انتشار۰٫۱۹٫۰](https://github.com/moein-tavakoli/begamnagam/releases/tag/v0.19.0) ثبت شده‌اند.
 
-برای گردش موجود n8n با کوکی و CSRF، راهنمای تأیید OTP نحوهٔ افزودن
-`signup_source` به `POST /api/v2/auth/sessions` را توضیح می‌دهد. مقدار
-`telegram` یا `bale` باید با کلید خصوصی همان ربات در `X-Bot-Key` یکی باشد.
-این فیلد فقط مبدأ حساب تازه را تعیین می‌کند.
+برای گردش n8n با کوکی و CSRF، `POST /api/v2/auth/sessions` فیلد اختیاری
+`signup_source` را می‌پذیرد. مقدار پیش‌فرض `""` است و هر یک از
+`telegram`، `bale` و `rubika` به کلید خصوصی همان ربات در `X-Bot-Key` نیاز دارد.
+مبدأ هنگام ساخت حساب تازه ثبت می‌شود.
+[راهنمای تأیید OTP](../backend/core/api_v2/integration/guide.fa.md)

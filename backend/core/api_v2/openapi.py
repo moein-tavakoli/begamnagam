@@ -28,7 +28,7 @@ def specification():
             if not spec['bot']:
                 bot_key_use = 'Required only when using a bot-owned session.'
                 if spec['identifier'] == 'createSession':
-                    bot_key_use = 'Required for bot-owned sessions or when declaring signup_source. The declared platform must match.'
+                    bot_key_use = 'Required for bot-owned sessions or a non-empty signup_source. The declared platform must match.'
                 parameters.append({'name': 'X-Bot-Key', 'in': 'header', 'required': False,
                                    'schema': {'type': 'string'},
                                    'description': bot_key_use + ' Server-side adapter secret; ordinary web sessions omit it.'})
@@ -65,7 +65,7 @@ def specification():
                 value['requestBody'] = {'required': True, 'content': {'application/json': {'schema': ref(spec['request'])}}}
             paths[path][method] = value
     return {'openapi': '3.0.3', 'info': {'title': 'BegamNagam integration API', 'version': '2.1.0',
-            'description': 'REST API for the frontend, Telegram and Bale adapters. One verified phone account and isolated cookie jar per messenger user. '
+            'description': 'REST API for the frontend and messenger adapters. One verified phone account and isolated cookie jar per messenger user. '
                            'All mutations require CSRF. No messenger id, contact, admin session or API documentation permission replaces phone verification. '
                            'Trusted bot adapters can persist/resume isolated sessions and encrypted conversation stages. '
                            'Every request using a bot-owned session additionally requires its X-Bot-Key. '

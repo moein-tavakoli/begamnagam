@@ -48,6 +48,11 @@ import { managementExplanation } from '@/lib/management';
 import { monitoringIntervals, monitoringInterval, monitoringNumber as number, monitoringPercent, monitoringTime, monitoringDuration, monitoringAlertValue, monitoringMetricSeverity, startMonitoringPoll, type MonitoringData, type MonitoringMetricSeverity } from '@/lib/monitoring';
 
 const settingsKey='management-monitoring-interval';
+const signupChannels = [
+  { id: 'telegram', label: 'تلگرام' },
+  { id: 'bale', label: 'بله' },
+  { id: 'rubika', label: 'روبیکا' },
+] as const;
 const compactDesktopQuery='(min-width:1200px) and (max-height:900px)';
 const compactDesktop=`@media ${compactDesktopQuery}`;
 const axisText={fontFamily:'\"Vazirmatn FD\", \"Vazirmatn\", Tahoma, sans-serif',fontSize:12};
@@ -296,8 +301,8 @@ export function ManagementMonitoring({onFailure}:{onFailure:(error:unknown)=>voi
           <Metric title="ثبت‌نام امروز از ربات و API" value={number(activity.bots_today + activity.api_today)}
             detail={`ربات ${number(activity.bots_today)} · API مستقیم ${number(activity.api_today)}`}
             icon={<PersonAddAltOutlined/>}/>
-          <Metric title="کل ثبت‌نام با مبدأ ربات" value={number(activity.telegram_total + activity.bale_total)}
-            detail={`تلگرام ${number(activity.telegram_total)} · بله ${number(activity.bale_total)}`}
+          <Metric title="کل ثبت‌نام با مبدأ ربات" value={number(activity.telegram_total + activity.bale_total + (activity.rubika_total ?? 0))}
+            detail="تلگرام، بله و روبیکا"
             icon={<SmartToyOutlined/>}/>
           <Metric title="ثبت‌نام بدون ارسال موفق" value={monitoringPercent(activity.without_successful_send,data.totals.accounts_total)}
             detail={`${number(activity.without_successful_send)} از ${number(data.totals.accounts_total)} حساب محصول`}
@@ -306,6 +311,13 @@ export function ManagementMonitoring({onFailure}:{onFailure:(error:unknown)=>voi
             value={monitoringPercent(activity.sent_three_gifts_without_package,activity.sent_three_gifts)}
             detail={`${number(activity.sent_three_gifts_without_package)} از ${number(activity.sent_three_gifts)} حساب با دست‌کم ۳ ارسال هدیه`}
             icon={<RedeemOutlined/>}/>
+        </Box>
+        <Box component="section" aria-label="ثبت‌نام به تفکیک پیام‌رسان"
+          sx={{display:'grid',gridTemplateColumns:{xs:'1fr',sm:'repeat(3,minmax(0,1fr))'},gap:1.5}}>
+          {signupChannels.map(({id,label}) => <Metric key={id} title={`ثبت‌نام از ${label}`}
+            value={number(activity[`${id}_total`] ?? null)}
+            detail={`کل ثبت‌نام · امروز ${number(activity[`${id}_today`] ?? null)}`}
+            icon={<PersonAddAltOutlined/>}/>)}
         </Box>
         {activity.unknown_sources > 0 && <Typography variant="caption" color="text.secondary">
           مبدأ ثبت‌نام {number(activity.unknown_sources)} حساب ثبت نشده است.

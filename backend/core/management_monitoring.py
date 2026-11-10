@@ -32,6 +32,9 @@ def _partition(rows, field):
 def _account_metrics(now, today_start):
     source = m.Account.SignupSource
     today = Q(created_at__gte=today_start, created_at__lt=now)
+    telegram = Q(signup_source=source.TELEGRAM)
+    bale = Q(signup_source=source.BALE)
+    rubika = Q(signup_source=source.RUBIKA)
     environment = credit_environment()
     # Preserve recorded acceptance while reconciliation is inconclusive.
     sent_status = Q(status=m.Order.Status.DELIVERED_DEMO) if settings.DEMO_MODE else (
@@ -48,10 +51,14 @@ def _account_metrics(now, today_start):
     counts = m.Account.objects.aggregate(
         accounts_today=Count('pk', filter=today),
         accounts_total=Count('pk'),
-        bots_today=Count('pk', filter=today & Q(signup_source__in=(source.TELEGRAM, source.BALE))),
+        bots_today=Count('pk', filter=today & (telegram | bale | rubika)),
         api_today=Count('pk', filter=today & Q(signup_source=source.API)),
-        telegram_total=Count('pk', filter=Q(signup_source=source.TELEGRAM)),
-        bale_total=Count('pk', filter=Q(signup_source=source.BALE)),
+        telegram_total=Count('pk', filter=telegram),
+        bale_total=Count('pk', filter=bale),
+        rubika_total=Count('pk', filter=rubika),
+        telegram_today=Count('pk', filter=today & telegram),
+        bale_today=Count('pk', filter=today & bale),
+        rubika_today=Count('pk', filter=today & rubika),
         unknown_sources=Count('pk', filter=Q(signup_source=source.UNKNOWN)),
         without_successful_send=Count('pk', filter=~Exists(sent)),
         sent_three_gifts=Count('pk', filter=sent_three_gifts),

@@ -187,15 +187,16 @@ sessionid بین ارسال و تأیید ثابت بوده است؛ مقدار 
 
 ### آماده‌سازی یک‌بارهٔ کلید اختصاصی هر ربات
 
-اپراتور در محیط خصوصی بک‌اند و پس از مهاجرت `0037`، برای هر پیام‌رسان یک
-integration می‌سازد. `bot-id` شناسهٔ عددی خود ربات در همان پیام‌رسان است،
-نه username. خروجی شامل کلید محرمانه است؛ فقط در فایل/secret store خصوصی
-adapter نگهداری شود و در لاگ CI، چت، کد فرانت یا Git قرار نگیرد:
+اپراتور در محیط خصوصی بک‌اند برای هر پیام‌رسان یک integration می‌سازد.
+در تلگرام و بله از شناسهٔ عددی ربات استفاده کنید. برای ثبت مبدأ روبیکا
+در n8n می‌توانید یک شناسهٔ عددی ثابت برای اتصال ربات در بگم نگم تعیین کنید.
+کلید خروجی را فقط در secret store خصوصی همان ربات و بیرون از Git و لاگ‌ها نگه دارید.
 
 ```sh
 umask 077
 python manage.py manage_bot_integration --platform telegram --bot-id 123456 > /private/telegram-api-key.json
 python manage.py manage_bot_integration --platform bale --bot-id 654321 > /private/bale-api-key.json
+python manage.py manage_bot_integration --platform rubika --bot-id 765432 > /private/rubika-api-key.json
 ```
 
 دایرکتوری `/private` نمونه است؛ مسیر موجود با دسترسی محدود خودتان را انتخاب کنید.
@@ -438,17 +439,18 @@ POST /api/v2/auth/sessions
 ۱. همان `sessionid` و `csrftoken` مرحلهٔ درخواست کد، `X-CSRFToken` و
 `Origin` معتبر را بفرستید. هدر `X-Bot-Key` را از Credentials ربات اضافه کنید.
 ۲. در JSON کنار `challenge_id` و `code` یک فیلد ثابت `signup_source` بگذارید:
-در ورک‌فلوی تلگرام `telegram` و در ورک‌فلوی بله `bale`. مقدار را از متن کاربر نگیرید.
+مقدار ثابت ورک‌فلو برای تلگرام `telegram`، بله `bale` و روبیکا `rubika` است.
 
 ```json
 {"challenge_id":"<uuid>","code":"0123","signup_source":"bale"}
 ```
 
-کلید نامعتبر یا غایب با فیلد مبدأ خطای `401 bot_authentication_required`
+کلید نامعتبر یا غایب با مقدار غیرخالی مبدأ خطای `401 bot_authentication_required`
 می‌دهد. اگر کلید برای پلتفرم دیگری باشد، پاسخ `403 signup_source_mismatch`
 است. این خطاها چالش OTP را مصرف نمی‌کنند. مبدأ فقط هنگام ساخت حساب تازه
-ثبت می‌شود. نشست ماندگار ربات بدون این فیلد هم مبدأ را از کلید می‌گیرد؛
-درخواست معمولی بدون فیلد به‌عنوان API مستقیم باقی می‌ماند.
+ثبت می‌شود. پیش‌فرض `signup_source` رشتهٔ خالی `""` است. با مقدار خالی یا
+حذف فیلد، نشست ماندگار ربات مبدأ را از کلید می‌گیرد و درخواست با نشست
+معمولی به‌عنوان API مستقیم ثبت می‌شود.
 
 ## گام ۳ — getMe، اعتبار و منوی اصلی
 

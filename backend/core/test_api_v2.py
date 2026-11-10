@@ -18,8 +18,7 @@ from django.utils import timezone
 from core.api_v2.contracts import SCHEMAS
 from core.api_v2.documentation import ASSETS
 from core.api_v2.openapi import specification
-from core.bot_conversations import new_credential
-from core.models import (Account, BotConversation, BotIntegration, CreditPurchase, Invitation, MessageDelivery, MessagePackage,
+from core.models import (Account, BotConversation, CreditPurchase, Invitation, MessageDelivery, MessagePackage,
                          OTPChallenge, Order, Outbox, Preview, RecipientState, SupportMessage)
 from core.privacy import digest, normalize_phone
 
@@ -81,10 +80,9 @@ class IntegrationAPITests(TestCase):
                             'consent': True, 'terms_version': preview['terms_version']}, key=key or uuid.uuid4())
 
     def bot_credential(self, platform):
-        integration = BotIntegration(platform=platform, bot_id='123456')
-        key = new_credential(integration)
-        integration.save()
-        return key
+        output = io.StringIO()
+        call_command('manage_bot_integration', '--platform', platform, '--bot-id', '123456', stdout=output)
+        return json.loads(output.getvalue())['api_key']
 
     def bot_login_payload(self, phone, source, client=None):
         issued = self.mutate('/auth/otp-challenges', {'phone': phone}, client=client)
@@ -93,7 +91,7 @@ class IntegrationAPITests(TestCase):
                 'signup_source': source}
 
     def test_direct_bot_signup_records_the_platform_without_a_managed_conversation(self):
-        for platform, phone in [('telegram', '09123456789'), ('bale', '09123456788')]:
+        for platform, phone in [('telegram', '09123456789'), ('bale', '09123456788'), ('rubika', '09123456787')]:
             with self.subTest(platform=platform):
                 client = Client(enforce_csrf_checks=True)
                 payload = self.bot_login_payload(phone, platform, client)
@@ -102,6 +100,12 @@ class IntegrationAPITests(TestCase):
                 self.assertTrue(response.json()['authenticated'])
                 self.assertEqual(Account.objects.get(phone_hash=digest(phone)).signup_source, platform)
         self.assertFalse(BotConversation.objects.exists())
+
+    def test_empty_signup_source_uses_the_regular_api_login(self):
+        payload = self.bot_login_payload('09123456789', '')
+        response = self.mutate('/auth/sessions', payload)
+        self.assertEqual(response.status_code, 201, response.content)
+        self.assertEqual(Account.objects.get().signup_source, 'api')
 
     def test_untrusted_or_mismatched_source_does_not_consume_the_otp(self):
         key = self.bot_credential('bale')

@@ -9,13 +9,19 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
-## 0.37.2 — 2026-11-10 — Optional bot key for ordinary OTP verification (local)
+## 0.37.2 — 2026-11-10 — Optional bot key for ordinary OTP verification
 
 - Allow ordinary API sessions to record the declared messenger signup source
   at OTP verification without an adapter key. Update the private Swagger
   contract and n8n guide.
 - Verified all three sources, original-session and CSRF checks, and platform
   matching for managed conversations.
+
+Deployed to all six frontend replicas. The encrypted backup restore and the
+existing database schema were verified. Isolated Compose checks completed OTP
+verification with and without a messenger token in the header. The live API
+reached OTP validation in both cases using a nonexistent challenge. Private
+Swagger accepted the existing documentation account. [Deployment evidence](docs/deployments/ct115-0.37.2.json)
 
 ## 0.37.1 — 2026-11-10 — Clear messenger registration counts (local)
 

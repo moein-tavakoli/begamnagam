@@ -103,7 +103,8 @@ SCHEMAS = {
                         ['challenge_id', 'expires_in', 'demo_mode']),
     'LoginInput': obj({'challenge_id': UUID, 'code': string(pattern='^[0-9]{4}$', description='Keep leading zeroes; Persian/Arabic digits are canonicalized.'),
                        'signup_source': string(enum=['', *BotPlatform.values], default='',
-                           description='Leave empty for the usual login flow. A platform requires a matching X-Bot-Key and is recorded on account creation.')},
+                           description='Optional source for new accounts in ordinary sessions. Empty means direct API signup. '
+                                       'Bot-owned sessions use the authenticated integration platform.')},
                       ['challenge_id', 'code'], closed=True),
     'RecipientValidation': obj({'valid': BOOL, 'phone': string(pattern='^09[0-9]{9}$'), 'phone_masked': string()},
                                ['valid', 'phone', 'phone_masked']),

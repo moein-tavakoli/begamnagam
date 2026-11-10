@@ -9,6 +9,14 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.37.2 — 2026-11-10 — Optional bot key for ordinary OTP verification (local)
+
+- Allow ordinary API sessions to record the declared messenger signup source
+  at OTP verification without an adapter key. Update the private Swagger
+  contract and n8n guide.
+- Verified all three sources, original-session and CSRF checks, and platform
+  matching for managed conversations.
+
 ## 0.37.1 — 2026-11-10 — Clear messenger registration counts (local)
 
 - Place the Telegram, Bale, and Rubika registration cards in one row above

@@ -90,12 +90,17 @@ class IntegrationAPITests(TestCase):
         return {'challenge_id': issued.json()['challenge_id'], 'code': issued.json()['debug_code'],
                 'signup_source': source}
 
-    def test_direct_bot_signup_records_the_platform_without_a_managed_conversation(self):
-        for platform, phone in [('telegram', '09123456789'), ('bale', '09123456788'), ('rubika', '09123456787')]:
-            with self.subTest(platform=platform):
+    def test_direct_bot_signup_records_the_platform_without_requiring_a_bot_key(self):
+        for platform, phone, header in [
+            ('telegram', '09123456789', None),
+            ('bale', '09123456788', None),
+            ('rubika', '09123456787', None),
+            ('telegram', '09123456786', 'messenger-token-fixture'),
+        ]:
+            with self.subTest(platform=platform, has_bot_key=header is not None):
                 client = Client(enforce_csrf_checks=True)
                 payload = self.bot_login_payload(phone, platform, client)
-                response = self.mutate('/auth/sessions', payload, client=client, bot_key=self.bot_credential(platform))
+                response = self.mutate('/auth/sessions', payload, client=client, bot_key=header)
                 self.assertEqual(response.status_code, 201, response.content)
                 self.assertTrue(response.json()['authenticated'])
                 self.assertEqual(Account.objects.get(phone_hash=digest(phone)).signup_source, platform)
@@ -107,25 +112,17 @@ class IntegrationAPITests(TestCase):
         self.assertEqual(response.status_code, 201, response.content)
         self.assertEqual(Account.objects.get().signup_source, 'api')
 
-    def test_untrusted_or_mismatched_source_does_not_consume_the_otp(self):
-        key = self.bot_credential('bale')
+    def test_direct_signup_source_still_requires_valid_input_and_the_original_session(self):
         payload = self.bot_login_payload('09123456789', 'bale')
-        for changed, supplied, status, code in [
-            (payload, None, 401, 'bot_authentication_required'),
-            (payload, 'invalid-key', 401, 'bot_authentication_required'),
-            ({**payload, 'signup_source': 'telegram'}, key, 403, 'signup_source_mismatch'),
-            ({**payload, 'signup_source': 'web'}, key, 422, 'invalid_input'),
-        ]:
-            with self.subTest(status=status, code=code):
-                response = self.mutate('/auth/sessions', changed, bot_key=supplied)
-                self.assertEqual(response.status_code, status, response.content)
-                self.assertEqual(response.json()['error']['code'], code)
-        self.assertEqual(self.mutate('/auth/sessions', payload, bot_key=key, csrf=False).status_code, 403)
+        response = self.mutate('/auth/sessions', {**payload, 'signup_source': 'web'})
+        self.assertEqual(response.status_code, 422, response.content)
+        self.assertEqual(response.json()['error']['code'], 'invalid_input')
+        self.assertEqual(self.mutate('/auth/sessions', payload, csrf=False).status_code, 403)
         other_session = Client(enforce_csrf_checks=True)
-        self.assertEqual(self.mutate('/auth/sessions', payload, client=other_session, bot_key=key).status_code, 400)
+        self.assertEqual(self.mutate('/auth/sessions', payload, client=other_session).status_code, 400)
         self.assertIsNone(OTPChallenge.objects.get(pk=payload['challenge_id']).consumed_at)
         self.assertFalse(Account.objects.exists())
-        self.assertEqual(self.mutate('/auth/sessions', payload, bot_key=key).status_code, 201)
+        self.assertEqual(self.mutate('/auth/sessions', payload).status_code, 201)
 
     def test_direct_bot_login_preserves_existing_signup_source(self):
         user = self.login()

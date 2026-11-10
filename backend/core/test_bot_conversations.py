@@ -78,6 +78,18 @@ SETTINGS = dict(DEMO_MODE=True, OTP_BACKEND='demo', SMS_BACKEND='console', AI_MO
 
 @override_settings(**SETTINGS)
 class BotConversationTests(BotHelpers, TestCase):
+    def test_managed_signup_source_must_match_the_integration(self):
+        self.resume()
+        challenge = self.mutate('/auth/otp-challenges', {'phone': '09123456789'})
+        self.assertEqual(challenge.status_code, 201, challenge.content)
+        payload = {'challenge_id': challenge.json()['challenge_id'], 'code': challenge.json()['debug_code']}
+        rejected = self.mutate('/auth/sessions', {**payload, 'signup_source': 'bale'})
+        self.assertEqual(rejected.status_code, 403, rejected.content)
+        self.assertEqual(rejected.json()['error']['code'], 'signup_source_mismatch')
+        accepted = self.mutate('/auth/sessions', {**payload, 'signup_source': 'telegram'})
+        self.assertEqual(accepted.status_code, 201, accepted.content)
+        self.assertEqual(Account.objects.get().signup_source, 'telegram')
+
     def test_bale_signup_source_is_recorded_without_relabeling_existing_accounts(self):
         direct = Client(enforce_csrf_checks=True)
         existing = self.login(client=direct)

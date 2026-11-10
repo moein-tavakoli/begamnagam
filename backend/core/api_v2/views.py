@@ -8,6 +8,7 @@ from django.utils import timezone
 from core import invitations as invitation_service, services, views as legacy
 from core import manual_payment_views, package_views, support_views, wallet_views
 from core.ai_config import current as ai_configuration
+from core.bot_conversations import authenticate_bot
 from core.freeform import available as freeform_available
 from core.limits import policy
 from core.message_examples import public_catalog
@@ -119,6 +120,8 @@ def otp_challenges(request):
                   request='LoginInput', auth=False, status=201,
                   description='Send challenge_id from the matching OTP response and the code as a four-digit string, '
                               'using the same sessionid that requested that challenge. Valid CSRF alone does not restore a lost session. '
+                              'An adapter using ordinary cookies can optionally send signup_source (telegram or bale) '
+                              'with a matching X-Bot-Key. It is recorded only for a newly created account. '
                               'invalid_otp can mean a different session, an expired/consumed challenge, exhausted attempts or an incorrect code. '
                               'On success merge Set-Cookie and replace csrf_token before the next request. Do not automatically replay login. '
                               'Verified product login lasts a fixed 30 days from successful OTP verification, including browser restarts; reads/writes do not renew it. '
@@ -127,6 +130,12 @@ def otp_challenges(request):
 def sessions(request):
     conversation = getattr(request, 'bot_conversation', None)
     source = conversation.integration.platform if conversation else Account.SignupSource.API
+    declared = request.api_data.get('signup_source')
+    if declared is not None:
+        integration = authenticate_bot(request)
+        if integration.platform != declared:
+            raise APIError('signup_source_mismatch', 'مبدأ ثبت‌نام باید با پلتفرم کلید ربات یکی باشد.', 403)
+        source = integration.platform
     result = delegate(request, legacy.verify_otp, signup_source=source)
     return session_data(request) if isinstance(result, dict) else result
 

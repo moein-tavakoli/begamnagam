@@ -26,9 +26,12 @@ def specification():
                                    'description': 'Store a UUID per explicit user action. Reuse it with the exact same input on network retries.'})
             unsafe = method not in {'get', 'head', 'options'}
             if not spec['bot']:
+                bot_key_use = 'Required only when using a bot-owned session.'
+                if spec['identifier'] == 'createSession':
+                    bot_key_use = 'Required for bot-owned sessions or when declaring signup_source. The declared platform must match.'
                 parameters.append({'name': 'X-Bot-Key', 'in': 'header', 'required': False,
                                    'schema': {'type': 'string'},
-                                   'description': 'Required only when using a bot-owned session. Server-side adapter secret; ordinary web sessions omit it.'})
+                                   'description': bot_key_use + ' Server-side adapter secret; ordinary web sessions omit it.'})
             if unsafe:
                 parameters.append({'name': 'X-CSRFToken', 'in': 'header', 'required': True,
                                    'schema': {'type': 'string'}, 'description': 'Current session.csrf_token; refresh after login/logout.'})

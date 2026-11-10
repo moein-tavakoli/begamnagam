@@ -9,6 +9,18 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.36.0 — 2026-11-10 — Trusted bot signup source (local)
+
+- Let Telegram and Bale workflows using ordinary API cookies declare
+  `signup_source` when verifying OTP. Require the matching platform's
+  `X-Bot-Key` and record the source only on first account creation.
+- Document the optional field and credential in private Swagger and the n8n
+  guide. Existing OTP, session and managed bot flows remain compatible.
+
+Passed 749 PostgreSQL tests, including both platforms, invalid credentials,
+CSRF, challenge ownership and preserving the source on subsequent logins.
+The 120 frontend tests and TypeScript check also passed.
+
 ## 0.35.0 — 2026-11-10 — Monitoring signup and activity counts
 
 - Show four cards below the main monitoring metrics for today's bot and

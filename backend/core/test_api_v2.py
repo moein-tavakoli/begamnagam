@@ -18,7 +18,8 @@ from django.utils import timezone
 from core.api_v2.contracts import SCHEMAS
 from core.api_v2.documentation import ASSETS
 from core.api_v2.openapi import specification
-from core.models import (Account, CreditPurchase, Invitation, MessageDelivery, MessagePackage,
+from core.bot_conversations import new_credential
+from core.models import (Account, BotConversation, BotIntegration, CreditPurchase, Invitation, MessageDelivery, MessagePackage,
                          OTPChallenge, Order, Outbox, Preview, RecipientState, SupportMessage)
 from core.privacy import digest, normalize_phone
 
@@ -39,13 +40,15 @@ class IntegrationAPITests(TestCase):
         self.tokens[id(client)] = response.json()['csrf_token']
         return response.json()
 
-    def mutate(self, path, data=None, *, method='POST', client=None, key=None, csrf=True):
+    def mutate(self, path, data=None, *, method='POST', client=None, key=None, bot_key=None, csrf=True):
         client = client or self.client
         if id(client) not in self.tokens:
             self.session(client)
         headers = {'HTTP_X_CSRFTOKEN': self.tokens[id(client)]} if csrf else {}
         if key is not None:
             headers['HTTP_IDEMPOTENCY_KEY'] = str(key)
+        if bot_key is not None:
+            headers['HTTP_X_BOT_KEY'] = bot_key
         response = client.generic(method, '/api/v2' + path, data=json.dumps({} if data is None else data),
                                   content_type='application/json', **headers)
         if response.status_code < 400 and isinstance(response.json(), dict) and 'csrf_token' in response.json():
@@ -76,6 +79,57 @@ class IntegrationAPITests(TestCase):
         preview = preview or self.make_preview(phone)
         return self.mutate('/messages', {'preview_id': preview['preview_id'], 'recipient_phone': phone,
                             'consent': True, 'terms_version': preview['terms_version']}, key=key or uuid.uuid4())
+
+    def bot_credential(self, platform):
+        integration = BotIntegration(platform=platform, bot_id='123456')
+        key = new_credential(integration)
+        integration.save()
+        return key
+
+    def bot_login_payload(self, phone, source, client=None):
+        issued = self.mutate('/auth/otp-challenges', {'phone': phone}, client=client)
+        self.assertEqual(issued.status_code, 201, issued.content)
+        return {'challenge_id': issued.json()['challenge_id'], 'code': issued.json()['debug_code'],
+                'signup_source': source}
+
+    def test_direct_bot_signup_records_the_platform_without_a_managed_conversation(self):
+        for platform, phone in [('telegram', '09123456789'), ('bale', '09123456788')]:
+            with self.subTest(platform=platform):
+                client = Client(enforce_csrf_checks=True)
+                payload = self.bot_login_payload(phone, platform, client)
+                response = self.mutate('/auth/sessions', payload, client=client, bot_key=self.bot_credential(platform))
+                self.assertEqual(response.status_code, 201, response.content)
+                self.assertTrue(response.json()['authenticated'])
+                self.assertEqual(Account.objects.get(phone_hash=digest(phone)).signup_source, platform)
+        self.assertFalse(BotConversation.objects.exists())
+
+    def test_untrusted_or_mismatched_source_does_not_consume_the_otp(self):
+        key = self.bot_credential('bale')
+        payload = self.bot_login_payload('09123456789', 'bale')
+        for changed, supplied, status, code in [
+            (payload, None, 401, 'bot_authentication_required'),
+            (payload, 'invalid-key', 401, 'bot_authentication_required'),
+            ({**payload, 'signup_source': 'telegram'}, key, 403, 'signup_source_mismatch'),
+            ({**payload, 'signup_source': 'web'}, key, 422, 'invalid_input'),
+        ]:
+            with self.subTest(status=status, code=code):
+                response = self.mutate('/auth/sessions', changed, bot_key=supplied)
+                self.assertEqual(response.status_code, status, response.content)
+                self.assertEqual(response.json()['error']['code'], code)
+        self.assertEqual(self.mutate('/auth/sessions', payload, bot_key=key, csrf=False).status_code, 403)
+        other_session = Client(enforce_csrf_checks=True)
+        self.assertEqual(self.mutate('/auth/sessions', payload, client=other_session, bot_key=key).status_code, 400)
+        self.assertIsNone(OTPChallenge.objects.get(pk=payload['challenge_id']).consumed_at)
+        self.assertFalse(Account.objects.exists())
+        self.assertEqual(self.mutate('/auth/sessions', payload, bot_key=key).status_code, 201)
+
+    def test_direct_bot_login_preserves_existing_signup_source(self):
+        user = self.login()
+        client = Client(enforce_csrf_checks=True)
+        payload = self.bot_login_payload('09123456789', 'telegram', client)
+        response = self.mutate('/auth/sessions', payload, client=client, bot_key=self.bot_credential('telegram'))
+        self.assertEqual(response.status_code, 201, response.content)
+        self.assertEqual(Account.objects.get(user=user).signup_source, 'api')
 
     def test_bootstrap_anonymous_and_verified_credit_summary(self):
         response = self.client.get('/api/v2/bootstrap')

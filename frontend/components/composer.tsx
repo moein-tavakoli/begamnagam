@@ -68,7 +68,7 @@ export function Composer({ onExit, replyToken, onReplyUnavailable }: {
   const defaultTone = toneOptions.find(item => item.id === data?.default_message_tone)?.id
     ?? toneOptions[0]?.id ?? data?.default_message_tone ?? 'firm';
   const [chosenTone, setMessageTone] = useState<MessageTone>(defaultTone);
-  const messageTone = toneOptions.some(item => item.id === chosenTone) ? chosenTone : defaultTone;
+  const messageTone = isReply && toneOptions.some(item => item.id === chosenTone) ? chosenTone : defaultTone;
   const [preview, setPreview] = useState<Preview | null>(null);
   const step = isReply ? (preview ? 1 : 0) : draftStep;
   const activeStep = Math.min(step, stepLabels.length - 1);
@@ -431,7 +431,7 @@ export function Composer({ onExit, replyToken, onReplyUnavailable }: {
                   {new Intl.NumberFormat("fa-IR").format(text.length)} / ۲۸۰
                 </span>
               </div>
-              {(!isReply || toneOptions.length > 1) && <MessageTonePicker options={toneOptions} value={messageTone} disabled={busy || !!order} onChange={tone => {
+              {isReply && toneOptions.length > 1 && <MessageTonePicker options={toneOptions} value={messageTone} disabled={busy || !!order} onChange={tone => {
                 setMessageTone(tone); setPreview(null); setConsent(false); setFields({}); setError(''); idempotencyKey.current = '';
               }} />}
               {fields.text && (

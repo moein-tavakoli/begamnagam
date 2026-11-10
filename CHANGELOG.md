@@ -9,6 +9,11 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.37.3 — 2026-11-10 — Use the default tone for ordinary messages (local)
+
+- Hide the tone picker for ordinary messages and prepare drafts with the configured default tone.
+- Verified the draft and preview at 375px and 1440px, including single- and multi-tone anonymous replies.
+
 ## 0.37.2 — 2026-11-10 — Optional bot key for ordinary OTP verification
 
 - Allow ordinary API sessions to record the declared messenger signup source

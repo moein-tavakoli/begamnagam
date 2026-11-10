@@ -9,7 +9,7 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
-## 0.37.0 — 2026-11-10 — Anonymous replies and messenger registration cards (local)
+## 0.37.0 — 2026-11-10 — Anonymous replies and messenger registration cards
 
 - Show the tone picker for anonymous replies when several tones are active.
   A single active tone is applied automatically. The reply form opens as a
@@ -23,6 +23,14 @@ Historical release reports below contain deployment evidence and limitations.
 Validation passed 750 PostgreSQL tests, 120 frontend tests and TypeScript.
 Browser checks at 375px and 1440px covered reply preview and retry, sending,
 history, preferences and all three registration cards.
+
+Deployed to all six frontend replicas. Migration `0048` preserved existing
+fields on the restored backup and applied on the server. The production
+monitoring endpoint returned the three messenger counts under the existing access rules.
+The deployed reply and monitoring bundles were verified on each replica.
+The isolated Compose smoke test used the same release artifacts. Private
+Swagger access and the signup source contract were verified over the internal HTTPS route.
+[Deployment evidence](docs/deployments/ct115-0.37.0.json)
 
 ## 0.36.0 — 2026-11-10 — Trusted bot signup source (local)
 

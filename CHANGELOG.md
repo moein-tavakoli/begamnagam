@@ -9,10 +9,16 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
-## 0.37.4 — 2026-11-10 — Combine the monitoring activity rows (local)
+## 0.37.4 — 2026-11-10 — Combine the monitoring activity rows
 
 - Show all seven messenger and account activity cards in one row. The row scrolls horizontally on narrow screens.
 - Verified card alignment, values and keyboard scrolling from 320px to 1440px.
+
+Deployed to all six frontend replicas, including the ordinary composer change
+from 0.37.3. Browser checks on the production build verified the seven-card
+row at desktop and mobile widths and ordinary previews using the default
+tone. The server passed health, backup restore and private Swagger checks.
+[Deployment evidence](docs/deployments/ct115-0.37.4.json)
 
 ## 0.37.3 — 2026-11-10 — Use the default tone for ordinary messages (local)
 

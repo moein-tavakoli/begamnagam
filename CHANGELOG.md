@@ -9,6 +9,11 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.37.4 — 2026-11-10 — Combine the monitoring activity rows (local)
+
+- Show all seven messenger and account activity cards in one row. The row scrolls horizontally on narrow screens.
+- Verified card alignment, values and keyboard scrolling from 320px to 1440px.
+
 ## 0.37.3 — 2026-11-10 — Use the default tone for ordinary messages (local)
 
 - Hide the tone picker for ordinary messages and prepare drafts with the configured default tone.

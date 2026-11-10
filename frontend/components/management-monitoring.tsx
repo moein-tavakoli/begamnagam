@@ -296,39 +296,39 @@ export function ManagementMonitoring({onFailure}:{onFailure:(error:unknown)=>voi
         <Metric title="نتیجهٔ نامعلوم" value={number(Number(data.operations.payment_unknown||0)+Number(data.operations.delivery_unknown||0))} detail="پرداخت و تحویل · اکنون" icon={<RuleOutlined/>} severity={Number(data.operations.payment_unknown||0)+Number(data.operations.delivery_unknown||0)>0?'warning':undefined}/>
         <Metric title="پشتیبانی بی‌پاسخ" value={number(data.totals.support_unanswered)} detail="گفت‌وگوهای منتظر پاسخ" icon={<SupportAgentOutlined/>} severity={monitoringMetricSeverity('support_unanswered',data.totals.support_unanswered)}/>
       </Box>
-      {activity && <Stack component="section" spacing={1.5} aria-label="ثبت‌نام و فعالیت کاربران">
-        <Stack component="section" spacing={1} aria-labelledby="messenger-signups">
-          <Typography id="messenger-signups" component="h2" variant="subtitle1" sx={{fontWeight:700}}>
-            ثبت‌نام به تفکیک پیام‌رسان
-          </Typography>
-          <Box sx={{display:'grid',gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:{xs:.75,sm:1.5}}}>
-            {signupChannels.map(({id,label}) => (
-              <Card key={id} component="article" aria-labelledby={`messenger-signups-${id}`}
-                sx={{...panelSurface,p:{xs:1,sm:1.5},minWidth:0}}>
-                <Typography id={`messenger-signups-${id}`} component="h3" variant="subtitle2"
-                  color="primary.main" sx={{fontWeight:700}}>
-                  {label}
-                </Typography>
-                <Box component="dl" sx={{
-                  display:'grid',gridTemplateColumns:{xs:'1fr',sm:'repeat(2,minmax(0,1fr))'},gap:1,m:0,mt:1,
-                }}>
-                  {[
-                    {name:'امروز',value:activity[`${id}_today`]},
-                    {name:'کل ثبت‌نام',value:activity[`${id}_total`]},
-                  ].map(({name,value}) => (
-                    <Box key={name} sx={{minWidth:0}}>
-                      <Typography component="dt" variant="caption" color="text.secondary">{name}</Typography>
-                      <Typography component="dd" variant="h6" sx={{m:0,fontWeight:700,lineHeight:1.2,overflowWrap:'anywhere'}}>
-                        {number(value ?? null)}
-                      </Typography>
-                    </Box>
-                  ))}
-                </Box>
-              </Card>
-            ))}
-          </Box>
-        </Stack>
-        <Box sx={{display:'grid',gridTemplateColumns:{xs:'repeat(2,minmax(0,1fr))',md:'repeat(4,minmax(0,1fr))'},gap:1.5}}>
+      {activity && <Stack component="section" spacing={1} aria-labelledby="monitoring-activity-title">
+        <Typography id="monitoring-activity-title" component="h2" variant="subtitle1" sx={{fontWeight:700}}>
+          ثبت‌نام و فعالیت کاربران
+        </Typography>
+        <Box role="group" aria-label="کارت‌های ثبت‌نام و فعالیت کاربران" tabIndex={0} sx={{
+          display:'grid',gridAutoFlow:'column',gridAutoColumns:'minmax(9rem,1fr)',
+          gap:{xs:1,sm:1.5},minWidth:0,overflowX:'auto',pb:.5,
+          '&:focus-visible':{outline:'2px solid var(--focus)',outlineOffset:2},
+        }}>
+          {signupChannels.map(({id,label}) => (
+            <Card key={id} component="article" aria-labelledby={`messenger-signups-${id}`}
+              sx={{...panelSurface,p:{xs:1,sm:1.5},minWidth:0}}>
+              <Typography id={`messenger-signups-${id}`} component="h3" variant="subtitle2"
+                color="primary.main" sx={{fontWeight:700}}>
+                {label}
+              </Typography>
+              <Box component="dl" sx={{
+                display:'grid',gridTemplateColumns:{xs:'1fr',sm:'repeat(2,minmax(0,1fr))'},gap:1,m:0,mt:1,
+              }}>
+                {[
+                  {name:'امروز',value:activity[`${id}_today`]},
+                  {name:'کل ثبت‌نام',value:activity[`${id}_total`]},
+                ].map(({name,value}) => (
+                  <Box key={name} sx={{minWidth:0}}>
+                    <Typography component="dt" variant="caption" color="text.secondary">{name}</Typography>
+                    <Typography component="dd" variant="h6" sx={{m:0,fontWeight:700,lineHeight:1.2,overflowWrap:'anywhere'}}>
+                      {number(value ?? null)}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            </Card>
+          ))}
           <Metric title="ثبت‌نام امروز از ربات و API" value={number(activity.bots_today + activity.api_today)}
             detail={`ربات ${number(activity.bots_today)} · API مستقیم ${number(activity.api_today)}`}
             icon={<PersonAddAltOutlined/>}/>

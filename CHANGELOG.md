@@ -9,7 +9,7 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
-## 1.0.0 — 2026-11-11 — Shorter recipient links and direct message review (local)
+## 1.0.0 — 2026-11-11 — Shorter recipient links and direct message review
 
 - Issue five-character codes for new stop and reply links. The dedicated SMS
   host can redirect a root path directly into the private recipient page.
@@ -23,6 +23,12 @@ Historical release reports below contain deployment evidence and limitations.
   insertion and preserve combined emoji in SMS templates.
 - Verified 770 PostgreSQL tests, 121 frontend tests, TypeScript, migration
   consistency, isolated HTTPS redirects and desktop/mobile browser flows.
+
+Deployed to the application server with six verified frontend replicas. Applied
+the SMS template migration after an encrypted backup restore rehearsal and
+verified the existing private Swagger access. Fresh five-character links use
+`bgam.ir/r/`. Root-path links await updated routing on the central Nginx.
+[Deployment evidence](docs/deployments/ct115-1.0.0.json)
 
 ## 0.42.0 — 2026-11-11 — Free SMS template layout (local)
 

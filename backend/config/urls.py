@@ -81,6 +81,7 @@ urlpatterns = [
     path("api/v1/auth/logout", views.logout_view),
     path("api/v1/messages/preview", views.preview),
     path("api/v1/messages", views.messages),
+    path("api/v1/messages/<uuid:order_id>", views.hide_message),
     path("api/v1/orders", views.create_order),
     path("api/v1/orders/<uuid:order_id>/pay-demo", views.pay_demo),
     path("api/v1/orders/<uuid:order_id>/confirm-free", views.confirm_free),

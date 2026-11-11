@@ -285,6 +285,7 @@ class Order(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="orders")
+    owner_hidden_at = models.DateTimeField(null=True, blank=True, editable=False)
     preview = models.OneToOneField(Preview, on_delete=models.PROTECT)
     idempotency_key = models.UUIDField()
     recipient_hash = models.CharField(max_length=64, db_index=True)

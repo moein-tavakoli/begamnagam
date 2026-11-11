@@ -407,7 +407,12 @@ def order_detail(request, order_id):
 
 @api(["GET"], authenticated=True)
 def messages(request):
-    return {"results": [services.serialize_order(order) for order in Order.objects.filter(owner=request.user).order_by("-created_at")[:100]]}
+    return {"results": [services.serialize_order(order) for order in services.visible_orders(request.user).order_by("-created_at")[:100]]}
+
+
+@api(["DELETE"], authenticated=True)
+def hide_message(request, order_id):
+    return services.hide_owned_order(request.user, order_id)
 
 
 @api(["GET", "POST"], authenticated=True)

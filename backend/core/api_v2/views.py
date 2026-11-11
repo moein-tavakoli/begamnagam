@@ -12,7 +12,7 @@ from core.freeform import available as freeform_available
 from core.limits import policy
 from core.message_examples import public_catalog
 from core.message_tones import choices as tone_choices, resolve as resolve_tone
-from core.models import Account, CreditEntry, Invitation, InvitationSend, MessagePackage, Order, Preview, WalletEntry, WalletTopup
+from core.models import Account, CreditEntry, Invitation, InvitationSend, MessagePackage, Preview, WalletEntry, WalletTopup
 from core.otp import OTP_LENGTH
 from core.packages import balance_field, checkout_enabled, credit_environment, credit_required, package_data, purchase_data
 from core.payment_options import options as payment_options
@@ -207,9 +207,10 @@ def previews(request):
 
 
 @resource(get=op('getMessagePreview', 'Messages', 'Retrieve your unexpired sealed preview', 'Preview',
-                 description='Reads the stored snapshot without another AI call. Expired previews require a new review and consent.'))
+                 description='Reads the stored snapshot without another AI call. Expired previews require a new review and consent. '
+                             'A preview linked to a message removed by its owner returns 404.'))
 def preview(request, preview_id):
-    item = Preview.objects.filter(owner=request.user, pk=preview_id).first()
+    item = Preview.objects.filter(owner=request.user, pk=preview_id, order__owner_hidden_at__isnull=True).first()
     if not item:
         raise APIError('not_found', 'پیش‌نمایش پیدا نشد.', 404)
     if item.expires_at <= timezone.now():
@@ -218,7 +219,7 @@ def preview(request, preview_id):
 
 
 @resource(get=op('listMessages', 'Messages', 'List the current account’s message history', 'MessagePage',
-                 query={**PAGE_QUERY, 'status': STATUS}),
+                 query={**PAGE_QUERY, 'status': STATUS}, description='Messages removed by the owner are excluded.'),
           post=op('createMessage', 'Messages', 'Reserve one credit for a reviewed message', 'Message', request='MessageInput', key=True,
                   description='Does not send yet. Store the returned id, then PUT its submission resource. '
                               'Omit recipient_phone for anonymous replies. Their receipts leave both recipient fields empty. '
@@ -226,15 +227,20 @@ def preview(request, preview_id):
 def messages(request):
     if request.method == 'POST':
         return delegate(request, legacy.create_order)
-    rows = Order.objects.filter(owner=request.user)
+    rows = services.visible_orders(request.user)
     status = request.api_query.get('status')
     if status:
         rows = rows.filter(status=status)
     return paginate(request, rows, services.serialize_order, 'messages:' + (status or '*'), serialize_many=services.serialize_orders)
 
 
-@resource(get=op('getMessage', 'Messages', 'Get receipt and delivery status', 'Message'))
+@resource(get=op('getMessage', 'Messages', 'Get receipt and delivery status', 'Message',
+                 description='A message removed by its owner returns 404.'),
+          delete=op('hideMessage', 'Messages', 'Remove a message from your history', 'OK', request='Empty',
+                    description='Only the owner can remove it. Repeating the request succeeds. Delivery, credits and staff history are preserved.'))
 def message(request, message_id):
+    if request.method == 'DELETE':
+        return delegate(request, legacy.hide_message, order_id=message_id)
     return services.serialize_order(services.get_owned_order(request.user, message_id))
 
 

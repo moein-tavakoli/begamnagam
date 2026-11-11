@@ -459,6 +459,65 @@ class IntegrationAPITests(TestCase):
         self.assertEqual(other.get(f'/api/v2/messages/{first["id"]}').status_code, 404)
         self.assertEqual(self.mutate(f'/messages/{first["id"]}/submission', method='PUT', client=other).status_code, 404)
 
+    def test_hide_message_persists_across_sessions_and_preserves_queued_delivery(self):
+        owner = self.login()
+        preview = self.make_preview()
+        key = uuid.uuid4()
+        message = self.reserve(preview, key=key).json()
+        identifier = message['id']
+        with self.captureOnCommitCallbacks(execute=False):
+            submitted = self.mutate(f'/messages/{identifier}/submission', method='PUT')
+        self.assertEqual(submitted.status_code, 200, submitted.content)
+        order = Order.objects.get(pk=identifier)
+        event = Outbox.objects.get(order=order)
+        credits = Account.objects.get(user=owner).free_sends_remaining
+        self.assertEqual([item['id'] for item in self.client.get('/api/v1/messages').json()['results']], [identifier])
+
+        response = self.client.delete(f'/api/v1/messages/{identifier}', HTTP_X_CSRFTOKEN=self.tokens[id(self.client)])
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json(), {'ok': True})
+        self.assertEqual(response['Cache-Control'], 'no-store')
+        fresh = Client()
+        fresh.force_login(owner)
+        for path in ('/api/v1/messages', '/api/v2/messages?limit=1'):
+            self.assertEqual(fresh.get(path).json()['results'], [])
+        for path in (f'/api/v1/orders/{identifier}', f'/api/v2/messages/{identifier}',
+                     f'/api/v2/message-previews/{preview["preview_id"]}'):
+            self.assertEqual(fresh.get(path).status_code, 404)
+
+        hidden = Order.objects.get(pk=identifier)
+        hidden_at = hidden.owner_hidden_at
+        self.assertIsNotNone(hidden_at)
+        self.assertEqual(self.mutate(f'/messages/{identifier}', method='DELETE').json(), {'ok': True})
+        hidden.refresh_from_db()
+        self.assertEqual(hidden.owner_hidden_at, hidden_at)
+        self.assertEqual((hidden.status, hidden.updated_at, hidden.full_sms), (order.status, order.updated_at, order.full_sms))
+        self.assertEqual(Outbox.objects.get(order=order).state, event.state)
+        self.assertEqual(Account.objects.get(user=owner).free_sends_remaining, credits)
+        self.assertTrue(Preview.objects.filter(pk=preview['preview_id']).exists())
+
+        repeated = self.reserve(preview, key=key).json()
+        self.assertEqual((repeated['id'], repeated['text'], repeated['recipient_phone']), (identifier, '', ''))
+        staff = Client()
+        staff.force_login(get_user_model().objects.create_superuser('message-history-admin'))
+        reviewed = staff.post(f'/api/v1/manage/orders/{identifier}/texts', {}, content_type='application/json')
+        self.assertEqual(reviewed.status_code, 200, reviewed.content)
+        self.assertTrue(reviewed.json()['final_text'])
+
+    def test_delete_message_requires_verified_owner_and_csrf(self):
+        self.login()
+        identifier = self.reserve().json()['id']
+        other = Client(enforce_csrf_checks=True)
+        self.login('09123456788', other)
+        for prefix in ('/api/v1', '/api/v2'):
+            with self.subTest(prefix=prefix):
+                path = f'{prefix}/messages/{identifier}'
+                self.assertEqual(Client().delete(path).status_code, 401)
+                self.assertEqual(self.client.delete(path).status_code, 403)
+                self.assertEqual(other.delete(path, data='{}', content_type='application/json',
+                                              HTTP_X_CSRFTOKEN=self.tokens[id(other)]).status_code, 404)
+        self.assertEqual(self.client.get(f'/api/v2/messages/{identifier}').status_code, 200)
+
     def test_freeform_fails_closed_when_disabled(self):
         self.login()
         result = self.mutate('/message-previews', {'recipient_phone': '09901234567', 'source_mode': 'freeform', 'text': 'متن دلخواه محترمانه'})

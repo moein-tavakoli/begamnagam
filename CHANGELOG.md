@@ -9,6 +9,15 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.39.0 — 2026-11-11 — Remove messages from personal history (local)
+
+- Add a Delete button to each entry in My Messages. After confirmation, the
+  entry disappears from the owner's site and API history across sessions.
+- Preserve the server record, staff access, delivery and credits. Add the
+  owner-only DELETE operation to the private Swagger contract.
+- Verified with 756 PostgreSQL tests, 120 frontend tests, TypeScript checks
+  and isolated browser checks at 375px and 1440px.
+
 ## 0.38.0 — 2026-11-11 — Change the SMS sender in management (local)
 
 - Allow staff to choose an authorized Kavenegar line in SMS settings. Clearing

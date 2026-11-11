@@ -95,11 +95,23 @@ def recipient_unavailable():
     return APIError("recipient_unavailable", RECIPIENT_LIMIT, 409)
 
 
+def visible_orders(user):
+    return Order.objects.filter(owner=user, owner_hidden_at__isnull=True)
+
+
 def get_owned_order(user, order_id):
     try:
-        return Order.objects.get(id=order_id, owner=user)
+        return visible_orders(user).get(pk=order_id)
     except Order.DoesNotExist:
         raise APIError("not_found", "درخواست پیدا نشد.", 404)
+
+
+def hide_owned_order(user, order_id):
+    orders = Order.objects.filter(pk=order_id, owner=user)
+    changed = orders.filter(owner_hidden_at__isnull=True).update(owner_hidden_at=timezone.now())
+    if not changed and not orders.exists():
+        raise APIError("not_found", "درخواست پیدا نشد.", 404)
+    return {"ok": True}
 
 
 def serialize_order(order, *, related=None):
@@ -121,14 +133,16 @@ def serialize_order(order, *, related=None):
         refunded = bool(payment and payment.pk in related['refunded_payments'])
     from .status_reasons import order_status_reason
     is_reply = order.reply_depth > 0
+    visible = order.owner_hidden_at is None
+    show_recipient = visible and not is_reply
     return {"financial_status": ('wallet_returned' if wallet_returned else 'wallet_paid' if order.paid_at else 'unpaid') if order.payment_method == 'wallet' else ("credit_returned" if order.purchased_credit_released_at else "credit_reserved") if order.uses_purchased_credit else ("free_credit_returned" if order.free_credit_released_at else "free") if order.is_free else 'wallet_returned' if payment and payment.return_to_wallet and refunded else "refunded" if payment and refunded else "refund_pending" if open_refund else payment.status if payment else "legacy_demo_paid" if order.paid_at else "unpaid",
         "payment_method": order.payment_method,
         "uses_purchased_credit": order.uses_purchased_credit,
         "status_reason": order_status_reason(order, delivery, event),
         "delivery_status": delivery.status if delivery else "not_ready","id": str(order.id), "status": order.status, "amount_toman": order.amount_toman,
-        "payment_mode": order.payment_mode, "recipient_masked": '' if is_reply else order.recipient_masked, "is_free": order.is_free,
-        "recipient_phone": decrypt(order.recipient_cipher) if order.recipient_cipher and not is_reply else '',
-        "is_reply": is_reply, "text": sender_sms(order.full_sms or order.text, is_reply=is_reply),
+        "payment_mode": order.payment_mode, "recipient_masked": order.recipient_masked if show_recipient else '', "is_free": order.is_free,
+        "recipient_phone": decrypt(order.recipient_cipher) if show_recipient and order.recipient_cipher else '',
+        "is_reply": is_reply, "text": sender_sms(order.full_sms or order.text, is_reply=is_reply) if visible else '',
         "category": order.category, "paid_at": order.paid_at.isoformat() if order.paid_at else None,
         "created_at": order.created_at.isoformat(), "payment_expires_at": (order.created_at + PAYMENT_WINDOW).isoformat()}
 

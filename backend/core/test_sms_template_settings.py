@@ -11,7 +11,7 @@ from .providers.kavenegar import SMSResult
 
 
 PATH = '/api/v1/manage/sms-template'
-TEMPLATE = '{{intro}}\n{{message}}\n{{opt_out}}'
+TEMPLATE = '{{intro}}\n{{message}}\n{{reply}}\n{{opt_out}}'
 VARIABLES = [{'name': 'intro', 'value': 'درود از بگم نگم'}]
 
 
@@ -69,23 +69,86 @@ class SMSTemplateSettingsTests(TestCase):
         result = save_template(secured, HTTP_X_CSRFTOKEN=secured.cookies['csrftoken'].value)
         self.assertEqual(result.status_code, 200, result.content)
 
-    def test_unsafe_or_unusable_templates_are_rejected_without_saving(self):
+    def test_free_layout_preserves_text_and_expands_three_custom_values_once(self):
+        template = '  {{reply}}\r\n{{intro}} «{{ message }}»\n{{opt_out}} — {{site_url}}\n{{message}} / {{signature}}\n{{note}}  '
+        variables = [
+            {'name': 'intro', 'value': 'درود\nمتن شما'},
+            {'name': 'signature', 'value': 'پشتیبانی ۰۲۱۱۲۳۴۵۶۷۸'},
+            {'name': 'note', 'value': ' {{reply}} '},
+        ]
+        with override_settings(SMS_LINK_HOST='bgam.ir'):
+            response = save_template(self.client, template=template, variables=variables)
+            self.assertEqual(response.status_code, 200, response.content)
+            result = response.json()
+            self.assertEqual(self.client.get(PATH).json(), result)
+        self.assertEqual(result['template'], template.replace('\r\n', '\n').replace('{{ message }}', '{{message}}'))
+        self.assertNotIn('{{site_url}}', result['default_template'])
+        sample = result['preview']
+        self.assertIn('  پاسخ: bgam.ir/r/pSample-X\nدرود\nمتن شما «', sample['full_sms'])
+        self.assertIn('لغو: bgam.ir/r/Sample-X — https://begamnagam.ir\n', sample['full_sms'])
+        self.assertTrue(sample['full_sms'].endswith(' / پشتیبانی 02112345678\n {{reply}}   '))
+        self.assertEqual(sample['full_sms'].count('از اینکه با مهربانی کنارم بودی، ممنونم.'), 2)
+        overhead = sample['sms_units'] - 2 * len('از اینکه با مهربانی کنارم بودی، ممنونم.')
+        self.assertEqual(sample['body_units'], max(0, (201 - overhead) // 2))
+
+    def test_optional_slots_and_multiline_values_save_with_stop_link(self):
+        response = save_template(self.client, template='{{footer}}\n{{empty}}پایان',
+                                 variables=[{'name': 'footer', 'value': 'سطر اول\nسطر دوم'}, {'name': 'empty', 'value': ''}])
+        self.assertEqual(response.status_code, 200, response.content)
+        sample = response.json()['preview']
+        self.assertEqual(sample['full_sms'], 'سطر اول\nسطر دوم\nپایان\nلغو: begamnagam.ir/r/Sample-X')
+        self.assertFalse(sample['has_message'])
+        self.assertFalse(sample['has_opt_out'])
+
+    def test_links_remain_usable_when_the_following_text_has_no_space(self):
+        response = save_template(self.client, template='{{reply}}{{opt_out}}{{empty}}پایان',
+                                 variables=[{'name': 'empty', 'value': ''}])
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json()['preview']['full_sms'],
+                         'پاسخ: begamnagam.ir/r/pSample-X لغو: begamnagam.ir/r/Sample-X پایان')
+
+    def test_existing_settings_keep_reply_position_and_can_then_remove_reply(self):
+        old_template = TEMPLATE.replace('{{reply}}\n', '')
+        row = m.SMSTemplateSettings.objects.create(template=old_template, variables=VARIABLES, revision=1)
+        settings = self.client.get(PATH).json()
+        self.assertEqual(settings['template'], TEMPLATE)
+        self.assertIn('\nپاسخ: begamnagam.ir/r/pSample-X\nلغو:', settings['preview']['full_sms'])
+        row.refresh_from_db()
+        self.assertEqual(row.template, old_template)
+        saved = save_template(self.client, template=old_template, revision=1)
+        self.assertEqual(saved.status_code, 200, saved.content)
+        self.assertEqual(saved.json(), self.client.get(PATH).json())
+        self.assertNotIn('پاسخ:', saved.json()['preview']['full_sms'])
+
+    def test_existing_custom_variables_that_match_new_system_names_keep_their_values(self):
+        old_template = '{{reply}} {{site_url}} {{reply_custom}}\n{{message}}\n{{opt_out}}'
+        variables = [
+            {'name': 'reply', 'value': 'تیتر قدیمی'},
+            {'name': 'site_url', 'value': 'توضیح سایت'},
+            {'name': 'reply_custom', 'value': 'امضای قدیمی'},
+        ]
+        row = m.SMSTemplateSettings.objects.create(template=old_template, variables=variables, revision=1)
+        response = self.client.get(PATH)
+        self.assertEqual(response.status_code, 200, response.content)
+        result = response.json()
+        self.assertTrue(result['preview']['full_sms'].startswith('تیتر قدیمی توضیح سایت امضای قدیمی\n'))
+        self.assertIn('\nپاسخ: begamnagam.ir/r/pSample-X\nلغو:', result['preview']['full_sms'])
+        self.assertTrue(result['template'].startswith('{{reply_custom_2}} {{site_url_custom}} {{reply_custom}}\n'))
+        row.refresh_from_db()
+        self.assertEqual(row.template, old_template)
+        saved = save_template(self.client, template=result['template'], variables=result['variables'], revision=1)
+        self.assertEqual(saved.status_code, 200, saved.content)
+        self.assertEqual(saved.json()['preview'], result['preview'])
+
+    def test_invalid_placeholder_and_variable_definitions_are_rejected_without_saving(self):
         cases = [
-            ('{{message}}', []),
-            ('{{message}}\n{{opt_out}}\nپایان', []),
-            ('متن {{message}}\n{{opt_out}}', []),
-            ('{{message}}\n{{message}}\n{{opt_out}}', []),
-            ('{{message}}\n{{opt_out}} {{opt_out}}', []),
             ('{{user.phone}}\n{{message}}\n{{opt_out}}', []),
             ('{{unknown}}\n{{message}}\n{{opt_out}}', []),
             (TEMPLATE, [{'name': 'message', 'value': 'سلام'}]),
+            (TEMPLATE, [{'name': 'reply', 'value': 'سلام'}]),
+            (TEMPLATE, [{'name': 'site_url', 'value': 'سلام'}]),
             (TEMPLATE, VARIABLES * 2),
-            (TEMPLATE, [{'name': 'intro', 'value': 'تماس با ۰۹۱۲۳۴۵۶۷۸۹'}]),
-            (TEMPLATE, [{'name': 'intro', 'value': 'example.org'}]),
-            (TEMPLATE, [{'name': 'intro', 'value': 'example.test'}]),
-            (TEMPLATE, [{'name': 'intro', 'value': 'tel:1234'}]),
-            (TEMPLATE, [{'name': 'intro', 'value': 'سلام\u2028از بگم نگم'}]),
-            (TEMPLATE, [{'name': 'intro', 'value': '{{opt_out}}'}]),
+            (TEMPLATE, [{'name': 'intro', 'value': 123}]),
             ('\u202eپیام\n{{message}}\n{{opt_out}}', []),
         ]
         for template, variables in cases:
@@ -96,14 +159,14 @@ class SMSTemplateSettingsTests(TestCase):
         self.assertFalse(m.OperatorAudit.objects.filter(action='update_sms_template').exists())
 
     def test_long_template_warns_and_saves(self):
-        template = 'نکته‌ای کوتاه و دوستانه برای شما ' * 24 + '\n{{message}}\n{{opt_out}}'
+        template = 'نکته‌ای کوتاه و دوستانه برای شما ' * 24 + '\n{{message}}\n{{reply}}\n{{opt_out}}'
         response = save_template(self.client, template=template, variables=[])
         self.assertEqual(response.status_code, 200, response.content)
         preview = response.json()['preview']
         self.assertTrue(preview['length_warning'])
         self.assertGreater(preview['sms_segments'], 3)
         self.assertIn('پاسخ:', preview['full_sms'])
-        self.assertEqual(m.SMSTemplateSettings.objects.get().template, template.replace(' \n', '\n'))
+        self.assertEqual(m.SMSTemplateSettings.objects.get().template, template)
 
     def test_save_normalizes_digits_and_conflicts_preserve_last_saved_template(self):
         localized = [{'name': 'intro', 'value': 'پیام شمارهٔ ۱۲'}]

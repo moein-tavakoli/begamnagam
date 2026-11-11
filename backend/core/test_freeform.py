@@ -76,7 +76,7 @@ class FreeformTests(TestCase):
         with patch('core.gapgpt.rewrite_message', side_effect=review):
             result = self.quote()
         self.assertEqual(result.status_code, 200, result.content)
-        self.assertTrue(result.json()['full_sms'].startswith(intro.strip() + '\n' + BODY + '\n'))
+        self.assertTrue(result.json()['full_sms'].startswith(intro + '\n' + BODY + '\n'))
         self.assertGreater(result.json()['sms_segments'], 3)
         validate_preview(Preview.objects.get(pk=result.json()['preview_id']))
 

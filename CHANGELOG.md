@@ -9,6 +9,16 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.42.0 — 2026-11-11 — Free SMS template layout (local)
+
+- Place or repeat the reviewed message and recipient links anywhere in the SMS
+  template. Add optional reply and main site address variables and allow
+  multiline custom values. Keep a working opt-out link if the slot is omitted.
+- Preserve the rendering of existing templates and the content of sealed
+  messages. Keep recipient link tokens out of anonymous reply previews and history.
+- Verified 762 PostgreSQL tests, 120 frontend tests, TypeScript checks,
+  migration consistency and the template editor at 375px and 1440px.
+
 ## 0.41.0 — 2026-11-11 — Archive old unknown sends from management
 
 - Add an archive action in the send queue for operations staff. Show the queue

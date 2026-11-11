@@ -195,6 +195,8 @@ class AnonymousReplyTests(TestCase):
         LIVE_PROVIDERS_ENABLED=True, PROVIDER_ENVIRONMENT='live', SMS_RECIPIENT_POLICY='all',
         SMS_MAX_COST_RIAL=20000, PROVIDER_DAILY_BUDGET_RIAL=100000, SENDING_WINDOW_ENABLED=False)
     def test_live_adapter_uses_the_sealed_reply_and_hidden_destination(self):
+        from django.contrib.auth import get_user_model
+
         from .provider_delivery import submit_delivery
         from .providers.kavenegar import SMSResult
 
@@ -205,9 +207,19 @@ class AnonymousReplyTests(TestCase):
             order = self.reserve(self.client, original, recipient_phone=self.second_phone).json()
             self.assertEqual(self.post(f'/orders/{order["id"]}/confirm-free').status_code, 200)
             submit_delivery(Outbox.objects.get(order_id=order['id']).pk)
+            editor = Client()
+            editor.force_login(get_user_model().objects.create_superuser('sms-editor'))
+            saved = editor.put('/api/v1/manage/sms-template', {
+                'template': 'متن شما «{{message}}» · {{opt_out}} سپس {{reply}}\nسپاس از همراهی {{reply}}',
+                'variables': [], 'revision': 0,
+            }, content_type='application/json')
+            self.assertEqual(saved.status_code, 200, saved.content)
             with override_settings(SMS_LINK_HOST='bgam.ir'):
                 reply = self.preview(self.other, reply_token=self.reply_token(original)).json()
+            self.assertNotIn('/r/', reply['full_sms'])
+            self.assertIn('لینک لغو دریافت سپس لینک پاسخ\nسپاس از همراهی لینک پاسخ', reply['full_sms'])
             reserved = self.reserve(self.other, reply).json()
+            self.assertEqual(reserved['text'], reply['full_sms'])
             self.assertEqual(self.post(f'/orders/{reserved["id"]}/confirm-free', {}, self.other).status_code, 200)
             event = Outbox.objects.get(order_id=reserved['id'])
             submit_delivery(event.pk)
@@ -216,5 +228,6 @@ class AnonymousReplyTests(TestCase):
         actual = wire.call_args.kwargs
         self.assertEqual(actual['phone'], self.first_phone)
         self.assertEqual(actual['text'], Preview.objects.get(pk=reply['preview_id']).full_sms)
-        self.assertRegex(actual['text'], r'پاسخ: bgam\.ir/r/p[A-Za-z0-9]{8}\nلغو: bgam\.ir/r/[A-Za-z0-9]{8}$')
+        self.assertRegex(actual['text'], r'لغو: bgam\.ir/r/[A-Za-z0-9]{8} سپس پاسخ: bgam\.ir/r/p[A-Za-z0-9]{8}')
+        self.assertEqual(actual['text'].count('پاسخ: bgam.ir/r/p'), 2)
         self.assertNotIn(self.second_phone, actual['text'])

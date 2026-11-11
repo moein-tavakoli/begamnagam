@@ -22,6 +22,7 @@ class SMSTemplateSettings(models.Model):
     id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
     template = models.TextField()
     variables = models.JSONField(default=list)
+    legacy_reply_footer = models.BooleanField(default=True, db_default=True, editable=False)
     sender = models.CharField(max_length=20, blank=True, default='', db_default='')
     revision = models.PositiveIntegerField(default=0, editable=False)
     updated_at = models.DateTimeField(auto_now=True)

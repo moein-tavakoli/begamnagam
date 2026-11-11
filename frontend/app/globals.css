@@ -81,7 +81,7 @@ fieldset { border: 0; padding: 0; margin: 0 0 23px; min-width: 0; }
 legend,label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 8px; }
 .category-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 9px; }
 .suggested-topics { margin-top: 16px; }
-.final-message>p, .history-message>p:first-of-type { white-space: pre-line; }
+.final-message>p, .history-message>p:first-of-type { white-space: pre-wrap; }
 .delivery-reason { display: flex; align-items: flex-start; gap: 9px; padding: 14px; margin-block: 14px; border: 1px solid var(--line); border-radius: 16px; background: var(--pale); text-align: right; font-size: 13px; line-height: 1.9; overflow-wrap: anywhere; }
 .delivery-reason svg { flex-shrink: 0; margin-top: 3px; }
 .delivery-reason p { margin: 0; font-size: inherit; }

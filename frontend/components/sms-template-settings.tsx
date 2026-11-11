@@ -28,7 +28,15 @@ import { managementNumber as number } from '@/lib/management';
 type Variable = { name: string; value: string };
 type Draft = { template: string; variables: Variable[]; sender: string };
 export type SmsTemplateDraftMemory = { draft: Draft; revision: number } | null;
-type Preview = { full_sms: string; sms_units: number; sms_segments: number; body_units: number; length_warning: boolean };
+type Preview = {
+  full_sms: string;
+  sms_units: number;
+  sms_segments: number;
+  body_units: number;
+  has_message: boolean;
+  has_opt_out: boolean;
+  length_warning: boolean;
+};
 type Settings = Draft & {
   revision: number;
   preview: Preview;
@@ -40,9 +48,11 @@ type Settings = Draft & {
 const path = '/manage/sms-template';
 const variableName = '[a-z][a-z0-9_]{0,23}';
 const validName = new RegExp(`^${variableName}$`);
-const requiredSlots = [
-  { token: '{{message}}', label: 'متن تأییدشدهٔ پیام', hint: 'یک بار در یک خط جدا' },
-  { token: '{{opt_out}}', label: 'لینک لغو دریافت', hint: 'یک بار در آخرین خط؛ لینک پاسخ در نوبت‌های مجاز درست قبل از آن می‌آید' },
+const systemSlots = [
+  { name: 'message', label: 'متن پیام' },
+  { name: 'reply', label: 'لینک پاسخ' },
+  { name: 'opt_out', label: 'لینک لغو' },
+  { name: 'site_url', label: 'آدرس سایت' },
 ];
 
 function draftFrom({ template, variables, sender = '' }: Draft): Draft {
@@ -190,16 +200,19 @@ export function SmsTemplateSettings({ onFailure, memory }: {
               helperText={fieldErrors?.sender || 'شمارهٔ خط مجاز کاوه‌نگار را وارد کنید. کادر خالی از خط پیش‌فرض سرور استفاده می‌کند.'}
               slotProps={{ inputLabel: { shrink: true }, htmlInput: { dir: 'ltr', inputMode: 'numeric', autoComplete: 'off' } }}/>
             <TextField id="sms-template-text" inputRef={templateInput} label="متن قالب" multiline minRows={5} fullWidth required
-              value={draft.template} disabled={disabled} onChange={event => edit({ ...draft, template: event.target.value })}
+              value={draft.template} disabled={disabled} onChange={event => edit({ ...draft, template: latinInputDigits(event.target.value) })}
               error={!!fieldErrors?.template}
-              helperText={fieldErrors?.template || 'متن ثابت و متغیرها را به ترتیبی که در پیامک دیده می‌شوند وارد کنید.'}
+              helperText={fieldErrors?.template || 'متن و متغیرها را در هر جای قالب بنویسید. روی متغیر بزنید تا در محل نشانگر درج شود.'}
               slotProps={{ htmlInput: { spellCheck: false, dir: 'rtl' } }}/>
-            <Stack spacing={.75}>
-              {requiredSlots.map(slot => <Stack key={slot.token} direction="row" useFlexGap sx={{ gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-                <Chip size="small" color="primary" variant="outlined" label={<Box component="code" dir="ltr">{slot.token}</Box>}/>
-                <Typography variant="body2">{slot.label}</Typography>
-                <Typography variant="caption" color="text.secondary">{slot.hint}</Typography>
-              </Stack>)}
+            <Stack spacing={1}>
+              <Stack direction="row" useFlexGap sx={{ gap: 1, flexWrap: 'wrap' }}>
+                {systemSlots.map(slot => <Chip key={slot.name} color="primary" variant="outlined" disabled={disabled}
+                  aria-label={'درج ' + slot.label} onClick={() => insertVariable(slot.name)}
+                  label={<Stack direction="row" spacing={.75} sx={{ alignItems: 'center' }}>
+                    <span>{slot.label}</span><Box component="code" dir="ltr">{'{{' + slot.name + '}}'}</Box>
+                  </Stack>}/>)}
+              </Stack>
+              <Typography variant="caption" color="text.secondary">لینک پاسخ در نوبت‌های مجاز درج می‌شود. آدرس اصلی سایت را در صورت نیاز به قالب اضافه کنید.</Typography>
             </Stack>
             <Divider/>
             <Stack direction="row" useFlexGap sx={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
@@ -209,7 +222,7 @@ export function SmsTemplateSettings({ onFailure, memory }: {
               <Button type="button" variant="outlined" startIcon={<AddRounded/>} disabled={disabled || draft.variables.length >= settings.max_variables}
                 onClick={() => edit({ ...draft, variables: [...draft.variables, { name: '', value: '' }] })}>افزودن متغیر</Button>
             </Stack>
-            <Typography variant="body2" color="text.secondary">برای متن‌های ثابت مثل تیتر، یک نام انگلیسی و مقدار وارد کنید. «درج» متغیر را به محل نشانگر در قالب اضافه می‌کند.</Typography>
+            <Typography variant="body2" color="text.secondary">برای متن ثابت دلخواه، مثل امضا یا توضیح، یک نام انگلیسی و مقدار وارد کنید.</Typography>
             {fieldErrors?.variables && <Alert severity="error">{fieldErrors.variables}</Alert>}
             {draft.variables.map((variable, index) => <Box key={index} sx={{ p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1 }}>
               <Grid container spacing={1.25} sx={{ alignItems: 'center' }}>
@@ -219,8 +232,8 @@ export function SmsTemplateSettings({ onFailure, memory }: {
                     slotProps={{ htmlInput: { dir: 'ltr', autoComplete: 'off', maxLength: 24, pattern: variableName, spellCheck: false } }}/>
                 </Grid>
                 <Grid size={{ xs: 12, sm: 8 }}>
-                  <TextField id={`sms-variable-value-${index}`} label="مقدار ثابت" fullWidth required disabled={disabled} value={variable.value}
-                    onChange={event => updateVariable(index, 'value', event.target.value)}/>
+                  <TextField id={`sms-variable-value-${index}`} label="مقدار ثابت" fullWidth multiline minRows={2} disabled={disabled} value={variable.value}
+                    onChange={event => updateVariable(index, 'value', latinInputDigits(event.target.value))}/>
                 </Grid>
               </Grid>
               <Stack direction="row" spacing={.5} sx={{ mt: .5, alignItems: 'center', justifyContent: 'flex-end' }}>
@@ -253,8 +266,13 @@ export function SmsTemplateSettings({ onFailure, memory }: {
               <Chip size="small" color="primary" label={`${number(preview.sms_segments)} بخش پیامک`}/>
               <Chip size="small" variant="outlined" label={`${number(preview.sms_units)} واحد در نمونه`}/>
             </Stack>
-            {preview.length_warning && <Alert severity="warning" variant="outlined">فضای متن برای ماندن در ۳ بخش کمتر از اندازهٔ پیشنهادی است. می‌توانید قالب را با همین طول ذخیره کنید. پیام‌های چندبخشی ممکن است هزینهٔ بیشتری برای سرویس داشته باشند.</Alert>}
-            <Typography variant="caption" color="text.secondary">برای ماندن در ۳ بخش، حدود {number(preview.body_units)} واحد برای متن پیام باقی می‌ماند. نشانی‌ها در این نمونه آزمایشی‌اند.</Typography>
+            {preview.has_message === false && <Alert severity="warning" variant="outlined">این قالب جای متن تأییدشدهٔ کاربر را ندارد.</Alert>}
+            {preview.has_opt_out === false && <Alert severity="info" variant="outlined">لینک لغو دریافت خودکار به پایان پیامک اضافه می‌شود.</Alert>}
+            {preview.length_warning && <Alert severity="warning" variant="outlined">این قالب ممکن است به بیش از ۳ بخش پیامک نیاز داشته باشد. می‌توانید آن را با همین طول ذخیره کنید.</Alert>}
+            <Typography variant="caption" color="text.secondary">
+              {preview.has_message !== false && <>برای ماندن در ۳ بخش، حدود {number(preview.body_units)} واحد برای متن پیام جا هست. </>}
+              لینک‌های پاسخ و لغو در این نمونه آزمایشی‌اند.
+            </Typography>
           </Stack>
         </Card>
       </Grid>}

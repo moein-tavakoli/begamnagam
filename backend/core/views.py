@@ -20,7 +20,8 @@ from .moderation import ModerationRejected, RewriteUnavailable, rewrite
 from .message_examples import public_catalog, is_current_suggestion
 from .privacy import DIGITS, decrypt, digest, encrypt, mask, normalize_phone
 from .services import APIError, api, is_product_authenticated, limited
-from .sms import compose_freeform_sms, compose_recipient_sms, MAX_REWRITE_BODY_UNITS, sender_sms, sms_origin, sms_segments
+from .sms import (MAX_REWRITE_BODY_UNITS, REPLY_SLOT, compose_freeform_sms, compose_recipient_sms,
+                  sender_sms, sms_origin, sms_segments)
 from .otp import OTP_LENGTH, valid_otp
 from .input_digits import canonical_input
 from .message_attempts import capture_preview_attempt, record_attempt
@@ -312,7 +313,7 @@ def preview(request):
         raise APIError('authentication_required' if not owner else 'recipient_required',
             'برای آماده‌سازی متن، ابتدا وارد شو و شمارهٔ گیرنده را وارد کن.', 401 if not owner else 422)
     from .sms_template_settings import current_sms_layout
-    layout = current_sms_layout()
+    layout, variables = current_sms_layout()
     origin = sms_origin()
     request._message_attempt_admitted = True
     alternative_body = None
@@ -342,12 +343,13 @@ def preview(request):
                 recipient_hash=recipient_hash, reply_to=parent, terms_version=settings.TERMS_VERSION, moderation_mode=mode,
                 expires_at=expires_at, is_free=is_free, price_toman=0)
             from .recipient import issue_grant
-            token, reply_token = issue_grant(item, recipient_hash, with_reply=with_reply)
+            token, reply_token = issue_grant(item, recipient_hash, with_reply=with_reply and REPLY_SLOT in layout)
             if use_freeform:
-                full_sms = compose_freeform_sms(rewritten, origin, token, reply_token=reply_token, layout=layout)
+                full_sms = compose_freeform_sms(rewritten, origin, token, reply_token=reply_token,
+                                               layout=layout, variables=variables)
             else:
                 item.text, full_sms = compose_recipient_sms(category, rewritten, origin, token, message_tone=tone,
-                    reply_token=reply_token, layout=layout, exact=choosing_alternative)
+                    reply_token=reply_token, layout=layout, variables=variables, exact=choosing_alternative)
             item.full_sms = full_sms
             item.review_signature = signature(item) if use_freeform else ''
             item.save(update_fields=['text', 'full_sms', 'review_signature'])

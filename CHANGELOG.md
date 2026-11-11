@@ -9,6 +9,21 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 1.0.0 — 2026-11-11 — Shorter recipient links and direct message review (local)
+
+- Issue five-character codes for new stop and reply links. The dedicated SMS
+  host can redirect a root path directly into the private recipient page.
+  Keep existing eight-character and legacy stop links usable.
+- API clients that extracted only eight characters after `/r/p` must accept
+  the new reply code format. Stop and report requests using a five-character
+  code also take the receiving mobile number. The recipient needs no account
+  or OTP to stop receiving.
+- Show the recorded recipient in staff user history and load message texts
+  on the initial click, with the existing permissions and audit. Add emoji
+  insertion and preserve combined emoji in SMS templates.
+- Verified 770 PostgreSQL tests, 121 frontend tests, TypeScript, migration
+  consistency, isolated HTTPS redirects and desktop/mobile browser flows.
+
 ## 0.42.0 — 2026-11-11 — Free SMS template layout (local)
 
 - Place or repeat the reviewed message and recipient links anywhere in the SMS

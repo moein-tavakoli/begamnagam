@@ -302,7 +302,9 @@ def preview(request):
         from .anonymous_replies import MAX_REPLIES, check_turn, counterpart_phone, parent_for_token
         parent = parent_for_token(owner, data['reply_token'])
         with_reply = check_turn(parent, owner) < MAX_REPLIES
-        recipient_hash = digest(counterpart_phone(parent, owner))
+        target_phone = counterpart_phone(parent, owner)
+        recipient_hash = digest(target_phone)
+        request._message_attempt_recipient_phone = target_phone
     elif data.get('recipient_phone'):
         if not owner:
             raise APIError('authentication_required', 'ابتدا شماره خودت را تأیید کن.', 401)
@@ -481,11 +483,15 @@ def payment_return(request):
 @api(["POST"])
 def recipient_action(request, action):
     from . import recipient
+    from .recipient_codes import is_short_code
     data = body(request)
     token = data.get('token')
     # Token is in JSON only, never request paths/query/access logs.
     limited('recipient-action-session', session_key(request), 30, 600)
-    limited('recipient-action-ip', request.META.get('REMOTE_ADDR', 'unknown'), 120, 600)
+    ip = request.META.get('REMOTE_ADDR', 'unknown')
+    limited('recipient-action-ip', ip, 120, 600)
+    if is_short_code(token):
+        limited('recipient-action-short-ip', ip, 30, 600)
     limited('recipient-action-token', digest(str(token)[:100]), 30, 600)
     if action == 'reply':
         if not is_product_authenticated(request.user):
@@ -494,8 +500,8 @@ def recipient_action(request, action):
         check_turn(parent_for_token(request.user, token), request.user)
         return {'active': True}
     if action == 'inspect': return recipient.inspect(token)
-    if action == 'stop': return recipient.stop(token)
-    if action == 'report': return recipient.report(token, data.get('reason'), data.get('details', ''))
+    if action == 'stop': return recipient.stop(token, phone=data.get('phone'))
+    if action == 'report': return recipient.report(token, data.get('reason'), data.get('details', ''), phone=data.get('phone'))
     raise APIError('not_found', 'درخواست پیدا نشد.', 404)
 
 

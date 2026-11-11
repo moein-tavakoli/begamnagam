@@ -38,6 +38,9 @@ APP_BASE_URL = os.getenv("APP_BASE_URL", "http://localhost:3000").rstrip("/")
 SMS_LINK_HOST = os.getenv("SMS_LINK_HOST", "").strip().lower()
 if SMS_LINK_HOST and web_otp_sms_host(f"https://{SMS_LINK_HOST}") != SMS_LINK_HOST:
     raise ImproperlyConfigured("SMS_LINK_HOST must be a DNS hostname without a scheme, path or port")
+SMS_LINK_ROOT_PATH = flag("SMS_LINK_ROOT_PATH")
+if SMS_LINK_ROOT_PATH and (not SMS_LINK_HOST or SMS_LINK_HOST == urlparse(APP_BASE_URL).hostname):
+    raise ImproperlyConfigured("SMS_LINK_ROOT_PATH requires a separate redirect-only SMS_LINK_HOST")
 INTERNAL_DEMO_HOST = os.getenv("INTERNAL_DEMO_HOST", "")
 PUBLIC_DEMO_HOST = os.getenv("PUBLIC_DEMO_HOST", "")
 TRUST_DOMAIN_PROXY = flag("TRUST_DOMAIN_PROXY")

@@ -28,7 +28,7 @@ def record_attempt(request, *, preview=None, error=None):
     except UnicodeEncodeError:
         return
     try:
-        phone = normalize_phone(data.get('recipient_phone', ''))
+        phone = normalize_phone(getattr(request, '_message_attempt_recipient_phone', data.get('recipient_phone', '')))
     except ValueError:
         phone = ''
     status = 'accepted' if preview else ('failed' if error.status >= 500 else 'rejected')

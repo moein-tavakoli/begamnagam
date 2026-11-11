@@ -4,6 +4,7 @@ import { test } from "node:test";
 import config from "../next.config.ts";
 import { GET as recipientRedirect, HEAD as recipientHead } from "../app/r/[code]/route.ts";
 import { helpQuestions } from "../lib/help-content.ts";
+import { replyTokenFromFragment } from "../lib/recipient-links.ts";
 import {
   getSeoConfig,
   pageJsonLd,
@@ -337,7 +338,7 @@ test("admin forms retain same-origin context for CSRF while private links omit r
 
 test("short stop and reply links redirect into the private recipient screen", async () => {
   const request = new Request('https://begamnagam.ir/r/Ab12Cd34?untrusted=ignored');
-  for (const code of ['Ab12Cd34', 'pAb12Cd34']) {
+  for (const code of ['A1b2C', 'r3PLY', 'Ab12Cd34', 'pAb12Cd34']) {
     for (const method of [recipientRedirect, recipientHead]) {
       const response = await method(request, { params: Promise.resolve({ code }) });
       assert.equal(response.status, 307);
@@ -348,7 +349,7 @@ test("short stop and reply links redirect into the private recipient screen", as
       assert.equal(await response.text(), '');
     }
   }
-  for (const code of ['abc', 'Abcd_123', 'Abcd-123', 'AB۱۲cd34', 'xAb12Cd34', 'pAb12Cd3_', 'A'.repeat(43), 'Ab12Cd34/extra']) {
+  for (const code of ['abc', 'about', 'r3PLY\n', 'Ab12Cd34\n', 'Abcd_123', 'Abcd-123', 'AB۱۲cd34', 'xAb12Cd34', 'pAb12Cd3_', 'A'.repeat(43), 'Ab12Cd34/extra']) {
     const response = await recipientRedirect(request, { params: Promise.resolve({ code }) });
     assert.equal(response.status, 404);
     assert.equal(response.headers.get('location'), null);
@@ -356,4 +357,13 @@ test("short stop and reply links redirect into the private recipient screen", as
   const headers = (await config.headers!()).filter(item => item.source === '/r/:path*').flatMap(item => item.headers);
   assert.ok(headers.some(item => item.key === 'Cache-Control' && item.value === 'no-store'));
   assert.ok(headers.some(item => item.key === 'Referrer-Policy' && item.value === 'no-referrer'));
+});
+
+test("the first character identifies new replies and the legacy p marker still works", () => {
+  assert.equal(replyTokenFromFragment('r3PLY'), 'r3PLY');
+  assert.equal(replyTokenFromFragment('5ABCD'), '5ABCD');
+  assert.equal(replyTokenFromFragment('pAb12Cd34'), 'Ab12Cd34');
+  for (const code of ['A1b2C', '4rPLY', 'reply', 'pA1', 'Ab12Cd34', 'A'.repeat(43)]) {
+    assert.equal(replyTokenFromFragment(code), null);
+  }
 });

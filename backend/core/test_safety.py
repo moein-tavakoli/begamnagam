@@ -33,7 +33,7 @@ class RecipientSafetyTests(TestCase):
             self.post('/orders/'+self.o['id']+'/pay-demo')
 
     def test_bound_quote_has_short_path_capability_and_encrypted_snapshot(self):
-        self.assertRegex(self.token, r'^[A-Za-z0-9]{8}$')
+        self.assertRegex(self.token, r'^[A-Z0-4][A-Za-z0-9]{4}$')
         self.assertNotIn('https://', self.quote['full_sms'])
         self.assertNotIn('http://', self.quote['full_sms'])
         self.assertEqual(RecipientGrant.objects.get().token_digest, digest('recipient-token:'+self.token))
@@ -59,7 +59,7 @@ class RecipientSafetyTests(TestCase):
         self.assertEqual(self.post('/recipient/actions/stop', {'token':self.token}, other).status_code, 403)
         headers = {'HTTP_X_CSRFTOKEN':other.cookies['csrftoken'].value}
         for _ in range(2):
-            r = self.post('/recipient/actions/stop', {'token':self.token}, other, **headers)
+            r = self.post('/recipient/actions/stop', {'token':self.token, 'phone':'09901234567'}, other, **headers)
             self.assertEqual(r.json(), {'blocked':True})
             self.assertEqual(r['Referrer-Policy'], 'no-referrer')
             self.assertEqual(r['Cache-Control'], 'no-store')
@@ -72,16 +72,18 @@ class RecipientSafetyTests(TestCase):
 
     def test_tampered_expired_or_unknown_grants_have_same_response(self):
         self.deliver()
-        wrong = ('x' if self.token[0]!='x' else 'y') + self.token[1:]
-        a = self.post('/recipient/actions/stop', {'token':wrong}, Client())
+        wrong = self.token[:-1] + ('7' if self.token[-1] != '7' else '8')
+        a = self.post('/recipient/actions/stop', {'token':wrong, 'phone':'09901234567'}, Client())
         RecipientGrant.objects.update(stop_expires_at=timezone.now()-timedelta(seconds=1))
-        b = self.post('/recipient/actions/stop', {'token':self.token}, Client())
+        b = self.post('/recipient/actions/stop', {'token':self.token, 'phone':'09901234567'}, Client())
         self.assertEqual(a.json(), b.json())
         self.assertEqual(a.status_code, 404)
 
     def test_report_duplicate_is_one_encrypted_case_and_stops_globally(self):
         self.deliver()
-        payload = {'token':self.token, 'reason':'harassment', 'details':'گزارش مصنوعی بدون اطلاعات واقعی'}
+        payload = {'token':self.token, 'phone':'09901234567', 'reason':'harassment', 'details':'گزارش مصنوعی بدون اطلاعات واقعی'}
+        wrong = self.post('/recipient/actions/report', {**payload, 'phone':'09901234568'}, Client())
+        self.assertEqual(wrong.status_code, 404)
         a = self.post('/recipient/actions/report', payload, Client())
         b = self.post('/recipient/actions/report', payload, Client())
         self.assertEqual(a.json(), b.json())
@@ -96,8 +98,8 @@ class RecipientSafetyTests(TestCase):
     def test_report_expiry_does_not_remove_longer_stop_right(self):
         self.deliver()
         RecipientGrant.objects.update(report_expires_at=timezone.now()-timedelta(seconds=1))
-        self.assertEqual(self.post('/recipient/actions/report', {'token':self.token,'reason':'unwanted'}, Client()).status_code,404)
-        self.assertEqual(self.post('/recipient/actions/stop', {'token':self.token}, Client()).status_code,200)
+        self.assertEqual(self.post('/recipient/actions/report', {'token':self.token,'phone':'09901234567','reason':'unwanted'}, Client()).status_code,404)
+        self.assertEqual(self.post('/recipient/actions/stop', {'token':self.token,'phone':'09901234567'}, Client()).status_code,200)
 
     def test_old_session_cannot_reenable_receipt_without_fresh_otp(self):
         self.post('/preferences', {'blocked':True})
@@ -142,7 +144,7 @@ class RecipientSafetyTests(TestCase):
 
     def test_legal_hold_is_time_limited_and_prevents_content_redaction(self):
         self.deliver()
-        self.post('/recipient/actions/report', {'token':self.token,'reason':'unwanted','details':'مصنوعی'}, Client())
+        self.post('/recipient/actions/report', {'token':self.token,'phone':'09901234567','reason':'unwanted','details':'مصنوعی'}, Client())
         AbuseReport.objects.update(hold_until=timezone.now()+timedelta(days=1))
         Order.objects.update(updated_at=timezone.now()-timedelta(days=32))
         call_command('prune_private_data', stdout=io.StringIO())

@@ -1,4 +1,4 @@
-"""Bounded, metadata-only per-user staff activity; plaintext never enters history."""
+"""Bounded per-user staff activity; message text is reviewed separately."""
 import uuid
 from django.db.models import CharField, F, OuterRef, Subquery, Value
 from django.db.models.functions import Cast
@@ -43,6 +43,15 @@ def message_records(account):
     return combined[0].union(*combined[1:], all=True).order_by('-created_at', '_kind', '_id')
 
 
+def message_recipient_phones(account, rows):
+    orders = m.Order.objects.filter(owner_id=account.user_id, pk__in=[row['id'] for row in rows if row['kind'] == 'order'])
+    attempts = m.MessageAttempt.objects.filter(owner_id=account.user_id, pk__in=[row['id'] for row in rows if row['kind'] == 'attempt'])
+    return {
+        **{('order', str(pk)): decrypt(cipher) for pk, cipher in orders.values_list('pk', 'recipient_cipher') if cipher},
+        **{('attempt', str(pk)): phone for pk, phone in attempts.values_list('pk', 'recipient_phone')},
+    }
+
+
 def invitation_records(account, page):
     latest = m.InvitationSend.objects.filter(invitation_id=OuterRef('pk')).order_by('-ordinal', '-created_at', '-pk')
     invitations = m.Invitation.objects.filter(inviter_id=account.user_id).annotate(
@@ -70,6 +79,9 @@ def activity_payload(account, section, page):
                 if row[key]:
                     row[key] = str(uuid.UUID(row[key]))
             row['record_id'] = row['id']
+        phones = message_recipient_phones(account, rows)
+        for row in rows:
+            row['recipient_phone'] = phones.get((row['kind'], row['id']), '')
     else:
         total, rows = invitation_records(account, page)
     return {'account': account_summary(account), 'section': section, 'rows': rows,

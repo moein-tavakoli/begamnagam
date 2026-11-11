@@ -35,10 +35,10 @@ class UserActivityTests(TestCase):
             original_text='private source', text='private reviewed', generated_body='private reviewed', price_toman=2000,
             moderation_mode='template', expires_at=timezone.now()+timedelta(minutes=5))
 
-    def order(self, owner=None):
+    def order(self, owner=None, recipient_phone='09999999999'):
         owner = owner or self.member
         return m.Order.objects.create(owner=owner, preview=self.preview(owner), idempotency_key=uuid.uuid4(),
-            recipient_hash=digest('09999999999'), recipient_cipher=encrypt('09999999999'), recipient_masked=mask('09999999999'),
+            recipient_hash=digest(recipient_phone), recipient_cipher=encrypt(recipient_phone), recipient_masked=mask(recipient_phone),
             text='private reviewed', category='appreciation', amount_toman=2000, status='failed')
 
     def activity(self, section='messages', page=1):
@@ -92,7 +92,7 @@ class UserActivityTests(TestCase):
     def test_message_activity_scopes_orders_and_historic_rejections_and_excludes_raw_text(self):
         self.permit('view_account', 'view_order')
         order = self.order()
-        foreign = self.order(self.other)
+        foreign = self.order(self.other, recipient_phone='09999999997')
         rejected = m.ModerationAudit.objects.create(owner=self.member, category='appreciation', outcome='rejected',
             reason_code='unsafe', content_digest='private-digest')
         m.ModerationAudit.objects.create(owner=self.other, category='appreciation', outcome='rejected', reason_code='unsafe', content_digest='other')
@@ -103,8 +103,26 @@ class UserActivityTests(TestCase):
         self.assertEqual(result['total'], 2)
         self.assertEqual({row['kind'] for row in result['rows']}, {'order', 'moderation'})
         self.assertEqual({row['id'] for row in result['rows']}, {str(order.pk), str(rejected.event_id)})
-        for secret in ('private source', 'private reviewed', 'private-digest', str(foreign.pk)):
+        self.assertEqual({row['kind']: row['recipient_phone'] for row in result['rows']},
+            {'order': '09999999999', 'moderation': ''})
+        self.assertEqual(response['Cache-Control'], 'no-store')
+        audit = m.OperatorAudit.objects.get(action='user_activity_viewed')
+        self.assertEqual(audit.after, {'section': 'messages'})
+        self.assertNotIn('09999999999', json.dumps([audit.reason, audit.before, audit.after]))
+        for secret in ('private source', 'private reviewed', 'private-digest', str(foreign.pk), '09999999997',
+                       order.recipient_cipher, order.recipient_hash, order.recipient_masked):
             self.assertNotIn(secret, response.content.decode())
+
+    def test_message_activity_leaves_a_cleared_order_recipient_unavailable(self):
+        self.permit('view_account', 'view_order')
+        order = self.order()
+        m.Order.objects.filter(pk=order.pk).update(recipient_cipher='')
+
+        response = self.activity()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['rows'][0]['recipient_phone'], '')
+        self.assertNotIn(order.recipient_masked, response.content.decode())
 
     def test_invitations_include_only_selected_user_and_recent_send_state(self):
         self.permit('view_account', 'view_invitation')
@@ -167,14 +185,15 @@ class UserActivityTests(TestCase):
         event = m.ModerationAudit.objects.create(owner=self.member, category='appreciation', outcome='rejected',
             reason_code='unsafe', content_digest='private-digest')
         rejected = m.MessageAttempt.objects.create(owner=self.member, original_text='private rejected source',
-            recipient_phone='09999999999', status='rejected', reason_code='unsafe', message_tone='firm', moderation_event_id=event.event_id)
+            recipient_phone='09999999998', status='rejected', reason_code='unsafe', message_tone='firm', moderation_event_id=event.event_id)
         m.MessageAttempt.objects.create(owner=self.member, preview=order.preview, original_text='private accepted source',
             status='accepted', reason_code='preview_accepted', message_tone='polite')
         failed = m.MessageAttempt.objects.create(owner=self.member, original_text='private failed source',
             status='failed', reason_code='ai_unavailable', message_tone='blunt')
         pending = m.MessageAttempt.objects.create(owner=self.member, preview=self.preview(), original_text='private pending source',
             status='accepted', reason_code='preview_accepted', message_tone='firm')
-        foreign = m.MessageAttempt.objects.create(owner=self.other, original_text='private foreign source', status='failed', reason_code='ai_unavailable')
+        foreign = m.MessageAttempt.objects.create(owner=self.other, original_text='private foreign source',
+            recipient_phone='09999999997', status='failed', reason_code='ai_unavailable')
         response = self.activity()
         self.assertEqual(response.status_code, 200)
         result = response.json()
@@ -182,8 +201,10 @@ class UserActivityTests(TestCase):
         self.assertEqual({row['id'] for row in result['rows']}, {str(row.pk) for row in (order, rejected, failed, pending)})
         self.assertEqual(next(row for row in result['rows'] if row['id'] == str(rejected.pk))['reason_code'], 'unsafe')
         self.assertEqual(next(row for row in result['rows'] if row['id'] == str(order.pk))['order_id'], str(order.pk))
+        self.assertEqual({row['id']: row['recipient_phone'] for row in result['rows']},
+            {str(order.pk): '09999999999', str(rejected.pk): '09999999998', str(failed.pk): '', str(pending.pk): ''})
         for secret in ('private rejected source', 'private accepted source', 'private failed source', 'private pending source',
-                       'private foreign source', str(foreign.pk), '09999999999', 'private-digest'):
+                       'private foreign source', str(foreign.pk), '09999999997', 'private-digest', 'enc:v1:'):
             self.assertNotIn(secret, response.content.decode())
 
     def test_message_pagination_covers_multiple_kinds_without_gaps(self):

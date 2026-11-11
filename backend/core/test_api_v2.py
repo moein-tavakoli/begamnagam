@@ -695,8 +695,12 @@ class IntegrationAPITests(TestCase):
         recipient = Client(enforce_csrf_checks=True)
         inspection = self.mutate('/recipient-capabilities/inspections', {'token': token}, client=recipient)
         self.assertEqual(inspection.json(), {'active': True, 'can_report': True})
-        self.assertEqual(self.mutate('/recipient-capabilities/preference', {'token': token}, method='PUT', client=recipient).json(), {'blocked': True})
-        report = self.mutate('/recipient-reports', {'token': token, 'reason': 'unwanted', 'details': 'توضیح آزمون'}, client=recipient)
+        missing = self.mutate('/recipient-capabilities/preference', {'token': token}, method='PUT', client=recipient)
+        self.assertEqual(missing.json()['error']['code'], 'recipient_confirmation_required')
+        self.assertEqual(self.mutate('/recipient-capabilities/preference', {'token': token, 'phone': '09901234567'},
+                                     method='PUT', client=recipient).json(), {'blocked': True})
+        report = self.mutate('/recipient-reports', {'token': token, 'phone': '09901234567',
+            'reason': 'unwanted', 'details': 'توضیح آزمون'}, client=recipient)
         self.assertEqual(report.status_code, 200, report.content)
         self.assertEqual(set(report.json()), {'receipt', 'blocked'})
         self.assertEqual(self.client.get('/api/v2/me/preferences').json(), {'blocked': False})

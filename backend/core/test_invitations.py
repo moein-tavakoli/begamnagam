@@ -154,20 +154,32 @@ class InvitationTests(TestCase):
         self.assertEqual(InvitationSend.objects.get().last_error_code, 'recipient_unavailable')
         self.assertNotIn('لغو', self.client.get('/api/v1/invitations').json()['results'][0]['reason'])
 
-    @override_settings(APP_BASE_URL='https://begamnagam.ir', SMS_LINK_HOST='bgam.ir')
+    @override_settings(APP_BASE_URL='https://begamnagam.ir', SMS_LINK_HOST='bgam.ir', SMS_LINK_ROOT_PATH=True)
     def test_link_works_with_explicit_stop_and_report_without_sender_identity(self):
         self.invite()
-        submit(InvitationSend.objects.get().pk)
+        with override_settings(SMS_LINK_ROOT_PATH=False):
+            submit(InvitationSend.objects.get().pk)
         send = InvitationSend.objects.get()
-        self.assertRegex(send.full_sms, r'\nbgam\.ir\nلغو: bgam\.ir/r/[A-Za-z0-9]{8}$')
-        token = send.full_sms.rsplit('/r/', 1)[-1]
-        self.assertTrue(token.isalnum() and token.isascii() and len(token)==8)
+        self.assertRegex(send.full_sms, r'\nbgam\.ir\nلغو: bgam\.ir/[A-Z0-4][A-Za-z0-9]{4}$')
+        token = send.full_sms.rsplit('/', 1)[-1]
         result = self.post('/recipient/actions/inspect', {'token':token})
         self.assertEqual(result.json(), {'active':True, 'can_report':True})
-        self.assertEqual(self.post('/recipient/actions/stop', {'token':token}).status_code, 200)
+        self.assertEqual(self.post('/recipient/actions/stop', {'token':token, 'phone':'09901234567'}).status_code, 200)
         self.assertTrue(RecipientState.objects.get(phone_hash=Invitation.objects.get().phone_hash).blocked)
         self.age_sends()
         self.assertEqual(self.resend(Invitation.objects.get()).status_code, 409)
+
+    @override_settings(APP_BASE_URL='https://begamnagam.ir', SMS_LINK_HOST='')
+    def test_queued_legacy_invitation_keeps_its_link_after_short_domain_activation(self):
+        with patch('core.recipient.generate_short_code', return_value='Ab12Cd34'):
+            self.invite()
+        send = InvitationSend.objects.get()
+        self.assertTrue(send.full_sms.endswith('begamnagam.ir/r/Ab12Cd34'))
+        with override_settings(SMS_LINK_HOST='bgam.ir', SMS_LINK_ROOT_PATH=True):
+            submit(send.pk)
+        self.assertEqual(InvitationSend.objects.get(pk=send.pk).full_sms, send.full_sms)
+        self.assertEqual(self.post('/recipient/actions/inspect', {'token': 'Ab12Cd34'}).json(),
+                         {'active': True, 'can_report': True})
 
     def test_expiry_retention_and_key_rotation_preserve_unique_claim(self):
         self.invite()

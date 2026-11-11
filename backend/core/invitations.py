@@ -14,10 +14,10 @@ ACTIVE = ['pending', 'submitting', 'unknown', 'accepted']
 INVITE_BODY = 'یکی از آشناهایت به بگم نگم دعوتت کرده. با ثبت‌نام ۳ ارسال رایگان داری:'
 
 
-def compose(token):
-    from .sms import SMS_INTRO, sms_origin
-    origin = sms_origin()
-    text = SMS_INTRO + '\n' + INVITE_BODY + '\n' + origin + '\nلغو: ' + origin + '/r/' + token
+def compose(token, *, origin=None, root_path=None):
+    from .sms import SMS_INTRO, recipient_sms_url, sms_origin
+    origin = origin or sms_origin()
+    text = SMS_INTRO + '\n' + INVITE_BODY + '\n' + origin + '\nلغو: ' + recipient_sms_url(origin, token, root_path=root_path)
     if len(text.encode('utf-16-le'))//2 > 201:
         raise APIError('invitation_unavailable', 'ثبت دعوت فعلاً ممکن نیست.', 503)
     return text

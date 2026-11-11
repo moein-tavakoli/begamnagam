@@ -60,7 +60,7 @@ export function managementDate(value: unknown): string {
   if (Number.isNaN(date.getTime())) return "—";
   return new Intl.DateTimeFormat("fa-IR", { dateStyle: "short", ...(String(value).length > 10 ? { timeStyle: "short" as const } : {}), timeZone: "Asia/Tehran" }).format(date);
 }
-export type ManagementAction = { name: string; label: string; object_id: string; value?: boolean; manualPayment?: { amount_toman: number }; userId?: string; accountLimits?: { sender_daily_limit: number | null; rewrite_daily_limit: number | null } };
+export type ManagementAction = { name: string; label: string; object_id: string; value?: boolean; manualPayment?: { amount_toman: number }; accountLimits?: { sender_daily_limit: number | null; rewrite_daily_limit: number | null } };
 export function managementActions(resource: string, row: ManagementRow, permissions: string[]): ManagementAction[] {
   const actions: ManagementAction[] = [];
   const add = (name: string, label: string, value?: boolean) => actions.push({ name, label, object_id: row.record_id, value });
@@ -151,6 +151,6 @@ export const managementReason = (action: string): string => auditReasons[action]
 export type ManagementActivity = {
   account: { id: number; phone: string; phone_masked: string; suspended: boolean };
   section: "messages" | "invitations";
-  rows: (ManagementRow & { kind: "order" | "attempt" | "moderation" | "invitation"; id: string; created_at: string; status: string; reason_code?: string; phone?: string; order_id?: string })[];
+  rows: (ManagementRow & { kind: "order" | "attempt" | "moderation" | "invitation"; id: string; created_at: string; status: string; reason_code?: string; phone?: string; recipient_phone?: string; order_id?: string })[];
   page: number; total: number; page_size: number;
 };

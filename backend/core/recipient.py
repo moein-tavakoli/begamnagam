@@ -1,17 +1,12 @@
 import re
-import secrets
-import string
 from datetime import timedelta
 from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.utils import timezone
 from .models import RecipientGrant, RecipientState, AbuseReport
-from .privacy import digest
+from .privacy import digest, normalize_phone
+from .recipient_codes import STOP_TOKEN_PATTERN, generate_short_code, is_short_code
 from .services import APIError
-
-
-def generate_short_code():
-    return ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(8))
 
 
 def issue_grant(preview, recipient_hash, *, invitation_send=None, with_reply=False):
@@ -20,7 +15,7 @@ def issue_grant(preview, recipient_hash, *, invitation_send=None, with_reply=Fal
     for _ in range(5):
         token = generate_short_code()
         token_digest = digest('recipient-token:' + token)
-        reply_token = generate_short_code() if with_reply else ''
+        reply_token = generate_short_code(reply=True) if with_reply else ''
         reply_digest = digest('reply-token:' + reply_token) if reply_token else None
         try:
             with transaction.atomic():
@@ -44,12 +39,15 @@ def activate_grant(order):
         activated_at=now, stop_expires_at=now+timedelta(days=365), report_expires_at=now+timedelta(days=30))
 
 
-def lookup_grant(token, *, report=False, lock=False):
+def lookup_grant(token, *, report=False, lock=False, recipient_hash=None):
     # Old message snapshots keep their original 256-bit capabilities.
-    if not isinstance(token, str) or not re.fullmatch(r'(?:[A-Za-z0-9]{8}|[A-Za-z0-9_-]{43})', token):
+    if not isinstance(token, str) or not re.fullmatch(STOP_TOKEN_PATTERN, token):
         raise APIError('link_unavailable', 'این لینک فعال نیست یا مهلتش تمام شده است.', 404)
     query = RecipientGrant.objects.select_for_update() if lock else RecipientGrant.objects
-    grant = query.filter(token_digest=digest('recipient-token:' + token), activated_at__isnull=False).first()
+    query = query.filter(token_digest=digest('recipient-token:' + token), activated_at__isnull=False)
+    if recipient_hash is not None:
+        query = query.filter(recipient_hash=recipient_hash)
+    grant = query.first()
     expiry = grant.report_expires_at if grant and report else grant.stop_expires_at if grant else None
     if not expiry or expiry <= timezone.now():
         raise APIError('link_unavailable', 'این لینک فعال نیست یا مهلتش تمام شده است.', 404)
@@ -62,27 +60,38 @@ def inspect(token):
     return {'active': True, 'can_report': bool(grant.report_expires_at and grant.report_expires_at > timezone.now())}
 
 
-def stop(token):
-    grant = lookup_grant(token)
+def confirmed_phone_hash(token, phone):
+    if not is_short_code(token):
+        return None
+    try:
+        return digest(normalize_phone(phone))
+    except ValueError:
+        raise APIError('recipient_confirmation_required', 'شمارهٔ موبایلی را وارد کنید که این پیامک را دریافت کرده است.', 422) from None
+
+
+def stop(token, *, phone=None):
+    phone_hash = confirmed_phone_hash(token, phone)
+    grant = lookup_grant(token, recipient_hash=phone_hash)
     with transaction.atomic():
         # Same lock order as submission: recipient then grant. Scanner GETs never
         # reach this function; stopping is an explicit CSRF-protected POST.
         RecipientState.objects.get_or_create(phone_hash=grant.recipient_hash)
         state = RecipientState.objects.select_for_update().get(phone_hash=grant.recipient_hash)
-        lookup_grant(token, lock=True)
+        lookup_grant(token, lock=True, recipient_hash=phone_hash)
         state.blocked = True
         state.save(update_fields=['blocked', 'updated_at'])
     return {'blocked': True}
 
 
-def report(token, reason, details):
+def report(token, reason, details, *, phone=None):
     if reason not in {'unwanted', 'harassment', 'wrong_number', 'other'} or not isinstance(details, str) or len(details) > 500:
         raise APIError('invalid_input', 'دلیل و توضیح حداکثر۵۰۰نویسه‌ای گزارش را بررسی کن.')
-    grant = lookup_grant(token, report=True)
+    phone_hash = confirmed_phone_hash(token, phone)
+    grant = lookup_grant(token, report=True, recipient_hash=phone_hash)
     with transaction.atomic():
         RecipientState.objects.get_or_create(phone_hash=grant.recipient_hash)
         state = RecipientState.objects.select_for_update().get(phone_hash=grant.recipient_hash)
-        grant = lookup_grant(token, report=True, lock=True)
+        grant = lookup_grant(token, report=True, lock=True, recipient_hash=phone_hash)
         item, _ = AbuseReport.objects.get_or_create(grant=grant, defaults={'reason': reason, 'details': details})
         state.blocked = True
         state.save(update_fields=['blocked', 'updated_at'])

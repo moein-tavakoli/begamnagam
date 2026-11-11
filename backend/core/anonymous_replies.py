@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from .models import Account, Order, RecipientGrant
 from .privacy import decrypt, digest
+from .recipient_codes import REPLY_TOKEN_PATTERN
 from .services import APIError, recipient_unavailable
 
 MAX_REPLIES = 3
@@ -18,7 +19,7 @@ def unavailable():
 
 
 def parent_for_token(user, token):
-    if not isinstance(token, str) or not re.fullmatch(r'[A-Za-z0-9]{8}', token):
+    if not isinstance(token, str) or not re.fullmatch(REPLY_TOKEN_PATTERN, token):
         raise unavailable()
     parent = Order.objects.filter(preview__recipient_grant__reply_token_digest=digest('reply-token:' + token),
                                   recipient_hash=user.account.phone_hash).first()

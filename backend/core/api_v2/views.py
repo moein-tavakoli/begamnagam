@@ -397,7 +397,7 @@ def capability(request):
     return delegate(request, legacy.recipient_action, action='inspect')
 
 
-@resource(put=op('stopRecipientMessages', 'Recipient controls', 'Stop receiving using a received private link', 'Preferences', request='CapabilityInput', auth=False))
+@resource(put=op('stopRecipientMessages', 'Recipient controls', 'Stop receiving using a received private link', 'Preferences', request='CapabilityPreferenceInput', auth=False))
 def recipient_preferences(request):
     return delegate(request, legacy.recipient_action, method='POST', action='stop')
 

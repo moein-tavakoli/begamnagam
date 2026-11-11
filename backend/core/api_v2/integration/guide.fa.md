@@ -566,11 +566,12 @@ POST /api/v2/message-previews
 ### پاسخ ناشناس از لینک پیامک
 
 ۱. کاربر باید با همان شماره‌ای وارد شود که پیامک را دریافت کرده است.
-   هشت نویسهٔ بعد از `/r/p` را از لینک پاسخ بردارید و با متن و لحن بفرستید.
+   کد پنج‌کاراکتری انتهای لینک پاسخ را با متن و لحن بفرستید. برای لینک
+   قدیمی، هشت نویسهٔ بعد از `/r/p` را بردارید.
    این کد را مانند توکن نشست خصوصی نگه دارید.
 
 ```json
-{"reply_token":"Ab12Cd34","source_mode":"freeform",
+{"reply_token":"r3PLY","source_mode":"freeform",
  "text":"ممنون که حرفت رو گفتی.","message_tone":"firm"}
 ```
 
@@ -736,13 +737,14 @@ callback فعلی `/api/v1/payments/return/zarinpal` و verify مستقل سرو
 - `DELETE /session` با `{}`، نشست همین ربات را خارج می‌کند. cookieها، CSRF و
   state متن/شمارهٔ آن کاربر را پاک کنید؛ سایر کاربران را دست نزنید.
 
-گیرنده با لینک خصوصی پیام خودش نیز می‌تواند اقدام کند:
+گیرنده با لینک خصوصی پیام خودش نیز می‌تواند اقدام کند.
 `POST /recipient-capabilities/inspections` با `{"token":"..."}`،
-`PUT /recipient-capabilities/preference` برای قطع دریافت با همان بدنه، و
-`POST /recipient-reports` با `token, reason, details?`. دلیل‌ها
-`unwanted|harassment|wrong_number|other`؛ گزارش هم دریافت را قطع می‌کند.
-token در JSON است، نه URL/query؛ از لینک دیگران جمع‌آوری نکنید. این مسیرها
-ورود لازم ندارند، اما نشست CSRF دارند و هویت فرستنده را افشا نمی‌کنند.
+`PUT /recipient-capabilities/preference` برای قطع دریافت و
+`POST /recipient-reports` با `token, reason, details?` برای گزارش است.
+برای قطع دریافت یا گزارش با کد پنج‌کاراکتری، `phone` را با شمارهٔ
+دریافت‌کنندهٔ پیامک در همان بدنه بفرستید. دلیل گزارش یکی از
+`unwanted|harassment|wrong_number|other` است. این درخواست‌ها با CSRF و
+کد در بدنهٔ JSON انجام می‌شوند. ورود به حساب یا کد پیامکی لازم نیست.
 
 ## رسیدگی به خطا و محدودیت
 

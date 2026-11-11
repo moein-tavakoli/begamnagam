@@ -8,6 +8,7 @@ from django.http import JsonResponse
 from core.input_digits import ascii_digits
 from core.models import BotPlatform
 from core.privacy import MAX_PHONE_INPUT_LENGTH
+from core.recipient_codes import REPLY_TOKEN_PATTERN
 from core.services import APIError, api, error_response, is_product_authenticated, limited
 from core.views import body
 
@@ -113,8 +114,8 @@ SCHEMAS = {
                            ['recipient_phone', 'source_mode', 'category', 'text'], closed=True),
     'FreeformInput': obj({'recipient_phone': PHONE, 'source_mode': string(enum=['freeform']), 'text': TEXT, 'message_tone': TONE},
                          ['recipient_phone', 'source_mode', 'text'], closed=True),
-    'ReplyPreviewInput': obj({'reply_token': string(pattern='^[A-Za-z0-9]{8}$',
-        description='Use the eight characters after /r/p in the SMS. Verify the SMS recipient’s phone first.'),
+    'ReplyPreviewInput': obj({'reply_token': string(pattern=f'^{REPLY_TOKEN_PATTERN}$',
+        description='Use the five-character reply code in the SMS. For older /r/p links, use the eight characters after /r/p. Verify the SMS recipient’s phone first.'),
         'source_mode': string(enum=['freeform']), 'text': TEXT, 'message_tone': TONE}, ['reply_token', 'source_mode', 'text'], closed=True),
     'AlternativeInput': obj({'recipient_phone': PHONE, 'source_mode': string(enum=['reviewed_alternative']),
                              'alternative_token': TOKEN, 'message_tone': TONE},
@@ -188,7 +189,11 @@ SCHEMAS = {
     'ReadInput': obj({'through_sequence': integer(minimum=0, maximum=2147483647)}, ['through_sequence'], closed=True),
     'OK': obj({'ok': BOOL}, ['ok']),
     'CapabilityInput': obj({'token': TOKEN}, ['token'], closed=True),
+    'CapabilityPreferenceInput': obj({'token': TOKEN, 'phone': {
+        **PHONE, 'description': 'The receiving mobile number is required with five-character stop codes.'}},
+        ['token'], closed=True),
     'ReportInput': obj({'token': TOKEN, 'reason': string(enum=['unwanted', 'harassment', 'wrong_number', 'other']),
+                        'phone': {**PHONE, 'description': 'The receiving mobile number is required with five-character stop codes.'},
                         'details': string(maxLength=500)}, ['token', 'reason'], closed=True),
     'Capability': obj({'active': BOOL, 'can_report': BOOL}, ['active', 'can_report']),
     'Report': obj({'receipt': UUID, 'blocked': BOOL}, ['receipt', 'blocked']),

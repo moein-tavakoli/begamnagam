@@ -5,6 +5,7 @@ from django.conf import settings
 
 from .models import SMSTemplateSettings
 from .moderation import DIRECT_TEMPLATES, TEMPLATES, ModerationRejected, is_reviewed_template, moderate
+from .recipient_codes import SHORT_REPLY_PATTERN, SHORT_STOP_PATTERN, is_short_code
 
 SMS_INTRO = 'نمیدونم بهت بگم یا نگم؟'
 MESSAGE_SLOT = '{{message}}'
@@ -15,12 +16,26 @@ SMS_VARIABLE_NAME = r'[a-z][a-z0-9_]{0,23}'
 SMS_PLACEHOLDER = re.compile(r'\{\{ *(' + SMS_VARIABLE_NAME + r') *\}\}')
 SMS_WARNING_SEGMENTS = 3
 MAX_REWRITE_BODY_UNITS = 201
-_REPLY_LINK = re.compile(r'پاسخ: \S+?/r/p[A-Za-z0-9]{8}')
-_OPT_OUT_LINK = re.compile(r'لغو: \S+?/(?:r/[A-Za-z0-9]{8}|preferences)')
+_REPLY_LINK = re.compile(rf'پاسخ: \S+?/(?:r/p[A-Za-z0-9]{{8}}|(?:r/)?{SHORT_REPLY_PATTERN})(?=\s|$)')
+_OPT_OUT_LINK = re.compile(rf'لغو: \S+?/(?:r/[A-Za-z0-9]{{8}}|(?:r/)?{SHORT_STOP_PATTERN}|preferences)(?=\s|$)')
+
+
+def site_sms_origin():
+    return settings.APP_BASE_URL.removeprefix('https://').removeprefix('http://').rstrip('/')
 
 
 def sms_origin():
-    return settings.SMS_LINK_HOST or settings.APP_BASE_URL.removeprefix('https://').removeprefix('http://').rstrip('/')
+    return settings.SMS_LINK_HOST or site_sms_origin()
+
+
+def recipient_sms_url(origin, token, *, reply=False, root_path=None):
+    short = is_short_code(token)
+    if root_path is None:
+        root_path = settings.SMS_LINK_ROOT_PATH and origin == settings.SMS_LINK_HOST
+    if short and root_path:
+        return f'{origin}/{token}'
+    prefix = 'p' if reply and not short else ''
+    return f'{origin}/r/{prefix}{token}'
 
 
 def current_sms_sender():
@@ -38,7 +53,7 @@ def sms_segments(text):
 
 
 def render_recipient_sms(body, origin, token, *, reply_token='', layout=DEFAULT_SMS_TEMPLATE, variables=None):
-    stop_path = '/r/' + token if token else '/preferences'
+    stop_url = recipient_sms_url(origin, token) if token else origin + '/preferences'
     if not reply_token and REPLY_SLOT in layout:
         layout = '\n'.join(line for line in layout.split('\n') if line.strip() != REPLY_SLOT)
     if OPT_OUT_SLOT not in layout:
@@ -47,8 +62,8 @@ def render_recipient_sms(body, origin, token, *, reply_token='', layout=DEFAULT_
     values = {
         **(variables or {}),
         'message': body,
-        'opt_out': 'لغو: ' + origin + stop_path,
-        'reply': 'پاسخ: ' + origin + '/r/p' + reply_token if reply_token else '',
+        'opt_out': 'لغو: ' + stop_url,
+        'reply': 'پاسخ: ' + recipient_sms_url(origin, reply_token, reply=True) if reply_token else '',
         'site_url': settings.APP_BASE_URL.rstrip('/'),
     }
     pieces = []

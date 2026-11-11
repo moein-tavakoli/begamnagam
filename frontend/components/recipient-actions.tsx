@@ -3,6 +3,8 @@ import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import {useEffect, useState} from 'react';
 import {api, ApiError, errorMessage} from '@/lib/api';
+import {phoneInput, validPhone} from '@/lib/format';
+import {isShortRecipientCode, replyTokenFromFragment} from '@/lib/recipient-links';
 import {useApp} from './app-provider';
 import {AuthGate} from './auth-gate';
 import {Composer} from './composer';
@@ -16,8 +18,9 @@ export function RecipientActions() {
     window.addEventListener('hashchange',readToken);
     return ()=>window.removeEventListener('hashchange',readToken);
   },[]);
-  return /^p[A-Za-z0-9]{8}$/.test(token)
-    ? <AnonymousReply key={token} token={token.slice(1)}/>
+  const replyToken = replyTokenFromFragment(token);
+  return replyToken
+    ? <AnonymousReply key={token} token={replyToken}/>
     : <OptOut key={token} token={token}/>;
 }
 
@@ -72,9 +75,12 @@ function OptOut({token}:{token:string}) {
   const [busy,setBusy] = useState(false);
   const [error,setError] = useState('');
   const [notice,setNotice] = useState('');
+  const [phone,setPhone] = useState('');
   const [reason,setReason] = useState('unwanted');
   const [details,setDetails] = useState('');
   const [checked,setChecked] = useState(false);
+  const needsPhone = isShortRecipientCode(token);
+  const canAct = !needsPhone || validPhone(phone);
   useEffect(()=>{
     if(!token || !data) return;
     let cancelled=false;
@@ -84,9 +90,12 @@ function OptOut({token}:{token:string}) {
     return ()=>{cancelled=true;};
   },[token,!!data]);
   async function act(action:'stop'|'report') {
+    if (!canAct) return;
     setBusy(true);setError('');setNotice('');
     try {
-      const result=await api<{receipt?:string}>('/recipient/actions/'+action,{method:'POST',body:{token,reason,details}});
+      const result=await api<{receipt?:string}>('/recipient/actions/'+action,{
+        method:'POST', body:{token,reason,details,...(needsPhone ? {phone} : {})},
+      });
       setNotice(action==='stop'?'دریافت پیام از همه فرستنده‌ها برای این شماره متوقف شد.':'گزارش ثبت شد و دریافت پیام متوقف شد. کد پیگیری: '+result.receipt);
       setDetails('');setChecked(false);
     } catch(e){setError(errorMessage(e));} finally {setBusy(false);}
@@ -100,7 +109,13 @@ function OptOut({token}:{token:string}) {
       {valid && <>
         <h2>نمی‌خوای پیام دیگه‌ای دریافت کنی؟</h2>
         <p>این انتخاب، دریافت پیام از همه فرستنده‌های بگم نگم را متوقف می‌کنه. پیامی که قبلاً به شبکه تحویل شده قابل پس‌گرفتن نیست.</p>
-        <BusyButton className="button primary full-width" busy={busy} onClick={()=>void act('stop')}>توقف دریافت همه پیام‌ها</BusyButton>
+        {needsPhone && <div>
+          <label htmlFor="recipient-confirm-phone">شماره‌ای که این پیامک را دریافت کرده</label>
+          <input id="recipient-confirm-phone" className="phone-number-input" type="tel" inputMode="numeric"
+            autoComplete="tel-national" dir="ltr" value={phone} disabled={busy}
+            onChange={event=>setPhone(phoneInput(event.target.value))}/>
+        </div>}
+        <BusyButton className="button primary full-width" busy={busy} disabled={!canAct} onClick={()=>void act('stop')}>توقف دریافت همه پیام‌ها</BusyButton>
         {canReport && <details className="recipient-report"><summary>گزارش پیام ناخواسته یا آزاردهنده</summary>
           <form onSubmit={e=>{e.preventDefault();if(checked)void act('report');}}>
             <label htmlFor="report-reason">دلیل گزارش</label><select id="report-reason" value={reason} onChange={e=>setReason(e.target.value)}>
@@ -109,11 +124,11 @@ function OptOut({token}:{token:string}) {
             <label htmlFor="report-details">توضیح اختیاری، حداکثر۵۰۰نویسه</label><textarea id="report-details" rows={4} maxLength={500} value={details} onChange={e=>setDetails(e.target.value)} aria-describedby="report-privacy"/>
             <p id="report-privacy" className="small muted">شماره، نشانی یا اطلاعات حساس ننویس. فقط پشتیبان مجاز توضیحت را می‌بینه.</p>
             <label className="checkbox-label"><input type="checkbox" checked={checked} onChange={e=>setChecked(e.target.checked)}/><span>می‌خواهم این گزارش ثبت و دریافت پیام برای این شماره متوقف شود.</span></label>
-            <BusyButton className="button secondary full-width" busy={busy} disabled={!checked}>ثبت گزارش و توقف دریافت</BusyButton>
+            <BusyButton className="button secondary full-width" busy={busy} disabled={!checked || !canAct}>ثبت گزارش و توقف دریافت</BusyButton>
           </form></details>}
       </>}
       {notice && <p className="success-notice" role="status">{notice}</p>}
-      <p className="small muted">این لینک را برای دیگران نفرست؛ دارندهٔ لینک می‌تواند دریافت را متوقف یا پیام را گزارش کند.</p>
+      <p className="small muted">این لینک را برای دیگران نفرست.</p>
       {data?.support_contact && <p>راه تماس پشتیبانی: <bdi>{data.support_contact}</bdi></p>}
       <Link href="/preferences">مدیریت شماره خودم با تأیید شماره</Link>
     </div>

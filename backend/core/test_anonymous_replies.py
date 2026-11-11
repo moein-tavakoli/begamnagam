@@ -10,7 +10,8 @@ from django.test import Client, TestCase, override_settings
 from django.utils import timezone
 
 from . import tests as legacy
-from .models import Account, Order, Outbox, Preview, RecipientGrant, SafetyControl
+from .models import Account, MessageAttempt, Order, Outbox, Preview, RecipientGrant, SafetyControl
+from .moderation import ModerationRejected
 from .privacy import decrypt
 from .tasks import deliver_message
 
@@ -59,9 +60,9 @@ class AnonymousReplyTests(TestCase):
 
     def reply_token(self, preview):
         snapshot = Preview.objects.get(pk=preview['preview_id']).full_sms
-        match = re.search(r'پاسخ: begamnagam\.ir/r/p([A-Za-z0-9]{8})', snapshot)
+        match = re.search(r'پاسخ: begamnagam\.ir/r/([a-z5-9][A-Za-z0-9]{4})', snapshot)
         self.assertIsNotNone(match, snapshot)
-        self.assertRegex(snapshot, r'لغو: begamnagam\.ir/r/[A-Za-z0-9]{8}$')
+        self.assertRegex(snapshot, r'لغو: begamnagam\.ir/r/[A-Z0-4][A-Za-z0-9]{4}$')
         return match.group(1)
 
     def test_three_reviewed_replies_then_close_the_thread(self):
@@ -117,11 +118,34 @@ class AnonymousReplyTests(TestCase):
             else:
                 snapshot = Preview.objects.get(pk=preview['preview_id']).full_sms
                 self.assertNotIn('پاسخ:', snapshot)
-                self.assertRegex(snapshot, r'لغو: begamnagam\.ir/r/[A-Za-z0-9]{8}$')
+                self.assertRegex(snapshot, r'لغو: begamnagam\.ir/r/[A-Z0-4][A-Za-z0-9]{4}$')
                 self.assertIsNone(RecipientGrant.objects.get(preview_id=preview['preview_id']).reply_token_digest)
         self.assertEqual(Order.objects.count(), 4)
         self.assertEqual(Account.objects.get(user=self.sender).free_sends_remaining, 1)
         self.assertEqual(Account.objects.get(user=self.receiver).free_sends_remaining, 1)
+
+    def test_existing_eight_character_reply_requires_the_original_verified_recipient(self):
+        with patch('core.recipient.generate_short_code', side_effect=['Ab12Cd34', 'Ef56Gh78']):
+            preview = self.preview(self.client, recipient_phone=self.second_phone).json()
+        self.assertIn('begamnagam.ir/r/pEf56Gh78', preview['full_sms'])
+        order = self.reserve(self.client, preview, recipient_phone=self.second_phone).json()
+        self.deliver(self.client, order)
+        self.assertEqual(self.post('/recipient/actions/reply', {'token': 'Ef56Gh78'}, self.client).status_code, 404)
+        self.assertEqual(self.post('/recipient/actions/reply', {'token': 'Ef56Gh78'}, self.other).json(), {'active': True})
+
+    def test_rejected_reply_attempt_keeps_server_resolved_destination_for_staff(self):
+        preview = self.preview(self.client, recipient_phone=self.second_phone).json()
+        order = self.reserve(self.client, preview, recipient_phone=self.second_phone).json()
+        self.deliver(self.client, order)
+        with patch('core.gapgpt.rewrite_message', side_effect=ModerationRejected('unsafe_content')):
+            response = self.other.post('/api/v2/message-previews', {
+                'source_mode': 'freeform', 'text': self.text, 'reply_token': self.reply_token(preview),
+            }, content_type='application/json')
+        self.assertEqual(response.status_code, 422, response.content)
+        self.assertNotIn(self.first_phone, response.content.decode())
+        attempt = MessageAttempt.objects.get(owner=self.receiver)
+        self.assertEqual(attempt.status, 'rejected')
+        self.assertEqual(attempt.recipient_phone, self.first_phone)
 
     def test_two_previews_compete_for_one_turn_and_expired_capability_is_denied(self):
         original = self.preview(self.client, recipient_phone=self.second_phone).json()
@@ -214,9 +238,9 @@ class AnonymousReplyTests(TestCase):
                 'variables': [], 'revision': 0,
             }, content_type='application/json')
             self.assertEqual(saved.status_code, 200, saved.content)
-            with override_settings(SMS_LINK_HOST='bgam.ir'):
+            with override_settings(SMS_LINK_HOST='bgam.ir', SMS_LINK_ROOT_PATH=True):
                 reply = self.preview(self.other, reply_token=self.reply_token(original)).json()
-            self.assertNotIn('/r/', reply['full_sms'])
+            self.assertNotIn('bgam.ir/', reply['full_sms'])
             self.assertIn('لینک لغو دریافت سپس لینک پاسخ\nسپاس از همراهی لینک پاسخ', reply['full_sms'])
             reserved = self.reserve(self.other, reply).json()
             self.assertEqual(reserved['text'], reply['full_sms'])
@@ -228,6 +252,6 @@ class AnonymousReplyTests(TestCase):
         actual = wire.call_args.kwargs
         self.assertEqual(actual['phone'], self.first_phone)
         self.assertEqual(actual['text'], Preview.objects.get(pk=reply['preview_id']).full_sms)
-        self.assertRegex(actual['text'], r'لغو: bgam\.ir/r/[A-Za-z0-9]{8} سپس پاسخ: bgam\.ir/r/p[A-Za-z0-9]{8}')
-        self.assertEqual(actual['text'].count('پاسخ: bgam.ir/r/p'), 2)
+        self.assertRegex(actual['text'], r'لغو: bgam\.ir/[A-Z0-4][A-Za-z0-9]{4} سپس پاسخ: bgam\.ir/[a-z5-9][A-Za-z0-9]{4}')
+        self.assertEqual(actual['text'].count('پاسخ: bgam.ir/'), 2)
         self.assertNotIn(self.second_phone, actual['text'])

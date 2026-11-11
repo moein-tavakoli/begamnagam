@@ -13,6 +13,7 @@ from .management_api import staff_api
 from .models import OperatorAudit, SMSTemplateSettings
 from .moderation import ANGRY_TEMPLATES, DIRECT_TEMPLATES, TEMPLATES
 from .privacy import digest
+from .recipient_codes import SAMPLE_REPLY_CODE, SAMPLE_STOP_CODE
 from .services import APIError
 from .sms import (DEFAULT_SMS_TEMPLATE, OPT_OUT_SLOT, REPLY_SLOT, SMS_PLACEHOLDER, SMS_VARIABLE_NAME,
                   SMS_WARNING_SEGMENTS, render_recipient_sms, sms_origin, sms_segments, sms_units)
@@ -22,8 +23,8 @@ from .views import body
 LEGACY_SYSTEM_NAMES = {'message', 'opt_out'}
 SYSTEM_NAMES = LEGACY_SYSTEM_NAMES | {'reply', 'site_url'}
 MAX_VARIABLES = 8
-SAMPLE_TOKEN = 'Sample-X'  # Cannot match the recipient capability format.
 SAMPLE_MESSAGE = 'از اینکه با مهربانی کنارم بودی، ممنونم.'
+EMOJI_TAG_SEQUENCE = re.compile(r'\U0001f3f4[\U000e0020-\U000e007e]+\U000e007f')
 MIN_BODY_UNITS = max(min(map(sms_units, choices))
                      for catalog in (TEMPLATES, DIRECT_TEMPLATES, ANGRY_TEMPLATES)
                      for choices in catalog.values())
@@ -39,7 +40,8 @@ def plain_text(text, field, *, allow_empty=False):
     text = text.replace('\r\n', '\n').translate(str.maketrans('\r\u2028\u2029', '\n\n\n'))
     if not allow_empty and not text.strip():
         invalid(field, 'متن قالب را وارد کنید.')
-    if any(unicodedata.category(char).startswith('C') and char not in '\n\t\u200c\u200d' for char in text):
+    text_without_emoji_tags = EMOJI_TAG_SEQUENCE.sub('', text)
+    if any(unicodedata.category(char).startswith('C') and char not in '\n\t\u200c\u200d' for char in text_without_emoji_tags):
         invalid(field, 'متن دارای نویسهٔ کنترلی است.')
     return ascii_digits(text)
 
@@ -104,7 +106,7 @@ def current_sms_layout():
 
 def sample_preview(layout, variables):
     origin = sms_origin()
-    full_sms = render_recipient_sms(SAMPLE_MESSAGE, origin, SAMPLE_TOKEN, reply_token=SAMPLE_TOKEN,
+    full_sms = render_recipient_sms(SAMPLE_MESSAGE, origin, SAMPLE_STOP_CODE, reply_token=SAMPLE_REPLY_CODE,
                                    layout=layout, variables=variables)
     names = SMS_PLACEHOLDER.findall(layout)
     occurrences = names.count('message')

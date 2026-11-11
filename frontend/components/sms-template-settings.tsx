@@ -10,12 +10,15 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Divider from '@mui/material/Divider';
 import Grid from '@mui/material/Grid';
 import IconButton from '@mui/material/IconButton';
+import Popover from '@mui/material/Popover';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import AddRounded from '@mui/icons-material/AddRounded';
+import CloseRounded from '@mui/icons-material/CloseRounded';
 import DataObjectOutlined from '@mui/icons-material/DataObjectOutlined';
 import DeleteOutlineRounded from '@mui/icons-material/DeleteOutlineRounded';
+import EmojiEmotionsOutlined from '@mui/icons-material/EmojiEmotionsOutlined';
 import PreviewOutlined from '@mui/icons-material/PreviewOutlined';
 import RefreshRounded from '@mui/icons-material/RefreshRounded';
 import RestoreRounded from '@mui/icons-material/RestoreRounded';
@@ -54,6 +57,20 @@ const systemSlots = [
   { name: 'opt_out', label: 'لینک لغو' },
   { name: 'site_url', label: 'آدرس سایت' },
 ];
+const templateEmojis = [
+  { value: '😊', label: 'لبخند' },
+  { value: '❤️', label: 'قلب قرمز' },
+  { value: '🌹', label: 'گل رز' },
+  { value: '🙏', label: 'دست‌های به هم چسبیده' },
+  { value: '✨', label: 'درخشش' },
+  { value: '👍', label: 'شست رو به بالا' },
+  { value: '👏', label: 'دست زدن' },
+  { value: '🤝', label: 'دست دادن' },
+  { value: '🌷', label: 'گل لاله' },
+  { value: '🎉', label: 'جشن' },
+  { value: '💜', label: 'قلب بنفش' },
+];
+const emojiPickerId = 'sms-template-emoji-picker';
 
 function draftFrom({ template, variables, sender = '' }: Draft): Draft {
   return { template, variables, sender };
@@ -69,6 +86,7 @@ export function SmsTemplateSettings({ onFailure, memory }: {
   const [pending, setPending] = useState<'load' | 'preview' | 'save' | null>('load');
   const [failure, setFailure] = useState<unknown>(null);
   const [saved, setSaved] = useState(false);
+  const [emojiAnchor, setEmojiAnchor] = useState<HTMLButtonElement | null>(null);
   const templateInput = useRef<HTMLTextAreaElement>(null);
   const previewTitle = useRef<HTMLHeadingElement>(null);
   const lifetime = useRef<AbortController | null>(null);
@@ -119,17 +137,21 @@ export function SmsTemplateSettings({ onFailure, memory }: {
     edit({ ...draft, variables: draft.variables.map((item, at) => at === index ? { ...item, [key]: value } : item) });
   }
 
-  function insertVariable(name: string) {
+  function insertTemplateText(text: string) {
     const input = templateInput.current;
     const start = input?.selectionStart ?? draft.template.length;
     const end = input?.selectionEnd ?? start;
-    const token = `{{${name}}}`;
-    const template = draft.template.slice(0, start) + token + draft.template.slice(end);
+    const template = draft.template.slice(0, start) + text + draft.template.slice(end);
+    const caret = start + text.length;
     edit({ ...draft, template });
     requestAnimationFrame(() => {
       input?.focus();
-      input?.setSelectionRange(start + token.length, start + token.length);
+      input?.setSelectionRange(caret, caret);
     });
+  }
+
+  function insertVariable(name: string) {
+    insertTemplateText(`{{${name}}}`);
   }
 
   const { sender, ...layout } = draft;
@@ -205,13 +227,32 @@ export function SmsTemplateSettings({ onFailure, memory }: {
               helperText={fieldErrors?.template || 'متن و متغیرها را در هر جای قالب بنویسید. روی متغیر بزنید تا در محل نشانگر درج شود.'}
               slotProps={{ htmlInput: { spellCheck: false, dir: 'rtl' } }}/>
             <Stack spacing={1}>
-              <Stack direction="row" useFlexGap sx={{ gap: 1, flexWrap: 'wrap' }}>
+              <Stack direction="row" useFlexGap sx={{ alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                <Button type="button" size="small" variant="outlined" startIcon={<EmojiEmotionsOutlined/>} disabled={disabled}
+                  aria-haspopup="dialog" aria-expanded={!!emojiAnchor} aria-controls={emojiAnchor ? emojiPickerId : undefined}
+                  onClick={event => setEmojiAnchor(event.currentTarget)}>درج ایموجی</Button>
                 {systemSlots.map(slot => <Chip key={slot.name} color="primary" variant="outlined" disabled={disabled}
                   aria-label={'درج ' + slot.label} onClick={() => insertVariable(slot.name)}
                   label={<Stack direction="row" spacing={.75} sx={{ alignItems: 'center' }}>
                     <span>{slot.label}</span><Box component="code" dir="ltr">{'{{' + slot.name + '}}'}</Box>
                   </Stack>}/>)}
               </Stack>
+              <Popover open={!!emojiAnchor} anchorEl={emojiAnchor} onClose={() => setEmojiAnchor(null)} dir="rtl"
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'right' }} transitionDuration={0}
+                slotProps={{ paper: {
+                  id: emojiPickerId, role: 'dialog', 'aria-modal': true, 'aria-label': 'انتخاب ایموجی', tabIndex: -1,
+                  sx: {
+                    boxSizing: 'border-box', width: 216, p: 1, display: 'grid', gap: 1, gridTemplateColumns: 'repeat(auto-fit, 44px)',
+                    '& .Mui-focusVisible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: -2 },
+                  },
+                } }}>
+                {templateEmojis.map(({ value, label }) => <IconButton key={value} type="button" aria-label={label}
+                  onClick={() => { setEmojiAnchor(null); insertTemplateText(value); }}>
+                  <span aria-hidden="true">{value}</span>
+                </IconButton>)}
+                <IconButton type="button" aria-label="بستن انتخاب ایموجی" onClick={() => setEmojiAnchor(null)}><CloseRounded/></IconButton>
+              </Popover>
               <Typography variant="caption" color="text.secondary">لینک پاسخ در نوبت‌های مجاز درج می‌شود. آدرس اصلی سایت را در صورت نیاز به قالب اضافه کنید.</Typography>
             </Stack>
             <Divider/>

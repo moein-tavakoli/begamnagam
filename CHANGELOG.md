@@ -9,7 +9,7 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
-## 0.41.0 — 2026-11-11 — Archive old unknown sends from management (local)
+## 0.41.0 — 2026-11-11 — Archive old unknown sends from management
 
 - Add an archive action in the send queue for operations staff. Show the queue
   creation time and an Archived filter to locate retained records.
@@ -17,6 +17,9 @@ Historical release reports below contain deployment evidence and limitations.
   Archiving removes the item from active queue age and retains delivery history.
 - Verified 757 PostgreSQL tests, 120 frontend tests, TypeScript checks and
   isolated browser confirmation, cancellation and conflict handling at 375px and 1440px.
+
+Deployed to the application server with six verified frontend replicas. Applied the sender and personal history migrations after backup restore rehearsal. Private Swagger remained available with the existing access. The short SMS hostname is pending valid HTTPS at the edge.
+[Deployment evidence](docs/deployments/ct115-0.41.0.json)
 
 ## 0.40.0 — 2026-11-11 — Short domain for SMS links (local)
 

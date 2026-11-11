@@ -11,7 +11,7 @@ from core import ai_management
 from core import wallet_views
 from core import package_views
 from core import example_views
-from core import sms_template_settings
+from core import kavenegar_settings, sms_template_settings
 from core import manual_payment_views, support_views, provider_balances
 
 handler404 = "core.views.not_found"
@@ -30,6 +30,7 @@ urlpatterns = [
     path('api/v1/manage/message-examples/<str:kind>/<int:record_id>/delete', example_views.delete),
     path('api/v1/manage/sms-template', sms_template_settings.configuration),
     path('api/v1/manage/sms-template/preview', sms_template_settings.preview),
+    path('api/v1/manage/sms-template/kavenegar-key', kavenegar_settings.configuration),
     path("api/v1/manage/provider-balances/<str:provider>", provider_balances.balance),
     path('api/v1/support/summary', support_views.summary),
     path('api/v1/support/messages', support_views.messages),

@@ -9,6 +9,16 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 1.1.0 — 2026-11-12 — Change the Kavenegar API key in SMS settings (local)
+
+- Let superusers save an encrypted Kavenegar key in the SMS template page and
+  restore the server's key. Show the key source and audit the actor, source
+  and revision of each change.
+- Use the active key for OTP, SMS delivery, status and balance checks. Include
+  the stored key in encrypted backup verification and encryption-key rotation.
+- Verified 776 PostgreSQL tests, 121 frontend tests, TypeScript, migration
+  consistency and browser checks at 375px and 1440px.
+
 ## 1.0.0 — 2026-11-11 — Shorter recipient links and direct message review
 
 - Issue five-character codes for new stop and reply links. The dedicated SMS

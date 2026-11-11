@@ -32,6 +32,16 @@ class SMSTemplateSettings(models.Model):
         constraints = [models.CheckConstraint(condition=models.Q(id=1), name='single_sms_template_settings')]
 
 
+class KavenegarSettings(models.Model):
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    api_key = EncryptedTextField(default='', blank=True, editable=False)
+    revision = models.PositiveIntegerField(default=0, editable=False)
+
+    class Meta:
+        default_permissions = ()
+        constraints = [models.CheckConstraint(condition=models.Q(id=1), name='single_kavenegar_settings')]
+
+
 class StaffRole(models.Model):
     name = models.CharField(max_length=80, unique=True)
     group = models.OneToOneField('auth.Group', on_delete=models.PROTECT, related_name='staff_role')

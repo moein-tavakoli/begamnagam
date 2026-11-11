@@ -27,6 +27,7 @@ import SmsOutlined from '@mui/icons-material/SmsOutlined';
 import { api, ApiError, errorMessage } from '@/lib/api';
 import { latinInputDigits } from '@/lib/input-digits';
 import { managementNumber as number } from '@/lib/management';
+import { KavenegarKeySettings } from './kavenegar-key-settings';
 
 type Variable = { name: string; value: string };
 type Draft = { template: string; variables: Variable[]; sender: string };
@@ -76,9 +77,10 @@ function draftFrom({ template, variables, sender = '' }: Draft): Draft {
   return { template, variables, sender };
 }
 
-export function SmsTemplateSettings({ onFailure, memory }: {
+export function SmsTemplateSettings({ onFailure, memory, canManageKavenegarKey }: {
   onFailure: (error: unknown) => void;
   memory: { current: SmsTemplateDraftMemory };
+  canManageKavenegarKey: boolean;
 }) {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [draft, setDraft] = useState<Draft>({ template: '', variables: [], sender: '' });
@@ -199,6 +201,7 @@ export function SmsTemplateSettings({ onFailure, memory }: {
   const disabled = pending !== null;
 
   return <Stack spacing={2.5}>
+    {canManageKavenegarKey && <KavenegarKeySettings onFailure={onFailure}/>}
     <Alert severity="info" variant="outlined">
       قالب ذخیره‌شده روی پیش‌نمایش‌های تازهٔ پیام به گیرنده اعمال می‌شود. پیش‌نمایش‌های قبلی با همان متنِ تأییدشده ارسال می‌شوند.
     </Alert>

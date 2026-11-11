@@ -48,10 +48,21 @@ def defer_until_open(event):
 
 
 def operator_action(actor, action, object_id, reason, reference=''):
-    permissions = {'halt': 'operate_safety', 'resume': 'operate_safety', 'suspend': 'suspend_account', 'unsuspend': 'suspend_account', 'close_report': 'triage_report', 'hold_report': 'triage_report', 'confirm_refund': 'confirm_refund', 'ack_alert': 'view_operations'}
+    permissions = {
+        'halt': 'operate_safety', 'resume': 'operate_safety', 'archive_unknown_outbox': 'operate_safety',
+        'suspend': 'suspend_account', 'unsuspend': 'suspend_account',
+        'close_report': 'triage_report', 'hold_report': 'triage_report',
+        'confirm_refund': 'confirm_refund', 'ack_alert': 'view_operations',
+    }
     permission = permissions.get(action)
     if not permission or not actor.is_active or not actor.is_staff or not actor.has_perm('core.' + permission):
         raise APIError('forbidden', 'مجوز این اقدام را ندارید.', 403)
+    if action == 'archive_unknown_outbox':
+        if not actor.has_perm('core.view_outbox'):
+            raise APIError('forbidden', 'مجوز مشاهدهٔ صف ارسال را ندارید.', 403)
+        from .queue_archive import archive_unknown_outbox
+        archive_unknown_outbox(object_id, reason, actor=actor)
+        return
     if not isinstance(reason, str) or not 3 <= len(reason.strip()) <= 200:
         raise APIError('reason_required', 'دلیل اقدام باید بین۳تا۲۰۰نویسه باشد.')
     with transaction.atomic():

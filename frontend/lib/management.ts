@@ -86,6 +86,9 @@ export function managementActions(resource: string, row: ManagementRow, permissi
     }
   }
   if (resource === "alerts" && permissions.includes("view_operations") && !row.acknowledged_by_id) add("ack_alert", "ثبت بررسی");
+  if (resource === "outbox" && row.can_archive === true && permissions.includes("operate_safety")) {
+    add("archive_unknown_outbox", "خروج از صف");
+  }
   if (resource === "refunds" && permissions.includes("confirm_refund") && row.status !== "refunded") add("confirm_refund", "ثبت بازپرداخت مستند");
   return actions;
 }

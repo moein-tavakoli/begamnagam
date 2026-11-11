@@ -34,6 +34,7 @@ import ArrowBackRounded from '@mui/icons-material/ArrowBackRounded';
 import ReceiptLongOutlined from '@mui/icons-material/ReceiptLongOutlined';
 import CheckCircleOutline from '@mui/icons-material/CheckCircleOutlined';
 import HistoryOutlined from '@mui/icons-material/HistoryOutlined';
+import ArchiveOutlined from '@mui/icons-material/ArchiveOutlined';
 import MailOutlineRounded from '@mui/icons-material/MailOutlineRounded';
 import SettingsOutlined from '@mui/icons-material/SettingsOutlined';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -304,6 +305,7 @@ function ActionDialog({ action, onClose, onComplete, onFailure }: { action: Mana
   const [busy, setBusy] = useState(false), [error, setError] = useState("");
   const [report, setReport] = useState<{ details: string; reviewed_text: string; reason: string; status: string } | null>(null);
   const [texts, setTexts] = useState<{ original_text: string; original_available: boolean; final_text: string; mode: string } | null>(null);
+  const archiving = action.name === 'archive_unknown_outbox';
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); const form = new FormData(event.currentTarget); setBusy(true); setError("");
     try {
@@ -323,7 +325,10 @@ function ActionDialog({ action, onClose, onComplete, onFailure }: { action: Mana
       {action.name==='free_sending'&&<Alert severity="warning">{action.value?'این حساب بدون مصرف هدیه یا اعتبار بسته ارسال می‌کند و هزینهٔ واقعی بر عهدهٔ سرویس است.':'ارسال‌های بعدی از هدیه و اعتبار بسته مصرف می‌کنند؛ سفارش‌های قبلی تغییر نمی‌کنند.'} سقف روزانه، کنترل گیرنده و محتوا مستقل‌اند.</Alert>}
       {action.name==='account_limits'&&<Box component="fieldset" disabled={busy} sx={{border:0,p:0,m:0,minWidth:0}}><Stack spacing={3}><Alert severity="info">تنظیم فقط برای همین حساب است. تعداد نامحدود، اعتبار پیام یا کنترل‌های محتوا و گیرنده را حذف نمی‌کند.</Alert><AccountLimitInput name="sender_daily_limit" label="سقف تعداد ارسال در ۲۴ ساعت" value={action.accountLimits?.sender_daily_limit??null}/><AccountLimitInput name="rewrite_daily_limit" label="بازنویسی در روز" value={action.accountLimits?.rewrite_daily_limit??null}/></Stack></Box>}
       {action.name==='confirm_refund'&&<><Alert severity="warning">ابتدا بازپرداخت را خارج از سایت انجام دهید؛ این اقدام فقط ثبت سند است.</Alert><ManagementInput label="مرجع سند بازپرداخت" name="reference" minLength={3} maxLength={100} required/></>}
-      <ManagementButton disabled={busy} startIcon={['message_texts','attempt_texts','review'].includes(action.name)?<VisibilityOutlined/>:<CheckCircleOutline/>}>{busy?'در حال ثبت…':['message_texts','attempt_texts'].includes(action.name)?'ثبت مشاهده و نمایش متن‌ها':action.name==='review'?'ثبت مشاهده و بازکردن پرونده':'تأیید و ثبت اقدام'}</ManagementButton>
+      {archiving && <Alert severity="warning">این مورد از صف فعال و استعلام خودکار خارج می‌شود. نتیجهٔ نامعلوم و سابقهٔ ارسال برای پیگیری حفظ می‌شوند.</Alert>}
+      <ManagementButton disabled={busy} startIcon={archiving ? <ArchiveOutlined/> : ['message_texts','attempt_texts','review'].includes(action.name) ? <VisibilityOutlined/> : <CheckCircleOutline/>}>
+        {busy ? 'در حال ثبت…' : archiving ? 'بایگانی مورد' : ['message_texts','attempt_texts'].includes(action.name) ? 'ثبت مشاهده و نمایش متن‌ها' : action.name === 'review' ? 'ثبت مشاهده و بازکردن پرونده' : 'تأیید و ثبت اقدام'}
+      </ManagementButton>
     </Stack>}
   </ManagementDialog>;
 }
@@ -349,7 +354,10 @@ function RowActions({ resource, row, permissions, onAction, tabIndex=0 }: { reso
         <MenuItem key="messages" component={Link} href={managementUserHref(row.record_id, "messages")} onClick={close}><ListItemIcon><MailOutlineRounded/></ListItemIcon>پیام‌های کاربر</MenuItem>,
         <MenuItem key="invitations" component={Link} href={managementUserHref(row.record_id, "invitations")} onClick={close}><ListItemIcon><ManagementIcon name="invitations"/></ListItemIcon>دعوت‌های کاربر</MenuItem>,
       ]}
-      {actions.map(item => <MenuItem key={item.name} onClick={() => { close(); onAction(item); }}><ListItemIcon><SettingsOutlined/></ListItemIcon>{item.label}</MenuItem>)}
+      {actions.map(item => <MenuItem key={item.name} onClick={() => { close(); onAction(item); }}>
+        <ListItemIcon>{item.name === 'archive_unknown_outbox' ? <ArchiveOutlined/> : <SettingsOutlined/>}</ListItemIcon>
+        {item.label}
+      </MenuItem>)}
     </Menu>
   </>;
 }

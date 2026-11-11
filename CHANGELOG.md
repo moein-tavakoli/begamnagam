@@ -9,6 +9,15 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.41.0 — 2026-11-11 — Archive old unknown sends from management (local)
+
+- Add an archive action in the send queue for operations staff. Show the queue
+  creation time and an Archived filter to locate retained records.
+- Reuse the 48-hour eligibility rule and record the acting staff member.
+  Archiving removes the item from active queue age and retains delivery history.
+- Verified 757 PostgreSQL tests, 120 frontend tests, TypeScript checks and
+  isolated browser confirmation, cancellation and conflict handling at 375px and 1440px.
+
 ## 0.40.0 — 2026-11-11 — Short domain for SMS links (local)
 
 - Use `SMS_LINK_HOST=bgam.ir` for links in new recipient and invitation SMS.

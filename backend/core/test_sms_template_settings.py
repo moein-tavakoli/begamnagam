@@ -44,6 +44,11 @@ class SMSTemplateSettingsTests(TestCase):
         self.assertTrue(sample['full_sms'].startswith('درود از بگم نگم\n'))
         self.assertTrue(sample['full_sms'].endswith('\nلغو: begamnagam.ir/r/Sample-X'))
         self.assertEqual(sample['sms_units'], len(sample['full_sms'].encode('utf-16-le')) // 2)
+        with override_settings(SMS_LINK_HOST='bgam.ir'):
+            short_sample = self.client.post(PATH + '/preview', {'template': TEMPLATE, 'variables': VARIABLES},
+                                            content_type='application/json').json()
+        self.assertEqual(short_sample['full_sms'], sample['full_sms'].replace('begamnagam.ir', 'bgam.ir'))
+        self.assertEqual(short_sample['sms_units'], sample['sms_units'] - 12)
         self.assertFalse(m.SMSTemplateSettings.objects.exists())
         self.assertFalse(m.RecipientGrant.objects.exists())
         self.assertFalse(m.Outbox.objects.exists())
@@ -193,13 +198,15 @@ class SMSTemplateFlowTests(TestCase):
         self.assertEqual(response.status_code, 200, response.content)
         examples = self.client.get('/api/v2/catalog').json()['examples']
         example = next(item for item in examples if item['topic'] == 'appreciation')
-        new = self.client.post('/api/v2/message-previews', {'category': example['topic'], 'text': example['text'],
-            'recipient_phone': '09901234568', 'source_mode': 'suggestion'}, content_type='application/json')
+        with override_settings(SMS_LINK_HOST='bgam.ir'):
+            new = self.client.post('/api/v2/message-previews', {'category': example['topic'], 'text': example['text'],
+                'recipient_phone': '09901234568', 'source_mode': 'suggestion'}, content_type='application/json')
         self.assertEqual(new.status_code, 201, new.content)
         second = new.json()
         self.assertTrue(second['full_sms'].startswith(intro + '\n' + second['rewritten_text'] + '\n'))
         self.assertGreater(second['sms_segments'], 3)
-        self.assertRegex(second['full_sms'], r'\nلغو: begamnagam\.ir/r/[A-Za-z0-9]{8}$')
+        self.assertRegex(second['full_sms'], r'\nلغو: bgam\.ir/r/[A-Za-z0-9]{8}$')
+        self.assertRegex(first['full_sms'], r'\nلغو: begamnagam\.ir/r/[A-Za-z0-9]{8}$')
         self.assertEqual(m.Preview.objects.get(pk=first['preview_id']).full_sms, first['full_sms'])
         for phone, quote in [('09901234567', first), ('09901234568', second)]:
             order = self.make_order(recipient=phone, quote=quote).json()

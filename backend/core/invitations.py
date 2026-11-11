@@ -15,8 +15,8 @@ INVITE_BODY = 'یکی از آشناهایت به بگم نگم دعوتت کرد
 
 
 def compose(token):
-    from .sms import SMS_INTRO
-    origin = settings.APP_BASE_URL.removeprefix('https://').removeprefix('http://').rstrip('/')
+    from .sms import SMS_INTRO, sms_origin
+    origin = sms_origin()
     text = SMS_INTRO + '\n' + INVITE_BODY + '\n' + origin + '\nلغو: ' + origin + '/r/' + token
     if len(text.encode('utf-16-le'))//2 > 201:
         raise APIError('invitation_unavailable', 'ثبت دعوت فعلاً ممکن نیست.', 503)

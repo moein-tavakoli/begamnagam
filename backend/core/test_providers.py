@@ -213,7 +213,7 @@ class ProviderContracts(TestCase):
         verified = self.post('/auth/verify-otp', {'challenge_id':response.json()['challenge_id'], 'code':code})
         self.assertEqual(verified.status_code, 200)
 
-    @override_settings(OTP_BACKEND='kavenegar', APP_BASE_URL='https://begamnagam.ir')
+    @override_settings(OTP_BACKEND='kavenegar', APP_BASE_URL='https://begamnagam.ir', SMS_LINK_HOST='bgam.ir')
     def test_public_otp_sms_binds_autofill_to_site_without_changing_verification(self):
         SMSTemplateSettings.objects.create(template=DEFAULT_SMS_TEMPLATE, sender='30001500')
         response = self.post('/auth/request-otp', {'phone': '09911234567'})

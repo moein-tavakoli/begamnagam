@@ -154,10 +154,12 @@ class InvitationTests(TestCase):
         self.assertEqual(InvitationSend.objects.get().last_error_code, 'recipient_unavailable')
         self.assertNotIn('لغو', self.client.get('/api/v1/invitations').json()['results'][0]['reason'])
 
+    @override_settings(APP_BASE_URL='https://begamnagam.ir', SMS_LINK_HOST='bgam.ir')
     def test_link_works_with_explicit_stop_and_report_without_sender_identity(self):
         self.invite()
         submit(InvitationSend.objects.get().pk)
         send = InvitationSend.objects.get()
+        self.assertRegex(send.full_sms, r'\nbgam\.ir\nلغو: bgam\.ir/r/[A-Za-z0-9]{8}$')
         token = send.full_sms.rsplit('/r/', 1)[-1]
         self.assertTrue(token.isalnum() and token.isascii() and len(token)==8)
         result = self.post('/recipient/actions/inspect', {'token':token})

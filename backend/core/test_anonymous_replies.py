@@ -205,7 +205,8 @@ class AnonymousReplyTests(TestCase):
             order = self.reserve(self.client, original, recipient_phone=self.second_phone).json()
             self.assertEqual(self.post(f'/orders/{order["id"]}/confirm-free').status_code, 200)
             submit_delivery(Outbox.objects.get(order_id=order['id']).pk)
-            reply = self.preview(self.other, reply_token=self.reply_token(original)).json()
+            with override_settings(SMS_LINK_HOST='bgam.ir'):
+                reply = self.preview(self.other, reply_token=self.reply_token(original)).json()
             reserved = self.reserve(self.other, reply).json()
             self.assertEqual(self.post(f'/orders/{reserved["id"]}/confirm-free', {}, self.other).status_code, 200)
             event = Outbox.objects.get(order_id=reserved['id'])
@@ -215,5 +216,5 @@ class AnonymousReplyTests(TestCase):
         actual = wire.call_args.kwargs
         self.assertEqual(actual['phone'], self.first_phone)
         self.assertEqual(actual['text'], Preview.objects.get(pk=reply['preview_id']).full_sms)
-        self.assertIn('/r/p', actual['text'])
+        self.assertRegex(actual['text'], r'پاسخ: bgam\.ir/r/p[A-Za-z0-9]{8}\nلغو: bgam\.ir/r/[A-Za-z0-9]{8}$')
         self.assertNotIn(self.second_phone, actual['text'])

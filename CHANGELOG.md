@@ -9,6 +9,17 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.40.0 — 2026-11-11 — Short domain for SMS links (local)
+
+- Use `SMS_LINK_HOST=bgam.ir` for links in new recipient and invitation SMS.
+  Preserve approved snapshots and the main site's OTP autofill origin.
+- Add an Nginx configuration that sends HTTP and HTTPS links to the main
+  domain with the original path and query string.
+- Verified 756 PostgreSQL tests, Compose environment wiring and isolated
+  Nginx TLS, redirect and ACME checks. The current edge presents the main
+  domain's certificate for the short hostname, so HTTPS needs the short
+  domain's virtual host before activation.
+
 ## 0.39.0 — 2026-11-11 — Remove messages from personal history (local)
 
 - Add a Delete button to each entry in My Messages. After confirmation, the

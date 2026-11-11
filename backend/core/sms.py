@@ -13,7 +13,7 @@ MAX_REWRITE_BODY_UNITS = 201
 
 
 def sms_origin():
-    return settings.APP_BASE_URL.removeprefix('https://').removeprefix('http://')
+    return settings.SMS_LINK_HOST or settings.APP_BASE_URL.removeprefix('https://').removeprefix('http://').rstrip('/')
 
 
 def current_sms_sender():

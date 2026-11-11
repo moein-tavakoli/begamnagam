@@ -1,8 +1,9 @@
-"""One versioned template for recipient messages, with literal substitutions."""
+"""Versioned settings for the recipient SMS layout and sending line."""
 import json
 import re
 import unicodedata
 
+from django.conf import settings
 from django.db import transaction
 from django.views.decorators.vary import vary_on_cookie
 
@@ -111,33 +112,49 @@ def draft(data):
     return template, variables, sample_preview(layout)
 
 
-def settings_data(template, variables, revision, preview):
+def settings_data(template, variables, revision, preview, *, sender=''):
     return {'template': template, 'variables': variables, 'revision': revision, 'preview': preview,
+            'sender': sender, 'default_sender': settings.KAVENEGAR_SENDER,
             'default_template': DEFAULT_SMS_TEMPLATE, 'max_variables': MAX_VARIABLES}
 
 
 def audit_value(item):
-    raw = json.dumps([item.template, item.variables], ensure_ascii=True, separators=(',', ':'))
+    raw = json.dumps([item.template, item.variables, item.sender], ensure_ascii=True, separators=(',', ':'))
     return {'revision': item.revision, 'fingerprint': digest(raw)}
+
+
+def clean_sender(value):
+    if not isinstance(value, str):
+        invalid('sender', 'شمارهٔ فرستنده باید به‌صورت متن وارد شود.')
+    sender = ''.join(ascii_digits(value).split())
+    if not re.fullmatch(r'[0-9]{0,20}', sender):
+        invalid('sender', 'شمارهٔ خط کاوه‌نگار را با حداکثر ۲۰ رقم وارد کنید.')
+    return sender
 
 
 @transaction.atomic
 def save(actor, data):
-    if set(data) != {'template', 'variables', 'revision'} or type(data['revision']) is not int or not 0 <= data['revision'] < 2147483647:
-        invalid('template', 'ساختار یا نسخهٔ قالب معتبر نیست. قالب را دوباره دریافت کنید.')
+    required = {'template', 'variables', 'revision'}
+    revision = data.get('revision')
+    if (not required <= data.keys() <= (required | {'sender'})
+            or type(revision) is not int or not 0 <= revision < 2147483647):
+        invalid('template', 'ساختار یا نسخهٔ تنظیمات پیامک معتبر نیست. تنظیمات را دوباره دریافت کنید.')
     template, variables, preview = draft(data)
+    sender = clean_sender(data['sender']) if 'sender' in data else None
     item, _ = SMSTemplateSettings.objects.get_or_create(pk=1, defaults={'template': DEFAULT_SMS_TEMPLATE})
     item = SMSTemplateSettings.objects.select_for_update().get(pk=1)
-    if item.revision != data['revision']:
-        raise APIError('settings_changed', 'قالب تغییر کرده است. آخرین نسخه را دریافت کنید و ویرایش را دوباره بررسی کنید.', 409)
-    if (item.template, item.variables) != (template, variables):
+    if item.revision != revision:
+        raise APIError('settings_changed', 'تنظیمات پیامک تغییر کرده است. آخرین نسخه را دریافت کنید و ویرایش را دوباره بررسی کنید.', 409)
+    if sender is None:
+        sender = item.sender
+    if (item.template, item.variables, item.sender) != (template, variables, sender):
         before = audit_value(item)
-        item.template, item.variables = template, variables
+        item.template, item.variables, item.sender = template, variables, sender
         item.revision += 1
-        item.save(update_fields=['template', 'variables', 'revision', 'updated_at'])
+        item.save(update_fields=['template', 'variables', 'sender', 'revision', 'updated_at'])
         OperatorAudit.objects.create(actor=actor, action='update_sms_template', object_id='sms-template',
-            reason='ذخیرهٔ قالب پیامک از پنل مدیریت', before=before, after=audit_value(item))
-    return settings_data(template, variables, item.revision, preview)
+            reason='ذخیرهٔ تنظیمات پیامک از پنل مدیریت', before=before, after=audit_value(item))
+    return settings_data(template, variables, item.revision, preview, sender=item.sender)
 
 
 @vary_on_cookie
@@ -149,7 +166,7 @@ def configuration(request):
     if item is None:
         return settings_data(DEFAULT_SMS_TEMPLATE, [], 0, sample_preview(DEFAULT_SMS_TEMPLATE))
     template, variables, layout = compile_layout(item.template, item.variables)
-    return settings_data(template, variables, item.revision, sample_preview(layout))
+    return settings_data(template, variables, item.revision, sample_preview(layout), sender=item.sender)
 
 
 @vary_on_cookie

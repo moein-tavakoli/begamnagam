@@ -15,9 +15,11 @@ TEMPLATE = '{{intro}}\n{{message}}\n{{opt_out}}'
 VARIABLES = [{'name': 'intro', 'value': 'درود از بگم نگم'}]
 
 
-def save_template(client, *, template=TEMPLATE, variables=VARIABLES, revision=0, **headers):
-    return client.put(PATH, {'template': template, 'variables': variables, 'revision': revision},
-                      content_type='application/json', **headers)
+def save_template(client, *, template=TEMPLATE, variables=VARIABLES, revision=0, sender=None, **headers):
+    payload = {'template': template, 'variables': variables, 'revision': revision}
+    if sender is not None:
+        payload['sender'] = sender
+    return client.put(PATH, payload, content_type='application/json', **headers)
 
 
 @override_settings(APP_BASE_URL='https://begamnagam.ir')
@@ -115,6 +117,40 @@ class SMSTemplateSettingsTests(TestCase):
         self.assertEqual((audit.before['revision'], audit.after['revision']), (0, 1))
         self.assertNotIn('پیام شمارهٔ', str(audit.after))
 
+    @override_settings(KAVENEGAR_SENDER='10000000')
+    def test_sender_can_change_independently_and_legacy_edits_preserve_it(self):
+        initial = self.client.get(PATH).json()
+        self.assertEqual(initial['sender'], '')
+        self.assertEqual(initial['default_sender'], '10000000')
+        layout = {'template': initial['template'], 'variables': initial['variables']}
+        saved = save_template(self.client, **layout, sender=' ۰۳۰۰ ١٥٠٠ ')
+        self.assertEqual(saved.status_code, 200, saved.content)
+        result = saved.json()
+        self.assertEqual((result['sender'], result['revision']), ('03001500', 1))
+        self.assertEqual(result['preview'], initial['preview'])
+        self.assertEqual(self.client.get(PATH).json(), result)
+        audit = m.OperatorAudit.objects.get(action='update_sms_template')
+        self.assertNotEqual(audit.before['fingerprint'], audit.after['fingerprint'])
+        self.assertNotIn('03001500', str(audit.after))
+
+        conflict = save_template(self.client, **layout, sender='20000000')
+        self.assertEqual(conflict.status_code, 409, conflict.content)
+        legacy = save_template(self.client, revision=1)
+        self.assertEqual(legacy.status_code, 200, legacy.content)
+        self.assertEqual(legacy.json()['sender'], '03001500')
+        reset = save_template(self.client, revision=legacy.json()['revision'], sender='')
+        self.assertEqual(reset.status_code, 200, reset.content)
+        self.assertEqual(reset.json()['sender'], '')
+        self.assertEqual(reset.json()['default_sender'], '10000000')
+
+    def test_invalid_sender_does_not_save_settings(self):
+        for sender in (30000000, '30000000,20000000', '+30000000', '3' * 21):
+            with self.subTest(sender=sender):
+                response = save_template(self.client, sender=sender)
+                self.assertEqual(response.status_code, 422, response.content)
+                self.assertIn('sender', response.json()['error']['fields'])
+        self.assertFalse(m.SMSTemplateSettings.objects.exists())
+
 
 @override_settings(APP_BASE_URL='https://begamnagam.ir')
 class SMSTemplateFlowTests(TestCase):
@@ -124,6 +160,29 @@ class SMSTemplateFlowTests(TestCase):
     preview = live.LiveGiftSMSTests.preview
     make_order = live.LiveGiftSMSTests.make_order
     confirm = live.LiveGiftSMSTests.confirm
+
+    @override_settings(KAVENEGAR_API_KEY='synthetic-key', KAVENEGAR_SENDER='10000000')
+    def test_queued_order_uses_sender_active_at_submission(self):
+        quote = self.preview(category='appreciation', text='ممنون از همراهی تو')
+        order = self.make_order(quote=quote).json()
+        self.confirm(order)
+        outbox = m.Outbox.objects.get(order_id=order['id'])
+        delivery = m.MessageDelivery.objects.get(order_id=order['id'])
+        editor = Client()
+        editor.force_login(get_user_model().objects.create_superuser('sms-editor'))
+        saved = save_template(editor, sender='30001500')
+        self.assertEqual(saved.status_code, 200, saved.content)
+
+        accepted = {'return': {'status': 200}, 'entries': [{'messageid': 700, 'status': 1, 'cost': 1000}]}
+        with patch('core.providers.kavenegar.post', return_value=accepted) as wire:
+            submit_delivery(outbox.pk)
+            submit_delivery(outbox.pk)
+        wire.assert_called_once()
+        payload = wire.call_args.args[2]
+        self.assertEqual(payload['sender'], '30001500')
+        self.assertEqual(payload['message'], quote['full_sms'])
+        self.assertEqual(payload['localid'], delivery.local_id)
+        self.assertEqual(m.Order.objects.get(pk=order['id']).status, 'accepted')
 
     def test_change_applies_to_new_previews_and_delivers_exact_old_and_new_snapshots(self):
         first = self.preview(category='appreciation', text='ممنون از همراهی تو')

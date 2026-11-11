@@ -26,13 +26,14 @@ import { latinInputDigits } from '@/lib/input-digits';
 import { managementNumber as number } from '@/lib/management';
 
 type Variable = { name: string; value: string };
-type Draft = { template: string; variables: Variable[] };
+type Draft = { template: string; variables: Variable[]; sender: string };
 export type SmsTemplateDraftMemory = { draft: Draft; revision: number } | null;
 type Preview = { full_sms: string; sms_units: number; sms_segments: number; body_units: number; length_warning: boolean };
 type Settings = Draft & {
   revision: number;
   preview: Preview;
   default_template: string;
+  default_sender: string;
   max_variables: number;
 };
 
@@ -44,8 +45,8 @@ const requiredSlots = [
   { token: '{{opt_out}}', label: 'لینک لغو دریافت', hint: 'یک بار در آخرین خط؛ لینک پاسخ در نوبت‌های مجاز درست قبل از آن می‌آید' },
 ];
 
-function draftFrom({ template, variables }: Draft): Draft {
-  return { template, variables };
+function draftFrom({ template, variables, sender = '' }: Draft): Draft {
+  return { template, variables, sender };
 }
 
 export function SmsTemplateSettings({ onFailure, memory }: {
@@ -53,7 +54,7 @@ export function SmsTemplateSettings({ onFailure, memory }: {
   memory: { current: SmsTemplateDraftMemory };
 }) {
   const [settings, setSettings] = useState<Settings | null>(null);
-  const [draft, setDraft] = useState<Draft>({ template: '', variables: [] });
+  const [draft, setDraft] = useState<Draft>({ template: '', variables: [], sender: '' });
   const [sample, setSample] = useState<{ key: string; preview: Preview } | null>(null);
   const [pending, setPending] = useState<'load' | 'preview' | 'save' | null>('load');
   const [failure, setFailure] = useState<unknown>(null);
@@ -121,8 +122,10 @@ export function SmsTemplateSettings({ onFailure, memory }: {
     });
   }
 
-  const draftKey = JSON.stringify(draft);
-  const dirty = settings !== null && draftKey !== JSON.stringify(draftFrom(settings));
+  const { sender, ...layout } = draft;
+  const layoutKey = JSON.stringify(layout);
+  const layoutDirty = settings !== null && layoutKey !== JSON.stringify({ template: settings.template, variables: settings.variables });
+  const dirty = settings !== null && (layoutDirty || sender !== (settings.sender ?? ''));
   const revision = memory.current?.revision ?? settings?.revision;
   const conflict = dirty && revision !== settings?.revision;
 
@@ -132,8 +135,8 @@ export function SmsTemplateSettings({ onFailure, memory }: {
     setPending('preview');
     setFailure(null);
     try {
-      const preview = await api<Preview>(`${path}/preview`, { method: 'POST', body: draft, signal });
-      setSample({ key: draftKey, preview });
+      const preview = await api<Preview>(`${path}/preview`, { method: 'POST', body: layout, signal });
+      setSample({ key: layoutKey, preview });
       previewTitle.current?.focus();
     } catch (error) {
       if (!signal?.aborted) { setFailure(error); onFailure(error); }
@@ -159,7 +162,7 @@ export function SmsTemplateSettings({ onFailure, memory }: {
   }
 
   const fieldErrors = failure instanceof ApiError ? failure.fields : undefined;
-  const sampleIsCurrent = sample?.key === draftKey;
+  const sampleIsCurrent = sample?.key === layoutKey;
   const preview = sampleIsCurrent ? sample.preview : settings?.preview;
   const disabled = pending !== null;
 
@@ -168,18 +171,24 @@ export function SmsTemplateSettings({ onFailure, memory }: {
       قالب ذخیره‌شده روی پیش‌نمایش‌های تازهٔ پیام به گیرنده اعمال می‌شود. پیش‌نمایش‌های قبلی با همان متنِ تأییدشده ارسال می‌شوند.
     </Alert>
     {failure != null && <Alert severity="error">{errorMessage(failure)}</Alert>}
-    {conflict && <Alert severity="warning">قالب فعال تغییر کرده است. متن پیش‌نویس شما در ویرایشگر باقی مانده است.</Alert>}
-    {saved && <Alert severity="success">قالب ذخیره شد و برای پیام‌های تازه فعال است.</Alert>}
+    {conflict && <Alert severity="warning">تنظیمات فعال تغییر کرده‌اند. ویرایش‌های شما حفظ شده‌اند.</Alert>}
+    {saved && <Alert severity="success">تنظیمات پیامک ذخیره شد.</Alert>}
     {!settings && (disabled ? <Stack direction="row" spacing={1.5} role="status" sx={{ alignItems: 'center', py: 2 }}>
-      <CircularProgress size={20} aria-hidden="true"/><Typography>در حال دریافت قالب پیامک…</Typography>
+      <CircularProgress size={20} aria-hidden="true"/><Typography>در حال دریافت تنظیمات پیامک…</Typography>
     </Stack> : <Box><Button onClick={() => void load(lifetime.current?.signal, true)} startIcon={<RefreshRounded/>}>تلاش دوباره</Button></Box>)}
     {settings && <Grid container spacing={2.5} sx={{ alignItems: 'flex-start' }}>
       <Grid size={{ xs: 12, lg: 7 }}>
         <Card component="form" onSubmit={save} sx={{ p: { xs: 2, sm: 3 }, minWidth: 0 }}>
           <Stack spacing={2.5}>
             <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-              <SmsOutlined color="primary"/><Typography component="h2" variant="h6">ویرایش قالب پیامک</Typography>
+              <SmsOutlined color="primary"/><Typography component="h2" variant="h6">تنظیمات پیامک</Typography>
             </Stack>
+            <TextField id="sms-sender" label="شمارهٔ فرستنده" fullWidth disabled={disabled}
+              value={sender} placeholder={settings.default_sender}
+              onChange={event => edit({ ...draft, sender: latinInputDigits(event.target.value).replace(/\s/g, '') })}
+              error={!!fieldErrors?.sender}
+              helperText={fieldErrors?.sender || 'شمارهٔ خط مجاز کاوه‌نگار را وارد کنید. کادر خالی از خط پیش‌فرض سرور استفاده می‌کند.'}
+              slotProps={{ inputLabel: { shrink: true }, htmlInput: { dir: 'ltr', inputMode: 'numeric', autoComplete: 'off' } }}/>
             <TextField id="sms-template-text" inputRef={templateInput} label="متن قالب" multiline minRows={5} fullWidth required
               value={draft.template} disabled={disabled} onChange={event => edit({ ...draft, template: event.target.value })}
               error={!!fieldErrors?.template}
@@ -222,10 +231,10 @@ export function SmsTemplateSettings({ onFailure, memory }: {
             </Box>)}
             <Divider/>
             <Stack direction={{ xs: 'column', sm: 'row' }} useFlexGap sx={{ gap: 1, flexWrap: 'wrap' }}>
-              <Button type="submit" variant="contained" startIcon={<SaveOutlined/>} disabled={disabled || !dirty || conflict}>{pending === 'save' ? 'در حال ذخیره…' : 'ذخیرهٔ قالب'}</Button>
+              <Button type="submit" variant="contained" startIcon={<SaveOutlined/>} disabled={disabled || !dirty || conflict}>{pending === 'save' ? 'در حال ذخیره…' : 'ذخیرهٔ تنظیمات'}</Button>
               <Button type="button" variant="outlined" startIcon={<PreviewOutlined/>} disabled={disabled} onClick={() => void showPreview()}>{pending === 'preview' ? 'در حال آماده‌سازی…' : 'پیش‌نمایش تغییرات'}</Button>
-              <Button type="button" startIcon={<RestoreRounded/>} disabled={disabled} onClick={() => edit({ template: settings.default_template, variables: [] })}>استفاده از قالب پیش‌فرض</Button>
-              {conflict && <Button type="button" startIcon={<RefreshRounded/>} onClick={() => void load(lifetime.current?.signal)} disabled={disabled}>کنارگذاشتن ویرایش‌ها و دریافت قالب فعال</Button>}
+              <Button type="button" startIcon={<RestoreRounded/>} disabled={disabled} onClick={() => edit({ ...draft, template: settings.default_template, variables: [] })}>استفاده از قالب پیش‌فرض</Button>
+              {conflict && <Button type="button" startIcon={<RefreshRounded/>} onClick={() => void load(lifetime.current?.signal)} disabled={disabled}>کنارگذاشتن ویرایش‌ها و دریافت تنظیمات فعال</Button>}
             </Stack>
           </Stack>
         </Card>
@@ -235,9 +244,9 @@ export function SmsTemplateSettings({ onFailure, memory }: {
           <Stack spacing={2} aria-live="polite">
             <Stack direction="row" useFlexGap sx={{ alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
               <PreviewOutlined color="primary"/><Typography id="sms-sample-title" ref={previewTitle} tabIndex={-1} component="h2" variant="h6">نمونهٔ پیامک</Typography>
-              <Chip size="small" label={dirty && sampleIsCurrent ? 'پیش‌نویس' : 'قالب فعال'} variant="outlined"/>
+              <Chip size="small" label={layoutDirty && sampleIsCurrent ? 'پیش‌نویس' : 'قالب فعال'} variant="outlined"/>
             </Stack>
-            {dirty && !sampleIsCurrent && <Typography variant="body2" color="text.secondary">برای دیدن ویرایش‌ها، «پیش‌نمایش تغییرات» را بزنید.</Typography>}
+            {layoutDirty && !sampleIsCurrent && <Typography variant="body2" color="text.secondary">برای دیدن ویرایش‌ها، «پیش‌نمایش تغییرات» را بزنید.</Typography>}
             <Box dir="auto" sx={{ p: 2, bgcolor: 'background.default', border: 1, borderColor: 'divider', borderRadius: 1,
               whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', lineHeight: 2 }}>{preview.full_sms}</Box>
             <Stack direction="row" useFlexGap sx={{ gap: .75, flexWrap: 'wrap' }}>

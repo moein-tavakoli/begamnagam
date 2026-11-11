@@ -2,6 +2,7 @@ import re
 from dataclasses import dataclass
 from django.conf import settings
 from ..otp import otp_sms, valid_otp
+from ..sms import current_sms_sender
 from .http import post, ProviderRejected, ProviderUnknown
 
 
@@ -51,7 +52,7 @@ class Kavenegar:
 
     def submit(self, *, phone, text, local_id):
         return self._result(self._call('sms/send', {'receptor': phone, 'message': text,
-            'sender': settings.KAVENEGAR_SENDER, 'localid': local_id, 'hide': 1}))
+            'sender': current_sms_sender(), 'localid': local_id, 'hide': 1}))
 
     def status(self, *, local_id, message_id=''):
         # A missing local ID after the vendor's12h window is NOT permission to resend.
@@ -67,7 +68,7 @@ class Kavenegar:
             text = otp_sms(code)
             return self._result(self._call('sms/send', {'receptor': phone,
                 'message': text,
-                'sender': settings.KAVENEGAR_SENDER, 'hide': 1}, otp=True))
+                'sender': current_sms_sender(), 'hide': 1}, otp=True))
         if settings.KAVENEGAR_OTP_MODE == 'lookup' and settings.KAVENEGAR_OTP_TEMPLATE:
             return self._result(self._call('verify/lookup', {'receptor': phone, 'token': code,
                 'template': settings.KAVENEGAR_OTP_TEMPLATE, 'type': 'sms'}, otp=True))

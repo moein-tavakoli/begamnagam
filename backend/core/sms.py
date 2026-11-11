@@ -1,6 +1,7 @@
-"""Build the reviewed recipient SMS snapshot before the sender confirms it."""
+"""Build reviewed recipient SMS snapshots and resolve the current sending line."""
 from django.conf import settings
 
+from .models import SMSTemplateSettings
 from .moderation import DIRECT_TEMPLATES, TEMPLATES, ModerationRejected, is_reviewed_template, moderate
 
 SMS_INTRO = 'نمیدونم بهت بگم یا نگم؟'
@@ -13,6 +14,11 @@ MAX_REWRITE_BODY_UNITS = 201
 
 def sms_origin():
     return settings.APP_BASE_URL.removeprefix('https://').removeprefix('http://')
+
+
+def current_sms_sender():
+    sender = SMSTemplateSettings.objects.filter(pk=1).values_list('sender', flat=True).first()
+    return sender or settings.KAVENEGAR_SENDER
 
 
 def sms_units(text):

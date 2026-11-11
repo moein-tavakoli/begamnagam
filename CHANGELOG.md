@@ -9,6 +9,15 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 0.38.0 — 2026-11-11 — Change the SMS sender in management (local)
+
+- Allow staff to choose an authorized Kavenegar line in SMS settings. Clearing
+  the field restores the server default.
+- Read the active line at submission for recipient messages, replies, invitations
+  and direct OTP SMS. Queued sends retain their approved text.
+- Verified with 754 PostgreSQL tests, 120 frontend tests, TypeScript checks and
+  isolated browser checks at 375px and 1440px. Provider responses were simulated.
+
 ## 0.37.4 — 2026-11-10 — Combine the monitoring activity rows
 
 - Show all seven messenger and account activity cards in one row. The row scrolls horizontally on narrow screens.

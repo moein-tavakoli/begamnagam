@@ -36,14 +36,14 @@ class ShortRecipientLinkTests(TestCase):
         return order
 
     @override_settings(APP_BASE_URL='https://begamnagam.ir')
-    def test_sms_uses_bare_domain_and_five_alphanumeric_characters(self):
+    def test_sms_uses_bare_domain_and_typed_cancel_code(self):
         response = self.quote()
         self.assertEqual(response.status_code, 200, response.content)
         quote = response.json()
         link = quote['full_sms'].split('لغو: ')[1]
-        self.assertRegex(link, r'^begamnagam\.ir/r/[A-Z0-4][A-Za-z0-9]{4}$')
+        self.assertRegex(link, r'^begamnagam\.ir/r/c[A-Za-z0-9]{5}$')
         old_link = 'https://begamnagam.ir/r#' + 'A'*43
-        self.assertEqual(len(old_link) - len(link), 46)
+        self.assertEqual(len(old_link) - len(link), 45)
         self.assertLessEqual(quote['sms_segments'], 3)
         self.deliver(quote)
         token = link.rsplit('/', 1)[1]
@@ -63,11 +63,11 @@ class ShortRecipientLinkTests(TestCase):
         self.assertTrue(RecipientState.objects.get(phone_hash=digest('09901234567')).blocked)
 
     @override_settings(APP_BASE_URL='https://begamnagam.ir', SMS_LINK_HOST='bgam.ir', SMS_LINK_ROOT_PATH=True)
-    def test_short_domain_can_send_bare_five_character_paths(self):
+    def test_short_domain_sends_typed_codes_at_the_root(self):
         response = self.quote()
         self.assertEqual(response.status_code, 200, response.content)
         quote = response.json()
-        self.assertRegex(quote['full_sms'], r'پاسخ: bgam\.ir/[a-z5-9][A-Za-z0-9]{4}\nلغو: bgam\.ir/[A-Z0-4][A-Za-z0-9]{4}$')
+        self.assertRegex(quote['full_sms'], r'پاسخ: bgam\.ir/r[A-Za-z0-9]{5}\nلغو: bgam\.ir/c[A-Za-z0-9]{5}$')
         stop = quote['full_sms'].rsplit('/', 1)[1]
         self.assertRegex(stop, r'[0-9]')
         self.deliver(quote)
@@ -96,23 +96,33 @@ class ShortRecipientLinkTests(TestCase):
         self.assertEqual(self.post('/recipient/actions/stop', {'token':token}, Client()).json(), {'blocked':True})
         self.assertEqual(Order.objects.get().full_sms, old_sms)
 
+    def test_previous_five_character_stop_link_still_confirms_the_phone(self):
+        token = 'A1Cd2'
+        with patch('core.recipient.generate_short_code', side_effect=[token, 'r2X45']):
+            quote = self.quote().json()
+        self.deliver(quote)
+        public = Client()
+        self.assertEqual(self.post('/recipient/actions/stop', {'token': token}, public).status_code, 422)
+        self.assertEqual(self.post('/recipient/actions/stop', {'token': token, 'phone': '09901234567'},
+                                   public).json(), {'blocked': True})
+
     def test_collision_retries_without_replacing_an_existing_grant(self):
-        with patch('core.recipient.generate_short_code', side_effect=['A1Cd2', 'r2X45']):
+        with patch('core.recipient.generate_short_code', side_effect=['c1Cd2x', 'r2X45y']):
             first = self.quote().json()
         original = RecipientGrant.objects.get(preview_id=first['preview_id'])
         with patch('core.recipient.generate_short_code', side_effect=[
-            'A1Cd2', 'z8P99', 'B2df3', 'r2X45', 'Xy9Q2', 'n3Dd4',
+            'c1Cd2x', 'r8P99z', 'c2df3b', 'r2X45y', 'cy9Q2x', 'r3Dd4n',
         ]) as generate:
             second = self.quote()
         self.assertEqual(second.status_code, 200, second.content)
-        self.assertTrue(second.json()['full_sms'].endswith('/r/Xy9Q2'))
+        self.assertTrue(second.json()['full_sms'].endswith('/r/cy9Q2x'))
         self.assertEqual(generate.call_count, 6)
         original.refresh_from_db()
-        self.assertEqual(original.token_digest, digest('recipient-token:A1Cd2'))
+        self.assertEqual(original.token_digest, digest('recipient-token:c1Cd2x'))
         self.assertEqual(RecipientGrant.objects.count(), 2)
 
     def test_exhausted_collisions_fail_closed_and_roll_back_preview(self):
-        with patch('core.recipient.generate_short_code', side_effect=['A1Cd2', 'r2X45'] * 6):
+        with patch('core.recipient.generate_short_code', side_effect=['c1Cd2x', 'r2X45y'] * 6):
             self.assertEqual(self.quote().status_code, 200)
             failed = self.quote()
         self.assertEqual(failed.status_code, 503)
@@ -129,10 +139,10 @@ class ShortRecipientLinkTests(TestCase):
         original = RecipientGrant.objects.get()
         self.assertEqual(original.recipient_hash, '')
         self.assertEqual(original.token_digest, digest('recipient-token:'+token))
-        with patch('core.recipient.generate_short_code', side_effect=[token, 'r4H01', 'F2sh1', 'r5E21']):
+        with patch('core.recipient.generate_short_code', side_effect=[token, 'r4H01a', 'c2sh1a', 'r5E21a']):
             response = self.quote()
         self.assertEqual(response.status_code, 200, response.content)
-        self.assertTrue(response.json()['full_sms'].endswith('/r/F2sh1'))
+        self.assertTrue(response.json()['full_sms'].endswith('/r/c2sh1a'))
         self.assertEqual(self.post('/recipient/actions/stop', {'token': token, 'phone': '09901234567'},
                                    Client()).status_code, 404)
 
@@ -147,9 +157,9 @@ class ShortRecipientLinkTests(TestCase):
         self.assertEqual(self.post('/recipient/actions/inspect', {'token': 'Qwer1234'}, Client()).status_code, 429)
         self.assertEqual(self.post('/recipient/actions/inspect', {'token': 'Qwer1234'}, Client(), REMOTE_ADDR='198.51.100.9').status_code, 404)
 
-    def test_five_character_codes_have_a_separate_tighter_ip_budget(self):
+    def test_old_and_new_short_codes_share_the_tighter_ip_budget(self):
         for index in range(30):
-            self.assertEqual(self.post('/recipient/actions/inspect', {'token': f'A{index:04d}'}, Client()).status_code, 404)
+            self.assertEqual(self.post('/recipient/actions/inspect', {'token': f'c{index:05d}'}, Client()).status_code, 404)
         self.assertEqual(self.post('/recipient/actions/inspect', {'token': 'Z1234'}, Client()).status_code, 429)
         self.assertEqual(self.post('/recipient/actions/inspect', {'token': 'OldT1234'}, Client()).status_code, 404)
         self.assertEqual(self.post('/recipient/actions/inspect', {'token': 'Z1234'}, Client(), REMOTE_ADDR='198.51.100.9').status_code, 404)

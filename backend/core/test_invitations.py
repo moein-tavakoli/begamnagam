@@ -9,7 +9,7 @@ from django.db import IntegrityError, connection, transaction
 from django.test import Client, TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 from . import tests as legacy
-from .invitations import CONSENT_VERSION, request_invitation, reward_registration, record_registration, lock_phone
+from .invitations import CONSENT_VERSION, compose, request_invitation, reward_registration, record_registration, lock_phone
 from .invitation_delivery import submit, reconcile
 from .models import Account, Invitation, InvitationSend, RecipientGrant, RecipientState, SafetyControl, SpendBudget, OperatorAudit
 from .privacy import digest, encrypt, mask, decrypt
@@ -160,7 +160,9 @@ class InvitationTests(TestCase):
         with override_settings(SMS_LINK_ROOT_PATH=False):
             submit(InvitationSend.objects.get().pk)
         send = InvitationSend.objects.get()
-        self.assertRegex(send.full_sms, r'\nbgam\.ir\nلغو: bgam\.ir/[A-Z0-4][A-Za-z0-9]{4}$')
+        self.assertRegex(send.full_sms, r'\nbgam\.ir/i[A-Za-z0-9]{5}\nلغو: bgam\.ir/c[A-Za-z0-9]{5}$')
+        invitation_code = send.full_sms.splitlines()[-2].rsplit('/', 1)[-1]
+        self.assertEqual(self.post('/recipient/actions/inspect', {'token': invitation_code}).status_code, 404)
         token = send.full_sms.rsplit('/', 1)[-1]
         result = self.post('/recipient/actions/inspect', {'token':token})
         self.assertEqual(result.json(), {'active':True, 'can_report':True})
@@ -174,6 +176,8 @@ class InvitationTests(TestCase):
         with patch('core.recipient.generate_short_code', return_value='Ab12Cd34'):
             self.invite()
         send = InvitationSend.objects.get()
+        send.full_sms = compose('Ab12Cd34')
+        send.save(update_fields=['full_sms'])
         self.assertTrue(send.full_sms.endswith('begamnagam.ir/r/Ab12Cd34'))
         with override_settings(SMS_LINK_HOST='bgam.ir', SMS_LINK_ROOT_PATH=True):
             submit(send.pk)
@@ -195,7 +199,10 @@ class InvitationTests(TestCase):
 
     def test_bad_snapshot_rejected_and_queue_expires_without_network(self):
         self.invite()
-        InvitationSend.objects.update(full_sms='unreviewed input')
+        send = InvitationSend.objects.get()
+        lines = send.full_sms.splitlines()
+        lines[-2] = 'other.invalid/r/i56Yc2'
+        InvitationSend.objects.update(full_sms='\n'.join(lines))
         with patch('core.invitation_delivery.Kavenegar.submit') as wire:
             submit(InvitationSend.objects.get().pk)
         wire.assert_not_called()

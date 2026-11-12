@@ -5,7 +5,7 @@ from django.conf import settings
 
 from .models import SMSTemplateSettings
 from .moderation import DIRECT_TEMPLATES, TEMPLATES, ModerationRejected, is_reviewed_template, moderate
-from .recipient_codes import SHORT_REPLY_PATTERN, SHORT_STOP_PATTERN, is_short_code
+from .recipient_codes import INVITE_CODE_PATTERN, SHORT_REPLY_PATTERN, SHORT_STOP_PATTERN, is_short_code
 
 SMS_INTRO = 'نمیدونم بهت بگم یا نگم؟'
 MESSAGE_SLOT = '{{message}}'
@@ -29,7 +29,7 @@ def sms_origin():
 
 
 def recipient_sms_url(origin, token, *, reply=False, root_path=None):
-    short = is_short_code(token)
+    short = is_short_code(token) or re.fullmatch(INVITE_CODE_PATTERN, token) is not None
     if root_path is None:
         root_path = settings.SMS_LINK_ROOT_PATH and origin == settings.SMS_LINK_HOST
     if short and root_path:

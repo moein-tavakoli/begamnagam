@@ -9,6 +9,21 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 2.0.0 — 2026-11-12 — Put the link type inside short SMS codes (local)
+
+- Use one lowercase type letter and five random characters in each new SMS
+  link. `r` opens a reply, `c` opens opt-out and `i` opens the home page
+  from an invitation. Each invitation also carries its own opt-out link.
+- Route all three types directly from the short host when the Nginx root
+  redirects and `SMS_LINK_ROOT_PATH` are enabled. Accept previously issued
+  recipient codes and preserve sealed invitation and message texts.
+- SMS parsers must accept six-character reply codes and pass the initial
+  `r` to the API as part of `reply_token`. The receiving number remains
+  required for opt-out and report actions that use a short code.
+- Verified 778 PostgreSQL tests, 122 frontend tests, TypeScript and Next.js
+  routes. Checked HTTPS redirects, legacy paths, privacy headers and ACME
+  routing in an isolated Nginx instance.
+
 ## 1.1.0 — 2026-11-12 — Change the Kavenegar API key in SMS settings (local)
 
 - Let superusers save an encrypted Kavenegar key in the SMS template page and

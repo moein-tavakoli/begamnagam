@@ -13,9 +13,9 @@ def issue_grant(preview, recipient_hash, *, invitation_send=None, with_reply=Fal
     # A uniqueness constraint arbitrates collisions across concurrent workers.
     # Savepoints keep a rare collision from poisoning the enclosing preview tx.
     for _ in range(5):
-        token = generate_short_code()
+        token = generate_short_code('c')
         token_digest = digest('recipient-token:' + token)
-        reply_token = generate_short_code(reply=True) if with_reply else ''
+        reply_token = generate_short_code('r') if with_reply else ''
         reply_digest = digest('reply-token:' + reply_token) if reply_token else None
         try:
             with transaction.atomic():

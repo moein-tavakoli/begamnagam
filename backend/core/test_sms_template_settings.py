@@ -42,7 +42,7 @@ class SMSTemplateSettingsTests(TestCase):
         self.assertEqual(preview.status_code, 200, preview.content)
         sample = preview.json()
         self.assertTrue(sample['full_sms'].startswith('درود از بگم نگم\n'))
-        self.assertTrue(sample['full_sms'].endswith('\nلغو: begamnagam.ir/r/S0TOP'))
+        self.assertTrue(sample['full_sms'].endswith('\nلغو: begamnagam.ir/r/c56Yc2'))
         self.assertEqual(sample['sms_units'], len(sample['full_sms'].encode('utf-16-le')) // 2)
         with override_settings(SMS_LINK_HOST='bgam.ir'):
             short_sample = self.client.post(PATH + '/preview', {'template': TEMPLATE, 'variables': VARIABLES},
@@ -84,8 +84,8 @@ class SMSTemplateSettingsTests(TestCase):
         self.assertEqual(result['template'], template.replace('\r\n', '\n').replace('{{ message }}', '{{message}}'))
         self.assertNotIn('{{site_url}}', result['default_template'])
         sample = result['preview']
-        self.assertIn('  پاسخ: bgam.ir/r/r3PLY\nدرود\nمتن شما «', sample['full_sms'])
-        self.assertIn('لغو: bgam.ir/r/S0TOP — https://begamnagam.ir\n', sample['full_sms'])
+        self.assertIn('  پاسخ: bgam.ir/r/r56Yc2\nدرود\nمتن شما «', sample['full_sms'])
+        self.assertIn('لغو: bgam.ir/r/c56Yc2 — https://begamnagam.ir\n', sample['full_sms'])
         self.assertTrue(sample['full_sms'].endswith(' / پشتیبانی 02112345678\n {{reply}}   '))
         self.assertEqual(sample['full_sms'].count('از اینکه با مهربانی کنارم بودی، ممنونم.'), 2)
         overhead = sample['sms_units'] - 2 * len('از اینکه با مهربانی کنارم بودی، ممنونم.')
@@ -96,7 +96,7 @@ class SMSTemplateSettingsTests(TestCase):
                                  variables=[{'name': 'footer', 'value': 'سطر اول\nسطر دوم'}, {'name': 'empty', 'value': ''}])
         self.assertEqual(response.status_code, 200, response.content)
         sample = response.json()['preview']
-        self.assertEqual(sample['full_sms'], 'سطر اول\nسطر دوم\nپایان\nلغو: begamnagam.ir/r/S0TOP')
+        self.assertEqual(sample['full_sms'], 'سطر اول\nسطر دوم\nپایان\nلغو: begamnagam.ir/r/c56Yc2')
         self.assertFalse(sample['has_message'])
         self.assertFalse(sample['has_opt_out'])
 
@@ -119,14 +119,14 @@ class SMSTemplateSettingsTests(TestCase):
                                  variables=[{'name': 'empty', 'value': ''}])
         self.assertEqual(response.status_code, 200, response.content)
         self.assertEqual(response.json()['preview']['full_sms'],
-                         'پاسخ: begamnagam.ir/r/r3PLY لغو: begamnagam.ir/r/S0TOP پایان')
+                         'پاسخ: begamnagam.ir/r/r56Yc2 لغو: begamnagam.ir/r/c56Yc2 پایان')
 
     def test_existing_settings_keep_reply_position_and_can_then_remove_reply(self):
         old_template = TEMPLATE.replace('{{reply}}\n', '')
         row = m.SMSTemplateSettings.objects.create(template=old_template, variables=VARIABLES, revision=1)
         settings = self.client.get(PATH).json()
         self.assertEqual(settings['template'], TEMPLATE)
-        self.assertIn('\nپاسخ: begamnagam.ir/r/r3PLY\nلغو:', settings['preview']['full_sms'])
+        self.assertIn('\nپاسخ: begamnagam.ir/r/r56Yc2\nلغو:', settings['preview']['full_sms'])
         row.refresh_from_db()
         self.assertEqual(row.template, old_template)
         saved = save_template(self.client, template=old_template, revision=1)
@@ -146,7 +146,7 @@ class SMSTemplateSettingsTests(TestCase):
         self.assertEqual(response.status_code, 200, response.content)
         result = response.json()
         self.assertTrue(result['preview']['full_sms'].startswith('تیتر قدیمی توضیح سایت امضای قدیمی\n'))
-        self.assertIn('\nپاسخ: begamnagam.ir/r/r3PLY\nلغو:', result['preview']['full_sms'])
+        self.assertIn('\nپاسخ: begamnagam.ir/r/r56Yc2\nلغو:', result['preview']['full_sms'])
         self.assertTrue(result['template'].startswith('{{reply_custom_2}} {{site_url_custom}} {{reply_custom}}\n'))
         row.refresh_from_db()
         self.assertEqual(row.template, old_template)
@@ -282,8 +282,8 @@ class SMSTemplateFlowTests(TestCase):
         second = new.json()
         self.assertTrue(second['full_sms'].startswith(intro + '\n' + second['rewritten_text'] + '\n'))
         self.assertGreater(second['sms_segments'], 3)
-        self.assertRegex(second['full_sms'], r'\nلغو: bgam\.ir/r/[A-Z0-4][A-Za-z0-9]{4}$')
-        self.assertRegex(first['full_sms'], r'\nلغو: begamnagam\.ir/r/[A-Z0-4][A-Za-z0-9]{4}$')
+        self.assertRegex(second['full_sms'], r'\nلغو: bgam\.ir/r/c[A-Za-z0-9]{5}$')
+        self.assertRegex(first['full_sms'], r'\nلغو: begamnagam\.ir/r/c[A-Za-z0-9]{5}$')
         self.assertEqual(m.Preview.objects.get(pk=first['preview_id']).full_sms, first['full_sms'])
         for phone, quote in [('09901234567', first), ('09901234568', second)]:
             order = self.make_order(recipient=phone, quote=quote).json()

@@ -1,9 +1,15 @@
 const shortCode = /^(?=[A-Za-z0-9]{0,4}[0-9])[A-Za-z0-9]{5}$/;
+const typedCode = /^[rci](?=[A-Za-z0-9]{0,4}[0-9])[A-Za-z0-9]{5}$/;
 const legacyStop = /^[A-Za-z0-9]{8}$/;
 const legacyReply = /^p[A-Za-z0-9]{8}$/;
 
 export function isShortRecipientCode(code: string): boolean {
-  return code.length === 5 && shortCode.test(code);
+  return (code.length === 6 && !code.startsWith('i') && typedCode.test(code)) ||
+    (code.length === 5 && shortCode.test(code));
+}
+
+export function isInvitationPathCode(code: string): boolean {
+  return code.length === 6 && code.startsWith('i') && typedCode.test(code);
 }
 
 export function isRecipientPathCode(code: string): boolean {
@@ -13,5 +19,7 @@ export function isRecipientPathCode(code: string): boolean {
 
 export function replyTokenFromFragment(code: string): string | null {
   if (code.length === 9 && legacyReply.test(code)) return code.slice(1);
-  return isShortRecipientCode(code) && /^[a-z5-9]/.test(code) ? code : null;
+  if (!isShortRecipientCode(code)) return null;
+  const reply = code.length === 6 ? code.startsWith('r') : /^[a-z5-9]/.test(code);
+  return reply ? code : null;
 }

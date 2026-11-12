@@ -33,7 +33,7 @@ class RecipientSafetyTests(TestCase):
             self.post('/orders/'+self.o['id']+'/pay-demo')
 
     def test_bound_quote_has_short_path_capability_and_encrypted_snapshot(self):
-        self.assertRegex(self.token, r'^[A-Z0-4][A-Za-z0-9]{4}$')
+        self.assertRegex(self.token, r'^c[A-Za-z0-9]{5}$')
         self.assertNotIn('https://', self.quote['full_sms'])
         self.assertNotIn('http://', self.quote['full_sms'])
         self.assertEqual(RecipientGrant.objects.get().token_digest, digest('recipient-token:'+self.token))

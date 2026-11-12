@@ -8,7 +8,7 @@ from .invitations import compose, lock_phone
 from .models import Account, Invitation, InvitationSend, Order, RecipientGrant, SafetyControl
 from .privacy import decrypt, digest
 from .providers import Kavenegar, ProviderDisabled, ProviderRejected, ProviderUnknown
-from .recipient_codes import STOP_TOKEN_PATTERN
+from .recipient_codes import INVITE_CODE_PATTERN, STOP_TOKEN_PATTERN
 from .services import models_busy_query
 from .sms import site_sms_origin, sms_origin
 
@@ -60,14 +60,20 @@ def apply_result(state, send, result):
 
 def check_snapshot(send):
     lines = send.full_sms.split('\n')
-    if len(lines) != 4 or lines[-2] not in {sms_origin(), site_sms_origin()}:
+    if len(lines) != 4:
         return False
-    origin, link = lines[-2:]
-    token = link.rsplit('/', 1)[-1]
-    root_path = link == 'لغو: ' + origin + '/' + token
+    landing, link = lines[-2:]
+    origin, separator, path = link.removeprefix('لغو: ').partition('/')
+    if not separator or origin not in {sms_origin(), site_sms_origin()}:
+        return False
+    token = path.rsplit('/', 1)[-1]
+    root_path = path == token
+    invite_code = landing.rsplit('/', 1)[-1] if landing != origin else ''
+    if invite_code and not re.fullmatch(INVITE_CODE_PATTERN, invite_code):
+        return False
     return (re.fullmatch(STOP_TOKEN_PATTERN, token) is not None
         and (not root_path or origin == settings.SMS_LINK_HOST)
-        and send.full_sms == compose(token, origin=origin, root_path=root_path)
+        and send.full_sms == compose(token, origin=origin, root_path=root_path, invite_code=invite_code)
         and RecipientGrant.objects.filter(invitation_send=send, token_digest=digest('recipient-token:'+token)).exists())
 
 

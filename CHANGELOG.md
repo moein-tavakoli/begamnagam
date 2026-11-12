@@ -9,7 +9,7 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
-## 2.0.0 — 2026-11-12 — Put the link type inside short SMS codes (local)
+## 2.0.0 — 2026-11-12 — Put the link type inside short SMS codes
 
 - Use one lowercase type letter and five random characters in each new SMS
   link. `r` opens a reply, `c` opens opt-out and `i` opens the home page
@@ -23,6 +23,9 @@ Historical release reports below contain deployment evidence and limitations.
 - Verified 778 PostgreSQL tests, 122 frontend tests, TypeScript and Next.js
   routes. Checked HTTPS redirects, legacy paths, privacy headers and ACME
   routing in an isolated Nginx instance.
+
+Deployed to the application server with six verified frontend replicas. Applied the encrypted Kavenegar settings migration after a backup restore rehearsal. Verified existing private Swagger access and direct reply, cancel and invite links on the short domain over HTTP and HTTPS.
+[Deployment evidence](docs/deployments/ct115-2.0.0.json)
 
 ## 1.1.0 — 2026-11-12 — Change the Kavenegar API key in SMS settings (local)
 

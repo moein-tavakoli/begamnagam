@@ -92,7 +92,7 @@ export function HomeFlow() {
         <HomeLogout />
       </section>
       <div className="home-slide compose-slide" hidden={!composing} aria-roledescription="اسلاید" aria-label="نوشتن پیام؛ صفحه دوم">
-        <Composer onExit={() => showComposer(false)} />
+        <Composer active={composing} onExit={() => showComposer(false)} />
       </div>
     </div>
   );

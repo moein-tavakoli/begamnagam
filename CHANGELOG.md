@@ -9,6 +9,19 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 2.1.0 — 2026-11-13 — Choose a recipient from device contacts (local)
+
+- Open the device contact picker beside the recipient field on supported
+  browsers. Fill a single valid Iranian mobile number or let the sender
+  choose between several. On Safari for iPhone, type or paste the number.
+- Request only phone numbers for one contact. Send the final destination to
+  the existing preview endpoint when the sender asks to prepare the message.
+  Changing the destination requires a fresh preview and confirmation.
+- Verified 126 frontend tests, TypeScript, three staff changelog tests, and a
+  production build. Checked browser flows at 375px and 1440px, service worker
+  registration and offline fallback. The contact picker was stubbed in Chromium
+  and the iPhone fallback was tested in WebKit emulation.
+
 ## 2.0.0 — 2026-11-12 — Put the link type inside short SMS codes
 
 - Use one lowercase type letter and five random characters in each new SMS

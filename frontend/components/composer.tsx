@@ -26,6 +26,7 @@ import { draftProblem, draftTopicHint } from "@/lib/composer-draft";
 import type { MessageTone } from '@/lib/message-tones';
 import { MessageTonePicker } from './message-tone-picker';
 import { RewriteLoading } from './rewrite-loading';
+import { RecipientPhoneField } from "./recipient-phone-field";
 import { ExampleFilters } from './example-filters';
 import { PaperDartButton, type PaperDartHandle } from './paper-dart-button';
 import { sendFeedback } from '@/lib/send-feedback';
@@ -53,7 +54,8 @@ const categoryIcons: Record<string, IconName> = {
 };
 const stepLabels = ["حرفت رو بنویس", "متن نهایی و ارسال"];
 
-export function Composer({ onExit, replyToken, onReplyUnavailable }: {
+export function Composer({ active = true, onExit, replyToken, onReplyUnavailable }: {
+  active?: boolean;
   onExit?: () => void;
   replyToken?: string;
   onReplyUnavailable?: (message: string) => void;
@@ -485,26 +487,10 @@ export function Composer({ onExit, replyToken, onReplyUnavailable }: {
           {step > 0 && !finished && !data?.authenticated && <AuthGate renderActions={renderActions} />}
           {step > 0 && !finished && data?.authenticated && (
             <form className="review-form" aria-labelledby="compose-title" onSubmit={preview ? createOrder : makePreview} noValidate>
-              {!isReply && <>
-              <label htmlFor="quote-recipient">شماره موبایل گیرنده</label>
-              <input id="quote-recipient" className="phone-number-input" type="tel" inputMode="numeric" dir="ltr"
-                maxLength={11} minLength={11} pattern="09[0-9]{9}"
-                value={recipient}
-                onChange={event => changeRecipient(event.target.value)}
-                onPaste={event => {
-                  const input = event.currentTarget;
-                  if (input.readOnly || input.disabled) return;
-                  if (input.selectionStart === 0 && input.selectionEnd === input.value.length) {
-                    event.preventDefault();
-                    changeRecipient(event.clipboardData.getData("text"));
-                  }
-                }}
-                autoComplete="off" placeholder="09123456789" disabled={busy}
-                readOnly={!!order}
-                aria-invalid={!!fields.recipient_phone}
-                aria-describedby={fields.recipient_phone ? "quote-recipient-error" : undefined} />
-              {fields.recipient_phone && <p className="field-error" id="quote-recipient-error">{fields.recipient_phone}</p>}
-              </>}
+              {!isReply && (
+                <RecipientPhoneField value={recipient} onChange={changeRecipient} active={active}
+                  disabled={busy} readOnly={!!order} error={fields.recipient_phone} />
+              )}
               {preview ? <>
               <div className="final-message">
                 <div className="final-message-header">

@@ -1,0 +1,99 @@
+{
+  "version": "2.1.0",
+  "source_commit": "ac32482c30254536baeda581f35b67dc2c0de8c3",
+  "deployed": true,
+  "verified_at_utc": "2026-11-13T14:41:59.533107+00:00",
+  "backend_image": "sha256:23c9dd3bac452b9e2283db3e1b93a88e48c84ae1889036553f80ff2623614323",
+  "frontend_image": "sha256:a34077b99f494e98a177ad326629b6e7788cc925f8595f4f434f4d3a81884fa1",
+  "asset_bridge_image": "sha256:65aed0128fa0aeecf9d6a50bf2d6c97443c790f6f5e33c495303c5f02ace37c9",
+  "services": {
+    "backend": "healthy",
+    "worker": "running",
+    "beat": "running",
+    "frontend": "healthy",
+    "frontend2": "healthy",
+    "frontend3": "healthy",
+    "frontend4": "healthy",
+    "frontend5": "healthy",
+    "frontend6": "healthy",
+    "postgres": "healthy",
+    "redis": "healthy",
+    "rabbitmq": "healthy",
+    "proxy": "healthy"
+  },
+  "frontends": {
+    "frontend": {
+      "version": "2.1.0",
+      "assets_verified": 13,
+      "recipient_routes": "PASS"
+    },
+    "frontend2": {
+      "version": "2.1.0",
+      "assets_verified": 13,
+      "recipient_routes": "PASS"
+    },
+    "frontend3": {
+      "version": "2.1.0",
+      "assets_verified": 13,
+      "recipient_routes": "PASS"
+    },
+    "frontend4": {
+      "version": "2.1.0",
+      "assets_verified": 13,
+      "recipient_routes": "PASS"
+    },
+    "frontend5": {
+      "version": "2.1.0",
+      "assets_verified": 13,
+      "recipient_routes": "PASS"
+    },
+    "frontend6": {
+      "version": "2.1.0",
+      "assets_verified": 13,
+      "recipient_routes": "PASS"
+    }
+  },
+  "frontend_runtime_files": 454,
+  "postgresql_tests": 778,
+  "frontend_tests": 126,
+  "frontend_typecheck": "PASS",
+  "frontend_production_build": "PASS",
+  "webkit_iphone_emulation": "PASS",
+  "compose_smoke": "PASS",
+  "live_compose_config": "PASS",
+  "github_actions_for_source": "not_run",
+  "database_schema_changed": false,
+  "pre_release_backup_encrypted": true,
+  "data_and_proxy_containers_preserved": true,
+  "live_sms_configuration_preserved": true,
+  "https": {
+    "version": "2.1.0",
+    "transport": "domain_https_via_internal_nginx",
+    "tls_certificate_verified": true,
+    "contact_picker_bundle": "PASS",
+    "manifest": "PASS",
+    "service_worker": "PASS",
+    "otp_is_real": true,
+    "package_checkout_enabled": false,
+    "anonymous_private_documentation": "denied",
+    "short_sms_routes": "PASS",
+    "public_address_probe_from_operator_network": "connection_failed_before_and_after_release"
+  },
+  "physical_android_test": "pending",
+  "verification_sms_sent": 0,
+  "verification_otp_sent": 0,
+  "verification_payments": 0,
+  "browser": {
+    "version": "2.1.0",
+    "origin_https_browser": "PASS",
+    "device_contact_api": "stubbed",
+    "product_api": "intercepted",
+    "physical_device": false
+  },
+  "sms_edge": {
+    "tls_verified_for_both_domains": true,
+    "short_host_prefixed_links": "PASS",
+    "legacy_links": "PASS",
+    "root_short_link_ready": true
+  }
+}

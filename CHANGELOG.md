@@ -9,7 +9,7 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
-## 2.1.0 — 2026-11-13 — Choose a recipient from device contacts (local)
+## 2.1.0 — 2026-11-13 — Choose a recipient from device contacts
 
 - Open the device contact picker beside the recipient field on supported
   browsers. Fill a single valid Iranian mobile number or let the sender
@@ -21,6 +21,13 @@ Historical release reports below contain deployment evidence and limitations.
   production build. Checked browser flows at 375px and 1440px, service worker
   registration and offline fallback. The contact picker was stubbed in Chromium
   and the iPhone fallback was tested in WebKit emulation.
+
+Deployed commit `ac32482` to the application server. Verified all six
+frontend replicas, 778 PostgreSQL tests, the isolated Compose smoke test,
+and the contact picker bundle over HTTPS through the internal Nginx.
+The database schema stayed the same. The operator network could not connect
+to the public address before or after the rollout. The physical Android
+test remains pending. [Deployment evidence](docs/deployments/ct115-2.1.0.json)
 
 ## 2.0.0 — 2026-11-12 — Put the link type inside short SMS codes
 

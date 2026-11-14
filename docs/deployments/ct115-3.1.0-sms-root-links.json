@@ -1,0 +1,42 @@
+{
+  "version": "3.1.0",
+  "source_commit": "4c336bb6f99752a3e4febe322831c6af2c99cd44",
+  "change": "Enable root-path SMS link issuance on the existing deployment",
+  "new_sms_link_format": "bgam.ir/<code>",
+  "nginx": {
+    "activated_at_utc": "2026-11-14T11:50:51.549518+00:00",
+    "config": "/etc/nginx/sites-available/bgam.ir",
+    "before_sha256": "68a9746293ab30cf68078567d65d95315e860fbbe58392164fdef2b28703b701",
+    "after_sha256": "078a788e3f9111712947a37ecf05a5affb8ef484b953aa36f43ec741530bf42f",
+    "config_test": "PASS",
+    "reload": "PASS",
+    "root_redirects_http_and_https": "PASS",
+    "legacy_link_redirects": "PASS",
+    "private_response_headers": "PASS",
+    "reserved_code_in_default_access_or_error_log": false
+  },
+  "application": {
+    "activated_at_utc": "2026-11-14T11:51:40.689667+00:00",
+    "sms_link_root_path": true,
+    "compose_config": "PASS",
+    "services_recreated": ["backend", "worker", "beat"],
+    "existing_images_used": true,
+    "combined_and_cancel_sms_rendering": "PASS",
+    "invitation_sms_rendering": "PASS",
+    "otp_is_real": true,
+    "paid_checkout_enabled": false
+  },
+  "verification": {
+    "transport": "domain_https_via_internal_nginx",
+    "tls_certificate_verified": true,
+    "routes_checked": 48,
+    "health": "PASS",
+    "browser_widths_px": [375, 1440],
+    "combined_page_and_both_options": "PASS",
+    "cancel_form_inspection": "browser_fixture_using_reserved_code",
+    "public_address_probe_from_operator_network": "connection_failed",
+    "sms_sent_by_verification": 0,
+    "otp_sent_by_verification": 0,
+    "opt_outs_submitted_by_verification": 0
+  }
+}

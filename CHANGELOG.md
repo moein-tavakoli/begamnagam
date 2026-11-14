@@ -26,6 +26,10 @@ HTTPS frontend with isolated staff fixtures. The operator network could not
 connect to the public address before or after the rollout.
 [Deployment evidence](docs/deployments/ct115-3.1.0.json)
 
+Updated the 3.1.0 server configuration so new SMS links use `bgam.ir/<code>`.
+Verified the combined link on HTTP and HTTPS, opened both options in Chrome
+and checked earlier links. [Deployment evidence](docs/deployments/ct115-3.1.0-sms-root-links.json)
+
 ## 3.0.0 — 2026-11-14 — Received messages and a shared SMS action link
 
 - Show received and sent messages in the staff account activity feed with the

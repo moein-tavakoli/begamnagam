@@ -151,6 +151,6 @@ export const managementReason = (action: string): string => auditReasons[action]
 export type ManagementActivity = {
   account: { id: number; phone: string; phone_masked: string; suspended: boolean };
   section: "messages" | "invitations";
-  rows: (ManagementRow & { kind: "order" | "attempt" | "moderation" | "invitation"; direction?: "sent" | "received"; id: string; created_at: string; status: string; reason_code?: string; phone?: string; recipient_phone?: string; order_id?: string })[];
+  rows: (ManagementRow & { kind: "order" | "attempt" | "moderation" | "invitation"; direction?: "sent" | "received"; id: string; created_at: string; status: string; reason_code?: string; phone?: string; recipient_phone?: string; sender_phone?: string; order_id?: string })[];
   page: number; total: number; page_size: number;
 };

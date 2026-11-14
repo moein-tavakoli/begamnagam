@@ -9,6 +9,16 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 3.1.0 — 2026-11-14 — Sender numbers in staff activity (local)
+
+- Show the sender's phone on received-message cards and in their text dialog.
+  Read the number from the sender's account under the existing staff
+  permissions. Display an unavailable label when the number has been removed.
+- Remove the visible record ID from all account activity cards. Keep the IDs
+  used by the text dialog and the existing API contract.
+- Verified PostgreSQL integration tests, the frontend suite and TypeScript.
+  Checked cards and the text dialog in Chromium at 375px and 1440px.
+
 ## 3.0.0 — 2026-11-14 — Received messages and a shared SMS action link
 
 - Show received and sent messages in the staff account activity feed with the

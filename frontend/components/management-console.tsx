@@ -347,8 +347,8 @@ function MessageTextsContent({ texts, isAttempt = false }: { texts: MessageTexts
 
 type MessageReview = { status: 'loading' } | { status: 'ready'; texts: MessageTexts } | { status: 'error'; message: string };
 
-function UserMessageTextsButton({ userId, kind, recordId, recipientPhone, onFailure }: {
-  userId: string; kind: 'order' | 'attempt'; recordId: string; recipientPhone?: string; onFailure: (error: unknown) => void;
+function UserMessageTextsButton({ userId, kind, recordId, phone, phoneLabel, onFailure }: {
+  userId: string; kind: 'order' | 'attempt'; recordId: string; phone?: string; phoneLabel: string; onFailure: (error: unknown) => void;
 }) {
   const [review, setReview] = useState<MessageReview | null>(null);
   const request = useRef<AbortController | null>(null);
@@ -383,7 +383,7 @@ function UserMessageTextsButton({ userId, kind, recordId, recipientPhone, onFail
   return <Box>
     <ManagementButton type="button" variant="outlined" startIcon={<VisibilityOutlined/>} onClick={()=>void show()}>مشاهدهٔ متن اولیه و نتیجه</ManagementButton>
     {review&&<ManagementDialog title="متن اولیه و نتیجه" onClose={close}>
-      {recipientPhone&&<Typography variant="body2">شمارهٔ گیرنده <bdi dir="ltr">{recipientPhone}</bdi></Typography>}
+      {phone&&<Typography variant="body2">{phoneLabel} <bdi dir="ltr">{phone}</bdi></Typography>}
       {review.status === 'loading' && <Loading/>}
       {review.status === 'ready' && <MessageTextsContent texts={review.texts} isAttempt={isAttempt}/>}
       {review.status === 'error' && <Failure message={review.message} retry={()=>void show()}/>}
@@ -456,28 +456,32 @@ function UserActivity({ userId, permissions, resources, onFailure }: {
     {error&&<Failure message={error} retry={()=>setEpoch(v=>v+1)}/>} {!canRead&&<Alert severity="warning">مجوز مشاهدهٔ این فعالیت را ندارید.</Alert>}{busy&&<Loading/>}
     {data?.section===section&&data.page===page&&!busy&&!error&&<ContentCard>
       <Stack direction="row" sx={{justifyContent:'space-between',gap:1}}><Typography variant="body2" color="text.secondary">{managementNumber(data.total)} رکورد</Typography><Typography variant="body2" color="text.secondary">صفحهٔ {managementNumber(data.page)} از {managementNumber(pages)}</Typography></Stack>
-      {!data.rows.length?<Empty message="فعالیتی در این بخش ثبت نشده است."/>:data.rows.map(row=><Card component="article" key={`${row.kind}-${row.record_id}`} sx={{p:2}}><Stack spacing={2}>
-        <Stack direction="row" sx={{alignItems:'center',justifyContent:'space-between',gap:1,flexWrap:'wrap'}}>
-          <Stack direction="row" spacing={1} sx={{alignItems:'center'}}>
-            <HistoryOutlined color="primary"/>
-            <Typography component="h3" variant="subtitle1">{row.direction === 'received' ? 'پیام دریافتی' : kinds[row.kind]}</Typography>
+      {!data.rows.length?<Empty message="فعالیتی در این بخش ثبت نشده است."/>:data.rows.map(row=>{
+        const received = row.direction === 'received';
+        const phone = received ? row.sender_phone : row.recipient_phone;
+        const phoneLabel = received ? 'شمارهٔ فرستنده' : 'شمارهٔ مقصد';
+        return <Card component="article" key={`${row.kind}-${row.record_id}`} sx={{p:2}}><Stack spacing={2}>
+          <Stack direction="row" sx={{alignItems:'center',justifyContent:'space-between',gap:1,flexWrap:'wrap'}}>
+            <Stack direction="row" spacing={1} sx={{alignItems:'center'}}>
+              <HistoryOutlined color="primary"/>
+              <Typography component="h3" variant="subtitle1">{received ? 'پیام دریافتی' : kinds[row.kind]}</Typography>
+            </Stack>
+            <Chip size="small" color={row.status==='rejected'?'warning':row.status==='failed'?'error':'default'}
+              label={received && row.status === 'accepted' ? 'پذیرفته‌شده توسط سرویس پیامک' : managementState(row.status)}/>
           </Stack>
-          <Chip size="small" color={row.status==='rejected'?'warning':row.status==='failed'?'error':'default'}
-            label={row.direction === 'received' && row.status === 'accepted' ? 'پذیرفته‌شده توسط سرویس پیامک' : managementState(row.status)}/>
-        </Stack>
-        <Typography variant="caption" color="text.secondary">{managementDate(row.created_at)}</Typography>
-        {row.phone&&<Typography variant="body2">مخاطب: {row.phone}</Typography>}
-        {row.kind!=='invitation'&&<Typography variant="body2">
-          {row.recipient_phone ? <>شمارهٔ مقصد <bdi dir="ltr">{row.recipient_phone}</bdi></> : 'شمارهٔ مقصد در دسترس نیست'}
-        </Typography>}
-        {row.reason_code&&<Alert severity={row.status==='rejected'?'warning':row.status==='failed'?'error':'info'}>علت: {managementExplanation(row.reason_code)}</Alert>}
-        {row.kind==='invitation'&&<Stack spacing={1}><Typography variant="body2">ثبت‌نام مخاطب: {row.registered_at?managementDate(row.registered_at):'هنوز ثبت‌نام نکرده است'}</Typography><Typography variant="body2">جایزهٔ دعوت: {row.reward_awarded_at?managementDate(row.reward_awarded_at):'ثبت نشده است'}</Typography></Stack>}
-        {row.kind==='moderation'&&<Typography variant="body2" color="text.secondary">این سابقهٔ قدیمی فقط نتیجهٔ بررسی را دارد؛ متن اولیه در آن زمان ذخیره نشده است.</Typography>}
-        <Accordion disableGutters elevation={0}><AccordionSummary expandIcon={<ExpandMoreRounded/>}><Typography variant="caption">شناسهٔ سابقه</Typography></AccordionSummary><AccordionDetails><Typography variant="caption" sx={{overflowWrap:'anywhere'}}>{row.id}</Typography></AccordionDetails></Accordion>
-        {permissions.includes('view_private_message_text')&&(row.kind==='order'||row.kind==='attempt')&&<UserMessageTextsButton
-          userId={userId} kind={row.kind} recordId={row.kind==='order' ? row.order_id || row.id : row.id}
-          recipientPhone={row.recipient_phone} onFailure={onFailure}/>}
-      </Stack></Card>)}
+          <Typography variant="caption" color="text.secondary">{managementDate(row.created_at)}</Typography>
+          {row.phone&&<Typography variant="body2">مخاطب: {row.phone}</Typography>}
+          {row.kind!=='invitation'&&<Typography variant="body2">
+            {phoneLabel}{phone ? <> <bdi dir="ltr">{phone}</bdi></> : ' در دسترس نیست'}
+          </Typography>}
+          {row.reason_code&&<Alert severity={row.status==='rejected'?'warning':row.status==='failed'?'error':'info'}>علت: {managementExplanation(row.reason_code)}</Alert>}
+          {row.kind==='invitation'&&<Stack spacing={1}><Typography variant="body2">ثبت‌نام مخاطب: {row.registered_at?managementDate(row.registered_at):'هنوز ثبت‌نام نکرده است'}</Typography><Typography variant="body2">جایزهٔ دعوت: {row.reward_awarded_at?managementDate(row.reward_awarded_at):'ثبت نشده است'}</Typography></Stack>}
+          {row.kind==='moderation'&&<Typography variant="body2" color="text.secondary">این سابقهٔ قدیمی فقط نتیجهٔ بررسی را دارد؛ متن اولیه در آن زمان ذخیره نشده است.</Typography>}
+          {permissions.includes('view_private_message_text')&&(row.kind==='order'||row.kind==='attempt')&&<UserMessageTextsButton
+            userId={userId} kind={row.kind} recordId={row.kind==='order' ? row.order_id || row.id : row.id}
+            phone={phone} phoneLabel={received ? phoneLabel : 'شمارهٔ گیرنده'} onFailure={onFailure}/>}
+        </Stack></Card>;
+      })}
       <Stack component="nav" aria-label="صفحه‌بندی فعالیت کاربر" direction="row" spacing={1} sx={{justifyContent:'flex-end'}}>{page>1&&<Button component={Link} variant="outlined" startIcon={<ArrowForwardRounded/>} href={pageHref(page-1)}>قبلی</Button>}{page<pages&&<Button component={Link} variant="outlined" endIcon={<ArrowBackRounded/>} href={pageHref(page+1)}>بعدی</Button>}</Stack>
     </ContentCard>}
   </Stack>;

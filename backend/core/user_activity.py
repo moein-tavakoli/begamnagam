@@ -72,6 +72,12 @@ def message_recipient_phones(account, rows):
     }
 
 
+def message_sender_phones(account, rows):
+    received_ids = [row['id'] for row in rows if row.get('direction') == 'received']
+    orders = m.Order.objects.filter(received_order_filter(account), pk__in=received_ids).exclude(owner_id=account.user_id)
+    return {str(pk): decrypt(cipher) for pk, cipher in orders.values_list('pk', 'owner__account__phone_cipher') if cipher}
+
+
 def invitation_records(account, page):
     latest = m.InvitationSend.objects.filter(invitation_id=OuterRef('pk')).order_by('-ordinal', '-created_at', '-pk')
     invitations = m.Invitation.objects.filter(inviter_id=account.user_id).annotate(
@@ -102,9 +108,12 @@ def activity_payload(account, section, page):
                 del row['direction']
             row['record_id'] = row['id']
         phones = message_recipient_phones(account, rows)
+        sender_phones = message_sender_phones(account, rows)
         for row in rows:
             row['created_at'] = row.pop('activity_at')
             row['recipient_phone'] = phones.get((row['kind'], row['id']), '')
+            if row.get('direction') == 'received':
+                row['sender_phone'] = sender_phones.get(row['id'], '')
     else:
         total, rows = invitation_records(account, page)
     return {'account': account_summary(account), 'section': section, 'rows': rows,

@@ -128,6 +128,9 @@ class UserActivityTests(TestCase):
     @override_settings(DEMO_MODE=False)
     def test_received_messages_match_the_users_phone_and_confirmed_sends(self):
         self.permit('view_account', 'view_order')
+        sender_phone = '09351234567'
+        sender = m.Account.objects.create(user=self.other, phone_hash=digest(sender_phone),
+            phone_cipher=encrypt(sender_phone), phone_masked=mask(sender_phone))
         sent = self.order()
         self_send = self.order(recipient_phone=self.phone, status=m.Order.Status.DELIVERED)
         delivered = self.order(self.other, self.phone, status=m.Order.Status.DELIVERED)
@@ -151,14 +154,19 @@ class UserActivityTests(TestCase):
             str(delivered.pk): 'received', str(accepted.pk): 'received',
         })
         self.assertEqual(orders[str(delivered.pk)]['recipient_phone'], self.phone)
+        self.assertEqual(orders[str(delivered.pk)]['sender_phone'], sender_phone)
+        self.assertEqual(orders[str(accepted.pk)]['sender_phone'], sender_phone)
+        self.assertNotIn('sender_phone', orders[str(sent.pk)])
         self.assertEqual(orders[str(delivered.pk)]['order_id'], str(delivered.pk))
         self.assertEqual(orders[str(delivered.pk)]['created_at'], DjangoJSONEncoder().default(delivered.created_at))
         for private in (self.other.username, 'private source', 'private reviewed',
-                        'private input for target', delivered.recipient_cipher, delivered.recipient_hash):
+                        'private input for target', delivered.recipient_cipher, delivered.recipient_hash,
+                        sender.phone_cipher, sender.phone_hash, sender.phone_masked):
             self.assertNotIn(private, response.content.decode())
         audit = m.OperatorAudit.objects.get(action='user_activity_viewed')
         self.assertEqual(audit.after, {'section': 'messages'})
         self.assertNotIn(self.phone, json.dumps([audit.reason, audit.before, audit.after]))
+        self.assertNotIn(sender_phone, json.dumps([audit.reason, audit.before, audit.after]))
 
         path = f'orders/{delivered.pk}/texts'
         self.assertEqual(self.post(path).status_code, 403)
@@ -167,6 +175,17 @@ class UserActivityTests(TestCase):
         audit = m.OperatorAudit.objects.get(action='message_text_viewed')
         self.assertEqual(audit.object_id, str(delivered.pk))
         self.assertNotIn('private reviewed', json.dumps([audit.reason, audit.before, audit.after]))
+
+    def test_received_rows_keep_missing_or_redacted_sender_numbers_unavailable(self):
+        self.permit('view_account', 'view_order')
+        self.order(self.other, self.phone, status=m.Order.Status.DELIVERED)
+        row, = self.activity().json()['rows']
+        self.assertEqual(row['sender_phone'], '')
+
+        phone = '09351234567'
+        m.Account.objects.create(user=self.other, phone_hash=digest(phone), phone_cipher='', phone_masked='حذف‌شده')
+        row, = self.activity().json()['rows']
+        self.assertEqual(row['sender_phone'], '')
 
     def test_received_messages_are_ordered_by_provider_receipt_time(self):
         self.permit('view_account', 'view_order')

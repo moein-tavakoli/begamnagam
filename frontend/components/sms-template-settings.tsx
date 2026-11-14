@@ -54,8 +54,8 @@ const variableName = '[a-z][a-z0-9_]{0,23}';
 const validName = new RegExp(`^${variableName}$`);
 const systemSlots = [
   { name: 'message', label: 'متن پیام' },
-  { name: 'reply', label: 'لینک پاسخ' },
-  { name: 'opt_out', label: 'لینک لغو' },
+  { name: 'reply', label: 'لینک پاسخ یا لغو دریافت' },
+  { name: 'opt_out', label: 'لینک لغو دریافت' },
   { name: 'site_url', label: 'آدرس سایت' },
 ];
 const templateEmojis = [
@@ -256,7 +256,7 @@ export function SmsTemplateSettings({ onFailure, memory, canManageKavenegarKey }
                 </IconButton>)}
                 <IconButton type="button" aria-label="بستن انتخاب ایموجی" onClick={() => setEmojiAnchor(null)}><CloseRounded/></IconButton>
               </Popover>
-              <Typography variant="caption" color="text.secondary">لینک پاسخ در نوبت‌های مجاز درج می‌شود. آدرس اصلی سایت را در صورت نیاز به قالب اضافه کنید.</Typography>
+              <Typography variant="caption" color="text.secondary">در نوبت مجاز، اولین جای لینک در قالب به لینک مشترک پاسخ و لغو دریافت اختصاص دارد. برای پیام بدون نوبت پاسخ، لینک لغو دریافت درج می‌شود.</Typography>
             </Stack>
             <Divider/>
             <Stack direction="row" useFlexGap sx={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
@@ -311,11 +311,11 @@ export function SmsTemplateSettings({ onFailure, memory, canManageKavenegarKey }
               <Chip size="small" variant="outlined" label={`${number(preview.sms_units)} واحد در نمونه`}/>
             </Stack>
             {preview.has_message === false && <Alert severity="warning" variant="outlined">این قالب جای متن تأییدشدهٔ کاربر را ندارد.</Alert>}
-            {preview.has_opt_out === false && <Alert severity="info" variant="outlined">لینک لغو دریافت خودکار به پایان پیامک اضافه می‌شود.</Alert>}
+            {preview.has_opt_out === false && <Alert severity="info" variant="outlined">اگر پیام امکان پاسخ نداشته باشد، لینک لغو دریافت خودکار به پایان پیامک اضافه می‌شود.</Alert>}
             {preview.length_warning && <Alert severity="warning" variant="outlined">این قالب ممکن است به بیش از ۳ بخش پیامک نیاز داشته باشد. می‌توانید آن را با همین طول ذخیره کنید.</Alert>}
             <Typography variant="caption" color="text.secondary">
               {preview.has_message !== false && <>برای ماندن در ۳ بخش، حدود {number(preview.body_units)} واحد برای متن پیام جا هست. </>}
-              لینک‌های پاسخ و لغو در این نمونه آزمایشی‌اند.
+              لینک این نمونه آزمایشی است.
             </Typography>
           </Stack>
         </Card>

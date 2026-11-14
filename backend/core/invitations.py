@@ -99,7 +99,7 @@ def new_send(invitation, key):
     send = InvitationSend.objects.create(invitation=invitation, ordinal=len(sends)+1, idempotency_key=key,
         available_at=now, consent_at=now, consent_version=CONSENT_VERSION,
         provider='console' if settings.DEMO_MODE and settings.SMS_BACKEND == 'console' else 'kavenegar')
-    token, _ = issue_grant(None, invitation.phone_hash, invitation_send=send)
+    token = issue_grant(None, invitation.phone_hash, invitation_send=send)
     send.full_sms = compose(token, invite_code=generate_short_code('i'))
     send.save(update_fields=['full_sms'])
     transaction.on_commit(lambda: publish(send.pk))

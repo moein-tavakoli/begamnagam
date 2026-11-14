@@ -40,7 +40,7 @@ def check_private_link_headers(headers):
 
 
 def check_typed_sms_links(request, origin):
-    destinations = {"r56Yc2": "/r#r56Yc2", "c56Yc2": "/r#c56Yc2", "i56Yc2": "/"}
+    destinations = {"a56Yc2": "/r#a56Yc2", "r56Yc2": "/r#r56Yc2", "c56Yc2": "/r#c56Yc2", "i56Yc2": "/"}
     for code, destination in destinations.items():
         path = "/r/" + code
         body, headers = request(path, 307)
@@ -63,7 +63,7 @@ def main():
     parser.add_argument("--product-session", help="Optional private JSON containing a synthetic diagnostic session")
     parser.add_argument("--expect-live-gifts", action="store_true", help="Expect real SMS/OTP and disabled paid checkout")
     parser.add_argument("--expect-plain-recipient-links", action="store_true", help="Check plain alphanumeric SMS links without using a real recipient code")
-    parser.add_argument("--expect-typed-sms-links", action="store_true", help="Check reply, cancel and invite redirects at bgam.ir and the main app")
+    parser.add_argument("--expect-typed-sms-links", action="store_true", help="Check combined action, reply, cancel and invite redirects at bgam.ir and the main app")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     origin = args.base_url.rstrip("/")

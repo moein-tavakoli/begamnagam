@@ -115,7 +115,7 @@ SCHEMAS = {
     'FreeformInput': obj({'recipient_phone': PHONE, 'source_mode': string(enum=['freeform']), 'text': TEXT, 'message_tone': TONE},
                          ['recipient_phone', 'source_mode', 'text'], closed=True),
     'ReplyPreviewInput': obj({'reply_token': string(pattern=f'^{REPLY_TOKEN_PATTERN}$',
-        description='Use the entire reply code, including the initial r in six-character links. For older five-character links use the whole code, and for /r/p links use the eight characters after /r/p. Verify the receiving phone first.'),
+        description='Use the entire six-character code, including a for a combined action link or r for a previous reply link. For five-character links use the whole code. For /r/p links use the eight characters after /r/p. Verify the receiving phone first.'),
         'source_mode': string(enum=['freeform']), 'text': TEXT, 'message_tone': TONE}, ['reply_token', 'source_mode', 'text'], closed=True),
     'AlternativeInput': obj({'recipient_phone': PHONE, 'source_mode': string(enum=['reviewed_alternative']),
                              'alternative_token': TOKEN, 'message_tone': TONE},

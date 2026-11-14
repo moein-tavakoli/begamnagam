@@ -46,7 +46,7 @@ class MessageTopicTests(TestCase):
                 self.assertIn(data['rewritten_text'],pool[item['id']])
                 self.assertTrue(data['full_sms'].startswith('نمیدونم بهت بگم یا نگم؟\n' + data['rewritten_text'] + '\n'))
                 self.assertEqual(data['sms_segments'], sms_segments(data['full_sms']))
-                self.assertRegex(data['full_sms'].split('لغو: ')[1],r'^begamnagam\.ir/r/c[A-Za-z0-9]{5}$')
+                self.assertRegex(data['full_sms'], r'\nپاسخ یا لغو: begamnagam\.ir/r/a[A-Za-z0-9]{5}$')
 
     def test_new_topic_keeps_moderation_before_and_after_preview(self):
         rejected=self.post('/messages/preview',{'category':'parking','text':'احمق'})

@@ -38,8 +38,8 @@ class PhaseTwoTests(TestCase):
         for category in TEMPLATES:
             quote=self.preview(category=category,text='یک پیام محترمانه')
             self.assertTrue(quote['full_sms'].startswith('نمیدونم بهت بگم یا نگم؟\n' + quote['rewritten_text']))
-            self.assertIn('\nپاسخ: ', quote['full_sms'])
-            self.assertIn('\nلغو: ', quote['full_sms'])
+            self.assertIn('\nپاسخ یا لغو: ', quote['full_sms'])
+            self.assertEqual(quote['full_sms'].count('/r/'), 1)
 
     def test_pair_limit_survives_global_cooldown_and_cache_loss(self):
         user=self.authenticate()

@@ -5,6 +5,7 @@ from datetime import timedelta
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.core.cache import cache
+from django.core.serializers.json import DjangoJSONEncoder
 from django.test import Client, TestCase, override_settings
 from django.utils import timezone
 
@@ -35,11 +36,11 @@ class UserActivityTests(TestCase):
             original_text='private source', text='private reviewed', generated_body='private reviewed', price_toman=2000,
             moderation_mode='template', expires_at=timezone.now()+timedelta(minutes=5))
 
-    def order(self, owner=None, recipient_phone='09999999999'):
+    def order(self, owner=None, recipient_phone='09999999999', *, status=m.Order.Status.FAILED):
         owner = owner or self.member
         return m.Order.objects.create(owner=owner, preview=self.preview(owner), idempotency_key=uuid.uuid4(),
             recipient_hash=digest(recipient_phone), recipient_cipher=encrypt(recipient_phone), recipient_masked=mask(recipient_phone),
-            text='private reviewed', category='appreciation', amount_toman=2000, status='failed')
+            text='private reviewed', category='appreciation', amount_toman=2000, status=status)
 
     def activity(self, section='messages', page=1):
         return self.post(f'users/{self.account.pk}/activity', {'section': section, 'page': page})
@@ -123,6 +124,87 @@ class UserActivityTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()['rows'][0]['recipient_phone'], '')
         self.assertNotIn(order.recipient_masked, response.content.decode())
+
+    @override_settings(DEMO_MODE=False)
+    def test_received_messages_match_the_users_phone_and_confirmed_sends(self):
+        self.permit('view_account', 'view_order')
+        sent = self.order()
+        self_send = self.order(recipient_phone=self.phone, status=m.Order.Status.DELIVERED)
+        delivered = self.order(self.other, self.phone, status=m.Order.Status.DELIVERED)
+        accepted = self.order(self.other, self.phone, status=m.Order.Status.ACCEPTED)
+        for state in (m.Order.Status.AWAITING_PAYMENT, m.Order.Status.QUEUED, m.Order.Status.UNKNOWN,
+                      m.Order.Status.FAILED, m.Order.Status.CANCELLED, m.Order.Status.DELIVERED_DEMO):
+            self.order(self.other, self.phone, status=state)
+        self.order(self.other, '09999999997', status=m.Order.Status.DELIVERED)
+        m.MessageAttempt.objects.create(owner=self.other, recipient_phone=self.phone, status='accepted',
+            reason_code='preview_accepted', original_text='private input for target')
+
+        response = self.activity()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Cache-Control'], 'no-store')
+        payload = response.json()
+        self.assertEqual(payload['total'], 4)
+        orders = {row['id']: row for row in payload['rows']}
+        self.assertEqual({identifier: row['direction'] for identifier, row in orders.items()}, {
+            str(sent.pk): 'sent', str(self_send.pk): 'sent',
+            str(delivered.pk): 'received', str(accepted.pk): 'received',
+        })
+        self.assertEqual(orders[str(delivered.pk)]['recipient_phone'], self.phone)
+        self.assertEqual(orders[str(delivered.pk)]['order_id'], str(delivered.pk))
+        self.assertEqual(orders[str(delivered.pk)]['created_at'], DjangoJSONEncoder().default(delivered.created_at))
+        for private in (self.other.username, 'private source', 'private reviewed',
+                        'private input for target', delivered.recipient_cipher, delivered.recipient_hash):
+            self.assertNotIn(private, response.content.decode())
+        audit = m.OperatorAudit.objects.get(action='user_activity_viewed')
+        self.assertEqual(audit.after, {'section': 'messages'})
+        self.assertNotIn(self.phone, json.dumps([audit.reason, audit.before, audit.after]))
+
+        path = f'orders/{delivered.pk}/texts'
+        self.assertEqual(self.post(path).status_code, 403)
+        self.permit('view_private_message_text')
+        self.assertEqual(self.post(path).json()['final_text'], 'private reviewed')
+        audit = m.OperatorAudit.objects.get(action='message_text_viewed')
+        self.assertEqual(audit.object_id, str(delivered.pk))
+        self.assertNotIn('private reviewed', json.dumps([audit.reason, audit.before, audit.after]))
+
+    def test_received_messages_are_ordered_by_provider_receipt_time(self):
+        self.permit('view_account', 'view_order')
+        confirmed = self.order(self.other, self.phone, status=m.Order.Status.DELIVERED)
+        accepted = self.order(self.other, self.phone, status=m.Order.Status.ACCEPTED)
+        sent = self.order()
+        now = timezone.now().replace(microsecond=0) + timedelta(hours=1)
+        m.MessageDelivery.objects.create(order=confirmed, status=m.MessageDelivery.Status.DELIVERED,
+            accepted_at=now - timedelta(minutes=2), resolved_at=now, provider='kavenegar', environment='live')
+        m.MessageDelivery.objects.create(order=accepted, status=m.MessageDelivery.Status.ACCEPTED,
+            accepted_at=now - timedelta(minutes=1), provider='kavenegar', environment='live')
+
+        rows = self.activity().json()['rows']
+
+        self.assertEqual([row['id'] for row in rows], [str(confirmed.pk), str(accepted.pk), str(sent.pk)])
+        self.assertEqual(rows[0]['created_at'], now.isoformat().replace('+00:00', 'Z'))
+
+    @override_settings(DEMO_MODE=True)
+    def test_demo_receipt_remains_labelled_as_simulated(self):
+        self.permit('view_account', 'view_order')
+        order = self.order(self.other, self.phone, status=m.Order.Status.DELIVERED_DEMO)
+
+        row, = self.activity().json()['rows']
+
+        self.assertEqual(row['id'], str(order.pk))
+        self.assertEqual(row['direction'], 'received')
+        self.assertEqual(row['status'], 'delivered_demo')
+
+    def test_redacted_accounts_or_cleared_recipient_hashes_do_not_match(self):
+        self.permit('view_account', 'view_order')
+        order = self.order(self.other, self.phone, status=m.Order.Status.DELIVERED)
+        m.Account.objects.filter(pk=self.account.pk).update(phone_cipher='')
+        self.assertEqual(self.activity().json()['rows'], [])
+
+        m.Account.objects.filter(pk=self.account.pk).update(phone_hash='', phone_cipher=self.account.phone_cipher)
+        m.Order.objects.filter(pk=order.pk).update(recipient_hash='', recipient_cipher='')
+
+        self.assertEqual(self.activity().json()['rows'], [])
 
     def test_invitations_include_only_selected_user_and_recent_send_state(self):
         self.permit('view_account', 'view_invitation')
@@ -210,16 +292,18 @@ class UserActivityTests(TestCase):
     def test_message_pagination_covers_multiple_kinds_without_gaps(self):
         self.permit('view_account', 'view_order')
         order = self.order()
+        received = self.order(self.other, self.phone, status=m.Order.Status.DELIVERED)
         m.MessageAttempt.objects.bulk_create([m.MessageAttempt(owner=self.member, status='failed', reason_code='ai_unavailable',
             original_text='private attempt') for _ in range(15)])
         m.ModerationAudit.objects.bulk_create([m.ModerationAudit(owner=self.member, outcome='rejected', reason_code='unsafe',
             content_digest='private-digest') for _ in range(15)])
         first, second = self.activity().json(), self.activity(page=2).json()
-        self.assertEqual(first['total'], 31)
-        self.assertEqual((len(first['rows']), len(second['rows'])), (25, 6))
+        self.assertEqual(first['total'], 32)
+        self.assertEqual((len(first['rows']), len(second['rows'])), (25, 7))
         ids = [row['record_id'] for row in first['rows'] + second['rows']]
-        self.assertEqual(len(set(ids)), 31)
+        self.assertEqual(len(set(ids)), 32)
         self.assertIn(str(order.pk), ids)
+        self.assertIn(str(received.pk), ids)
         self.assertTrue(first['pagination']['has_next'])
         self.assertFalse(second['pagination']['has_next'])
         self.assertEqual(self.activity(page=3).json()['rows'], [])

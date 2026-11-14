@@ -1,37 +1,68 @@
 "use client";
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
-import {useEffect, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {api, ApiError, errorMessage} from '@/lib/api';
 import {phoneInput, validPhone} from '@/lib/format';
-import {isShortRecipientCode, replyTokenFromFragment} from '@/lib/recipient-links';
+import {actionFromFragment, isShortRecipientCode, replyTokenFromFragment} from '@/lib/recipient-links';
 import {useApp} from './app-provider';
 import {AuthGate} from './auth-gate';
 import {Composer} from './composer';
 import {BusyButton, ErrorBox} from './feedback';
+import styles from './recipient-actions.module.css';
 
 export function RecipientActions() {
-  const [token,setToken] = useState('');
+  const [fragment,setFragment] = useState<string | null>(null);
   useEffect(()=>{
-    const readToken=()=>setToken(location.hash.slice(1));
-    readToken();
-    window.addEventListener('hashchange',readToken);
-    return ()=>window.removeEventListener('hashchange',readToken);
+    const readFragment=()=>setFragment(location.hash.slice(1));
+    readFragment();
+    window.addEventListener('hashchange',readFragment);
+    return ()=>window.removeEventListener('hashchange',readFragment);
   },[]);
-  const replyToken = replyTokenFromFragment(token);
+  if (fragment === null) return null;
+  const action = actionFromFragment(fragment);
+  if (action) {
+    const {token} = action;
+    const choicesHref = `#${token}`;
+    if (action.action === 'reply') return <AnonymousReply key={fragment} token={token} choicesHref={choicesHref}/>;
+    if (action.action === 'stop') return <OptOut key={fragment} token={token} choicesHref={choicesHref}/>;
+    return <RecipientActionMenu key={fragment} href={choicesHref}/>;
+  }
+  const replyToken = replyTokenFromFragment(fragment);
   return replyToken
-    ? <AnonymousReply key={token} token={replyToken}/>
-    : <OptOut key={token} token={token}/>;
+    ? <AnonymousReply key={fragment} token={replyToken}/>
+    : <OptOut key={fragment} token={fragment}/>;
 }
 
-function AnonymousReply({token}:{token:string}) {
+function RecipientActionMenu({ href }: { href: string }) {
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    heading.current?.focus({ preventScroll: true });
+  }, []);
+
+  return <section className={`account-page wrap ${styles.menu}`} aria-labelledby="recipient-actions-title">
+    <div className={`account-card ${styles.card}`}>
+      <h1 id="recipient-actions-title" ref={heading} tabIndex={-1}>پاسخ یا لغو دریافت</h1>
+      <div className={styles.actions}>
+        <a className="button primary" href={href + '/reply'}>پاسخ</a>
+        <a className="button ghost" href={href + '/stop'}>لغو دریافت</a>
+      </div>
+    </div>
+  </section>;
+}
+
+function AnonymousReply({token, choicesHref}:{token:string; choicesHref?: string}) {
   const router=useRouter();
   const {data,loading,error:bootstrapError,reload}=useApp();
   const [verified,setVerified]=useState(false);
   const [failure,setFailure]=useState<{message:string;canSwitch:boolean}|null>(null);
   const [switching,setSwitching]=useState(false);
   const [inspection,setInspection]=useState(0);
+  const heading = useRef<HTMLHeadingElement>(null);
   const authenticated=!!data?.authenticated;
+  useEffect(() => {
+    if (choicesHref) heading.current?.focus();
+  }, [choicesHref]);
   useEffect(()=>{
     if (!authenticated) return;
     const controller=new AbortController();
@@ -45,12 +76,15 @@ function AnonymousReply({token}:{token:string}) {
   },[authenticated,data?.session_identity,token,inspection]);
   const canReview=data?.rewrite_mode==='gapgpt' || data?.rewrite_mode==='ollama';
   if (authenticated && verified && canReview)
-    return <Composer replyToken={token} onExit={()=>router.push('/')} onReplyUnavailable={message=>{
+    return <Composer replyToken={token} onExit={() => {
+      if (choicesHref) location.hash = choicesHref;
+      else router.push('/');
+    }} onReplyUnavailable={message=>{
       setVerified(false);
       setFailure({message,canSwitch:true});
     }}/>;
   return <div className="account-page wrap">
-    <div className="account-heading"><h1>پاسخ ناشناس</h1><p>پاسخ از همین‌جا برای طرف مقابل فرستاده می‌شود و نام و شمارهٔ شما در پیامک دیده نمی‌شود.</p></div>
+    <div className="account-heading"><h1 ref={heading} tabIndex={choicesHref ? -1 : undefined}>پاسخ ناشناس</h1><p>پاسخ از همین‌جا برای طرف مقابل فرستاده می‌شود و نام و شمارهٔ شما در پیامک دیده نمی‌شود.</p></div>
     <div className="account-card">
       <ErrorBox message={bootstrapError || failure?.message || ''}/>
       {(!data && loading) || (authenticated && !verified && !failure)
@@ -63,13 +97,15 @@ function AnonymousReply({token}:{token:string}) {
         void reload().then(()=>setInspection(attempt=>attempt+1));
       }}>تلاش دوباره</button>}
       {data && (!authenticated || switching) && <AuthGate forceReverify={switching} purpose="همان شماره‌ای را تأیید کن که پیامک را دریافت کرده."/>}
-      <Link href="/">بازگشت به بگم نگم</Link>
+      {choicesHref ? <a href={choicesHref} className="text-button">بازگشت به گزینه‌ها</a>
+        : <Link href="/">بازگشت به بگم نگم</Link>}
     </div>
   </div>;
 }
 
-function OptOut({token}:{token:string}) {
+function OptOut({token, choicesHref}:{token:string; choicesHref?: string}) {
   const {data} = useApp();
+  const heading = useRef<HTMLHeadingElement>(null);
   const [valid,setValid] = useState(false);
   const [canReport,setCanReport] = useState(false);
   const [busy,setBusy] = useState(false);
@@ -81,6 +117,9 @@ function OptOut({token}:{token:string}) {
   const [checked,setChecked] = useState(false);
   const needsPhone = isShortRecipientCode(token);
   const canAct = !needsPhone || validPhone(phone);
+  useEffect(() => {
+    if (choicesHref) heading.current?.focus();
+  }, [choicesHref]);
   useEffect(()=>{
     if(!token || !data) return;
     let cancelled=false;
@@ -101,7 +140,7 @@ function OptOut({token}:{token:string}) {
     } catch(e){setError(errorMessage(e));} finally {setBusy(false);}
   }
   return <div className="account-page wrap" data-update-blocked={!!details || busy}>
-    <div className="account-heading"><h1>آرامش تو مهمه.</h1><p>برای توقف دریافت یا گزارش این پیام، لازم نیست حساب بسازی. فرستنده از هویت یا گزارش تو مطلع نمی‌شه.</p></div>
+    <div className="account-heading"><h1 ref={heading} tabIndex={choicesHref ? -1 : undefined}>آرامش تو مهمه.</h1><p>برای توقف دریافت یا گزارش این پیام، لازم نیست حساب بسازی. فرستنده از هویت یا گزارش تو مطلع نمی‌شه.</p></div>
     <div className="account-card">
       <ErrorBox message={error}/>
       {!token && <p>لینک داخل پیامک را کامل باز کن. برای مدیریت شماره خودت هم می‌تونی از صفحه قطع دریافت استفاده کنی.</p>}
@@ -131,6 +170,7 @@ function OptOut({token}:{token:string}) {
       <p className="small muted">این لینک را برای دیگران نفرست.</p>
       {data?.support_contact && <p>راه تماس پشتیبانی: <bdi>{data.support_contact}</bdi></p>}
       <Link href="/preferences">مدیریت شماره خودم با تأیید شماره</Link>
+      {choicesHref && <div><a href={choicesHref} className="text-button">بازگشت به گزینه‌ها</a></div>}
     </div>
   </div>;
 }

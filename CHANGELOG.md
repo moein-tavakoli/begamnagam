@@ -9,6 +9,23 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 3.0.0 — 2026-11-14 — Received messages and a shared SMS action link (local)
+
+- Show received and sent messages in the staff account activity feed with the
+  same cards and separate, audited permission to view the text. Distinguish
+  messages accepted by the SMS provider from confirmed deliveries.
+- Use one labeled SMS link for messages that allow a reply. Its landing page
+  offers «پاسخ» and «لغو دریافت» and opens the existing flow for each choice.
+  Retain stop-only links for messages with no reply turn.
+- Move the 9px product version under the logo and into the bottom of the home
+  card on the welcome screen.
+- SMS parsers must accept the new six-character `a` code and pass it in full
+  as `reply_token`. Previously issued links and sealed message texts remain
+  usable as issued.
+- Verified PostgreSQL and frontend tests, TypeScript, a production build and
+  an isolated Compose smoke test. Checked browser flows and version placement
+  at mobile and desktop widths and short-domain routing in isolated Nginx.
+
 ## 2.1.0 — 2026-11-13 — Choose a recipient from device contacts
 
 - Open the device contact picker beside the recipient field on supported

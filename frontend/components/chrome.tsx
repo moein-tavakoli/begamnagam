@@ -1,14 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { version } from "../package.json";
 import { usePathname } from "next/navigation";
 import { Icon } from "./icons";
 import { useApp } from "./app-provider";
 import { CrestNavigation } from "./crest-navigation";
 import navigationStyles from "./crest-navigation.module.css";
 import { ThemeToggle } from "./theme-toggle";
+import { AppVersion } from "./app-version";
 import { useComposeView } from "@/lib/use-compose-view";
+
+export function SkipToContent() {
+  return <a className="skip-link" href="#main-content" onClick={event => {
+    const main = document.getElementById("main-content");
+    if (!main) return;
+    event.preventDefault();
+    // Recipient links keep their private action in the fragment.
+    main.focus({ preventScroll: true });
+    main.scrollIntoView({ behavior: "instant" });
+  }}>رفتن به محتوای اصلی</a>;
+}
 
 export function Brand() {
   return (
@@ -31,7 +42,10 @@ export function Header() {
   const hidden = (path === "/" && !composing) || path === "/links" || path.startsWith("/manage");
   return (
     <header className="site-header wrap" hidden={hidden}>
-      <div className="header-brand-actions"><Brand /><ThemeToggle /></div>
+      <div className="header-brand-actions">
+        <div className="header-brand"><Brand /><AppVersion /></div>
+        <ThemeToggle />
+      </div>
       <CrestNavigation mode="desktop" />
       <nav className={navigationStyles.utilities} aria-label="راهنما و اعتبار">
         <Link href="/pricing">خرید اعتبار</Link>
@@ -85,12 +99,4 @@ export function MobileNav() {
   const composing = useComposeView();
   const hidden = (path === "/" && !composing) || path === "/links" || path.startsWith("/manage");
   return <CrestNavigation mode="mobile" hidden={hidden} />;
-}
-
-export function AppVersion() {
-  const path = usePathname();
-  if (path.startsWith("/manage") || path.startsWith("/admin")) return null;
-  return <small className="app-version" aria-label="نسخهٔ نرم‌افزار">
-    نسخه <bdi dir="ltr">{version}</bdi>{process.env.NODE_ENV === "development" ? " · توسعه" : ""}
-  </small>;
 }

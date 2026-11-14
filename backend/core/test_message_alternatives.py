@@ -59,7 +59,7 @@ class MessageAlternativeTests(TestCase):
     def test_inspect_cannot_replace_text_or_recipient_or_token(self):
         offer = self.offer()
         for extra in [{'text': 'میکشمت'}, {'category': 'appreciation'},
-                      {'recipient_phone': '09901234568'}, {'alternative_token': offer['token']+'x'},
+                      {'recipient_phone': '09901234568'}, {'alternative_token': 'AAAA' + offer['token'][4:]},
                       {'source_mode': 'freeform'}]:
             with self.subTest(extra=extra):
                 self.assertNotEqual(self.choose(offer, **extra).status_code, 200)

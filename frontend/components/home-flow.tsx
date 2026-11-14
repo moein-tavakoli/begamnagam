@@ -9,6 +9,7 @@ import { HomeTrustMarks } from "./home-trust-marks";
 import { ThemeToggle } from "./theme-toggle";
 import { changeHomeView, useComposeView } from "@/lib/use-compose-view";
 import { HomeLogout } from "./home-logout";
+import { AppVersion } from "./app-version";
 
 export function HomeFlow() {
   const composing = useComposeView();
@@ -90,6 +91,7 @@ export function HomeFlow() {
         </div>
         <div className="hero-art"><LetterFlight active={!composing} /><HomeTrustMarks /></div>
         <HomeLogout />
+        <AppVersion />
       </section>
       <div className="home-slide compose-slide" hidden={!composing} aria-roledescription="اسلاید" aria-label="نوشتن پیام؛ صفحه دوم">
         <Composer active={composing} onExit={() => showComposer(false)} />

@@ -13,7 +13,7 @@ from .management_api import staff_api
 from .models import OperatorAudit, SMSTemplateSettings
 from .moderation import ANGRY_TEMPLATES, DIRECT_TEMPLATES, TEMPLATES
 from .privacy import digest
-from .recipient_codes import SAMPLE_REPLY_CODE, SAMPLE_STOP_CODE
+from .recipient_codes import SAMPLE_ACTION_CODE, SAMPLE_STOP_CODE
 from .services import APIError
 from .sms import (DEFAULT_SMS_TEMPLATE, OPT_OUT_SLOT, REPLY_SLOT, SMS_PLACEHOLDER, SMS_VARIABLE_NAME,
                   SMS_WARNING_SEGMENTS, render_recipient_sms, sms_origin, sms_segments, sms_units)
@@ -106,8 +106,8 @@ def current_sms_layout():
 
 def sample_preview(layout, variables):
     origin = sms_origin()
-    full_sms = render_recipient_sms(SAMPLE_MESSAGE, origin, SAMPLE_STOP_CODE, reply_token=SAMPLE_REPLY_CODE,
-                                   layout=layout, variables=variables)
+    sample_token = SAMPLE_ACTION_CODE if REPLY_SLOT in layout else SAMPLE_STOP_CODE
+    full_sms = render_recipient_sms(SAMPLE_MESSAGE, origin, sample_token, layout=layout, variables=variables)
     names = SMS_PLACEHOLDER.findall(layout)
     occurrences = names.count('message')
     units = sms_units(full_sms)

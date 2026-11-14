@@ -345,13 +345,12 @@ def preview(request):
                 recipient_hash=recipient_hash, reply_to=parent, terms_version=settings.TERMS_VERSION, moderation_mode=mode,
                 expires_at=expires_at, is_free=is_free, price_toman=0)
             from .recipient import issue_grant
-            token, reply_token = issue_grant(item, recipient_hash, with_reply=with_reply and REPLY_SLOT in layout)
+            token = issue_grant(item, recipient_hash, with_reply=with_reply and REPLY_SLOT in layout)
             if use_freeform:
-                full_sms = compose_freeform_sms(rewritten, origin, token, reply_token=reply_token,
-                                               layout=layout, variables=variables)
+                full_sms = compose_freeform_sms(rewritten, origin, token, layout=layout, variables=variables)
             else:
                 item.text, full_sms = compose_recipient_sms(category, rewritten, origin, token, message_tone=tone,
-                    reply_token=reply_token, layout=layout, variables=variables, exact=choosing_alternative)
+                    layout=layout, variables=variables, exact=choosing_alternative)
             item.full_sms = full_sms
             item.review_signature = signature(item) if use_freeform else ''
             item.save(update_fields=['text', 'full_sms', 'review_signature'])

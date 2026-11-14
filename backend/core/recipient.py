@@ -13,10 +13,9 @@ def issue_grant(preview, recipient_hash, *, invitation_send=None, with_reply=Fal
     # A uniqueness constraint arbitrates collisions across concurrent workers.
     # Savepoints keep a rare collision from poisoning the enclosing preview tx.
     for _ in range(5):
-        token = generate_short_code('c')
+        token = generate_short_code('a' if with_reply else 'c')
         token_digest = digest('recipient-token:' + token)
-        reply_token = generate_short_code('r') if with_reply else ''
-        reply_digest = digest('reply-token:' + reply_token) if reply_token else None
+        reply_digest = digest('reply-token:' + token) if with_reply else None
         try:
             with transaction.atomic():
                 RecipientGrant.objects.create(preview=preview, invitation_send=invitation_send, token_digest=token_digest,
@@ -29,7 +28,7 @@ def issue_grant(preview, recipient_hash, *, invitation_send=None, with_reply=Fal
             if RecipientGrant.objects.filter(**source).exists() or not RecipientGrant.objects.filter(collisions).exists():
                 raise
         else:
-            return token, reply_token
+            return token
     raise APIError('link_generation_unavailable', 'ساخت لینک موقتاً ممکن نیست؛ دوباره تلاش کنید.', 503)
 
 

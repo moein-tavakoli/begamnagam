@@ -33,10 +33,11 @@ class RecipientSafetyTests(TestCase):
             self.post('/orders/'+self.o['id']+'/pay-demo')
 
     def test_bound_quote_has_short_path_capability_and_encrypted_snapshot(self):
-        self.assertRegex(self.token, r'^c[A-Za-z0-9]{5}$')
+        self.assertRegex(self.token, r'^a[A-Za-z0-9]{5}$')
         self.assertNotIn('https://', self.quote['full_sms'])
         self.assertNotIn('http://', self.quote['full_sms'])
         self.assertEqual(RecipientGrant.objects.get().token_digest, digest('recipient-token:'+self.token))
+        self.assertEqual(RecipientGrant.objects.get().reply_token_digest, digest('reply-token:'+self.token))
         with connection.cursor() as cursor:
             cursor.execute('SELECT full_sms FROM core_order')
             raw = cursor.fetchone()[0]

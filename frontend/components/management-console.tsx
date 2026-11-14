@@ -445,7 +445,7 @@ function UserActivity({ userId, permissions, resources, onFailure }: {
     return () => controller.abort();
   }, [userId, section, page, canRead, epoch, onFailure]);
   const pages = data ? Math.max(1, Math.ceil(data.total / data.page_size)) : 1;
-  const kinds: Record<string, string> = { order: "سفارش پیام", attempt: "تلاش ساخت پیام", moderation: "بررسی محتوای قدیمی", invitation: "دعوت" };
+  const kinds = { order: "پیام ارسالی", attempt: "تلاش ساخت پیام", moderation: "بررسی محتوای قدیمی", invitation: "دعوت" };
   const pageHref = (number: number) => `${managementUserHref(userId, section)}&page=${number}`;
   return <Stack spacing={3}>
     <Box><Button component={Link} href="/manage/users" startIcon={<ArrowForwardRounded/>}>بازگشت به کاربران</Button></Box>
@@ -457,7 +457,14 @@ function UserActivity({ userId, permissions, resources, onFailure }: {
     {data?.section===section&&data.page===page&&!busy&&!error&&<ContentCard>
       <Stack direction="row" sx={{justifyContent:'space-between',gap:1}}><Typography variant="body2" color="text.secondary">{managementNumber(data.total)} رکورد</Typography><Typography variant="body2" color="text.secondary">صفحهٔ {managementNumber(data.page)} از {managementNumber(pages)}</Typography></Stack>
       {!data.rows.length?<Empty message="فعالیتی در این بخش ثبت نشده است."/>:data.rows.map(row=><Card component="article" key={`${row.kind}-${row.record_id}`} sx={{p:2}}><Stack spacing={2}>
-        <Stack direction="row" sx={{alignItems:'center',justifyContent:'space-between',gap:1,flexWrap:'wrap'}}><Stack direction="row" spacing={1} sx={{alignItems:'center'}}><HistoryOutlined color="primary"/><Typography component="h3" variant="subtitle1">{kinds[row.kind]||'فعالیت کاربر'}</Typography></Stack><Chip size="small" color={row.status==='rejected'?'warning':row.status==='failed'?'error':'default'} label={managementState(row.status)}/></Stack>
+        <Stack direction="row" sx={{alignItems:'center',justifyContent:'space-between',gap:1,flexWrap:'wrap'}}>
+          <Stack direction="row" spacing={1} sx={{alignItems:'center'}}>
+            <HistoryOutlined color="primary"/>
+            <Typography component="h3" variant="subtitle1">{row.direction === 'received' ? 'پیام دریافتی' : kinds[row.kind]}</Typography>
+          </Stack>
+          <Chip size="small" color={row.status==='rejected'?'warning':row.status==='failed'?'error':'default'}
+            label={row.direction === 'received' && row.status === 'accepted' ? 'پذیرفته‌شده توسط سرویس پیامک' : managementState(row.status)}/>
+        </Stack>
         <Typography variant="caption" color="text.secondary">{managementDate(row.created_at)}</Typography>
         {row.phone&&<Typography variant="body2">مخاطب: {row.phone}</Typography>}
         {row.kind!=='invitation'&&<Typography variant="body2">

@@ -9,7 +9,7 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
-## 3.0.0 — 2026-11-14 — Received messages and a shared SMS action link (local)
+## 3.0.0 — 2026-11-14 — Received messages and a shared SMS action link
 
 - Show received and sent messages in the staff account activity feed with the
   same cards and separate, audited permission to view the text. Distinguish
@@ -25,6 +25,13 @@ Historical release reports below contain deployment evidence and limitations.
 - Verified PostgreSQL and frontend tests, TypeScript, a production build and
   an isolated Compose smoke test. Checked browser flows and version placement
   at mobile and desktop widths and short-domain routing in isolated Nginx.
+
+Deployed commit `067e0c1` to the application server. Verified the six frontend
+replicas, 781 PostgreSQL tests on the server image, and the recipient choices
+over HTTPS through the internal Nginx. The new SMS links use `bgam.ir/r/<code>`.
+Previously issued links continue to use their original routes. The operator
+network could not connect to the public address before or after deployment.
+Physical Android testing remains pending. [Deployment evidence](docs/deployments/ct115-3.0.0.json)
 
 ## 2.1.0 — 2026-11-13 — Choose a recipient from device contacts
 

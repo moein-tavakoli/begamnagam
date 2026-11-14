@@ -1,0 +1,116 @@
+{
+  "version": "3.0.0",
+  "source_commit": "067e0c14748200989bd9aa1ea0857285182fc999",
+  "deployed": true,
+  "verified_at_utc": "2026-11-14T10:46:43.577934+00:00",
+  "backend_image": "sha256:99931f39b42084188e8d5ed077606b8fbde1e83e17ed85e4c7ea097d04fb3829",
+  "frontend_image": "sha256:b28e34aabe7ea0685531491f154835d446e986cd3853be2b0f48a5f4d8dc60ab",
+  "asset_bridge_image": "sha256:269ca66ef262fa19bcdfdca102fb526c98bc9ba172f10fb21249045034449c38",
+  "compatible_backend_rollback_image": "sha256:e1c71f60539a39e12bd932b190dbc606fec85a847fc76659d5cb19a90faaf758",
+  "services": {
+    "postgres": "healthy",
+    "redis": "healthy",
+    "rabbitmq": "healthy",
+    "proxy": "healthy",
+    "backend": "healthy",
+    "worker": "running",
+    "beat": "running",
+    "frontend": "healthy",
+    "frontend2": "healthy",
+    "frontend3": "healthy",
+    "frontend4": "healthy",
+    "frontend5": "healthy",
+    "frontend6": "healthy"
+  },
+  "frontends": {
+    "frontend": {
+      "version": "3.0.0",
+      "assets_verified": 22,
+      "recipient_routes": "PASS"
+    },
+    "frontend2": {
+      "version": "3.0.0",
+      "assets_verified": 22,
+      "recipient_routes": "PASS"
+    },
+    "frontend3": {
+      "version": "3.0.0",
+      "assets_verified": 22,
+      "recipient_routes": "PASS"
+    },
+    "frontend4": {
+      "version": "3.0.0",
+      "assets_verified": 22,
+      "recipient_routes": "PASS"
+    },
+    "frontend5": {
+      "version": "3.0.0",
+      "assets_verified": 22,
+      "recipient_routes": "PASS"
+    },
+    "frontend6": {
+      "version": "3.0.0",
+      "assets_verified": 22,
+      "recipient_routes": "PASS"
+    }
+  },
+  "frontend_runtime_files": 454,
+  "backend_files_verified": 18,
+  "postgresql_tests": 781,
+  "frontend_tests": 127,
+  "frontend_typecheck": "PASS",
+  "frontend_production_build": "PASS",
+  "compose_smoke": "PASS",
+  "live_compose_config": "PASS",
+  "github_actions_for_source": "not_run",
+  "database_schema_changed": false,
+  "pre_release_backup_encrypted": true,
+  "data_and_proxy_containers_preserved": true,
+  "live_provider_settings_preserved": true,
+  "live_sms_template_settings_preserved": true,
+  "sms_edge_config_changed": false,
+  "new_sms_link_format": "bgam.ir/r/<code>",
+  "sample_rendering_and_backend_validation": "PASS",
+  "https": {
+    "version": "3.0.0",
+    "transport": "domain_https_via_internal_nginx",
+    "tls_certificate_verified": true,
+    "feature_bundles": "PASS",
+    "manifest": "PASS",
+    "service_worker": "PASS",
+    "otp_is_real": true,
+    "package_checkout_enabled": false,
+    "anonymous_private_documentation": "denied",
+    "sms_edge": {
+      "https_direct_code_ready": false,
+      "http_direct_code_ready": false,
+      "prefixed_links": "PASS",
+      "unchanged_older_root_codes": "PASS",
+      "tls_verified": true
+    },
+    "public_address_probe_from_operator_network": "connection_failed_before_and_after_release"
+  },
+  "verification_sms_sent": 0,
+  "verification_otp_sent": 0,
+  "verification_paid_model_calls": 0,
+  "verification_payments": 0,
+  "browser": [
+    {
+      "width": 375,
+      "origin_https_browser": "PASS",
+      "recipient_menu_and_branches": "PASS",
+      "version_placement": "PASS",
+      "mutations_forwarded": 0,
+      "physical_device": false
+    },
+    {
+      "width": 1440,
+      "origin_https_browser": "PASS",
+      "recipient_menu_and_branches": "PASS",
+      "version_placement": "PASS",
+      "mutations_forwarded": 0,
+      "physical_device": false
+    }
+  ],
+  "physical_android_test": "pending"
+}

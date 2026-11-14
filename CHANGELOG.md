@@ -9,7 +9,7 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
-## 3.1.0 — 2026-11-14 — Sender numbers in staff activity (local)
+## 3.1.0 — 2026-11-14 — Sender numbers in staff activity
 
 - Show the sender's phone on received-message cards and in their text dialog.
   Read the number from the sender's account under the existing staff
@@ -18,6 +18,13 @@ Historical release reports below contain deployment evidence and limitations.
   used by the text dialog and the existing API contract.
 - Verified PostgreSQL integration tests, the frontend suite and TypeScript.
   Checked cards and the text dialog in Chromium at 375px and 1440px.
+
+Deployed commit `4c336bb` to the application server. Verified all six frontend
+replicas, 782 PostgreSQL tests on the server image, and the sender phone field
+for 24 received messages in a read-only check. The browser check used the live
+HTTPS frontend with isolated staff fixtures. The operator network could not
+connect to the public address before or after the rollout.
+[Deployment evidence](docs/deployments/ct115-3.1.0.json)
 
 ## 3.0.0 — 2026-11-14 — Received messages and a shared SMS action link
 

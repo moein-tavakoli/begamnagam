@@ -6,6 +6,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
 
+from .identity_settings import identity_requests_enabled
 from .models import Account, IdentityConsent, IdentityReceipt, OperatorAudit, Order
 from .privacy import decrypt, digest, normalize_phone
 from .recipient_codes import ACTION_CODE_PATTERN
@@ -18,7 +19,7 @@ def unavailable():
 
 
 def require_enabled():
-    if not settings.IDENTITY_REQUESTS_ENABLED:
+    if not identity_requests_enabled():
         raise unavailable()
 
 
@@ -111,6 +112,7 @@ def request_identity(request, data):
         if active_accounts().filter(pk__in=[subject.pk, requester.pk]).count() != 2:
             raise unavailable()
         lookup_grant(data['token'], recipient_hash=requester.phone_hash)
+        require_enabled()
         # Every accepted submission is counted equally; pair transitions must
         # not reveal whether separate anonymous sources share an author.
         limited('identity-submission', str(requester.pk), 20, 86400)
@@ -187,6 +189,8 @@ def decision(request, consent_id):
         ).first()
         if record is None:
             raise unavailable()
+        if action != 'revoke':
+            require_enabled()
         if action == 'revoke' and record.status == IdentityConsent.Status.REVOKED:
             return serialize(record)
         if record.revision != data['revision']:
@@ -236,6 +240,7 @@ def phone(request, consent_id):
         subject = active_accounts().filter(pk=record.subject_id).first()
         if subject is None:
             raise unavailable()
+        require_enabled()
         try:
             value = normalize_phone(decrypt(subject.phone_cipher))
         except (InvalidToken, ValueError):

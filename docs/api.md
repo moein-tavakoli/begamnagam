@@ -76,10 +76,10 @@ bootstrap فهرست `message_tones:[{id,label,description}]` از لحن‌ها
 
 ## نشست و CSRF
 
-قابلیت خاموشِ درخواست شناختن فرستنده و رضایت نمایش فقط شمارهٔ موبایل در
-[قرارداد رضایت وب](identity-consent.fa.md) شرح داده شده است.
-`bootstrap.identity_requests_enabled` پیش‌فرض false است؛ کنترل سرور با
-`IDENTITY_REQUESTS_ENABLED=0` مسیرهای درخواست، فهرست و مشاهده را می‌بندد.
+درخواست شناختن فرستنده و رضایت نمایش فقط شمارهٔ موبایل پیش‌فرض خاموش‌اند.
+`bootstrap.identity_requests_enabled` وضعیت تنظیم مدیر را برمی‌گرداند. سرور با
+خاموش‌کردن تنظیم، مسیرهای درخواست، فهرست، تأیید و مشاهده را می‌بندد.
+[قرارداد رضایت وب](identity-consent.fa.md)
 
 اصلاح محلی۳٫۱٫۳: bootstrap وب برای حساب واردشده فیلد opaque
 `message_visibility_revision` دارد. تغییر این مقدار باید state خصوصیِ قبلی را

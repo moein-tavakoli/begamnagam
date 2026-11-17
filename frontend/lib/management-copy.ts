@@ -94,6 +94,7 @@ Object.assign(values.payment_mode, { credit_demo: 'اعتبار بستهٔ آز�
 Object.assign(values.action, {
   update_sms_template: 'ویرایش تنظیمات پیامک',
   update_kavenegar_key: 'تغییر کلید کاوه‌نگار',
+  update_identity_settings: 'تغییر وضعیت «میخوام بدونم»',
   message_text_viewed: 'مشاهدهٔ متن پیام', message_attempt_text_viewed: 'مشاهدهٔ متن تلاش ساخت پیام', report_viewed: 'مشاهدهٔ پروندهٔ گزارش',
   approve_manual_payment: 'تأیید واریز بانکی', reject_manual_payment: 'رد رسید بانکی', update_site_limits: 'ویرایش محدودیت‌های سایت',
   configure_site_limits: 'پیکربندی محدودیت‌های سایت', update_ai_configuration: 'ویرایش تنظیمات هوش مصنوعی', update_message_package: 'ویرایش بستهٔ پیام',

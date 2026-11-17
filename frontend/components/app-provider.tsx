@@ -10,6 +10,8 @@ import {
 } from "react";
 import { api, ApiError, errorMessage, type Bootstrap } from "@/lib/api";
 import { openSessionChannel } from "@/lib/browser-capabilities";
+import { identitySettingsChanged } from "@/lib/identity-consent";
+import { actionFromFragment } from "@/lib/recipient-links";
 
 type AppContextValue = {
   data: Bootstrap | null;
@@ -32,13 +34,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = useState<Bootstrap | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const loadBootstrap = useCallback(async () => {
+  const loadBootstrap = useCallback(async ({ keepGuestOnFailure = false } = {}) => {
     const current=++generation.current;
     bootstrapRequest.current?.abort();
     const controller=new AbortController();
     bootstrapRequest.current=controller;
-    setLoading(true);
-    setError("");
+    if(!keepGuestOnFailure){setLoading(true);setError("");}
     try {
       const result=await api<Bootstrap>("/bootstrap", { signal: controller.signal });
       if(current===generation.current) {
@@ -46,11 +47,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         identity.current=result.session_identity;
         messageVisibility.current=result.message_visibility_revision;
         setData(result);
+        setError("");
         if (!document.hidden) setPrivacyPending(false);
         return result;
       }
     } catch (error) {
       if(current===generation.current && !controller.signal.aborted){
+        if(keepGuestOnFailure && !identity.current)return;
         identity.current=undefined;
         messageVisibility.current=undefined;
         setPrivacyEpoch(v=>v+1);
@@ -113,7 +116,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // when the server's account-scoped revision arrives.
       void reload();
     };
-    const remote=(event:MessageEvent)=>{if(event.data==='session-changed' || event.data==='message-hidden')clear();};
+    const recipientIdentityView=()=>{
+      if(window.location.pathname !== '/r')return false;
+      const route=actionFromFragment(window.location.hash.slice(1));
+      return !!route && (!route.action || route.action==='identity');
+    };
+    const refreshIdentitySetting=()=>{
+      if(!identity.current && !recipientIdentityView())return;
+      // Remove a displayed number and abort pending reads on a change hint.
+      // The server's next response decides whether the panel can reappear.
+      setData(current=>current?.identity_requests_enabled ? {...current,identity_requests_enabled:false} : current);
+      if(document.hidden || pendingReset || authenticationInFlight.current)return;
+      if(identity.current)void reload();
+      else void loadBootstrap({keepGuestOnFailure:true});
+    };
+    const identitySettingChanged=()=>{
+      channel?.postMessage(identitySettingsChanged);
+      refreshIdentitySetting();
+    };
+    const remote=(event:MessageEvent)=>{
+      if(event.data==='session-changed' || event.data==='message-hidden')clear();
+      else if(event.data===identitySettingsChanged)refreshIdentitySetting();
+    };
     const restore=(event:PageTransitionEvent)=>{if(event.persisted)clear();};
     const focus=()=>{
       if(document.hidden)return;
@@ -132,18 +156,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       } else focus();
     };
-    // Another device cannot broadcast here. Revalidate visible sessions too;
-    // there is no private-content offline fallback when this request fails.
+    // Refresh open SMS menus as well as verified sessions. A settings change
+    // from another device cannot broadcast to this tab.
     const timer=setInterval(()=>{
-      if(!document.hidden && identity.current && !pendingReset && !authenticationInFlight.current)void reload();
+      if(document.hidden || pendingReset || authenticationInFlight.current)return;
+      if(identity.current)void reload();
+      else if(recipientIdentityView())void loadBootstrap({keepGuestOnFailure:true});
     },30000);
     window.addEventListener('privacy-reset',local);
     window.addEventListener('message-visibility-changed',hiddenMessage);
+    window.addEventListener(identitySettingsChanged,identitySettingChanged);
     window.addEventListener('pageshow',restore);
     window.addEventListener('focus',focus);
     document.addEventListener('visibilitychange',visibility);
     channel?.addEventListener('message',remote);
-    return ()=>{pendingReset=undefined;clearInterval(timer);window.removeEventListener('privacy-reset',local);window.removeEventListener('message-visibility-changed',hiddenMessage);window.removeEventListener('pageshow',restore);window.removeEventListener('focus',focus);document.removeEventListener('visibilitychange',visibility);channel?.close();};
+    return ()=>{pendingReset=undefined;clearInterval(timer);window.removeEventListener('privacy-reset',local);window.removeEventListener('message-visibility-changed',hiddenMessage);window.removeEventListener(identitySettingsChanged,identitySettingChanged);window.removeEventListener('pageshow',restore);window.removeEventListener('focus',focus);document.removeEventListener('visibilitychange',visibility);channel?.close();};
   },[reload,loadBootstrap]);
   return (
     <AppContext.Provider value={{ data, loading, error, reload, verifyOtp }}>

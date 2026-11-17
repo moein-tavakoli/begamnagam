@@ -9,6 +9,21 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 3.4.0 — 2026-11-17 — Admin switch for identity requests
+
+- Add a default-off «میخوام بدونم» switch to Site Settings for authorized staff.
+  Save and audit the state in the database with revision checks. Migration
+  `0055_identity_request_settings` adds the setting.
+- Use the same state for the SMS menu, profile and server authorization.
+  Disabling pauses requests, approvals and number reads and preserves the
+  owner's ability to revoke consent. Enabling restores only valid consents.
+- Revalidate open identity views on the same-browser notification or their next
+  refresh. Keep guest background checks out of response and report forms.
+- Validation: 828 PostgreSQL/Redis tests, 129 frontend tests, TypeScript,
+  migration consistency, Compose configuration, and the production browser
+  flow at desktop and 375px with the PWA service worker active.
+- Local release. [Management and consent contract](docs/identity-consent.fa.md).
+
 ## 3.3.0 — 2026-11-17 — Optional, revocable phone disclosure
 
 - Implement «میخوام بدونم» behind `IDENTITY_REQUESTS_ENABLED=0`. Its recipient

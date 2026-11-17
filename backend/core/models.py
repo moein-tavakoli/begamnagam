@@ -252,6 +252,16 @@ class RecipientState(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
 
+class IdentityRequestSettings(models.Model):
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    enabled = models.BooleanField(default=False, db_default=False)
+    revision = models.PositiveIntegerField(default=0, editable=False)
+
+    class Meta:
+        default_permissions = ()
+        constraints = [models.CheckConstraint(condition=models.Q(id=1), name='single_identity_request_settings')]
+
+
 class IdentityConsent(models.Model):
     class Status(models.TextChoices):
         PENDING = 'pending', 'منتظر تأیید'

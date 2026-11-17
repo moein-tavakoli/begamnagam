@@ -61,6 +61,7 @@ import { ManagementDataGrid } from './management-data-grid';
 const ManagementStaff=dynamic(()=>import('./management-staff').then(module=>module.ManagementStaff),{loading:()=> <Loading/>});
 const ManagementMonitoring=dynamic(()=>import('./management-monitoring').then(module=>module.ManagementMonitoring),{loading:()=> <Loading/>});
 const MonitoringAccessSettings=dynamic(()=>import('./monitoring-access-settings').then(module=>module.MonitoringAccessSettings),{loading:()=> <Loading/>});
+const IdentityRequestSettings=dynamic(()=>import('./identity-request-settings').then(module=>module.IdentityRequestSettings),{loading:()=> <Loading/>});
 const SmsTemplateSettings=dynamic(()=>import('./sms-template-settings').then(module=>module.SmsTemplateSettings),{loading:()=> <Loading/>});
 
 function ContentCard({children}: {children:ReactNode}) { return <Card sx={{p:{xs:2,sm:3},minWidth:0}}><Stack spacing={2.5}>{children}</Stack></Card>; }
@@ -253,7 +254,7 @@ function Limits({ onFailure, canManageMonitoringAccess }: { onFailure: (e: unkno
   const onSaved = (updated: LimitSettings) => { setData(updated); setSaved(true); };
   const load = useCallback(async () => { setError(""); try { setData(await api<LimitSettings>("/manage/limits")); } catch (e) { setError(errorMessage(e)); onFailure(e); } }, [onFailure]);
   useEffect(() => { void load(); }, [load]);
-  return <Stack spacing={3}>{canManageMonitoringAccess&&<MonitoringAccessSettings onFailure={onFailure}/>} {error&&<Failure message={error} retry={()=>void load()}/>} {saved&&<Alert severity="success">تنظیمات ذخیره شد.</Alert>}{!data?!error&&<Loading/>:<>
+  return <Stack spacing={3}><IdentityRequestSettings onFailure={onFailure}/>{canManageMonitoringAccess&&<MonitoringAccessSettings onFailure={onFailure}/>} {error&&<Failure message={error} retry={()=>void load()}/>} {saved&&<Alert severity="success">تنظیمات ذخیره شد.</Alert>}{!data?!error&&<Loading/>:<>
     <Alert severity="info">سه ارسال هدیهٔ اولیه رایگان می‌مانند. صفر در بازه‌های شمارش و فاصله‌ها همان محدودیت را خاموش می‌کند. برای ارسال در تمام شبانه‌روز، گزینهٔ «ارسال فقط در ساعت مجاز» را بردارید.</Alert>
     {data.gateway_problem&&<Alert severity="warning">درگاه آمادهٔ فعال‌سازی نیست: {data.gateway_problem}</Alert>}
     <SiteLimits key={`site-${data.revision}`} data={data} onSaved={onSaved} onFailure={onFailure}/><RequestLimits rules={data.requests} onSaved={onSaved} onFailure={onFailure}/>

@@ -14,7 +14,7 @@ from core import example_views
 from core import kavenegar_settings, sms_template_settings
 from core import manual_payment_views, support_views, provider_balances
 from core import personal_share
-from core import identity_consent
+from core import identity_consent, identity_settings
 
 handler404 = "core.views.not_found"
 handler500 = "core.views.server_error"
@@ -67,6 +67,7 @@ urlpatterns = [
     path("api/v1/manage/monitoring", management_monitoring.monitoring),
     path('api/v1/manage/monitoring/access', monitoring_access.access),
     path('api/v1/manage/monitoring/settings', monitoring_access.configuration),
+    path('api/v1/manage/identity-settings', identity_settings.configuration),
     path("api/v1/manage/records/<slug:resource>", management.records),
     path("api/v1/manage/users/<int:account_id>", management.user_summary),
     path("api/v1/manage/users/<int:account_id>/activity", management.user_activity),

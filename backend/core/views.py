@@ -86,13 +86,14 @@ def bootstrap(request):
     authenticated = is_product_authenticated(request.user)
     from .freeform import available as freeform_available
     from .ai_config import current as ai_configuration
+    from .identity_settings import identity_requests_enabled
     from .limits import policy
     ai = ai_configuration()
     from .message_tones import choices as tone_choices, resolve as resolve_tone
     from .packages import balance_field, package_data, checkout_enabled
     from .models import MessagePackage
     data = {"demo_mode": settings.DEMO_MODE, "authenticated": authenticated,
-        "identity_requests_enabled": settings.IDENTITY_REQUESTS_ENABLED,
+        "identity_requests_enabled": identity_requests_enabled(),
         "price_toman": 0, **public_catalog(freeform=freeform_available(ai)), "rewrite_mode": ai.provider if freeform_available(ai) else 'template', "payment_backend": settings.PAYMENT_BACKEND, "support_contact": settings.SUPPORT_CONTACT,
         "otp_is_real": otp_is_real()}
     data['message_packages'] = [package_data(p) for p in MessagePackage.objects.filter(active=True)]

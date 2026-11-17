@@ -1,18 +1,75 @@
+import json
 import uuid
 import threading
 from datetime import timedelta
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
 from django.core.cache import cache
 from django.db import close_old_connections, transaction
 from django.test import Client, RequestFactory, TestCase, TransactionTestCase, override_settings, skipUnlessDBFeature
 from django.utils import timezone
 
 from . import tests as legacy
-from .models import Account, IdentityConsent, IdentityReceipt, OperatorAudit, Order, Outbox, Preview, RecipientGrant, SafetyControl
+from .models import (Account, IdentityConsent, IdentityReceipt, IdentityRequestSettings,
+                     OperatorAudit, Order, Outbox, Preview, RecipientGrant, SafetyControl)
 from .privacy import digest, encrypt
 from .tasks import deliver_message
+
+
+SETTINGS_PATH = '/api/v1/manage/identity-settings'
+
+
+def save_setting(client, enabled, revision, **headers):
+    return client.put(SETTINGS_PATH, json.dumps({'enabled': enabled, 'revision': revision}),
+                      content_type='application/json', **headers)
+
+
+class IdentitySettingsTests(TestCase):
+    def setUp(self):
+        self.admin = get_user_model().objects.create_user(username='identity-settings-admin', is_staff=True)
+        self.admin.user_permissions.add(Permission.objects.get(codename='manage_site_limits'))
+        self.client.force_login(self.admin)
+
+    def test_staff_can_save_global_setting_and_only_current_changes_are_audited(self):
+        self.assertEqual(self.client.get(SETTINGS_PATH).json(), {'enabled': False, 'revision': 0})
+        visitor = Client()
+        self.assertIs(visitor.get('/api/v1/bootstrap').json()['identity_requests_enabled'], False)
+        enabled = save_setting(self.client, True, 0)
+        self.assertEqual(enabled.status_code, 200, enabled.content)
+        self.assertEqual(enabled.json(), {'enabled': True, 'revision': 1})
+        state = visitor.get('/api/v1/bootstrap')
+        self.assertIs(state.json()['identity_requests_enabled'], True)
+        self.assertEqual(state['Cache-Control'], 'no-store')
+        self.assertEqual(save_setting(self.client, True, 1).json(), enabled.json())
+        self.assertEqual(save_setting(self.client, False, 0).status_code, 409)
+        self.assertEqual(save_setting(self.client, 'false', 1).status_code, 422)
+        self.assertEqual(save_setting(self.client, False, 1).json(), {'enabled': False, 'revision': 2})
+        self.assertIs(visitor.get('/api/v1/bootstrap').json()['identity_requests_enabled'], False)
+        changes = OperatorAudit.objects.filter(action='update_identity_settings')
+        self.assertCountEqual(changes.values_list('actor_id', 'before', 'after'), [
+            (self.admin.pk, {'enabled': False}, {'enabled': True}),
+            (self.admin.pk, {'enabled': True}, {'enabled': False}),
+        ])
+
+    def test_setting_needs_staff_permission_and_csrf(self):
+        self.assertEqual(save_setting(Client(), True, 0).status_code, 401)
+        for is_staff in (False, True):
+            actor = get_user_model().objects.create_user(username=f'identity-other-{is_staff}', is_staff=is_staff)
+            if not is_staff:
+                actor.user_permissions.add(Permission.objects.get(codename='manage_site_limits'))
+                Account.objects.create(user=actor, phone_hash=digest('09901234567'), phone_cipher=encrypt('09901234567'))
+            other = Client()
+            other.force_login(actor)
+            self.assertEqual(other.get(SETTINGS_PATH).status_code, 403)
+            self.assertEqual(save_setting(other, True, 0).status_code, 403)
+        checked = Client(enforce_csrf_checks=True)
+        checked.force_login(self.admin)
+        self.assertEqual(save_setting(checked, True, 0).status_code, 403)
+        checked.get('/api/v1/manage/session')
+        token = checked.cookies['csrftoken'].value
+        self.assertEqual(save_setting(checked, True, 0, HTTP_X_CSRFTOKEN=token).status_code, 200)
 
 
 @override_settings(
@@ -23,6 +80,10 @@ class IdentityConsentTests(TestCase):
     post, authenticate = legacy.APITestCase.post, legacy.APITestCase.authenticate
     sender_phone = '09123456789'
     recipient_phone = '09901234567'
+
+    @classmethod
+    def setUpTestData(cls):
+        IdentityRequestSettings.objects.create(enabled=True)
 
     def setUp(self):
         self.receipt_ids = {}
@@ -74,11 +135,11 @@ class IdentityConsentTests(TestCase):
         return row
 
     def test_feature_is_closed_by_default_for_bootstrap_and_direct_requests(self):
+        IdentityRequestSettings.objects.all().delete()
         self.assertFalse(self.client.get('/api/v1/bootstrap').json().get('identity_requests_enabled', False))
         self.assertEqual(self.request_identity().status_code, 404)
         self.assertEqual(self.client.get('/api/v1/identity-requests').status_code, 404)
 
-    @override_settings(IDENTITY_REQUESTS_ENABLED=True)
     def test_request_requires_the_verified_recipient_and_delivered_message(self):
         self.assertTrue(self.recipient.get('/api/v1/bootstrap').json().get('identity_requests_enabled'))
         self.assertEqual(self.request_identity(Client()).status_code, 401)
@@ -91,7 +152,6 @@ class IdentityConsentTests(TestCase):
         self.assertEqual(self.request_identity(self.third, token).status_code, 404)
         self.assertEqual(self.phone(row).status_code, 404)
 
-    @override_settings(IDENTITY_REQUESTS_ENABLED=True)
     def test_only_the_subject_can_approve_and_only_the_requester_can_read_phone(self):
         row = self.create_request()
         self.assertEqual(self.action(row, 'approve', self.third, consent=True).status_code, 404)
@@ -112,7 +172,6 @@ class IdentityConsentTests(TestCase):
             self.assertNotIn(self.sender_phone, response.content.decode())
             self.assertNotIn(self.recipient_phone, response.content.decode())
 
-    @override_settings(IDENTITY_REQUESTS_ENABLED=True)
     def test_approval_is_directional_and_never_grants_another_recipient(self):
         row = self.create_request()
         self.assertEqual(self.action(row, 'approve', consent=True).status_code, 200)
@@ -126,7 +185,6 @@ class IdentityConsentTests(TestCase):
         self.assertEqual(self.phone(reverse, self.client).status_code, 404)
         self.assertEqual(self.phone(row).json(), {'phone': self.sender_phone})
 
-    @override_settings(IDENTITY_REQUESTS_ENABLED=True)
     def test_revoke_blocks_future_reads_and_stale_approval_cannot_reopen_it(self):
         row = self.create_request()
         approved = self.action(row, 'approve', consent=True).json()
@@ -145,17 +203,28 @@ class IdentityConsentTests(TestCase):
         self.assertEqual(self.action(approved, 'approve', consent=True).status_code, 404)
         self.assertEqual(self.action(pending_again, 'approve', consent=True).status_code, 200)
 
-    @override_settings(IDENTITY_REQUESTS_ENABLED=True)
-    def test_disabling_feature_hides_existing_approvals_and_still_allows_revocation(self):
+    def test_admin_toggle_gates_product_actions_and_preserves_revocation(self):
+        IdentityRequestSettings.objects.all().delete()
+        admin = Client()
+        admin.force_login(get_user_model().objects.create_superuser(username='identity-owner'))
+        self.assertEqual(save_setting(admin, True, 0).status_code, 200)
+        self.assertEqual(self.phone({'id': uuid.uuid4()}, admin).status_code, 401)
         row = self.create_request()
+        self.assertEqual(self.phone(row).status_code, 404)
         approved = self.action(row, 'approve', consent=True).json()
-        with override_settings(IDENTITY_REQUESTS_ENABLED=False):
-            self.assertEqual(self.phone(row).status_code, 404)
-            self.assertEqual(self.client.get('/api/v1/identity-requests').status_code, 404)
-            self.assertEqual(self.action(approved, 'revoke').status_code, 200)
+        self.assertEqual(self.phone(row).json(), {'phone': self.sender_phone})
+        self.assertEqual(save_setting(admin, False, 1).status_code, 200)
+        self.assertEqual(self.request_identity().status_code, 404)
+        self.assertEqual(self.action(approved, 'approve', consent=True).status_code, 404)
+        self.assertEqual(self.phone(row).status_code, 404)
+        self.assertEqual(self.client.get('/api/v1/identity-requests').status_code, 404)
+        self.assertEqual(save_setting(admin, True, 2).status_code, 200)
+        self.assertEqual(self.phone(row).json(), {'phone': self.sender_phone})
+        self.assertEqual(save_setting(admin, False, 3).status_code, 200)
+        self.assertEqual(self.action(approved, 'revoke').status_code, 200)
+        self.assertEqual(save_setting(admin, True, 4).status_code, 200)
         self.assertEqual(self.phone(row).status_code, 404)
 
-    @override_settings(IDENTITY_REQUESTS_ENABLED=True)
     def test_only_explicit_csrf_protected_actions_change_consent(self):
         row = self.create_request()
         checked = Client(enforce_csrf_checks=True)
@@ -167,7 +236,6 @@ class IdentityConsentTests(TestCase):
             self.assertEqual(self.action(row, 'approve', consent=True).status_code, 200)
         wire.assert_not_called()
 
-    @override_settings(IDENTITY_REQUESTS_ENABLED=True)
     def test_deleted_or_suspended_subject_never_discloses_phone(self):
         row = self.create_request()
         self.assertEqual(self.action(row, 'approve', consent=True).status_code, 200)
@@ -177,7 +245,6 @@ class IdentityConsentTests(TestCase):
         self.assertEqual(self.post('/account/deletion').status_code, 200)
         self.assertEqual(self.phone(row).status_code, 404)
 
-    @override_settings(IDENTITY_REQUESTS_ENABLED=True)
     def test_decline_does_not_disclose_and_repeated_pending_requests_are_idempotent(self):
         row = self.create_request()
         self.assertEqual(self.action(row, 'decline').json()['status'], 'declined')
@@ -186,7 +253,6 @@ class IdentityConsentTests(TestCase):
         self.assertEqual(self.request_identity().json()['id'], self.receipt_ids[new_request['id']])
         self.assertEqual(self.action(row, 'approve', consent=True).status_code, 404)
 
-    @override_settings(IDENTITY_REQUESTS_ENABLED=True)
     def test_hidden_message_never_opens_a_new_request_or_exposes_its_context(self):
         row = self.create_request()
         self.assertEqual(self.client.delete(f'/api/v1/messages/{self.order.pk}').status_code, 200)
@@ -197,7 +263,6 @@ class IdentityConsentTests(TestCase):
             self.assertIsNone(result['message_created_at'])
             self.assertNotIn('text', result)
 
-    @override_settings(IDENTITY_REQUESTS_ENABLED=True)
     def test_visibility_and_link_expiry_are_rechecked_after_admission(self):
         from .identity_consent import lock_actor
 
@@ -220,7 +285,6 @@ class IdentityConsentTests(TestCase):
             self.assertEqual(self.request_identity().status_code, 404)
         self.assertFalse(IdentityConsent.objects.exists())
 
-    @override_settings(IDENTITY_REQUESTS_ENABLED=True)
     def test_expired_links_and_staff_without_verified_account_have_no_access(self):
         staff = get_user_model().objects.create_user(username='identity-staff', is_staff=True)
         staff_client = Client()
@@ -231,14 +295,12 @@ class IdentityConsentTests(TestCase):
         self.assertEqual(self.request_identity().status_code, 404)
         self.assertFalse(IdentityConsent.objects.exists())
 
-    @override_settings(IDENTITY_REQUESTS_ENABLED=True)
     def test_attempts_are_limited_even_for_wrong_capabilities(self):
         for _ in range(30):
             self.assertEqual(self.request_identity(self.third).status_code, 404)
         self.assertEqual(self.request_identity(self.third).status_code, 429)
         self.assertFalse(IdentityConsent.objects.exists())
 
-    @override_settings(IDENTITY_REQUESTS_ENABLED=True)
     def test_account_deletion_revokes_permanently_and_audits_contain_no_phones(self):
         row = self.create_request()
         self.assertEqual(self.action(row, 'approve', consent=True).status_code, 200)
@@ -250,7 +312,6 @@ class IdentityConsentTests(TestCase):
             self.assertNotIn(self.sender_phone, str(event.after))
             self.assertNotIn(self.recipient_phone, str(event.after))
 
-    @override_settings(IDENTITY_REQUESTS_ENABLED=True)
     def test_public_receipts_never_link_separate_anonymous_sources_or_reuse_revoked_handles(self):
         first = self.request_identity().json()
         _, second_token = self.send(self.client, self.recipient_phone)
@@ -276,7 +337,6 @@ class IdentityConsentTests(TestCase):
         self.assertEqual(self.phone(fresh).status_code, 200)
         self.assertEqual(self.phone(first).status_code, 404)
 
-    @override_settings(IDENTITY_REQUESTS_ENABLED=True)
     def test_unapproved_denials_remain_neutral_and_environment_cannot_bypass_permissions(self):
         row = self.create_request()
         public_id = self.receipt_ids[row['id']]
@@ -295,11 +355,11 @@ class IdentityConsentTests(TestCase):
             self.assertEqual(self.action(approved, malformed).status_code, 422)
 
 
-@override_settings(IDENTITY_REQUESTS_ENABLED=True)
 class IdentityConsentConcurrencyTests(TransactionTestCase):
     @skipUnlessDBFeature('has_select_for_update')
     def test_phone_read_waits_for_committing_revocation_and_returns_no_number(self):
         from .identity_consent import phone
+        IdentityRequestSettings.objects.create(enabled=True)
         users = [get_user_model().objects.create_user(username=name) for name in ('identity-subject', 'identity-requester')]
         accounts = [Account.objects.create(user=user, phone_hash=digest(number), phone_cipher=encrypt(number))
                     for user, number in zip(users, ('09123456789', '09901234567'))]

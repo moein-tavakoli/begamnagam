@@ -23,9 +23,12 @@ const AppContext = createContext<AppContextValue | null>(null);
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const generation=useRef(0);
   const identity=useRef<string|undefined>(undefined);
+  const messageVisibility=useRef<string|undefined>(undefined);
   const bootstrapRequest=useRef<AbortController | null>(null);
   const authenticationInFlight=useRef(false);
+  const resumeAfterAuthentication=useRef(false);
   const [privacyEpoch,setPrivacyEpoch]=useState(0);
+  const [privacyPending,setPrivacyPending]=useState(false);
   const [data, setData] = useState<Bootstrap | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -39,13 +42,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       const result=await api<Bootstrap>("/bootstrap", { signal: controller.signal });
       if(current===generation.current) {
-        if(identity.current !== result.session_identity) setPrivacyEpoch(v=>v+1);
+        if(identity.current !== result.session_identity || messageVisibility.current !== result.message_visibility_revision) setPrivacyEpoch(v=>v+1);
         identity.current=result.session_identity;
+        messageVisibility.current=result.message_visibility_revision;
         setData(result);
+        if (!document.hidden) setPrivacyPending(false);
         return result;
       }
     } catch (error) {
-      if(current===generation.current && !controller.signal.aborted){setData(null);setError(errorMessage(error));}
+      if(current===generation.current && !controller.signal.aborted){
+        identity.current=undefined;
+        messageVisibility.current=undefined;
+        setPrivacyEpoch(v=>v+1);
+        setData(null);
+        setPrivacyPending(false);
+        setError(errorMessage(error));
+      }
     } finally {
       if(current===generation.current) setLoading(false);
     }
@@ -66,7 +78,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // Never unmount the OTP form into an empty/anonymous bootstrap in between.
       const session=await loadBootstrap();
       if(!session?.authenticated)throw new ApiError("کد تأیید شد، اما نشست ورود برقرار نشد؛ دوباره کد بگیر.","session_unconfirmed");
-    } finally {authenticationInFlight.current=false;}
+    } finally {
+      authenticationInFlight.current=false;
+      if(resumeAfterAuthentication.current && !document.hidden){
+        resumeAfterAuthentication.current=false;
+        await loadBootstrap();
+      }
+    }
   },[loadBootstrap]);
   useEffect(() => {
     void reload();
@@ -74,7 +92,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(()=>{
     const channel=openSessionChannel();
     let pendingReset: Promise<void> | undefined;
-    const clear=()=>{pendingReset=undefined;generation.current+=1;bootstrapRequest.current?.abort();identity.current=undefined;setData(null);setPrivacyEpoch(v=>v+1);void loadBootstrap();};
+    const clear=()=>{pendingReset=undefined;generation.current+=1;bootstrapRequest.current?.abort();identity.current=undefined;messageVisibility.current=undefined;setData(null);setPrivacyEpoch(v=>v+1);void loadBootstrap();};
     const local=(event: Event)=>{
       channel?.postMessage('session-changed');
       const settled=(event as CustomEvent<{settled?: Promise<void>}>).detail?.settled;
@@ -89,18 +107,48 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       });
     };
-    const remote=(event:MessageEvent)=>{if(event.data==='session-changed')clear();};
+    const hiddenMessage=()=>{
+      channel?.postMessage('message-hidden');
+      // The initiating history removes its row; other retained views are reset
+      // when the server's account-scoped revision arrives.
+      void reload();
+    };
+    const remote=(event:MessageEvent)=>{if(event.data==='session-changed' || event.data==='message-hidden')clear();};
     const restore=(event:PageTransitionEvent)=>{if(event.persisted)clear();};
-    const focus=()=>{if(!pendingReset && !authenticationInFlight.current)void reload();};
+    const focus=()=>{
+      if(document.hidden)return;
+      if(authenticationInFlight.current){resumeAfterAuthentication.current=true;return;}
+      if(pendingReset)return;
+      resumeAfterAuthentication.current=false;
+      if(identity.current) setPrivacyPending(true);
+      void reload();
+    };
+    const visibility=()=>{
+      if(document.hidden){
+        if(identity.current) setPrivacyPending(true);
+        if(!authenticationInFlight.current && !pendingReset){
+          generation.current+=1;
+          bootstrapRequest.current?.abort();
+        }
+      } else focus();
+    };
+    // Another device cannot broadcast here. Revalidate visible sessions too;
+    // there is no private-content offline fallback when this request fails.
+    const timer=setInterval(()=>{
+      if(!document.hidden && identity.current && !pendingReset && !authenticationInFlight.current)void reload();
+    },30000);
     window.addEventListener('privacy-reset',local);
+    window.addEventListener('message-visibility-changed',hiddenMessage);
     window.addEventListener('pageshow',restore);
     window.addEventListener('focus',focus);
+    document.addEventListener('visibilitychange',visibility);
     channel?.addEventListener('message',remote);
-    return ()=>{pendingReset=undefined;window.removeEventListener('privacy-reset',local);window.removeEventListener('pageshow',restore);window.removeEventListener('focus',focus);channel?.close();};
+    return ()=>{pendingReset=undefined;clearInterval(timer);window.removeEventListener('privacy-reset',local);window.removeEventListener('message-visibility-changed',hiddenMessage);window.removeEventListener('pageshow',restore);window.removeEventListener('focus',focus);document.removeEventListener('visibilitychange',visibility);channel?.close();};
   },[reload,loadBootstrap]);
   return (
     <AppContext.Provider value={{ data, loading, error, reload, verifyOtp }}>
-      <div key={privacyEpoch} className="app-shell">{children}</div>
+      {privacyPending && <p role="status" className="service-loading">در حال بررسی دسترسی…</p>}
+      <div key={privacyEpoch} className="app-shell" hidden={privacyPending}>{children}</div>
     </AppContext.Provider>
   );
 }

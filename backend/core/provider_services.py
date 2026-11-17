@@ -22,7 +22,7 @@ def request_refund(payment, reason):
 def begin_payment(user, order_id, key):
     """Resume an already-issued historical checkout; never create a new one."""
     with transaction.atomic():
-        order = Order.objects.select_for_update().filter(pk=order_id, owner=user).first()
+        order = Order.objects.select_for_update().filter(pk=order_id, owner=user, owner_hidden_at__isnull=True).first()
         if not order:
             raise APIError('not_found', 'سفارش پیدا نشد.', 404)
         if order.is_free or order.uses_purchased_credit:

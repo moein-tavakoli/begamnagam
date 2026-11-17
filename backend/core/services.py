@@ -99,6 +99,13 @@ def visible_orders(user):
     return Order.objects.filter(owner=user, owner_hidden_at__isnull=True)
 
 
+def message_visibility_revision(user):
+    # Tombstones are permanent: retention redacts content but never removes an
+    # Order or clears owner_hidden_at. Count changes even if the clock moves back.
+    removed = Order.objects.filter(owner=user, owner_hidden_at__isnull=False).count()
+    return digest(f'message-visibility:{user.pk}:{removed}')
+
+
 def get_owned_order(user, order_id):
     try:
         return visible_orders(user).get(pk=order_id)
@@ -118,6 +125,9 @@ def serialize_order(order, *, related=None):
     from .models import Refund, WalletEntry
     from .sms import sender_sms
     if related is None:
+        # A caller may have loaded this object before a concurrent deletion.
+        if not Order.objects.filter(pk=order.pk, owner_hidden_at__isnull=True).exists():
+            raise APIError('not_found', 'درخواست پیدا نشد.', 404)
         payment = order.payment_attempts.filter(applied_to_order=True).first() or order.payment_attempts.order_by("-created_at").first()
         delivery = MessageDelivery.objects.filter(order=order).first()
         open_refund = Refund.objects.filter(payment__order=order).exclude(status="refunded").exists()
@@ -152,7 +162,12 @@ def serialize_orders(orders):
     from .models import Refund, WalletEntry
     if not orders:
         return []
-    ids = [order.pk for order in orders]
+    # Check again after loading rows; never serialize a stale in-memory record.
+    ids = set(Order.objects.filter(pk__in=[order.pk for order in orders],
+                                   owner_hidden_at__isnull=True).values_list('pk', flat=True))
+    orders = [order for order in orders if order.pk in ids]
+    if not orders:
+        return []
     payments = {}
     for payment in PaymentAttempt.objects.filter(order_id__in=ids).order_by('-created_at', 'pk'):
         if payment.order_id not in payments or payment.applied_to_order:
@@ -191,6 +206,8 @@ def create_order(user, session_key, data, idempotency_key):
         user.account = Account.objects.get(user_id=user.pk)
         previous = Order.objects.filter(owner=user, idempotency_key=key).first()
         if previous:
+            if previous.owner_hidden_at is not None:
+                raise APIError('not_found', 'درخواست پیدا نشد.', 404)
             expected_hash = '' if previous.reply_depth else previous.recipient_hash
             if previous.preview_id != preview_id or expected_hash != phone_hash:
                 raise APIError("idempotency_conflict", "این کلید برای درخواست دیگری استفاده شده است.", 409)
@@ -323,7 +340,7 @@ def pay_order(user, order_id):
     ensure_open()
     with transaction.atomic():
         try:
-            order = Order.objects.select_for_update().get(id=order_id, owner=user)
+            order = visible_orders(user).select_for_update().get(id=order_id)
         except Order.DoesNotExist:
             raise APIError("not_found", "درخواست پیدا نشد.", 404)
         if order.is_free:
@@ -392,7 +409,7 @@ def confirm_free_order(user, order_id):
     from .demo_limits import recipient_in_cooldown
     ensure_open()
     with transaction.atomic():
-        order = Order.objects.select_for_update().filter(id=order_id, owner=user).first()
+        order = visible_orders(user).select_for_update().filter(id=order_id).first()
         if not order:
             raise APIError("not_found", "درخواست پیدا نشد.", 404)
         if not (order.is_free or order.uses_purchased_credit) or order.amount_toman != 0:

@@ -496,8 +496,8 @@ class IntegrationAPITests(TestCase):
         self.assertEqual(Account.objects.get(user=owner).free_sends_remaining, credits)
         self.assertTrue(Preview.objects.filter(pk=preview['preview_id']).exists())
 
-        repeated = self.reserve(preview, key=key).json()
-        self.assertEqual((repeated['id'], repeated['text'], repeated['recipient_phone']), (identifier, '', ''))
+        repeated = self.reserve(preview, key=key)
+        self.assertEqual(repeated.status_code, 404, repeated.content)
         staff = Client()
         staff.force_login(get_user_model().objects.create_superuser('message-history-admin'))
         reviewed = staff.post(f'/api/v1/manage/orders/{identifier}/texts', {}, content_type='application/json')
@@ -554,9 +554,9 @@ class IntegrationAPITests(TestCase):
         Order.objects.filter(pk=orders[0].pk).update(status='unknown')
         orders = list(Order.objects.all())
         expected = [serialize_order(order) for order in orders]
-        with self.assertNumQueries(4):
+        with self.assertNumQueries(5):
             self.assertEqual(serialize_orders(orders), expected)
-        with self.assertNumQueries(4):
+        with self.assertNumQueries(5):
             self.assertEqual(serialize_orders(orders[:1]), expected[:1])
 
     def test_keyset_pagination_ties_tampering_owner_filter_and_new_insertion(self):

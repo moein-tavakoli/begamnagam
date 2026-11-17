@@ -134,12 +134,14 @@ def main():
             assert response.status == status, f"{path}: expected {status}, got {response.status}"
             return response.read(), response.headers
 
-    def page_at(path, status=200, agent="BegamNagam-SEO-Check/1.0"):
+    def page_at(path, status=200, agent="BegamNagam-SEO-Check/1.0", *, require_heading=True):
         body, headers = get(path, status, agent)
         assert headers.get_content_type() == "text/html", path
         page = Page(body.decode("utf-8"))
         assert (page.language, page.direction) == ("fa", "rtl"), path
-        assert page.title and page.headings, path
+        assert page.title, path
+        if require_heading:
+            assert page.headings, path
         assert page.one("description"), path
         return page, headers
 
@@ -226,7 +228,10 @@ def main():
     assert not references - definitions, f"Unresolved graph IDs: {references - definitions}"
 
     for path in PRIVATE:
-        page, headers = page_at(path)
+        # /r chooses its UI from a capability in the browser-only fragment.
+        # Its initial server HTML is intentionally empty; all private metadata,
+        # noindex and no-referrer checks below still apply.
+        page, headers = page_at(path, require_heading=path != "/r")
         assert "noindex" in page.one("robots") and "nofollow" in page.one("robots"), path
         assert "noindex" in headers.get("X-Robots-Tag", ""), path
         assert page.one("referrer") == "no-referrer"

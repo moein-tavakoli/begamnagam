@@ -33,6 +33,7 @@ export type Bootstrap = {
   recent_auth?: boolean;
   support_contact?: string;
   session_identity?: string;
+  message_visibility_revision?: string;
 };
 export type Preview = {
   message_tone?: MessageTone;
@@ -173,6 +174,9 @@ export async function api<T>(
         "پاسخ سرویس معتبر نیست. دوباره تلاش کنید.",
         "invalid_response",
       );
+    if (typeof window !== 'undefined' && method === 'DELETE' && /^\/messages\/[a-f0-9-]+$/.test(path)) {
+      window.dispatchEvent(new CustomEvent('message-visibility-changed'));
+    }
     if (typeof window !== "undefined" && method === "POST" &&
         ["/auth/logout", "/auth/verify-otp", "/manage/login", "/manage/logout"].includes(path)) {
       // Both phone and staff authentication replace the shared Django session.

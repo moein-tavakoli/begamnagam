@@ -147,33 +147,41 @@ export function History() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const historyHeading = useRef<HTMLHeadingElement>(null);
+  const historyRequest = useRef<AbortController | null>(null);
   const load = useCallback(async () => {
+    historyRequest.current?.abort();
+    const controller = new AbortController();
+    historyRequest.current = controller;
     setLoading(true);
+    setMessages([]);
     setError("");
     setNotice("");
     try {
-      const result = await api<{ results: Message[] }>("/messages");
-      setMessages(result.results);
+      const result = await api<{ results: Message[] }>("/messages", { signal: controller.signal });
+      if (!controller.signal.aborted) setMessages(result.results);
     } catch (error) {
-      setError(errorMessage(error));
+      if (!controller.signal.aborted) setError(errorMessage(error));
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
   }, []);
   useEffect(() => {
     if (data?.authenticated) void load();
     else setMessages([]);
+    return () => historyRequest.current?.abort();
   }, [data?.authenticated, load]);
 
   async function removeMessage(id: string) {
-    if (!window.confirm("این پیام از فهرست «پیام‌های من» حذف شود؟")) return;
+    if (!window.confirm("این پیام برای همیشه از دسترس شما خارج شود؟ سابقه برای مدیر باقی می‌ماند و ارسالِ تأییدشده ادامه پیدا می‌کند.")) return;
     setDeletingId(id);
     setError("");
     setNotice("");
     try {
       await api(`/messages/${id}`, { method: "DELETE" });
+      historyRequest.current?.abort();
+      setLoading(false);
       setMessages(current => current.filter(message => message.id !== id));
-      setNotice("پیام از فهرست شما حذف شد.");
+      setNotice("پیام برای همیشه از دسترس شما خارج شد.");
       historyHeading.current?.focus();
     } catch (error) {
       setError(errorMessage(error));

@@ -193,7 +193,7 @@ def return_order(order, reason):
 @transaction.atomic
 def pay_order(user, order_id):
     """Read an already-paid historical wallet order without charging it again."""
-    order = Order.objects.select_for_update().filter(owner=user, pk=order_id).first()
+    order = Order.objects.select_for_update().filter(owner=user, pk=order_id, owner_hidden_at__isnull=True).first()
     if not order:
         raise APIError('not_found', 'سفارش پیدا نشد.', 404)
     if order.payment_method == 'wallet' and order.paid_at:

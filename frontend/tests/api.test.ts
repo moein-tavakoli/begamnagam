@@ -21,6 +21,20 @@ function otpSessionBrowser(context: TestContext) {
   return events;
 }
 
+test("successful website message deletion emits a content-free visibility event", async context => {
+  const events = otpSessionBrowser(context);
+  globalThis.fetch = async () => Response.json({ ok: true });
+  await api('/messages/9cfd58ef-6758-49e9-a5bd-b8b7c83106a0', { method: 'DELETE' });
+  assert.deepEqual(events.map(event => [event.type, event.detail]), [['message-visibility-changed', null]]);
+});
+
+test("failed deletion never invalidates other tabs", async context => {
+  const events = otpSessionBrowser(context);
+  globalThis.fetch = async () => Response.json({ error: { code: 'not_found', message: 'Unavailable' } }, { status: 404 });
+  await assert.rejects(() => api('/messages/9cfd58ef-6758-49e9-a5bd-b8b7c83106a0', { method: 'DELETE' }));
+  assert.deepEqual(events, []);
+});
+
 test("API canonicalizes numeric text in the actual request and retains credentials", async t => {
   otpSessionBrowser(t);
   let sent: unknown;

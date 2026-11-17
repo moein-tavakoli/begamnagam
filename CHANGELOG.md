@@ -9,6 +9,29 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 3.1.3 — 2026-11-17 — Permanent website message access removal
+
+- Reject hidden-order receipt, retry, submission and historical payment access;
+  recheck visibility before serializing records loaded before deletion. Preserve
+  administrative records, accounting and already-authorized queued delivery.
+- Invalidate retained website/PWA state across tabs and on the account's
+  visibility revision. Mask private views during resume revalidation, discard
+  stale requests and clear them when revalidation fails. Preserve OTP feedback
+  when a user switches away during reauthentication. Bot checkpoint code unchanged.
+- Update Next.js from 16.4.3 to 16.4.6. Review access controls, browser/provider
+  boundaries, dependencies and live security configuration without changing the
+  server or sending SMS. Record backup-recovery requirements and remaining limits
+  in the [security report](docs/security-audit-2026-11-17.fa.md).
+- Validation: 791 isolated PostgreSQL/Redis backend tests, 129 frontend tests,
+  TypeScript, migration consistency, Compose configuration, and browser checks
+  for cross-tab deletion, resumed/offline views, stale responses and 375px width.
+  The standalone build and 19 production HTTP security checks passed. Update the
+  SEO check to recognize the existing fragment-only /r shell; all 103 checks pass
+  with private metadata protections retained. Dependency audits report no known
+  vulnerabilities after the update.
+
+Local release only; no push, promotion or server deployment.
+
 ## 3.1.2 — 2026-11-17 — Keep sentence punctuation during rewriting
 
 - Preserve sentence punctuation in freeform and anonymous reply drafts.

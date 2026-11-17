@@ -109,6 +109,7 @@ def bootstrap(request):
         data["free_sends_earned_total"] = request.user.account.free_sends_earned_total
         data["recent_auth"] = timezone.now().timestamp() - request.session.get("phone_verified_at", 0) <= 300
         data["session_identity"] = digest("session-identity:" + request.session.session_key)
+        data['message_visibility_revision'] = services.message_visibility_revision(request.user)
         data["phone_masked"] = request.user.account.phone_masked
         data["phone"] = decrypt(request.user.account.phone_cipher) if request.user.account.phone_cipher else ''
         data["recipient_blocked"] = RecipientState.objects.filter(phone_hash=request.user.account.phone_hash, blocked=True).exists()
@@ -410,7 +411,8 @@ def order_detail(request, order_id):
 
 @api(["GET"], authenticated=True)
 def messages(request):
-    return {"results": [services.serialize_order(order) for order in services.visible_orders(request.user).order_by("-created_at")[:100]]}
+    orders = list(services.visible_orders(request.user).order_by('-created_at')[:100])
+    return {'results': services.serialize_orders(orders)}
 
 
 @api(["DELETE"], authenticated=True)

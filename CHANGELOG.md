@@ -9,6 +9,24 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 3.1.4 — 2026-11-17 — Production security assessment and image hardening
+
+- Add bounded, TLS-verified web security probes with health guards and regression
+  checks against false-positive redirect/SSRF results. Record exact image,
+  package, runtime binary and scanner database evidence in the
+  [Persian assessment](docs/production-security-assessment-2026-11-17.fa.md).
+- Repair the live SSH Fail2Ban journal backend and update 48 host packages after
+  simulations, preserving SSH configuration and all 13 application containers.
+  Explicitly retain pending runtime/library activation and maintenance findings.
+- Pin reviewed Python, Node and infrastructure bases; patch zlib, remove build
+  installers from application runtimes, and record six scanned amd64 candidate
+  digests. These application/container changes are local, not deployed.
+- Validation: 53 live bounded probes; 791 backend tests on the final image with
+  isolated PostgreSQL/Redis; 129 frontend tests and typecheck; four probe helper
+  tests; production image builds; 19 final frontend HTTP checks; Compose checks;
+  isolated native RabbitMQ startup. Remaining advisory matches and deployment
+  requirements are documented without claiming complete security.
+
 ## 3.1.3 — 2026-11-17 — Permanent website message access removal
 
 - Reject hidden-order receipt, retry, submission and historical payment access;

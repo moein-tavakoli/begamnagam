@@ -1,0 +1,2298 @@
+{
+  "assessment_date": "2026-11-17",
+  "local_version": "3.1.4",
+  "production_application_version": "3.1.2",
+  "application_images_deployed": false,
+  "source_base_commit": "b1f14a7",
+  "scope": {
+    "owned_application_host": "CT115",
+    "web_origin": "https://begamnagam.ir",
+    "edge_connection": "LAN address override with domain TLS/SNI verification",
+    "central_nginx_os_excluded_by_user": true,
+    "parent_proxmox_kernel_not_assessed": true,
+    "independent_public_internet_vantage": false,
+    "customer_records_read_or_exported": false,
+    "live_account_mutation": false,
+    "real_sms_otp_ai_payment_calls": false,
+    "mounted_data_volumes_exported": false,
+    "bot_behavior_changed": false
+  },
+  "scanner": {
+    "release": {
+      "source": "https://github.com/aquasecurity/trivy/releases/tag/v0.76.2",
+      "version": "v0.76.2",
+      "published_at": "2026-11-05T12:50:25Z",
+      "asset": "trivy_0.76.2_macOS-ARM64.tar.gz",
+      "asset_sha256": "sha256:ae7ea358326960406b703c77b2ac490190797d80b306b5b50c2a27221da0a5b8",
+      "verified_release_asset_digest": true,
+      "verified_checksums_file": true
+    },
+    "database": {
+      "Version": 2,
+      "NextUpdate": "2026-11-18T13:00:16.23116036Z",
+      "UpdatedAt": "2026-11-17T13:00:16.23116094Z",
+      "DownloadedAt": "2026-11-17T15:36:43.208849Z"
+    },
+    "scanners": [
+      "vuln"
+    ],
+    "parallel": 1,
+    "image_platform": "linux/amd64",
+    "counts_mean": "Package/advisory matches, not demonstrated exploits; duplicate advisories across packages remain in match counts. FixedVersion does not prove an application image or reachable path is fixed.",
+    "raw_inventory_and_images_not_committed": true,
+    "downloaded_scanner_cache_removed_after_scans": true
+  },
+  "web_probes": {
+    "target": "https://begamnagam.ir",
+    "connect_ip_override": "192.168.1.6",
+    "tls_verified": true,
+    "rate_limit_seconds": 1,
+    "cookies_sent": false,
+    "response_bodies_stored": false,
+    "provider_calls_intended": false,
+    "planned_probes": 53,
+    "completed_probes": 53,
+    "halted": null,
+    "health": [
+      {
+        "status": 200,
+        "seconds": 0.03
+      },
+      {
+        "status": 200,
+        "seconds": 0.019
+      },
+      {
+        "status": 200,
+        "seconds": 0.008
+      },
+      {
+        "status": 200,
+        "seconds": 0.015
+      },
+      {
+        "status": 200,
+        "seconds": 0.01
+      },
+      {
+        "status": 200,
+        "seconds": 0.025
+      },
+      {
+        "status": 200,
+        "seconds": 0.021
+      }
+    ],
+    "results": [
+      {
+        "probe": "anonymous_private_api",
+        "path": "/api/v1/messages",
+        "method": "GET",
+        "status": 401,
+        "expected": [
+          401
+        ],
+        "passed": true,
+        "seconds": 0.008
+      },
+      {
+        "probe": "anonymous_private_api",
+        "path": "/api/v1/orders/00000000-0000-0000-0000-000000000000",
+        "method": "GET",
+        "status": 401,
+        "expected": [
+          401
+        ],
+        "passed": true,
+        "seconds": 0.006
+      },
+      {
+        "probe": "anonymous_private_api",
+        "path": "/api/v1/wallet",
+        "method": "GET",
+        "status": 401,
+        "expected": [
+          401
+        ],
+        "passed": true,
+        "seconds": 0.007
+      },
+      {
+        "probe": "anonymous_private_api",
+        "path": "/api/v1/preferences",
+        "method": "GET",
+        "status": 401,
+        "expected": [
+          401
+        ],
+        "passed": true,
+        "seconds": 0.007
+      },
+      {
+        "probe": "anonymous_private_api",
+        "path": "/api/v1/invitations",
+        "method": "GET",
+        "status": 401,
+        "expected": [
+          401
+        ],
+        "passed": true,
+        "seconds": 0.008
+      },
+      {
+        "probe": "anonymous_private_api",
+        "path": "/api/v1/support/messages",
+        "method": "GET",
+        "status": 401,
+        "expected": [
+          401
+        ],
+        "passed": true,
+        "seconds": 0.006
+      },
+      {
+        "probe": "anonymous_private_api",
+        "path": "/api/v1/credit-purchases/00000000-0000-0000-0000-000000000000",
+        "method": "GET",
+        "status": 401,
+        "expected": [
+          401
+        ],
+        "passed": true,
+        "seconds": 0.008
+      },
+      {
+        "probe": "anonymous_private_api_v2",
+        "path": "/api/v2/me",
+        "method": "GET",
+        "status": 401,
+        "expected": [
+          401
+        ],
+        "passed": true,
+        "seconds": 0.006
+      },
+      {
+        "probe": "anonymous_private_api_v2",
+        "path": "/api/v2/messages",
+        "method": "GET",
+        "status": 401,
+        "expected": [
+          401
+        ],
+        "passed": true,
+        "seconds": 0.006
+      },
+      {
+        "probe": "anonymous_private_api_v2",
+        "path": "/api/v2/messages/00000000-0000-0000-0000-000000000000",
+        "method": "GET",
+        "status": 401,
+        "expected": [
+          401
+        ],
+        "passed": true,
+        "seconds": 0.007
+      },
+      {
+        "probe": "anonymous_private_api_v2",
+        "path": "/api/v2/message-previews/00000000-0000-0000-0000-000000000000",
+        "method": "GET",
+        "status": 401,
+        "expected": [
+          401
+        ],
+        "passed": true,
+        "seconds": 0.007
+      },
+      {
+        "probe": "anonymous_private_api_v2",
+        "path": "/api/v2/invitations",
+        "method": "GET",
+        "status": 401,
+        "expected": [
+          401
+        ],
+        "passed": true,
+        "seconds": 0.008
+      },
+      {
+        "probe": "anonymous_private_api_v2",
+        "path": "/api/v2/support/messages",
+        "method": "GET",
+        "status": 401,
+        "expected": [
+          401
+        ],
+        "passed": true,
+        "seconds": 0.014
+      },
+      {
+        "probe": "anonymous_private_api_v2",
+        "path": "/api/v2/wallet/entries",
+        "method": "GET",
+        "status": 401,
+        "expected": [
+          401
+        ],
+        "passed": true,
+        "seconds": 0.007
+      },
+      {
+        "probe": "anonymous_staff_api",
+        "path": "/api/v1/manage/dashboard",
+        "method": "GET",
+        "status": 401,
+        "expected": [
+          401
+        ],
+        "passed": true,
+        "seconds": 0.007
+      },
+      {
+        "probe": "anonymous_staff_api",
+        "path": "/api/v1/manage/users/2147483647",
+        "method": "GET",
+        "status": 401,
+        "expected": [
+          401
+        ],
+        "passed": true,
+        "seconds": 0.006
+      },
+      {
+        "probe": "anonymous_staff_api",
+        "path": "/api/v1/manage/changelog",
+        "method": "GET",
+        "status": 401,
+        "expected": [
+          401
+        ],
+        "passed": true,
+        "seconds": 0.007
+      },
+      {
+        "probe": "anonymous_staff_api",
+        "path": "/api/v1/manage/staff/employees",
+        "method": "GET",
+        "status": 401,
+        "expected": [
+          401
+        ],
+        "passed": true,
+        "seconds": 0.007
+      },
+      {
+        "probe": "anonymous_staff_api",
+        "path": "/api/v1/manage/staff/roles",
+        "method": "GET",
+        "status": 401,
+        "expected": [
+          401
+        ],
+        "passed": true,
+        "seconds": 0.008
+      },
+      {
+        "probe": "anonymous_staff_api",
+        "path": "/api/v1/manage/monitoring/settings",
+        "method": "GET",
+        "status": 401,
+        "expected": [
+          401
+        ],
+        "passed": true,
+        "seconds": 0.008
+      },
+      {
+        "probe": "anonymous_staff_api",
+        "path": "/api/v1/manage/sms-template/kavenegar-key",
+        "method": "GET",
+        "status": 401,
+        "expected": [
+          401
+        ],
+        "passed": true,
+        "seconds": 0.015
+      },
+      {
+        "probe": "records_get_method_rejected",
+        "path": "/api/v1/manage/records/orders",
+        "method": "GET",
+        "status": 405,
+        "expected": [
+          405
+        ],
+        "passed": true,
+        "seconds": 0.007
+      },
+      {
+        "probe": "private_file",
+        "path": "/.env",
+        "method": "GET",
+        "status": 404,
+        "expected": [
+          403,
+          404
+        ],
+        "passed": true,
+        "seconds": 0.019
+      },
+      {
+        "probe": "private_file",
+        "path": "/.env.internal",
+        "method": "GET",
+        "status": 404,
+        "expected": [
+          403,
+          404
+        ],
+        "passed": true,
+        "seconds": 0.018
+      },
+      {
+        "probe": "private_file",
+        "path": "/.git/config",
+        "method": "GET",
+        "status": 404,
+        "expected": [
+          403,
+          404
+        ],
+        "passed": true,
+        "seconds": 0.02
+      },
+      {
+        "probe": "private_file",
+        "path": "/backup.sql",
+        "method": "GET",
+        "status": 404,
+        "expected": [
+          403,
+          404
+        ],
+        "passed": true,
+        "seconds": 0.018
+      },
+      {
+        "probe": "private_file",
+        "path": "/db.sqlite3",
+        "method": "GET",
+        "status": 404,
+        "expected": [
+          403,
+          404
+        ],
+        "passed": true,
+        "seconds": 0.018
+      },
+      {
+        "probe": "private_file",
+        "path": "/config/settings.py",
+        "method": "GET",
+        "status": 404,
+        "expected": [
+          403,
+          404
+        ],
+        "passed": true,
+        "seconds": 0.019
+      },
+      {
+        "probe": "private_file",
+        "path": "/_next/server/app/page.js",
+        "method": "GET",
+        "status": 404,
+        "expected": [
+          403,
+          404
+        ],
+        "passed": true,
+        "seconds": 0.021
+      },
+      {
+        "probe": "private_file",
+        "path": "/package-lock.json",
+        "method": "GET",
+        "status": 404,
+        "expected": [
+          403,
+          404
+        ],
+        "passed": true,
+        "seconds": 0.024
+      },
+      {
+        "probe": "private_document",
+        "path": "/api/v2/document/openapi.json",
+        "method": "GET",
+        "status": 404,
+        "expected": [
+          302,
+          303,
+          403,
+          404
+        ],
+        "passed": true,
+        "seconds": 0.011
+      },
+      {
+        "probe": "private_document",
+        "path": "/api/v2/document/client.py",
+        "method": "GET",
+        "status": 404,
+        "expected": [
+          302,
+          303,
+          403,
+          404
+        ],
+        "passed": true,
+        "seconds": 0.014
+      },
+      {
+        "probe": "encoded_path_boundary",
+        "path": "/api/v1/messages/..%2f..%2f.env",
+        "method": "GET",
+        "status": 400,
+        "expected": [
+          400,
+          401,
+          403,
+          404
+        ],
+        "passed": true,
+        "seconds": 0.012
+      },
+      {
+        "probe": "encoded_path_boundary",
+        "path": "/%2e%2e/%2e%2e/etc/passwd",
+        "method": "GET",
+        "status": 400,
+        "expected": [
+          400,
+          401,
+          403,
+          404
+        ],
+        "passed": true,
+        "seconds": 0.013
+      },
+      {
+        "probe": "encoded_path_boundary",
+        "path": "/api/v1/messages%00",
+        "method": "GET",
+        "status": 400,
+        "expected": [
+          400,
+          401,
+          403,
+          404
+        ],
+        "passed": true,
+        "seconds": 0.012
+      },
+      {
+        "probe": "encoded_path_boundary",
+        "path": "/api/v1/messages%3fadmin=true",
+        "method": "GET",
+        "status": 400,
+        "expected": [
+          400,
+          401,
+          403,
+          404
+        ],
+        "passed": true,
+        "seconds": 0.013
+      },
+      {
+        "probe": "encoded_path_boundary",
+        "path": "/api/v1/messages%3b",
+        "method": "GET",
+        "status": 400,
+        "expected": [
+          400,
+          401,
+          403,
+          404
+        ],
+        "passed": true,
+        "seconds": 0.012
+      },
+      {
+        "probe": "path_parameter_boundary",
+        "path": "/public/..;x/api/v1/manage/dashboard",
+        "method": "GET",
+        "status": 404,
+        "expected": [
+          400,
+          401,
+          403,
+          404
+        ],
+        "passed": true,
+        "seconds": 0.023
+      },
+      {
+        "probe": "path_parameter_boundary",
+        "path": "/public/..%3bx/api/v1/messages",
+        "method": "GET",
+        "status": 400,
+        "expected": [
+          400,
+          401,
+          403,
+          404
+        ],
+        "passed": true,
+        "seconds": 0.007
+      },
+      {
+        "probe": "forged_header_x-forwarded-for",
+        "path": "/api/v1/messages",
+        "method": "GET",
+        "status": 401,
+        "expected": [
+          401
+        ],
+        "passed": true,
+        "seconds": 0.01
+      },
+      {
+        "probe": "forged_header_x-real-ip",
+        "path": "/api/v1/messages",
+        "method": "GET",
+        "status": 401,
+        "expected": [
+          401
+        ],
+        "passed": true,
+        "seconds": 0.014
+      },
+      {
+        "probe": "forged_header_forwarded",
+        "path": "/api/v1/messages",
+        "method": "GET",
+        "status": 401,
+        "expected": [
+          401
+        ],
+        "passed": true,
+        "seconds": 0.014
+      },
+      {
+        "probe": "forged_header_x-original-url",
+        "path": "/api/v1/messages",
+        "method": "GET",
+        "status": 401,
+        "expected": [
+          401
+        ],
+        "passed": true,
+        "seconds": 0.007
+      },
+      {
+        "probe": "forged_header_x-rewrite-url",
+        "path": "/api/v1/messages",
+        "method": "GET",
+        "status": 401,
+        "expected": [
+          401
+        ],
+        "passed": true,
+        "seconds": 0.007
+      },
+      {
+        "probe": "forged_header_x-middleware-subrequest",
+        "path": "/api/v1/messages",
+        "method": "GET",
+        "status": 401,
+        "expected": [
+          401
+        ],
+        "passed": true,
+        "seconds": 0.013
+      },
+      {
+        "probe": "forged_monitoring_ip",
+        "path": "/api/v1/manage/monitoring",
+        "method": "GET",
+        "status": 401,
+        "expected": [
+          401
+        ],
+        "passed": true,
+        "seconds": 0.035
+      },
+      {
+        "probe": "cross_origin_private_api",
+        "path": "/api/v1/messages",
+        "method": "GET",
+        "status": 401,
+        "expected": [
+          401
+        ],
+        "passed": true,
+        "seconds": 0.012
+      },
+      {
+        "probe": "csrf_missing_preferences",
+        "path": "/api/v1/preferences",
+        "method": "POST",
+        "status": 403,
+        "expected": [
+          403
+        ],
+        "passed": true,
+        "seconds": 0.016
+      },
+      {
+        "probe": "image_optimizer_loopback",
+        "path": "/_next/image?url=http%3A%2F%2F127.0.0.1%3A8000%2Fhealthz&w=64&q=75",
+        "method": "GET",
+        "status": 400,
+        "expected": [
+          400
+        ],
+        "passed": true,
+        "seconds": 0.011
+      },
+      {
+        "probe": "image_optimizer_external",
+        "path": "/_next/image?url=https%3A%2F%2Faudit.invalid%2Fimage.png&w=64&q=75",
+        "method": "GET",
+        "status": 400,
+        "expected": [
+          400
+        ],
+        "passed": true,
+        "seconds": 0.011
+      },
+      {
+        "probe": "untrusted_host",
+        "path": "/",
+        "method": "GET",
+        "status": 404,
+        "expected": [
+          400,
+          403,
+          404,
+          421
+        ],
+        "passed": true,
+        "seconds": 0.01
+      },
+      {
+        "probe": "forged_forwarded_host",
+        "path": "/",
+        "method": "GET",
+        "status": 200,
+        "expected": [
+          200
+        ],
+        "passed": true,
+        "seconds": 0.029
+      },
+      {
+        "probe": "forged_nonce",
+        "path": "/",
+        "method": "GET",
+        "status": 200,
+        "expected": [
+          200
+        ],
+        "passed": true,
+        "seconds": 0.024
+      }
+    ]
+  },
+  "tls": [
+    {
+      "protocol": "TLS1.0",
+      "negotiated": null,
+      "error": "[SSL: TLSV1_ALERT_PROTOCOL_VERSION] tlsv1 alert protocol version (_ssl.c:1144)"
+    },
+    {
+      "protocol": "TLS1.1",
+      "negotiated": null,
+      "error": "[SSL: TLSV1_ALERT_PROTOCOL_VERSION] tlsv1 alert protocol version (_ssl.c:1144)"
+    },
+    {
+      "protocol": "TLS1.2",
+      "negotiated": "TLSv1.2",
+      "cipher": "ECDHE-ECDSA-AES256-GCM-SHA384",
+      "certificate_verified": true,
+      "expires": "Jan 23 14:46:09 2027 GMT"
+    },
+    {
+      "protocol": "TLS1.3",
+      "negotiated": "TLSv1.3",
+      "cipher": "TLS_AES_256_GCM_SHA384",
+      "certificate_verified": true,
+      "expires": "Jan 23 14:46:09 2027 GMT"
+    }
+  ],
+  "tcp_scan": {
+    "version": "Nmap 7.95",
+    "single_host": true,
+    "scope": "25 selected TCP ports from LAN",
+    "max_rate": 5,
+    "scan_delay_ms": 200,
+    "max_retries": 1,
+    "connect_scan": true,
+    "nse_scripts": false,
+    "port_results": [
+      {
+        "port": 22,
+        "protocol": "tcp",
+        "state": "open"
+      },
+      {
+        "port": 25,
+        "protocol": "tcp",
+        "state": "filtered"
+      },
+      {
+        "port": 53,
+        "protocol": "tcp",
+        "state": "filtered"
+      },
+      {
+        "port": 80,
+        "protocol": "tcp",
+        "state": "filtered"
+      },
+      {
+        "port": 443,
+        "protocol": "tcp",
+        "state": "open"
+      },
+      {
+        "port": 2375,
+        "protocol": "tcp",
+        "state": "filtered"
+      },
+      {
+        "port": 2376,
+        "protocol": "tcp",
+        "state": "filtered"
+      },
+      {
+        "port": 3000,
+        "protocol": "tcp",
+        "state": "filtered"
+      },
+      {
+        "port": 3001,
+        "protocol": "tcp",
+        "state": "filtered"
+      },
+      {
+        "port": 3002,
+        "protocol": "tcp",
+        "state": "filtered"
+      },
+      {
+        "port": 3003,
+        "protocol": "tcp",
+        "state": "filtered"
+      },
+      {
+        "port": 3004,
+        "protocol": "tcp",
+        "state": "filtered"
+      },
+      {
+        "port": 3005,
+        "protocol": "tcp",
+        "state": "filtered"
+      },
+      {
+        "port": 4369,
+        "protocol": "tcp",
+        "state": "filtered"
+      },
+      {
+        "port": 5432,
+        "protocol": "tcp",
+        "state": "filtered"
+      },
+      {
+        "port": 5672,
+        "protocol": "tcp",
+        "state": "filtered"
+      },
+      {
+        "port": 6379,
+        "protocol": "tcp",
+        "state": "filtered"
+      },
+      {
+        "port": 8000,
+        "protocol": "tcp",
+        "state": "filtered"
+      },
+      {
+        "port": 8080,
+        "protocol": "tcp",
+        "state": "filtered"
+      },
+      {
+        "port": 8082,
+        "protocol": "tcp",
+        "state": "filtered"
+      },
+      {
+        "port": 9000,
+        "protocol": "tcp",
+        "state": "filtered"
+      },
+      {
+        "port": 9090,
+        "protocol": "tcp",
+        "state": "filtered"
+      },
+      {
+        "port": 15672,
+        "protocol": "tcp",
+        "state": "filtered"
+      },
+      {
+        "port": 15692,
+        "protocol": "tcp",
+        "state": "filtered"
+      },
+      {
+        "port": 25672,
+        "protocol": "tcp",
+        "state": "filtered"
+      }
+    ],
+    "scanner_arguments": "/opt/homebrew/bin/nmap -sT -Pn -n --max-rate 5 --scan-delay 200ms --max-parallelism 1 --max-retries 1 --host-timeout 90s -p 22,25,53,80,443,2375,2376,3000-3005,4369,5432,5672,6379,8000,8080,8082,9000,9090,15672,15692,25672 -oX .local/pentest-20261117/ports-ct115.xml 192.168.1.123",
+    "parallelism_note": "Nmap ignored --max-parallelism because --scan-delay was set; bounded rate, delay, retries and single host still applied."
+  },
+  "host": {
+    "os": "Debian 12 (reported 12.7)",
+    "shared_kernel": "6.14.8-2-pve",
+    "before": {
+      "private_artifact": ".local/pentest-20261117/scans/host.json",
+      "artifact_sha256": "338c6bba9b5dcd8a3cd2745e3e44df5ef4f5f32c49acbdcc0ed08527ea31440f",
+      "os": {
+        "Family": "debian",
+        "Name": "12.7"
+      },
+      "detected_packages": 286,
+      "package_advisory_matches": 1842,
+      "unique_advisories": 705,
+      "by_severity": {
+        "CRITICAL": 31,
+        "HIGH": 496,
+        "MEDIUM": 735,
+        "LOW": 531,
+        "UNKNOWN": 49
+      },
+      "matches_with_fixed_version": 700,
+      "fixable_by_severity": {
+        "CRITICAL": 21,
+        "HIGH": 237,
+        "MEDIUM": 337,
+        "LOW": 97,
+        "UNKNOWN": 8
+      },
+      "targets": [
+        {
+          "target": "<private>/host-rootfs (debian 12.7)",
+          "class": "os-pkgs",
+          "type": "debian",
+          "matches": 1842
+        }
+      ]
+    },
+    "after_disk_package_updates": {
+      "private_artifact": ".local/pentest-20261117/scans/host-final.json",
+      "artifact_sha256": "f341f9ad1c9e51d85ad613322c6540fcc8bc0fab405a1047b1042b9d06ae8a6d",
+      "os": {
+        "Family": "debian",
+        "Name": "12.7"
+      },
+      "detected_packages": 286,
+      "package_advisory_matches": 1244,
+      "unique_advisories": 440,
+      "by_severity": {
+        "CRITICAL": 10,
+        "HIGH": 261,
+        "MEDIUM": 477,
+        "LOW": 452,
+        "UNKNOWN": 44
+      },
+      "matches_with_fixed_version": 102,
+      "fixable_by_severity": {
+        "CRITICAL": 0,
+        "HIGH": 2,
+        "MEDIUM": 79,
+        "LOW": 18,
+        "UNKNOWN": 3
+      },
+      "targets": [
+        {
+          "target": "<private>/host-rootfs (debian 12.7)",
+          "class": "os-pkgs",
+          "type": "debian",
+          "matches": 1244
+        }
+      ]
+    },
+    "updated_packages": [
+      "libssl3 3.0.22-1~deb12u2",
+      "openssh-client 1:9.2p1-2+deb12u10",
+      "openssh-server 1:9.2p1-2+deb12u10",
+      "openssh-sftp-server 1:9.2p1-2+deb12u10",
+      "openssl 3.0.22-1~deb12u2",
+      "ssh 1:9.2p1-2+deb12u10",
+      "apt 2.6.2",
+      "apt-utils 2.6.2",
+      "bind9-dnsutils 1:9.18.49-1~deb12u3",
+      "bind9-host 1:9.18.49-1~deb12u3",
+      "bind9-libs 1:9.18.49-1~deb12u3",
+      "inetutils-telnet 2:2.4-2+deb12u3",
+      "krb5-locales 1.20.1-2+deb12u5",
+      "libapt-pkg6.0 2.6.2",
+      "libbrotli1 1.0.9-2+deb12u1",
+      "libexpat1 2.5.0-1+deb12u5",
+      "libfile-find-rule-perl 0.34-4~deb12u1",
+      "libgcrypt20 1.10.1-3+deb12u1",
+      "libgnutls30 3.7.9-2+deb12u7",
+      "libgssapi-krb5-2 1.20.1-2+deb12u5",
+      "libicu72 72.1-3+deb12u1",
+      "libk5crypto3 1.20.1-2+deb12u5",
+      "libkrb5-3 1.20.1-2+deb12u5",
+      "libkrb5support0 1.20.1-2+deb12u5",
+      "liblzma5 5.4.1-1+deb12u2",
+      "libnghttp2-14 1.52.0-1+deb12u3",
+      "libpcre2-8-0 10.42-1+deb12u2",
+      "libperl5.36 5.36.0-7+deb12u4",
+      "libpython3.11-minimal 3.11.2-6+deb12u9",
+      "libpython3.11-stdlib 3.11.2-6+deb12u9",
+      "libsasl2-2 2.1.28+dfsg-10+deb12u1",
+      "libsasl2-modules-db 2.1.28+dfsg-10+deb12u1",
+      "libsqlite3-0 3.40.1-2+deb12u2",
+      "libssh2-1 1.10.0-3+deb12u1",
+      "libtasn1-6 4.19.0-2+deb12u1",
+      "libxml2 2.9.14+dfsg-1.3~deb12u6",
+      "perl 5.36.0-7+deb12u4",
+      "perl-base 5.36.0-7+deb12u4",
+      "perl-modules-5.36 5.36.0-7+deb12u4",
+      "python3-httplib2 0.20.4-3+deb12u1",
+      "python3-pkg-resources 66.1.1-1+deb12u2",
+      "python3-urllib3 1.26.12-1+deb12u4",
+      "python3.11 3.11.2-6+deb12u9",
+      "python3.11-minimal 3.11.2-6+deb12u9",
+      "vim-common 2:9.0.1378-2+deb12u2",
+      "vim-tiny 2:9.0.1378-2+deb12u2",
+      "wget 1.21.3-1+deb12u1",
+      "xz-utils 5.4.1-1+deb12u2"
+    ],
+    "updated_package_count": 48,
+    "ssh_ssl_remediation": {
+      "updated_packages": [
+        "libssl3 3.0.22-1~deb12u2",
+        "openssh-client 1:9.2p1-2+deb12u10",
+        "openssh-server 1:9.2p1-2+deb12u10",
+        "openssh-sftp-server 1:9.2p1-2+deb12u10",
+        "openssl 3.0.22-1~deb12u2",
+        "ssh 1:9.2p1-2+deb12u10"
+      ],
+      "sshd_config_preserved": true,
+      "ssh_configuration_check": true,
+      "ssh_reload": true,
+      "automatic_service_restarts_suppressed": true,
+      "application_restart_requested": false,
+      "temporary_restart_policy_removed": true,
+      "fresh_key_ssh_connection_ok": true
+    },
+    "tool_remediation": {
+      "updated_packages": [
+        "apt 2.6.2",
+        "apt-utils 2.6.2",
+        "bind9-dnsutils 1:9.18.49-1~deb12u3",
+        "bind9-host 1:9.18.49-1~deb12u3",
+        "bind9-libs 1:9.18.49-1~deb12u3",
+        "inetutils-telnet 2:2.4-2+deb12u3",
+        "krb5-locales 1.20.1-2+deb12u5",
+        "libapt-pkg6.0 2.6.2",
+        "libbrotli1 1.0.9-2+deb12u1",
+        "libexpat1 2.5.0-1+deb12u5",
+        "libfile-find-rule-perl 0.34-4~deb12u1",
+        "libgcrypt20 1.10.1-3+deb12u1",
+        "libgnutls30 3.7.9-2+deb12u7",
+        "libgssapi-krb5-2 1.20.1-2+deb12u5",
+        "libicu72 72.1-3+deb12u1",
+        "libk5crypto3 1.20.1-2+deb12u5",
+        "libkrb5-3 1.20.1-2+deb12u5",
+        "libkrb5support0 1.20.1-2+deb12u5",
+        "liblzma5 5.4.1-1+deb12u2",
+        "libnghttp2-14 1.52.0-1+deb12u3",
+        "libpcre2-8-0 10.42-1+deb12u2",
+        "libperl5.36 5.36.0-7+deb12u4",
+        "libpython3.11-minimal 3.11.2-6+deb12u9",
+        "libpython3.11-stdlib 3.11.2-6+deb12u9",
+        "libsasl2-2 2.1.28+dfsg-10+deb12u1",
+        "libsasl2-modules-db 2.1.28+dfsg-10+deb12u1",
+        "libsqlite3-0 3.40.1-2+deb12u2",
+        "libssh2-1 1.10.0-3+deb12u1",
+        "libtasn1-6 4.19.0-2+deb12u1",
+        "libxml2 2.9.14+dfsg-1.3~deb12u6",
+        "perl 5.36.0-7+deb12u4",
+        "perl-base 5.36.0-7+deb12u4",
+        "perl-modules-5.36 5.36.0-7+deb12u4",
+        "python3-httplib2 0.20.4-3+deb12u1",
+        "python3-pkg-resources 66.1.1-1+deb12u2",
+        "python3-urllib3 1.26.12-1+deb12u4",
+        "python3.11 3.11.2-6+deb12u9",
+        "python3.11-minimal 3.11.2-6+deb12u9",
+        "vim-common 2:9.0.1378-2+deb12u2",
+        "vim-tiny 2:9.0.1378-2+deb12u2",
+        "wget 1.21.3-1+deb12u1",
+        "xz-utils 5.4.1-1+deb12u2"
+      ],
+      "package_count": 42,
+      "systemd_libc_docker_kernel_not_upgraded": true,
+      "automatic_service_restarts_suppressed": true,
+      "reloaded": "ssh",
+      "restarted": "fail2ban",
+      "application_restart_requested": false,
+      "temporary_restart_policy_removed": true,
+      "dpkg_audit_clean": true,
+      "fresh_key_ssh_connection_ok": true
+    },
+    "fail2ban_remediation": {
+      "finding": "fail2ban_sshd_log_backend",
+      "before_config_exit": 255,
+      "after_config_exit": 0,
+      "service_active": "active",
+      "jail_status_exit": 0,
+      "jail_summary": [
+        "Status for the jail: sshd",
+        "|  |- Currently failed:\t0",
+        "|  |- Total failed:\t0",
+        "|  `- Journal matches:\t_SYSTEMD_UNIT=sshd.service + _COMM=sshd",
+        "|- Currently banned:\t0",
+        "|- Total banned:\t0"
+      ],
+      "override": "/etc/fail2ban/jail.d/begamnagam-sshd.local",
+      "changed_only_journal_backend": true,
+      "application_containers_restarted": false,
+      "fresh_key_ssh_connection_ok": true
+    },
+    "remaining_fixable_packages": {
+      "dpkg": {
+        "installed": "1.21.22",
+        "fixed_versions": [
+          "1.21.23"
+        ],
+        "advisories": [
+          "CVE-2025-6297",
+          "CVE-2026-2219"
+        ]
+      },
+      "gcc-12-base": {
+        "installed": "12.2.0-14",
+        "fixed_versions": [
+          "12.2.0-14+deb12u1"
+        ],
+        "advisories": [
+          "CVE-2023-4039"
+        ]
+      },
+      "libc-bin": {
+        "installed": "2.36-9+deb12u8",
+        "fixed_versions": [
+          "2.36-9+deb12u10",
+          "2.36-9+deb12u11",
+          "2.36-9+deb12u13",
+          "2.36-9+deb12u14"
+        ],
+        "advisories": [
+          "CVE-2025-0395",
+          "CVE-2025-15281",
+          "CVE-2025-4802",
+          "CVE-2025-8058",
+          "CVE-2026-0861",
+          "CVE-2026-0915",
+          "CVE-2026-4046",
+          "CVE-2026-4437",
+          "CVE-2026-4438"
+        ]
+      },
+      "libc-l10n": {
+        "installed": "2.36-9+deb12u8",
+        "fixed_versions": [
+          "2.36-9+deb12u10",
+          "2.36-9+deb12u11",
+          "2.36-9+deb12u13",
+          "2.36-9+deb12u14"
+        ],
+        "advisories": [
+          "CVE-2025-0395",
+          "CVE-2025-15281",
+          "CVE-2025-4802",
+          "CVE-2025-8058",
+          "CVE-2026-0861",
+          "CVE-2026-0915",
+          "CVE-2026-4046",
+          "CVE-2026-4437",
+          "CVE-2026-4438"
+        ]
+      },
+      "libc6": {
+        "installed": "2.36-9+deb12u8",
+        "fixed_versions": [
+          "2.36-9+deb12u10",
+          "2.36-9+deb12u11",
+          "2.36-9+deb12u13",
+          "2.36-9+deb12u14"
+        ],
+        "advisories": [
+          "CVE-2025-0395",
+          "CVE-2025-15281",
+          "CVE-2025-4802",
+          "CVE-2025-8058",
+          "CVE-2026-0861",
+          "CVE-2026-0915",
+          "CVE-2026-4046",
+          "CVE-2026-4437",
+          "CVE-2026-4438"
+        ]
+      },
+      "libcap2": {
+        "installed": "1:2.66-4",
+        "fixed_versions": [
+          "1:2.66-4+deb12u1",
+          "1:2.66-4+deb12u3"
+        ],
+        "advisories": [
+          "CVE-2025-1390",
+          "CVE-2026-4878"
+        ]
+      },
+      "libcap2-bin": {
+        "installed": "1:2.66-4",
+        "fixed_versions": [
+          "1:2.66-4+deb12u1",
+          "1:2.66-4+deb12u3"
+        ],
+        "advisories": [
+          "CVE-2025-1390",
+          "CVE-2026-4878"
+        ]
+      },
+      "libgcc-s1": {
+        "installed": "12.2.0-14",
+        "fixed_versions": [
+          "12.2.0-14+deb12u1"
+        ],
+        "advisories": [
+          "CVE-2023-4039"
+        ]
+      },
+      "libnss-systemd": {
+        "installed": "252.30-1~deb12u2",
+        "fixed_versions": [
+          "252.38-1~deb12u1",
+          "252.39-1~deb12u2"
+        ],
+        "advisories": [
+          "CVE-2025-4598",
+          "CVE-2026-29111",
+          "CVE-2026-40225",
+          "CVE-2026-40226",
+          "CVE-2026-4105"
+        ]
+      },
+      "libpam-modules": {
+        "installed": "1.5.2-6+deb12u1",
+        "fixed_versions": [
+          "1.5.2-6+deb12u2"
+        ],
+        "advisories": [
+          "CVE-2024-22365"
+        ]
+      },
+      "libpam-modules-bin": {
+        "installed": "1.5.2-6+deb12u1",
+        "fixed_versions": [
+          "1.5.2-6+deb12u2"
+        ],
+        "advisories": [
+          "CVE-2024-22365"
+        ]
+      },
+      "libpam-runtime": {
+        "installed": "1.5.2-6+deb12u1",
+        "fixed_versions": [
+          "1.5.2-6+deb12u2"
+        ],
+        "advisories": [
+          "CVE-2024-22365"
+        ]
+      },
+      "libpam-systemd": {
+        "installed": "252.30-1~deb12u2",
+        "fixed_versions": [
+          "252.38-1~deb12u1",
+          "252.39-1~deb12u2"
+        ],
+        "advisories": [
+          "CVE-2025-4598",
+          "CVE-2026-29111",
+          "CVE-2026-40225",
+          "CVE-2026-40226",
+          "CVE-2026-4105"
+        ]
+      },
+      "libpam0g": {
+        "installed": "1.5.2-6+deb12u1",
+        "fixed_versions": [
+          "1.5.2-6+deb12u2"
+        ],
+        "advisories": [
+          "CVE-2024-22365"
+        ]
+      },
+      "libstdc++6": {
+        "installed": "12.2.0-14",
+        "fixed_versions": [
+          "12.2.0-14+deb12u1"
+        ],
+        "advisories": [
+          "CVE-2023-4039"
+        ]
+      },
+      "libsystemd-shared": {
+        "installed": "252.30-1~deb12u2",
+        "fixed_versions": [
+          "252.38-1~deb12u1",
+          "252.39-1~deb12u2"
+        ],
+        "advisories": [
+          "CVE-2025-4598",
+          "CVE-2026-29111",
+          "CVE-2026-40225",
+          "CVE-2026-40226",
+          "CVE-2026-4105"
+        ]
+      },
+      "libsystemd0": {
+        "installed": "252.30-1~deb12u2",
+        "fixed_versions": [
+          "252.38-1~deb12u1",
+          "252.39-1~deb12u2"
+        ],
+        "advisories": [
+          "CVE-2025-4598",
+          "CVE-2026-29111",
+          "CVE-2026-40225",
+          "CVE-2026-40226",
+          "CVE-2026-4105"
+        ]
+      },
+      "libudev1": {
+        "installed": "252.30-1~deb12u2",
+        "fixed_versions": [
+          "252.38-1~deb12u1",
+          "252.39-1~deb12u2"
+        ],
+        "advisories": [
+          "CVE-2025-4598",
+          "CVE-2026-29111",
+          "CVE-2026-40225",
+          "CVE-2026-40226",
+          "CVE-2026-4105"
+        ]
+      },
+      "locales": {
+        "installed": "2.36-9+deb12u8",
+        "fixed_versions": [
+          "2.36-9+deb12u10",
+          "2.36-9+deb12u11",
+          "2.36-9+deb12u13",
+          "2.36-9+deb12u14"
+        ],
+        "advisories": [
+          "CVE-2025-0395",
+          "CVE-2025-15281",
+          "CVE-2025-4802",
+          "CVE-2025-8058",
+          "CVE-2026-0861",
+          "CVE-2026-0915",
+          "CVE-2026-4046",
+          "CVE-2026-4437",
+          "CVE-2026-4438"
+        ]
+      },
+      "login": {
+        "installed": "1:4.13+dfsg1-1+b1",
+        "fixed_versions": [
+          "1:4.13+dfsg1-1+deb12u1"
+        ],
+        "advisories": [
+          "CVE-2023-29383",
+          "CVE-2023-4641"
+        ]
+      },
+      "passwd": {
+        "installed": "1:4.13+dfsg1-1+b1",
+        "fixed_versions": [
+          "1:4.13+dfsg1-1+deb12u1"
+        ],
+        "advisories": [
+          "CVE-2023-29383",
+          "CVE-2023-4641"
+        ]
+      },
+      "sed": {
+        "installed": "4.9-1",
+        "fixed_versions": [
+          "4.9-1+deb12u1"
+        ],
+        "advisories": [
+          "CVE-2026-5958"
+        ]
+      },
+      "systemd": {
+        "installed": "252.30-1~deb12u2",
+        "fixed_versions": [
+          "252.38-1~deb12u1",
+          "252.39-1~deb12u2"
+        ],
+        "advisories": [
+          "CVE-2025-4598",
+          "CVE-2026-29111",
+          "CVE-2026-40225",
+          "CVE-2026-40226",
+          "CVE-2026-4105"
+        ]
+      },
+      "systemd-sysv": {
+        "installed": "252.30-1~deb12u2",
+        "fixed_versions": [
+          "252.38-1~deb12u1",
+          "252.39-1~deb12u2"
+        ],
+        "advisories": [
+          "CVE-2025-4598",
+          "CVE-2026-29111",
+          "CVE-2026-40225",
+          "CVE-2026-40226",
+          "CVE-2026-4105"
+        ]
+      },
+      "systemd-timesyncd": {
+        "installed": "252.30-1~deb12u2",
+        "fixed_versions": [
+          "252.38-1~deb12u1",
+          "252.39-1~deb12u2"
+        ],
+        "advisories": [
+          "CVE-2025-4598",
+          "CVE-2026-29111",
+          "CVE-2026-40225",
+          "CVE-2026-40226",
+          "CVE-2026-4105"
+        ]
+      },
+      "tzdata": {
+        "installed": "2024a-0+deb12u1",
+        "fixed_versions": [
+          "2026c-0+deb12u1",
+          "2026e-0+deb12u1",
+          "2026f-0+deb12u1"
+        ],
+        "advisories": [
+          "DLA-4792-1",
+          "DLA-4854-1",
+          "DLA-4867-1"
+        ]
+      },
+      "udev": {
+        "installed": "252.30-1~deb12u2",
+        "fixed_versions": [
+          "252.38-1~deb12u1",
+          "252.39-1~deb12u2"
+        ],
+        "advisories": [
+          "CVE-2025-4598",
+          "CVE-2026-29111",
+          "CVE-2026-40225",
+          "CVE-2026-40226",
+          "CVE-2026-4105"
+        ]
+      }
+    },
+    "stale_library_mappings": {
+      "(sd-pam)": [
+        "libcrypto.so.3",
+        "libgcrypt.so.20.4.1",
+        "liblzma.so.5.4.1",
+        "libpcre2-8.so.0.11.2"
+      ],
+      "cron": [
+        "libpcre2-8.so.0.11.2"
+      ],
+      "dbus-daemon": [
+        "libexpat.so.1.8.10",
+        "libgcrypt.so.20.4.1",
+        "liblzma.so.5.4.1",
+        "libpcre2-8.so.0.11.2"
+      ],
+      "dockerd": [
+        "libgcrypt.so.20.4.1",
+        "liblzma.so.5.4.1"
+      ],
+      "master": [
+        "libgssapi_krb5.so.2.2",
+        "libicudata.so.72.1",
+        "libicuuc.so.72.1",
+        "libk5crypto.so.3.1",
+        "libkrb5.so.3.3",
+        "libkrb5support.so.0.1"
+      ],
+      "pickup": [
+        "libgssapi_krb5.so.2.2",
+        "libicudata.so.72.1",
+        "libicuuc.so.72.1",
+        "libk5crypto.so.3.1",
+        "libkrb5.so.3.3",
+        "libkrb5support.so.0.1"
+      ],
+      "qmgr": [
+        "libgssapi_krb5.so.2.2",
+        "libicudata.so.72.1",
+        "libicuuc.so.72.1",
+        "libk5crypto.so.3.1",
+        "libkrb5.so.3.3",
+        "libkrb5support.so.0.1"
+      ],
+      "systemd": [
+        "libcrypto.so.3",
+        "libgcrypt.so.20.4.1",
+        "liblzma.so.5.4.1",
+        "libpcre2-8.so.0.11.2"
+      ],
+      "systemd-journal": [
+        "libcrypto.so.3",
+        "libgcrypt.so.20.4.1",
+        "liblzma.so.5.4.1",
+        "libpcre2-8.so.0.11.2"
+      ],
+      "systemd-logind": [
+        "libcrypto.so.3",
+        "libgcrypt.so.20.4.1",
+        "liblzma.so.5.4.1",
+        "libpcre2-8.so.0.11.2"
+      ],
+      "systemd-network": [
+        "libcrypto.so.3",
+        "libgcrypt.so.20.4.1",
+        "liblzma.so.5.4.1",
+        "libpcre2-8.so.0.11.2"
+      ]
+    },
+    "remaining_updates_and_reload_need_maintenance": true,
+    "failed_systemd_units_after": ""
+  },
+  "container_runtime": {
+    "docker": "29.9.2",
+    "containerd": "2.4.2",
+    "runc": "1.5.2",
+    "docker_live_restore_enabled": false,
+    "scan": {
+      "private_artifact": ".local/pentest-20261117/scans/runtime.json",
+      "artifact_sha256": "cd6c91276a1959a89c1e80927a16dde6685b7010ae1769a887f155b764581119",
+      "os": null,
+      "detected_packages": 429,
+      "package_advisory_matches": 32,
+      "unique_advisories": 15,
+      "by_severity": {
+        "CRITICAL": 0,
+        "HIGH": 7,
+        "MEDIUM": 18,
+        "LOW": 2,
+        "UNKNOWN": 5
+      },
+      "matches_with_fixed_version": 31,
+      "fixable_by_severity": {
+        "CRITICAL": 0,
+        "HIGH": 7,
+        "MEDIUM": 17,
+        "LOW": 2,
+        "UNKNOWN": 5
+      },
+      "targets": [
+        {
+          "target": "usr/bin/containerd",
+          "class": "lang-pkgs",
+          "type": "gobinary",
+          "matches": 13
+        },
+        {
+          "target": "usr/bin/dockerd",
+          "class": "lang-pkgs",
+          "type": "gobinary",
+          "matches": 8
+        },
+        {
+          "target": "usr/bin/runc",
+          "class": "lang-pkgs",
+          "type": "gobinary",
+          "matches": 11
+        }
+      ]
+    },
+    "binary_evidence": [
+      {
+        "binary": "dockerd",
+        "sha256": "eb2dc117f61db1a696f03d1210cd1d0e8646e9c483b4f6f8e8aeaa711ab89a2f",
+        "bytes": 112566672
+      },
+      {
+        "binary": "containerd",
+        "sha256": "c2aa167a2222dc9fa708ed23f06488b62b0875deff7f5e7aa2cdb491acf81cfe",
+        "bytes": 44295472
+      },
+      {
+        "binary": "runc",
+        "sha256": "3349bc041d876457803f02fbf5ea1aac9f1f676793e3651e98bee2d6a1a1e9b4",
+        "bytes": 9720248
+      }
+    ],
+    "upgrade_performed": false,
+    "maintenance_required": true
+  },
+  "live_images": [
+    {
+      "service": "backend",
+      "image_id": "sha256:68b4767fb3f782f96cda4d60fb36e787726b0e0de03f00611bf785d4eb1a3014",
+      "runtime_version": {
+        "exit_code": 0,
+        "version": "Python 3.13.15"
+      },
+      "scan": {
+        "private_artifact": ".local/pentest-20261117/scans/backend.json",
+        "artifact_sha256": "dee35009a7ce9f101441d123413c1965c90302aedcbf15fee44d0e8633cbe39e",
+        "os": {
+          "Family": "debian",
+          "Name": "13.7"
+        },
+        "detected_packages": 135,
+        "package_advisory_matches": 265,
+        "unique_advisories": 122,
+        "by_severity": {
+          "CRITICAL": 1,
+          "HIGH": 59,
+          "MEDIUM": 125,
+          "LOW": 72,
+          "UNKNOWN": 8
+        },
+        "matches_with_fixed_version": 56,
+        "fixable_by_severity": {
+          "CRITICAL": 1,
+          "HIGH": 12,
+          "MEDIUM": 33,
+          "LOW": 7,
+          "UNKNOWN": 3
+        },
+        "targets": [
+          {
+            "target": "<private>/backend-image.tar (debian 13.7)",
+            "class": "os-pkgs",
+            "type": "debian",
+            "matches": 256
+          },
+          {
+            "target": "Python",
+            "class": "lang-pkgs",
+            "type": "python-pkg",
+            "matches": 9
+          }
+        ]
+      }
+    },
+    {
+      "service": "frontend",
+      "image_id": "sha256:d499228fd9f7e63ac95e7a44f9d733414a8b2075ef595776fb643892ab34411b",
+      "runtime_version": {
+        "exit_code": 0,
+        "version": "v24.20.0"
+      },
+      "scan": {
+        "private_artifact": ".local/pentest-20261117/scans/frontend.json",
+        "artifact_sha256": "7c32dfa38a74f9b4b89b6d85a3c34e750f12a5dcef42970f6b45244cc96df99a",
+        "os": {
+          "Family": "alpine",
+          "Name": "3.24.1"
+        },
+        "detected_packages": 325,
+        "package_advisory_matches": 53,
+        "unique_advisories": 42,
+        "by_severity": {
+          "CRITICAL": 0,
+          "HIGH": 15,
+          "MEDIUM": 25,
+          "LOW": 13,
+          "UNKNOWN": 0
+        },
+        "matches_with_fixed_version": 53,
+        "fixable_by_severity": {
+          "CRITICAL": 0,
+          "HIGH": 15,
+          "MEDIUM": 25,
+          "LOW": 13,
+          "UNKNOWN": 0
+        },
+        "targets": [
+          {
+            "target": "<private>/frontend-image.tar (alpine 3.24.1)",
+            "class": "os-pkgs",
+            "type": "alpine",
+            "matches": 24
+          },
+          {
+            "target": "Node.js",
+            "class": "lang-pkgs",
+            "type": "node-pkg",
+            "matches": 29
+          }
+        ]
+      }
+    },
+    {
+      "service": "postgres",
+      "image_id": "sha256:e4cb93687b062cd25a0e8f672d85a7708235009d70d31f8a7698d9370092a9c4",
+      "runtime_version": {
+        "exit_code": 0,
+        "version": "postgres (PostgreSQL) 17.11"
+      },
+      "scan": {
+        "private_artifact": ".local/pentest-20261117/scans/postgres.json",
+        "artifact_sha256": "6403243b53fcb1ee91197c8fae484aedbeddc4b512362e3eeabee4182a94e59e",
+        "os": {
+          "Family": "alpine",
+          "Name": "3.24.3"
+        },
+        "detected_packages": 49,
+        "package_advisory_matches": 88,
+        "unique_advisories": 88,
+        "by_severity": {
+          "CRITICAL": 1,
+          "HIGH": 44,
+          "MEDIUM": 38,
+          "LOW": 3,
+          "UNKNOWN": 2
+        },
+        "matches_with_fixed_version": 88,
+        "fixable_by_severity": {
+          "CRITICAL": 1,
+          "HIGH": 44,
+          "MEDIUM": 38,
+          "LOW": 3,
+          "UNKNOWN": 2
+        },
+        "targets": [
+          {
+            "target": "<private>/postgres-image.tar (alpine 3.24.3)",
+            "class": "os-pkgs",
+            "type": "alpine",
+            "matches": 26
+          },
+          {
+            "target": "usr/local/bin/gosu",
+            "class": "lang-pkgs",
+            "type": "gobinary",
+            "matches": 62
+          }
+        ]
+      }
+    },
+    {
+      "service": "redis",
+      "image_id": "sha256:1db42ccef14898aa29bae778452d567534b59c107129cbc1163fb552de184d3c",
+      "runtime_version": {
+        "exit_code": 0,
+        "version": "Redis server v=7.4.11 sha=00000000:0 malloc=jemalloc-5.3.0 bits=64 build=fbf7a7d03c2e9219"
+      },
+      "scan": {
+        "private_artifact": ".local/pentest-20261117/scans/redis.json",
+        "artifact_sha256": "84da39cde9f1eb36aaf81d085fc1251673f42e7e79dee911d0494a39cfd453eb",
+        "os": {
+          "Family": "alpine",
+          "Name": "3.21.7",
+          "EOSL": true
+        },
+        "detected_packages": 19,
+        "package_advisory_matches": 50,
+        "unique_advisories": 26,
+        "by_severity": {
+          "CRITICAL": 0,
+          "HIGH": 7,
+          "MEDIUM": 27,
+          "LOW": 16,
+          "UNKNOWN": 0
+        },
+        "matches_with_fixed_version": 50,
+        "fixable_by_severity": {
+          "CRITICAL": 0,
+          "HIGH": 7,
+          "MEDIUM": 27,
+          "LOW": 16,
+          "UNKNOWN": 0
+        },
+        "targets": [
+          {
+            "target": "<private>/redis-image.tar (alpine 3.21.7)",
+            "class": "os-pkgs",
+            "type": "alpine",
+            "matches": 50
+          }
+        ]
+      }
+    },
+    {
+      "service": "rabbitmq",
+      "image_id": "sha256:2225c65600dbdd89d7d0a8e2ed386b1d0b32817a3c97ab6ef621ac33056bec27",
+      "runtime_version": {
+        "exit_code": 0,
+        "version": "4.4.0"
+      },
+      "scan": {
+        "private_artifact": ".local/pentest-20261117/scans/rabbitmq.json",
+        "artifact_sha256": "5ae212efa6101ef90d443a256e46fb8a9ccca79eabc855b9d119cf536a31cb32",
+        "os": {
+          "Family": "alpine",
+          "Name": "3.24.3"
+        },
+        "detected_packages": 30,
+        "package_advisory_matches": 1,
+        "unique_advisories": 1,
+        "by_severity": {
+          "CRITICAL": 0,
+          "HIGH": 0,
+          "MEDIUM": 1,
+          "LOW": 0,
+          "UNKNOWN": 0
+        },
+        "matches_with_fixed_version": 1,
+        "fixable_by_severity": {
+          "CRITICAL": 0,
+          "HIGH": 0,
+          "MEDIUM": 1,
+          "LOW": 0,
+          "UNKNOWN": 0
+        },
+        "targets": [
+          {
+            "target": "<private>/rabbitmq-image.tar (alpine 3.24.3)",
+            "class": "os-pkgs",
+            "type": "alpine",
+            "matches": 1
+          }
+        ]
+      }
+    },
+    {
+      "service": "proxy",
+      "image_id": "sha256:24841fe2de7304c149343d877d2923b4c8800a38ba015dea9174c23b20e344a0",
+      "runtime_version": {
+        "exit_code": 0,
+        "version": "Version:      3.7.13\nCodename:     langres\nGo version:   go1.26.8\nBuilt:        2026-09-04T12:31:42Z\nOS/Arch:      linux/amd64"
+      },
+      "scan": {
+        "private_artifact": ".local/pentest-20261117/scans/proxy.json",
+        "artifact_sha256": "03a9eed10885fcd680b2944184b2a193c3baa49ebf2dc8ca12e9797c1f380a95",
+        "os": {
+          "Family": "alpine",
+          "Name": "3.24.2"
+        },
+        "detected_packages": 376,
+        "package_advisory_matches": 40,
+        "unique_advisories": 29,
+        "by_severity": {
+          "CRITICAL": 0,
+          "HIGH": 10,
+          "MEDIUM": 23,
+          "LOW": 5,
+          "UNKNOWN": 2
+        },
+        "matches_with_fixed_version": 40,
+        "fixable_by_severity": {
+          "CRITICAL": 0,
+          "HIGH": 10,
+          "MEDIUM": 23,
+          "LOW": 5,
+          "UNKNOWN": 2
+        },
+        "targets": [
+          {
+            "target": "<private>/proxy-image.tar (alpine 3.24.2)",
+            "class": "os-pkgs",
+            "type": "alpine",
+            "matches": 4
+          },
+          {
+            "target": "usr/local/bin/traefik",
+            "class": "lang-pkgs",
+            "type": "gobinary",
+            "matches": 36
+          }
+        ]
+      }
+    }
+  ],
+  "candidate_images": [
+    {
+      "service": "backend",
+      "tag": "begamnagam-security/backend:3.1.4",
+      "id": "sha256:46808bd066a6545123e77932e8fff4be8c5e56f439dbbbadd353865938e48733",
+      "repo_digests": [
+        "begamnagam-security/backend@sha256:46808bd066a6545123e77932e8fff4be8c5e56f439dbbbadd353865938e48733"
+      ],
+      "architecture": "amd64",
+      "size": 509634808,
+      "deployment_status": "built and scanned; not active on production",
+      "scan": {
+        "private_artifact": ".local/pentest-20261117/scans/backend-fixed.json",
+        "artifact_sha256": "43c2c87be49d2561ab828922a9f2de85a855eb6884589ff258a59b1093c9dd90",
+        "os": {
+          "Family": "debian",
+          "Name": "13.7"
+        },
+        "detected_packages": 116,
+        "package_advisory_matches": 209,
+        "unique_advisories": 93,
+        "by_severity": {
+          "CRITICAL": 0,
+          "HIGH": 47,
+          "MEDIUM": 92,
+          "LOW": 65,
+          "UNKNOWN": 5
+        },
+        "matches_with_fixed_version": 0,
+        "fixable_by_severity": {
+          "CRITICAL": 0,
+          "HIGH": 0,
+          "MEDIUM": 0,
+          "LOW": 0,
+          "UNKNOWN": 0
+        },
+        "targets": [
+          {
+            "target": "begamnagam-security/backend:3.1.4 (debian 13.7)",
+            "class": "os-pkgs",
+            "type": "debian",
+            "matches": 209
+          }
+        ]
+      }
+    },
+    {
+      "service": "frontend",
+      "tag": "begamnagam-security/frontend:3.1.4",
+      "id": "sha256:2aa20062ada4acf19872991cd2114639b7543c5c9cc7ed7208e8d2451d101241",
+      "repo_digests": [
+        "begamnagam-security/frontend@sha256:2aa20062ada4acf19872991cd2114639b7543c5c9cc7ed7208e8d2451d101241"
+      ],
+      "architecture": "amd64",
+      "size": 76759187,
+      "deployment_status": "built and scanned; not active on production",
+      "scan": {
+        "private_artifact": ".local/pentest-20261117/scans/frontend-final.json",
+        "artifact_sha256": "356c8360f5cbfea1cad69645b6f6335de1f81bb68e89e2d36015688f1a2fb2a5",
+        "os": {
+          "Family": "alpine",
+          "Name": "3.24.4"
+        },
+        "detected_packages": 38,
+        "package_advisory_matches": 0,
+        "unique_advisories": 0,
+        "by_severity": {
+          "CRITICAL": 0,
+          "HIGH": 0,
+          "MEDIUM": 0,
+          "LOW": 0,
+          "UNKNOWN": 0
+        },
+        "matches_with_fixed_version": 0,
+        "fixable_by_severity": {
+          "CRITICAL": 0,
+          "HIGH": 0,
+          "MEDIUM": 0,
+          "LOW": 0,
+          "UNKNOWN": 0
+        },
+        "targets": []
+      }
+    },
+    {
+      "service": "redis",
+      "tag": "begamnagam-security/redis:3.1.4",
+      "id": "sha256:b8031019dd9b9eeb098c4c3ca71250ece7f7695e687b40ea4b692411a56f2e08",
+      "repo_digests": [
+        "begamnagam-security/redis@sha256:b8031019dd9b9eeb098c4c3ca71250ece7f7695e687b40ea4b692411a56f2e08"
+      ],
+      "architecture": "amd64",
+      "size": 16500151,
+      "deployment_status": "built and scanned; not active on production",
+      "scan": {
+        "private_artifact": ".local/pentest-20261117/scans/redis-fixed.json",
+        "artifact_sha256": "5ac287af4f73dcdd43edd5c53d75acea349dde30852541afb8e32ba6653d25b8",
+        "os": {
+          "Family": "alpine",
+          "Name": "3.22.8"
+        },
+        "detected_packages": 20,
+        "package_advisory_matches": 0,
+        "unique_advisories": 0,
+        "by_severity": {
+          "CRITICAL": 0,
+          "HIGH": 0,
+          "MEDIUM": 0,
+          "LOW": 0,
+          "UNKNOWN": 0
+        },
+        "matches_with_fixed_version": 0,
+        "fixable_by_severity": {
+          "CRITICAL": 0,
+          "HIGH": 0,
+          "MEDIUM": 0,
+          "LOW": 0,
+          "UNKNOWN": 0
+        },
+        "targets": []
+      }
+    },
+    {
+      "service": "rabbitmq",
+      "tag": "begamnagam-security/rabbitmq:3.1.4",
+      "id": "sha256:dbe20bac0db279167ab5be967ee59bc8f7dee989dd810fe7986f3d24b1ac7b28",
+      "repo_digests": [
+        "begamnagam-security/rabbitmq@sha256:dbe20bac0db279167ab5be967ee59bc8f7dee989dd810fe7986f3d24b1ac7b28"
+      ],
+      "architecture": "amd64",
+      "size": 90306982,
+      "deployment_status": "built and scanned; not active on production",
+      "scan": {
+        "private_artifact": ".local/pentest-20261117/scans/rabbitmq-fixed.json",
+        "artifact_sha256": "1cfe4562d6c16b1f7ceaec0f5f49f505b45c266cbe13b13ad8edf5b44fcf8140",
+        "os": {
+          "Family": "alpine",
+          "Name": "3.24.4"
+        },
+        "detected_packages": 30,
+        "package_advisory_matches": 0,
+        "unique_advisories": 0,
+        "by_severity": {
+          "CRITICAL": 0,
+          "HIGH": 0,
+          "MEDIUM": 0,
+          "LOW": 0,
+          "UNKNOWN": 0
+        },
+        "matches_with_fixed_version": 0,
+        "fixable_by_severity": {
+          "CRITICAL": 0,
+          "HIGH": 0,
+          "MEDIUM": 0,
+          "LOW": 0,
+          "UNKNOWN": 0
+        },
+        "targets": []
+      }
+    },
+    {
+      "service": "proxy",
+      "tag": "begamnagam-security/proxy:3.1.4",
+      "id": "sha256:8187c4e99945f9901c5fb98292a2f9df5201723e3a864895b158a3f2f648ba55",
+      "repo_digests": [
+        "begamnagam-security/proxy@sha256:8187c4e99945f9901c5fb98292a2f9df5201723e3a864895b158a3f2f648ba55"
+      ],
+      "architecture": "amd64",
+      "size": 55372817,
+      "deployment_status": "built and scanned; not active on production",
+      "scan": {
+        "private_artifact": ".local/pentest-20261117/scans/proxy-fixed.json",
+        "artifact_sha256": "43438499a1d7beb17345ffc64a9d04017f303d17dc3c9c1d52ff096e46123457",
+        "os": {
+          "Family": "alpine",
+          "Name": "3.24.4"
+        },
+        "detected_packages": 378,
+        "package_advisory_matches": 1,
+        "unique_advisories": 1,
+        "by_severity": {
+          "CRITICAL": 0,
+          "HIGH": 0,
+          "MEDIUM": 1,
+          "LOW": 0,
+          "UNKNOWN": 0
+        },
+        "matches_with_fixed_version": 1,
+        "fixable_by_severity": {
+          "CRITICAL": 0,
+          "HIGH": 0,
+          "MEDIUM": 1,
+          "LOW": 0,
+          "UNKNOWN": 0
+        },
+        "targets": [
+          {
+            "target": "usr/local/bin/traefik",
+            "class": "lang-pkgs",
+            "type": "gobinary",
+            "matches": 1
+          }
+        ]
+      }
+    },
+    {
+      "service": "postgres",
+      "tag": "begamnagam-security/postgres:3.1.4",
+      "id": "sha256:b8278e0590879086f03d2ea6f717b0ea41f39d493e22a1390024aeba34fb6de6",
+      "repo_digests": [
+        "begamnagam-security/postgres@sha256:b8278e0590879086f03d2ea6f717b0ea41f39d493e22a1390024aeba34fb6de6"
+      ],
+      "architecture": "amd64",
+      "size": 117408698,
+      "deployment_status": "built and scanned; not active on production",
+      "scan": {
+        "private_artifact": ".local/pentest-20261117/scans/postgres-fixed.json",
+        "artifact_sha256": "410f108c46b5568c4f1d691f311f2ef0530bb14af520100a8ce3092b194aae2b",
+        "os": {
+          "Family": "alpine",
+          "Name": "3.24.4"
+        },
+        "detected_packages": 49,
+        "package_advisory_matches": 62,
+        "unique_advisories": 62,
+        "by_severity": {
+          "CRITICAL": 1,
+          "HIGH": 25,
+          "MEDIUM": 31,
+          "LOW": 3,
+          "UNKNOWN": 2
+        },
+        "matches_with_fixed_version": 62,
+        "fixable_by_severity": {
+          "CRITICAL": 1,
+          "HIGH": 25,
+          "MEDIUM": 31,
+          "LOW": 3,
+          "UNKNOWN": 2
+        },
+        "targets": [
+          {
+            "target": "usr/local/bin/gosu",
+            "class": "lang-pkgs",
+            "type": "gobinary",
+            "matches": 62
+          }
+        ]
+      }
+    }
+  ],
+  "residual_candidate_triage": {
+    "backend": "209 Debian package/advisory matches without vendor FixedVersion in this database; 0 Python matches. Not declared vulnerability-free.",
+    "postgres": "62 matches confined to gosu (Go stdlib, moby/sys/user and x/sys); none in OS packages. Critical TLS-session-resumption match is not a PostgreSQL TLS finding. The reviewed gosu main source has no network client/server. Crafted local passwd/group parsing remains a conditional risk; no blanket suppression.",
+    "proxy": "1 medium OpenTelemetry log-SDK match CVE-2026-128085. OTLP log/trace/metric export not configured in reviewed runtime. Latest reviewed upstream image still matches; keep tracking, do not enable affected telemetry without reassessment."
+  },
+  "availability": [
+    {
+      "service": "backend",
+      "unchanged_start_time": true,
+      "unchanged_image": true,
+      "restart_count": 0,
+      "state": "running",
+      "health": "healthy"
+    },
+    {
+      "service": "beat",
+      "unchanged_start_time": true,
+      "unchanged_image": true,
+      "restart_count": 0,
+      "state": "running",
+      "health": null
+    },
+    {
+      "service": "worker",
+      "unchanged_start_time": true,
+      "unchanged_image": true,
+      "restart_count": 0,
+      "state": "running",
+      "health": null
+    },
+    {
+      "service": "frontend6",
+      "unchanged_start_time": true,
+      "unchanged_image": true,
+      "restart_count": 0,
+      "state": "running",
+      "health": "healthy"
+    },
+    {
+      "service": "frontend5",
+      "unchanged_start_time": true,
+      "unchanged_image": true,
+      "restart_count": 0,
+      "state": "running",
+      "health": "healthy"
+    },
+    {
+      "service": "frontend4",
+      "unchanged_start_time": true,
+      "unchanged_image": true,
+      "restart_count": 0,
+      "state": "running",
+      "health": "healthy"
+    },
+    {
+      "service": "frontend3",
+      "unchanged_start_time": true,
+      "unchanged_image": true,
+      "restart_count": 0,
+      "state": "running",
+      "health": "healthy"
+    },
+    {
+      "service": "frontend",
+      "unchanged_start_time": true,
+      "unchanged_image": true,
+      "restart_count": 0,
+      "state": "running",
+      "health": "healthy"
+    },
+    {
+      "service": "frontend2",
+      "unchanged_start_time": true,
+      "unchanged_image": true,
+      "restart_count": 0,
+      "state": "running",
+      "health": "healthy"
+    },
+    {
+      "service": "proxy",
+      "unchanged_start_time": true,
+      "unchanged_image": true,
+      "restart_count": 0,
+      "state": "running",
+      "health": "healthy"
+    },
+    {
+      "service": "redis",
+      "unchanged_start_time": true,
+      "unchanged_image": true,
+      "restart_count": 0,
+      "state": "running",
+      "health": "healthy"
+    },
+    {
+      "service": "postgres",
+      "unchanged_start_time": true,
+      "unchanged_image": true,
+      "restart_count": 0,
+      "state": "running",
+      "health": "healthy"
+    },
+    {
+      "service": "rabbitmq",
+      "unchanged_start_time": true,
+      "unchanged_image": true,
+      "restart_count": 0,
+      "state": "running",
+      "health": "healthy"
+    }
+  ],
+  "validation": {
+    "backend_full_postgresql_tests": {
+      "passed": 791,
+      "elapsed_seconds": 152.564,
+      "database": "isolated PostgreSQL 17.12",
+      "redis": "isolated Redis 7.4.12",
+      "provider_network": "disabled and Docker network internal",
+      "image": "begamnagam-security/backend:3.1.4"
+    },
+    "targeted_security_tests_passed": 112,
+    "frontend_tests_passed": 129,
+    "typecheck": "PASS",
+    "frontend_final_http": {
+      "result": "PASS",
+      "requests": 19,
+      "read_only": true,
+      "failures": []
+    },
+    "probe_helper_regression_tests_passed": 4,
+    "compose_default": "PASS",
+    "compose_internal_hardened_performance_with_candidate_manifest": "PASS",
+    "backend_and_frontend_linux_amd64_builds": "PASS",
+    "rabbitmq_native_isolated_startup": {
+      "running": true,
+      "exit_code": 0,
+      "oom_killed": false,
+      "image": "sha256:dbe20bac0db279167ab5be967ee59bc8f7dee989dd810fe7986f3d24b1ac7b28",
+      "ping_exit": 0,
+      "ping": "Ping succeeded",
+      "diagnostic": ""
+    },
+    "rabbitmq_native_isolation": {
+      "created": true,
+      "network": "none",
+      "published_ports": false,
+      "persistent_data_mounted": false,
+      "memory_limit": 268435456,
+      "cpu_limit": 0.5
+    },
+    "rabbitmq_native_cleanup": {
+      "isolated_candidate_container_removed": true,
+      "candidate_image_tag_removed": true,
+      "live_services_touched": false
+    },
+    "rabbitmq_emulation_limitation": "Initial amd64 Erlang under Apple Silicon emulation failed in prim_tty NIF. Same exact image started and passed rabbitmq-diagnostics ping on native amd64 with network none, tmpfs-only data and resource limits.",
+    "independent_final_review": {
+      "result": "no actionable blocker",
+      "verified": [
+        "15 scan summaries and evidence hashes",
+        "six manifest digests",
+        "host package counts and residual severities",
+        "13 unchanged production service starts/images/restarts",
+        "test evidence and document/manifest secret patterns"
+      ],
+      "limits": [
+        "future deployment success",
+        "untested exploitability",
+        "independent re-fetch of upstream advisories"
+      ]
+    }
+  },
+  "private_evidence_sha256": {
+    "live-before.json": "e292e838fef0fa355ab950f0f42e6576e69f7344c39349da51f0b75bccf62aed",
+    "live-final.json": "7b70550733843af1024df73a2dc116acb8a5a01016b5c0ee3081bcf65ebe8740",
+    "web-probes-final.json": "b1f32427dc89dbacebb8fd9edf57b75bbef88ef322765d20aa845996086ebbba",
+    "host-tool-remediation.json": "9e77a78eb654dac496d2f40c789915d24bc414c794e7b09bd515cea2c897e80c",
+    "host-ssh-ssl-remediation.json": "12604e56e9a1128979d958ffa4c9ac6750e7a517c71db71a07c0128b4273d4dd",
+    "fail2ban-remediation.json": "2bd6b8b5c7bb588425761240ebe0c8d3e19509a1d07efa2a3ee0601fc40d73ea",
+    "host-stale-library-mappings.json": "bb36b2be409cad1eef8a62bbf4fba59ab94313f5d5d8bd75ca51778b6aa57da0",
+    "candidate-backend-full-tests.log": "8f1e00a71356246a9f3bd9a02bf79f920f71f472f5cb21082ab0a0a0baa78c2c",
+    "frontend-tests.log": "51d8bc258b111c94c4865e944f0e61594253d998ce7bff58e2dbdc300de1f4ee",
+    "frontend-typecheck.log": "a2abf3dc47e819c5bab71ecbdd9d1386ee5ab27195136c4b46ab5f0a4c5730bc",
+    "frontend-final-http.json": "465dce4f0fbad20ac1c48729fc87917a24d0ff89e527be39f34407a424a8e8cd",
+    "rabbitmq-native-test-result.json": "6d241f63d13912a18b8dfc2d4537a485eb01eabc29a87539e19d3c382d95d98e",
+    "rabbitmq-native-test-cleanup.json": "02618962dd2830a16f95cd48eb6c2f05dcf5128ea2101bfac1d62a42bb4acb13",
+    "ports-ct115.xml": "008fa5bcb7bd9473b88f418c14bcdb0e1c91a359805e190780da771d2fa9bea8",
+    "tls.json": "82930eae488b4efd8f9728e310b16c0381fdfc16629b5732acb3898f091c7480"
+  },
+  "limits": [
+    "No stress, brute-force, destructive exploit or production account state changes.",
+    "No external full port scan, parent Proxmox or central Nginx operating-system audit.",
+    "No assertion of historical breach absence or absolute security.",
+    "Production deployment and maintenance remain separate from this local version."
+  ]
+}

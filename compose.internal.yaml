@@ -29,7 +29,7 @@ x-app: &app
 
 services:
   proxy:
-    image: ${TRAEFIK_IMAGE:-traefik:v3.7.13}
+    image: ${TRAEFIK_IMAGE:-traefik:v3.7.19@sha256:aa942a00bce033c909bf1f7e861d93761be4b31a035f10d2410d33e38a8f41cf}
     command:
       - --global.checknewversion=false
       - --global.sendanonymoususage=false
@@ -87,7 +87,7 @@ services:
       frontend: {condition: service_healthy}
       backend: {condition: service_healthy}
   postgres:
-    image: ${POSTGRES_IMAGE:-postgres:17-alpine}
+    image: ${POSTGRES_IMAGE:-postgres:17.12-alpine3.24@sha256:a77aa70e641402a21411b92b721c58d10f23b50ae5fdd2333efd22d166e1e5f7}
     command: [postgres, -c, listen_addresses=127.0.0.1, -c, shared_buffers=16MB, -c, max_connections=20, -c, work_mem=1MB, -c, maintenance_work_mem=16MB, -c, max_wal_size=128MB, -c, min_wal_size=32MB]
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?Required}
@@ -103,7 +103,7 @@ services:
     mem_limit: 128m
     logging: *logging
   redis:
-    image: ${REDIS_IMAGE:-redis:7.4-alpine}
+    image: ${REDIS_IMAGE:-redis:7.4.12-alpine3.22@sha256:7f7d30b7fdd09467bac58198a1f166dd69789d348d4fe859cccb20e0cf287fbe}
     command: [redis-server, --bind, 127.0.0.1, --appendonly, "yes", --maxmemory, 16mb, --maxmemory-policy, noeviction]
     volumes: [redis-data:/data]
     network_mode: host
@@ -115,7 +115,7 @@ services:
     mem_limit: 32m
     logging: *logging
   rabbitmq:
-    image: ${RABBITMQ_IMAGE:-rabbitmq:4.4-alpine}
+    image: ${RABBITMQ_IMAGE:-rabbitmq:4.4.0-alpine@sha256:7b77c3d3a996c7fcca1ca8bf53ce1557ff43c13b8ca2c132df6031781b209ef2}
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?Required}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Required}

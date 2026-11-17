@@ -387,6 +387,7 @@ test("the combined link carries the same capability through either action", () =
   assert.deepEqual(actionFromFragment('a56Yc2'), { token: 'a56Yc2' });
   assert.deepEqual(actionFromFragment('a56Yc2/reply'), { token: 'a56Yc2', action: 'reply' });
   assert.deepEqual(actionFromFragment('a56Yc2/stop'), { token: 'a56Yc2', action: 'stop' });
+  assert.deepEqual(actionFromFragment('a56Yc2/identity'), { token: 'a56Yc2', action: 'identity' });
   for (const fragment of ['r56Yc2', 'A56Yc2', 'a56Yc2/', 'a56Yc2/stop/extra', 'a56Yc2/report']) {
     assert.equal(actionFromFragment(fragment), null);
   }

@@ -590,8 +590,7 @@ export function Composer({ active = true, onExit, replyToken, onReplyUnavailable
         </div>
       </div>
       <p className="compose-bottom">
-        <Icon name="lock" size={16} /> شماره شما برای گیرنده پنهانه؛ سرویس برای
-        جلوگیری از سوءاستفاده، فرستنده رو شناسایی می‌کنه.
+        <Icon name="lock" size={16} /> شماره‌ات پنهونه؛ فقط با درخواست گیرنده و تأیید خودت در پروفایل، برای همون فرد دیده می‌شه. سرویس برای جلوگیری از سوءاستفاده، فرستنده رو شناسایی می‌کنه.
       </p>
       {preparingText && <RewriteLoading />}
     </section>

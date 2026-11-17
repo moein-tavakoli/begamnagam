@@ -16,11 +16,11 @@ export function isRecipientActionCode(code: string): boolean {
   return code.length === 6 && code.startsWith('a') && typedCode.test(code);
 }
 
-export function actionFromFragment(fragment: string): { token: string; action?: 'reply' | 'stop' } | null {
+export function actionFromFragment(fragment: string): { token: string; action?: 'reply' | 'stop' | 'identity' } | null {
   const [token, action, extra] = fragment.split('/', 3);
   if (!isRecipientActionCode(token) || extra !== undefined) return null;
   if (action === undefined) return { token };
-  return action === 'reply' || action === 'stop' ? { token, action } : null;
+  return action === 'reply' || action === 'stop' || action === 'identity' ? { token, action } : null;
 }
 
 export function isRecipientPathCode(code: string): boolean {

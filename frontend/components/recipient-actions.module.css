@@ -23,3 +23,12 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
+
+.identity {
+  margin-top: 16px;
+}
+
+.identity p {
+  margin-bottom: 0;
+  line-height: 1.9;
+}

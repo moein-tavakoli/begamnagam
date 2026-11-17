@@ -284,6 +284,7 @@ CI روی GitHub برای push و pull request روی `dev` و `prod`، تست �
 - [معماری و تصمیم‌های فنی](docs/architecture.md)
 - [قیمت‌گذاری و اقتصاد هر پیام](docs/pricing.md)
 - [حریم خصوصی و جلوگیری از سوءاستفاده](docs/privacy-safety.md)
+- [رضایت اختیاری نمایش شماره؛ قابلیت فعلاً خاموش](docs/identity-consent.fa.md)
 - [قرارداد API](docs/api.md)
 - [API فرانت و ربات تلگرام/بله و Swagger خصوصی](docs/bot-api.fa.md)
 - [راهنمای اجرا، رفع اشکال و بازیابی](docs/operations.md)

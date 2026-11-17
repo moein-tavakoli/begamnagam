@@ -8,10 +8,13 @@ import {actionFromFragment, isShortRecipientCode, replyTokenFromFragment} from '
 import {useApp} from './app-provider';
 import {AuthGate} from './auth-gate';
 import {Composer} from './composer';
+import {IdentityRequest} from './identity-request';
+import {identityRequestNotice} from '@/lib/identity-consent';
 import {BusyButton, ErrorBox} from './feedback';
 import styles from './recipient-actions.module.css';
 
 export function RecipientActions() {
+  const {data} = useApp();
   const [fragment,setFragment] = useState<string | null>(null);
   useEffect(()=>{
     const readFragment=()=>setFragment(location.hash.slice(1));
@@ -26,6 +29,7 @@ export function RecipientActions() {
     const choicesHref = `#${token}`;
     if (action.action === 'reply') return <AnonymousReply key={fragment} token={token} choicesHref={choicesHref}/>;
     if (action.action === 'stop') return <OptOut key={fragment} token={token} choicesHref={choicesHref}/>;
+    if (action.action === 'identity' && data?.identity_requests_enabled) return <IdentityRequest key={fragment} token={token} choicesHref={choicesHref}/>;
     return <RecipientActionMenu key={fragment} href={choicesHref}/>;
   }
   const replyToken = replyTokenFromFragment(fragment);
@@ -35,6 +39,7 @@ export function RecipientActions() {
 }
 
 function RecipientActionMenu({ href }: { href: string }) {
+  const {data} = useApp();
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     heading.current?.focus({ preventScroll: true });
@@ -47,6 +52,10 @@ function RecipientActionMenu({ href }: { href: string }) {
         <a className="button primary" href={href + '/reply'}>پاسخ</a>
         <a className="button ghost" href={href + '/stop'}>لغو دریافت</a>
       </div>
+      {data?.identity_requests_enabled && <div className={styles.identity}>
+        <a className="button secondary full-width" href={href + '/identity'} aria-describedby="identity-request-description">میخوام بدونم کیه</a>
+        <p id="identity-request-description" className="small muted">{identityRequestNotice}</p>
+      </div>}
     </div>
   </section>;
 }

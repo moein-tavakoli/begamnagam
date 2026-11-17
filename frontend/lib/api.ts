@@ -9,6 +9,7 @@ export type Category = {
   example: string;
 };
 export type Bootstrap = {
+  identity_requests_enabled?: boolean;
   message_tones?: MessageToneOption[];
   default_message_tone?: MessageTone;
   wallet_balance_toman?: string;

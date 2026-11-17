@@ -9,6 +9,27 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 3.3.0 — 2026-11-17 — Optional, revocable phone disclosure
+
+- Implement «میخوام بدونم» behind `IDENTITY_REQUESTS_ENABLED=0`. Its recipient
+  menu option, profile controls and disclosure APIs stay closed by default.
+  A verified recipient can explicitly request disclosure from a delivered message;
+  only its sender can approve it in their website profile.
+- Show only the approved phone to that requester in their profile. Scope consent
+  to a directed pair and delivery environment. «ناشناس شدن» closes future reads;
+  retired approvals, deleted accounts and stale browser responses cannot reopen it.
+- Keep outward handles independent of anonymous sender pairs, preserve neutral
+  unapproved requests, and separate consent generations. Add migration
+  `0054_identity_consent`. Preserve hidden-message access rules and bot behavior.
+- Update home, composer, profile, help and privacy explanations. Consent is
+  optional and person-specific; an already-seen or copied number cannot be recalled.
+- Validation: 826 PostgreSQL/Redis regressions plus 17 final consent checks,
+  129 frontend tests, TypeScript,
+  migration and Compose checks, production build, desktop/375px browser approval
+  and revocation flows, late-response protection, hidden controls and PWA cache
+  exclusion. All provider calls in automated testing stay isolated and mocked.
+- Local release only; no push or deployment. [Behavior and API](docs/identity-consent.fa.md).
+
 ## 3.2.0 — 2026-11-17 — Personal receive links and story QR
 
 - Add an opt-in link in the profile with copyable Persian text, native sharing

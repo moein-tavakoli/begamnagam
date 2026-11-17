@@ -92,6 +92,7 @@ def bootstrap(request):
     from .packages import balance_field, package_data, checkout_enabled
     from .models import MessagePackage
     data = {"demo_mode": settings.DEMO_MODE, "authenticated": authenticated,
+        "identity_requests_enabled": settings.IDENTITY_REQUESTS_ENABLED,
         "price_toman": 0, **public_catalog(freeform=freeform_available(ai)), "rewrite_mode": ai.provider if freeform_available(ai) else 'template', "payment_backend": settings.PAYMENT_BACKEND, "support_contact": settings.SUPPORT_CONTACT,
         "otp_is_real": otp_is_real()}
     data['message_packages'] = [package_data(p) for p in MessagePackage.objects.filter(active=True)]
@@ -503,6 +504,9 @@ def recipient_action(request, action):
     from .recipient_codes import is_short_code
     data = body(request)
     token = data.get('token')
+    if action == 'identity':
+        from .identity_consent import request_identity
+        return request_identity(request, data)
     # Token is in JSON only, never request paths/query/access logs.
     limited('recipient-action-session', session_key(request), 30, 600)
     ip = request.META.get('REMOTE_ADDR', 'unknown')
@@ -527,7 +531,8 @@ def request_deletion(request):
     body(request)
     if timezone.now().timestamp() - request.session.get('phone_verified_at', 0) > 300:
         raise APIError('reauthentication_required', 'برای درخواست حذف، شماره خودت را مجدداً تأیید کن.', 403)
-    from .models import OperatorAudit, PersonalShareLink
+    from .models import IdentityConsent, IdentityReceipt, OperatorAudit, PersonalShareLink
+    from django.db.models import F, Q
     with transaction.atomic():
         account = Account.objects.select_for_update().get(user=request.user)
         if not account.deletion_requested_at:
@@ -535,6 +540,12 @@ def request_deletion(request):
             account.suspended = True
             account.save(update_fields=['deletion_requested_at', 'suspended'])
             PersonalShareLink.objects.filter(account=account).delete()
+            IdentityConsent.objects.filter(Q(subject=account) | Q(requester=account)).update(
+                status=IdentityConsent.Status.REVOKED, revision=F('revision')+1, updated_at=timezone.now(), source_order=None,
+            )
+            IdentityReceipt.objects.filter(Q(consent__subject=account) | Q(consent__requester=account)).update(
+                status=IdentityConsent.Status.REVOKED, source_order=None,
+            )
             OperatorAudit.objects.create(actor=request.user, action='account_delete_requested', object_id=str(account.pk), reason='verified_owner_request')
     return {'requested': True, 'redaction_within_days': 30}
 

@@ -81,7 +81,7 @@ export function HomeFlow() {
           </h1>
           <p className="hero-description">
             <span className="hero-text-line" data-home-enter="description-first">تشکر، دلگرمی یا یه یادآوری دوستانه؛</span>
-            <span className="hero-text-line" data-home-enter="description-last">حرفت رو با احترام برسون، بدون نمایش اسمت به گیرنده.</span>
+            <span className="hero-text-line" data-home-enter="description-last">شماره‌ات پنهونه؛ مگر با درخواست گیرنده و تأیید تو در پروفایل.</span>
           </p>
           <button type="button" className="button primary hero-cta" data-home-enter="primary" onClick={() => showComposer(true)}>
             بعدی؛ حرفم رو بگم <Icon name="arrow" size={20} />

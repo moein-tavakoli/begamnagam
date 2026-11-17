@@ -252,6 +252,49 @@ class RecipientState(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
 
+class IdentityConsent(models.Model):
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'منتظر تأیید'
+        APPROVED = 'approved', 'نمایش شماره مجاز'
+        DECLINED = 'declined', 'ردشده'
+        REVOKED = 'revoked', 'ناشناس'
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    decision_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    subject = models.ForeignKey(Account, on_delete=models.CASCADE, related_name='+')
+    requester = models.ForeignKey(Account, on_delete=models.CASCADE, related_name='+')
+    environment = models.CharField(max_length=8)
+    source_order = models.ForeignKey('Order', on_delete=models.SET_NULL, null=True, related_name='+')
+    status = models.CharField(max_length=10, choices=Status, default=Status.PENDING)
+    revision = models.PositiveIntegerField(default=0)
+    generation = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        default_permissions = ()
+        constraints = [
+            models.UniqueConstraint(fields=['subject', 'requester', 'environment'], name='unique_directed_identity_pair'),
+            models.CheckConstraint(condition=~models.Q(subject=models.F('requester')), name='identity_consent_distinct_parties'),
+            models.CheckConstraint(condition=models.Q(status__in=['pending', 'approved', 'declined', 'revoked']), name='identity_consent_valid_status'),
+        ]
+
+
+class IdentityReceipt(models.Model):
+    """An outward handle never identifies the internal directed account pair."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    consent = models.ForeignKey(IdentityConsent, on_delete=models.CASCADE, related_name='requests')
+    source_order = models.ForeignKey('Order', on_delete=models.SET_NULL, null=True, related_name='+')
+    generation = models.PositiveIntegerField()
+    status = models.CharField(max_length=10, choices=IdentityConsent.Status, default=IdentityConsent.Status.PENDING)
+    approved_once = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        default_permissions = ()
+        constraints = [models.UniqueConstraint(fields=['consent', 'source_order', 'generation'], name='unique_identity_source_generation')]
+
+
 class RewriteBudget(models.Model):
     day = models.DateField(primary_key=True)
     reserved_requests = models.PositiveIntegerField(default=0)

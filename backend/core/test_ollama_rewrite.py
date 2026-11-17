@@ -34,6 +34,25 @@ class LocalClientTests(TestCase):
         self.patcher = patch('core.ollama_rewrite.urllib.request.build_opener', return_value=self.opener)
         self.patcher.start(); self.addCleanup(self.patcher.stop)
 
+    def test_source_names_are_allowed_by_both_model_instructions_in_every_tone(self):
+        source = 'سارا احمدی، از کمکت ممنونم!'
+        for tone in [None, 'polite', 'firm', 'blunt', 'angry']:
+            with self.subTest(tone=tone):
+                self.opener.open.reset_mock()
+                checks = (*REVIEW_KEYS, 'tone_matched') if tone in {'firm', 'blunt', 'angry'} else REVIEW_KEYS
+                self.opener.open.side_effect = [response({'allowed': True, 'message': source}),
+                                               response({key: True for key in checks})]
+                self.assertEqual(rewrite_message(source, max_units=140, config=self.config, message_tone=tone), source)
+                generation, review = [json.loads(call.args[0].data) for call in self.opener.open.call_args_list]
+                self.assertEqual(json.loads(generation['messages'][1]['content'])['text'], source)
+                self.assertEqual(json.loads(review['messages'][1]['content']), {'source': source, 'candidate': source})
+                for payload in [generation, review]:
+                    prompt = payload['messages'][0]['content']
+                    self.assertIn('Personal names supplied in the source are allowed', prompt)
+                    self.assertIn('A name alone must not fail no_private_data', prompt)
+                    self.assertNotIn('No names,', prompt)
+                    self.assertNotIn('Names, identifying details', prompt)
+
     def test_separate_review_is_local_structured_bounded_and_stateless(self):
         source = 'میشه وسایل رو سر جاش بذاری? 🙏🏽'
         body = 'میشه وسایل رو سر جاش بذاری? 🙏🏽'

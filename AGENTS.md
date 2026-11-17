@@ -93,7 +93,10 @@ do not invent current APIs.
   budgets. Login OTP accepts all valid phone numbers; do not reintroduce a
   recipient allowlist for authentication. This permission applies only to fixed OTP
   text and does not activate order SMS, payment providers or public deployment.
-- Recipients must never see sender identity. Sender-facing errors must not expose
+- Never attach sender account/profile identity to recipient messages. Personal
+  names explicitly supplied in the user's message are allowed and should be
+  preserved when otherwise safe; never infer or append names from account data.
+  Sender-facing errors must not expose
   whether a target opted out or has an account. The explicitly requested authenticated
   invitation panel alone reports existing membership and signup after a phone invitation;
   it must not reveal opt-out or another inviter's identity. Preferences apply to the verified

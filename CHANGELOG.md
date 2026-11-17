@@ -9,6 +9,20 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 3.1.5 — 2026-11-17 — Allow personal names in message text
+
+- Permit source-supplied first names, surnames and full names in generation and
+  independent review for both AI providers and every tone. Preserve these names
+  without inventing names or attaching sender account/profile identity.
+- Stop treating the literal surname label as contact data. Threats, harassment,
+  impersonation, contact details and sensitive disclosures remain blocked;
+  negative or uncertain independent reviews still fail closed.
+- Regression tests reproduce the former prompt/surname rejections, cover both
+  client request payloads and local guards, and retain approved names through
+  sealed delivery to a mocked SMS provider. All 798 backend tests pass against
+  isolated PostgreSQL/Redis; migration and Persian release-note checks pass.
+  No real model or SMS call was made. This version is local and not deployed.
+
 ## 3.1.4 — 2026-11-17 — Production security assessment and image hardening
 
 - Add bounded, TLS-verified web security probes with health guards and regression

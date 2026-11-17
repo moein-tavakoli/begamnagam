@@ -6,6 +6,27 @@ from .moderation import ModerationRejected
 
 
 class DraftGuardTests(SimpleTestCase):
+    def test_personal_names_alone_are_not_contact_details(self):
+        for text in ['علی رضایی، از کمکت ممنونم!',
+                     'از سارا و محمد بابت کمکتون ممنونم 😊',
+                     'نام خانوادگی من رضایی است، بابت کمکت ممنونم!']:
+            with self.subTest(text=text):
+                try:
+                    cleaned = sanitize_draft(text)
+                    checked = validate_polite_body(text, max_units=130)
+                except ModerationRejected as rejected:
+                    self.fail(f'A personal name alone must be allowed: {rejected}')
+                self.assertEqual(cleaned, text)
+                self.assertEqual(checked, text)
+
+    def test_personal_names_do_not_exempt_threats_or_contact_details(self):
+        for text in ['علی، میکشمت', 'سارا، به ۰۹۱۲۳۴۵۶۷۸۹ زنگ بزن',
+                     'رضایی، شماره کارت من ۱۲۳۴۵ است']:
+            with self.subTest(text=text), self.assertRaises(ModerationRejected):
+                sanitize_draft(text)
+            with self.subTest(text=text), self.assertRaises(ModerationRejected):
+                validate_polite_body(text, max_units=130)
+
     def test_message_punctuation_reaches_the_model(self):
         for text in ('امروز فرصت داری؟', 'از کمکت ممنونم!', 'برای فردا وقت داری?',
                      'فرصت داری؟ ممنونم!', 'منتظر خبرت هستم...', 'خبر میدی؟! ❤️'):

@@ -101,6 +101,39 @@ class GapGPTClientTests(SimpleTestCase):
         payload = json.loads(self.opener.open.call_args_list[0].args[0].data)
         self.assertEqual(json.loads(payload['messages'][1]['content'])['tone'], 'clear_and_respectful')
 
+    def test_source_names_are_allowed_by_both_model_instructions_in_every_tone(self):
+        source = 'علی رضایی، از کمکت ممنونم!'
+        for tone in [None, 'polite', 'firm', 'blunt', 'angry']:
+            with self.subTest(tone=tone):
+                self.opener.open.reset_mock()
+                verdict = {**VERDICT, **({'tone_matched': True} if tone in {'firm', 'blunt', 'angry'} else {})}
+                self.opener.open.side_effect = [
+                    _Response(_completion({'allowed': True, 'message': source})),
+                    _Response(_completion(verdict)),
+                ]
+                self.assertEqual(rewrite_message(source, max_units=130, message_tone=tone), source)
+                generation, review = [json.loads(call.args[0].data) for call in self.opener.open.call_args_list]
+                self.assertEqual(json.loads(generation['messages'][1]['content'])['text'], source)
+                self.assertEqual(json.loads(review['messages'][1]['content']), {'source': source, 'candidate': source})
+                for payload in [generation, review]:
+                    prompt = payload['messages'][0]['content']
+                    self.assertIn('Personal names supplied in the source are allowed', prompt)
+                    self.assertIn('A name alone must not fail no_private_data', prompt)
+                    self.assertNotIn('No names,', prompt)
+                    self.assertNotIn('Names, identifying details', prompt)
+
+    def test_named_message_still_fails_a_negative_privacy_or_added_claims_review(self):
+        source = 'علی رضایی، از کمکت ممنونم!'
+        for check, reason in [('no_private_data', 'review_private'), ('no_added_claims', 'review_added_claims')]:
+            with self.subTest(check=check):
+                self.opener.open.side_effect = [
+                    _Response(_completion({'allowed': True, 'message': source})),
+                    _Response(_completion({**VERDICT, check: False})),
+                ]
+                with self.assertRaises(GapGPTRejected) as rejected:
+                    rewrite_message(source, max_units=130)
+                self.assertEqual(rejected.exception.reason, reason)
+
     def test_missing_activation_or_credentials_never_open_network(self):
         configurations = [dict(AI_MODE='template'), dict(GAPGPT_API_KEY=''),
             dict(GAPGPT_MODEL=''), dict(GAPGPT_MODEL='bad\nmodel'),

@@ -30,9 +30,9 @@ class BoundaryCases:
                 SENDING_WINDOW_ENABLED=False, TERMS_VERSION='v-boundary-test'):
             yield
 
-    def quote(self):
-        with patch('core.'+('ollama_rewrite' if self.provider == 'ollama' else 'gapgpt')+'.rewrite_message', return_value=BODY):
-            result = self.post('/messages/preview', {'text': 'احمق جلوی در پارک نکن، رفت‌وآمد سخت میشه',
+    def quote(self, text='احمق جلوی در پارک نکن، رفت‌وآمد سخت میشه', body=BODY):
+        with patch('core.'+('ollama_rewrite' if self.provider == 'ollama' else 'gapgpt')+'.rewrite_message', return_value=body):
+            result = self.post('/messages/preview', {'text': text,
                 'recipient_phone': '09901234567', 'source_mode': 'freeform'})
         self.assertEqual(result.status_code, 200, result.content)
         return result.json()
@@ -98,6 +98,18 @@ class BoundaryCases:
             response = self.post('/orders/'+order['id']+'/confirm-free', {'full_sms': RUDE})
             self.assertEqual(response.status_code, 422)
             self.assertFalse(Outbox.objects.exists())
+
+    def test_user_supplied_names_reach_delivery_only_in_the_sealed_reviewed_message(self):
+        source = 'نام خانوادگی من رضایی است، علی بابت کمکت ممنونم!'
+        with self.live():
+            quote = self.quote(text=source, body=source)
+            self.assertEqual(quote['rewritten_text'], source)
+            self.assertIn(source, quote['full_sms'])
+            self.queue(quote)
+            with patch('core.provider_delivery.Kavenegar.submit', return_value=SMSResult('accepted', '802', 1000)) as wire:
+                submit_delivery(Outbox.objects.get().pk)
+            wire.assert_called_once()
+            self.assertEqual(wire.call_args.kwargs['text'], quote['full_sms'])
 
     def test_tampering_after_order_creation_is_rejected_before_queuing(self):
         quote = self.quote(); order = self.checkout(quote).json()

@@ -222,7 +222,8 @@ def preview(request, preview_id):
                  query={**PAGE_QUERY, 'status': STATUS}, description='Messages removed by the owner are excluded.'),
           post=op('createMessage', 'Messages', 'Reserve one credit for a reviewed message', 'Message', request='MessageInput', key=True,
                   description='Does not send yet. Store the returned id, then PUT its submission resource. '
-                              'Omit recipient_phone for anonymous replies. Their receipts leave both recipient fields empty. '
+                              'Omit recipient_phone for anonymous replies or website previews with a personal receive link. '
+                              'Anonymous replies leave both recipient fields empty. Personal receive links show only recipient_masked. '
                               'Retries return the same message and never reserve a second credit.'))
 def messages(request):
     if request.method == 'POST':

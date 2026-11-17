@@ -54,11 +54,12 @@ const categoryIcons: Record<string, IconName> = {
 };
 const stepLabels = ["حرفت رو بنویس", "متن نهایی و ارسال"];
 
-export function Composer({ active = true, onExit, replyToken, onReplyUnavailable }: {
+export function Composer({ active = true, onExit, replyToken, onReplyUnavailable, sharedRecipient }: {
   active?: boolean;
   onExit?: () => void;
   replyToken?: string;
   onReplyUnavailable?: (message: string) => void;
+  sharedRecipient?: { token: string; maskedPhone: string };
 }) {
   const { data, reload } = useApp();
   const isReply = !!replyToken;
@@ -227,7 +228,7 @@ export function Composer({ active = true, onExit, replyToken, onReplyUnavailable
     setError("");
     setFields({});
     if (!data?.authenticated) { setError("اول شماره خودت رو تأیید کن."); return; }
-    if (!isReply && !validPhone(recipient)) {
+    if (!isReply && !sharedRecipient && !validPhone(recipient)) {
       setFields({ recipient_phone: "شماره موبایل گیرنده را با ۰۹ و ۱۱ رقم وارد کن." });
       document.getElementById("quote-recipient")?.focus();
       return;
@@ -242,12 +243,14 @@ export function Composer({ active = true, onExit, replyToken, onReplyUnavailable
     setBusy(true);
     setPreparingText(freeformRewrite && !alternative);
     try {
+      const destination = sharedRecipient ? { share_token: sharedRecipient.token } : { recipient_phone: normalizePhone(recipient) };
       const result = await api<Preview>("/messages/preview", {
         method: "POST",
         body: isReply
           ? { reply_token: replyToken, text: text.trim(), source_mode: 'freeform', message_tone: messageTone }
-          : alternative ? alternativeRequest(alternative, normalizePhone(recipient))
-          : { category, text: text.trim(), recipient_phone: normalizePhone(recipient), source_mode: freeformRewrite ? 'freeform' : 'suggestion', message_tone: messageTone },
+          : alternative ? alternativeRequest(alternative, destination)
+          : { category, text: text.trim(), ...destination,
+              source_mode: freeformRewrite ? 'freeform' : 'suggestion', message_tone: messageTone },
       });
       setPreview(result);
       setAlternatives([]); setSelectedAlternative(null);
@@ -267,7 +270,7 @@ export function Composer({ active = true, onExit, replyToken, onReplyUnavailable
     if (busy || orderInFlight.current) return;
     setError("");
     setFields({});
-    if (!isReply && !validPhone(recipient)) {
+    if (!isReply && !sharedRecipient && !validPhone(recipient)) {
       setFields({
         recipient_phone: "شماره موبایل گیرنده را با ۰۹ و ۱۱ رقم وارد کن.",
       });
@@ -299,7 +302,7 @@ export function Composer({ active = true, onExit, replyToken, onReplyUnavailable
           method: "POST",
           body: {
             preview_id: preview.preview_id,
-            ...(!isReply && { recipient_phone: normalizePhone(recipient) }),
+            ...(!isReply && !sharedRecipient && { recipient_phone: normalizePhone(recipient) }),
             consent, terms_version: preview.terms_version,
           },
           idempotencyKey: idempotencyKey.current,
@@ -377,7 +380,7 @@ export function Composer({ active = true, onExit, replyToken, onReplyUnavailable
       <div className="compose-layout">
         <div className="compose-panel">
           <div className="panel-top">
-            <span>{isReply ? "پاسخ ناشناس" : "یک پیام، یک فرصت برای حال بهتر"}</span>
+            <span>{isReply ? "پاسخ ناشناس" : sharedRecipient ? "پیام به صاحب لینک شخصی" : "یک پیام، یک فرصت برای حال بهتر"}</span>
             <span className="step-count">
               {new Intl.NumberFormat("fa-IR").format(activeStep + 1)} از ۲
             </span>
@@ -427,7 +430,7 @@ export function Composer({ active = true, onExit, replyToken, onReplyUnavailable
                 <p className="message-helper" id="message-hint">
                   {freeformRewrite
                     ? "اسم، نشانی یا اطلاعات خصوصی ننویس؛ پیش از تأیید، متن نهایی رو بخون."
-                    : "اسم، نشانی یا اطلاعات خصوصی کسی رو ننویس. دربارهٔ یک رفتار مشخص حرف بزن، نه شخصیت آدم‌ها."}
+                    : "شمارهٔ تماس، نشانی یا اطلاعات خصوصی کسی رو ننویس. دربارهٔ یک رفتار مشخص حرف بزن، نه شخصیت آدم‌ها."}
                 </p>
                 <span id="message-count">
                   {new Intl.NumberFormat("fa-IR").format(text.length)} / ۲۸۰
@@ -487,7 +490,12 @@ export function Composer({ active = true, onExit, replyToken, onReplyUnavailable
           {step > 0 && !finished && !data?.authenticated && <AuthGate renderActions={renderActions} />}
           {step > 0 && !finished && data?.authenticated && (
             <form className="review-form" aria-labelledby="compose-title" onSubmit={preview ? createOrder : makePreview} noValidate>
-              {!isReply && (
+              {sharedRecipient ? <div className="shared-destination">
+                <label htmlFor="quote-recipient">شمارهٔ مقصد</label>
+                <input id="quote-recipient" className="phone-number-input" dir="ltr" type="text" readOnly
+                  autoComplete="off" value={sharedRecipient.maskedPhone} aria-describedby="shared-destination-help" />
+                <p id="shared-destination-help" className="small muted">مقصد از لینک شخصی انتخاب شده و شماره به‌صورت پوشیده نمایش داده می‌شه.</p>
+              </div> : !isReply && (
                 <RecipientPhoneField value={recipient} onChange={changeRecipient} active={active}
                   disabled={busy} readOnly={!!order} error={fields.recipient_phone} />
               )}
@@ -495,11 +503,11 @@ export function Composer({ active = true, onExit, replyToken, onReplyUnavailable
               <div className="final-message">
                 <div className="final-message-header">
                   <Icon name="leaf" size={19} />
-                  <span>{isReply ? "متن پاسخ پیش از ارسال" : "متن کامل پیامک؛ همین متن ارسال می‌شه"}</span>
+                  <span>{isReply ? "متن پاسخ پیش از ارسال" : sharedRecipient ? "متن پیامک پیش از ارسال" : "متن کامل پیامک؛ همین متن ارسال می‌شه"}</span>
                 </div>
                 <p>{preview.full_sms || preview.rewritten_text}</p>
                 <div className="final-message-footer">
-                  <Icon name="shield" size={15} /> {isReply ? "نشانی لینک‌ها فقط در پیامک دیده می‌شه." : "اسم و شمارهٔ شما در پیامک دیده نمی‌شه."}
+                  <Icon name="shield" size={15} /> {isReply || sharedRecipient ? "نشانی لینک‌های گیرنده فقط در پیامک دیده می‌شه." : "بگم نگم اطلاعات حسابت رو به پیامک اضافه نمی‌کنه."}
                 </div>
               </div>
               <div className="preview-info">
@@ -521,7 +529,8 @@ export function Composer({ active = true, onExit, replyToken, onReplyUnavailable
                 <span>
                   {isReply
                     ? "متن نهایی رو خوندم و منظورم رو می‌رسونه. پاسخ رو با احترام و بدون تحقیر، تهدید یا مزاحمت می‌فرستم."
-                    : "متن نهایی رو خوندم و منظورم رو می‌رسونه. این فرد رو می‌شناسم؛ هدفم کمک و یادآوریه، نه تحقیر، تهدید یا مزاحمت."}
+                    : sharedRecipient ? "متن نهایی رو خوندم. این پیام رو برای صاحب لینک و بدون تحقیر، تهدید یا مزاحمت می‌فرستم."
+                      : "متن نهایی رو خوندم و منظورم رو می‌رسونه. این فرد رو می‌شناسم؛ هدفم کمک و یادآوریه، نه تحقیر، تهدید یا مزاحمت."}
                   {" "}<TermsDialog /> رو می‌پذیرم.
                 </span>
               </label>
@@ -540,7 +549,7 @@ export function Composer({ active = true, onExit, replyToken, onReplyUnavailable
               </> : <>
                 <div className="review-placeholder" role="note">
                   <Icon name="chat" size={24} />
-                  <p>{alternatives.length > 0 ? "یکی از پیشنهادهای بالا را انتخاب کن تا پیش‌نمایش کامل آن را ببینی." : freeformRewrite ? "شماره رو وارد کن تا متن نهایی آماده بشه. قبل از ارسال، متن کامل پیامک رو می‌بینی." : "شماره رو وارد کن تا متن نهایی آماده بشه. هر ارسال یک اعتبار مصرف می‌کنه."}</p>
+                  <p>{alternatives.length > 0 ? "یکی از پیشنهادهای بالا را انتخاب کن تا پیش‌نمایش آن را ببینی." : sharedRecipient ? "متن نهایی رو آماده کن و پیش از ارسال مرورش کن." : freeformRewrite ? "شماره رو وارد کن تا متن نهایی آماده بشه. قبل از ارسال، متن کامل پیامک رو می‌بینی." : "شماره رو وارد کن تا متن نهایی آماده بشه. هر ارسال یک اعتبار مصرف می‌کنه."}</p>
                 </div>
                 {data?.authenticated && renderActions(
                   <BusyButton type="submit" className="button primary composer-next" busy={busy} disabled={!data?.authenticated || (alternatives.length > 0 && !selectedAlternative)}>

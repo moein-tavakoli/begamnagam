@@ -54,6 +54,7 @@ export type Order = {
   uses_purchased_credit?: boolean;
   is_free?: boolean;
   is_reply?: boolean;
+  is_shared_destination?: boolean;
   id: string;
   status: string;
   amount_toman: number;

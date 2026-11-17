@@ -97,11 +97,10 @@ def render_recipient_sms(body, origin, token, *, layout=DEFAULT_SMS_TEMPLATE, va
     return rendered + separator + link
 
 
-def sender_sms(full_sms, *, is_reply):
-    if not is_reply or not full_sms:
+def sender_sms(full_sms, *, hide_recipient_links):
+    if not hide_recipient_links or not full_sms:
         return full_sms
-    # The sender of an anonymous reply must not see the recipient's capabilities.
-    # Replace the labeled links wherever they appear in the sealed copy.
+    # Hide recipient-only links from senders who do not know the destination.
     text = _ACTION_LINK.sub('لینک پاسخ یا لغو دریافت', full_sms)
     return _OPT_OUT_LINK.sub('لینک لغو دریافت', _REPLY_LINK.sub('لینک پاسخ', text))
 

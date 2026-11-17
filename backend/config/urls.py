@@ -13,6 +13,7 @@ from core import package_views
 from core import example_views
 from core import kavenegar_settings, sms_template_settings
 from core import manual_payment_views, support_views, provider_balances
+from core import personal_share
 
 handler404 = "core.views.not_found"
 handler500 = "core.views.server_error"
@@ -80,6 +81,8 @@ urlpatterns = [
     path("api/v1/auth/request-otp", views.request_otp),
     path("api/v1/auth/verify-otp", views.verify_otp),
     path("api/v1/auth/logout", views.logout_view),
+    path("api/v1/personal-share", personal_share.manage),
+    path("api/v1/personal-share/resolve", personal_share.resolve),
     path("api/v1/messages/preview", views.preview),
     path("api/v1/messages", views.messages),
     path("api/v1/messages/<uuid:order_id>", views.hide_message),

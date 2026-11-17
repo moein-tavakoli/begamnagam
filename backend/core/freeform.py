@@ -92,6 +92,8 @@ def signature(preview):
         value += ['tone-v1', preview.message_tone]
     if preview.reply_to_id:
         value += ['reply-v1', str(preview.reply_to_id)]
+    if preview.is_shared_destination:
+        value += ['personal-share-v1', str(preview.personal_share_token)]
     return digest('approved-gapgpt-v1:'+json.dumps(value, ensure_ascii=False, separators=(',', ':')))
 
 
@@ -109,6 +111,14 @@ def validate_order(order):
     preview = order.preview
     if order.reply_to_id != preview.reply_to_id or bool(order.reply_to_id) != bool(order.reply_depth):
         raise ModerationRejected('unreviewed_snapshot')
+    if preview.is_shared_destination:
+        from cryptography.fernet import InvalidToken
+        try:
+            actual_hash = digest(decrypt(order.recipient_cipher))
+        except InvalidToken:
+            raise ModerationRejected('unreviewed_snapshot') from None
+        if order.recipient_hash != preview.recipient_hash or actual_hash != order.recipient_hash:
+            raise ModerationRejected('unreviewed_snapshot')
     if order.reply_to_id:
         from cryptography.fernet import InvalidToken
         from .anonymous_replies import counterpart_phone

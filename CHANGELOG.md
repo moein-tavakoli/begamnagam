@@ -9,6 +9,21 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 3.2.0 — 2026-11-17 — Personal receive links and story QR
+
+- Add an opt-in link in the profile with copyable Persian text, native sharing
+  where available and a 1080×1920 PNG story. Downloaded QR codes encode the
+  complete link.
+- After phone verification, select the destination on the server and show its
+  masked number in the composer and receipts. The link remains bound to the
+  reviewed preview through order confirmation.
+- Allow owners to disable their link and create a fresh one. Confirmed deliveries
+  keep their existing queue authorization. Add migration `0053_personal_share_link`.
+- Validation includes 125 final PostgreSQL/Redis tests, 129 frontend tests and a
+  local production build. The desktop and 375px browser journeys passed with the
+  service worker active, and a QR reader decoded the downloaded PNG to the exact link.
+- Local release. [Usage, API and rollout notes](docs/personal-share.fa.md)
+
 ## 3.1.5 — 2026-11-17 — Allow personal names in message text
 
 - Permit source-supplied first names, surnames and full names in generation and

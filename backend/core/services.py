@@ -126,8 +126,10 @@ def serialize_order(order, *, related=None):
     from .sms import sender_sms
     if related is None:
         # A caller may have loaded this object before a concurrent deletion.
-        if not Order.objects.filter(pk=order.pk, owner_hidden_at__isnull=True).exists():
+        snapshot = Order.objects.filter(pk=order.pk, owner_hidden_at__isnull=True).values('preview__is_shared_destination').first()
+        if snapshot is None:
             raise APIError('not_found', 'درخواست پیدا نشد.', 404)
+        shared_destination = snapshot['preview__is_shared_destination']
         payment = order.payment_attempts.filter(applied_to_order=True).first() or order.payment_attempts.order_by("-created_at").first()
         delivery = MessageDelivery.objects.filter(order=order).first()
         open_refund = Refund.objects.filter(payment__order=order).exclude(status="refunded").exists()
@@ -135,6 +137,7 @@ def serialize_order(order, *, related=None):
         wallet_returned = WalletEntry.objects.filter(order=order, kind='order_return').exists() if order.payment_method == 'wallet' else False
         refunded = bool(payment and payment.refunds.filter(status='refunded').exists())
     else:
+        shared_destination = order.pk in related['shared_destinations']
         payment = related['payments'].get(order.pk)
         delivery = related['deliveries'].get(order.pk)
         event = related['events'].get(order.pk)
@@ -151,8 +154,10 @@ def serialize_order(order, *, related=None):
         "status_reason": order_status_reason(order, delivery, event),
         "delivery_status": delivery.status if delivery else "not_ready","id": str(order.id), "status": order.status, "amount_toman": order.amount_toman,
         "payment_mode": order.payment_mode, "recipient_masked": order.recipient_masked if show_recipient else '', "is_free": order.is_free,
-        "recipient_phone": decrypt(order.recipient_cipher) if show_recipient and order.recipient_cipher else '',
-        "is_reply": is_reply, "text": sender_sms(order.full_sms or order.text, is_reply=is_reply) if visible else '',
+        "recipient_phone": decrypt(order.recipient_cipher) if show_recipient and not shared_destination and order.recipient_cipher else '',
+        "is_shared_destination": shared_destination,
+        "is_reply": is_reply,
+        "text": sender_sms(order.full_sms or order.text, hide_recipient_links=is_reply or shared_destination) if visible else '',
         "category": order.category, "paid_at": order.paid_at.isoformat() if order.paid_at else None,
         "created_at": order.created_at.isoformat(), "payment_expires_at": (order.created_at + PAYMENT_WINDOW).isoformat()}
 
@@ -163,8 +168,9 @@ def serialize_orders(orders):
     if not orders:
         return []
     # Check again after loading rows; never serialize a stale in-memory record.
-    ids = set(Order.objects.filter(pk__in=[order.pk for order in orders],
-                                   owner_hidden_at__isnull=True).values_list('pk', flat=True))
+    visible = dict(Order.objects.filter(pk__in=[order.pk for order in orders], owner_hidden_at__isnull=True)
+                   .values_list('pk', 'preview__is_shared_destination'))
+    ids = set(visible)
     orders = [order for order in orders if order.pk in ids]
     if not orders:
         return []
@@ -175,6 +181,7 @@ def serialize_orders(orders):
     refunds = list(Refund.objects.filter(payment__order_id__in=ids).values_list('payment__order_id', 'payment_id', 'status'))
     wallet_ids = [order.pk for order in orders if order.payment_method == 'wallet']
     related = {
+        'shared_destinations': {order_id for order_id, shared in visible.items() if shared},
         'payments': payments,
         'deliveries': {row.order_id: row for row in MessageDelivery.objects.filter(order_id__in=ids)},
         'events': {row.order_id: row for row in Outbox.objects.filter(order_id__in=ids)},
@@ -208,7 +215,7 @@ def create_order(user, session_key, data, idempotency_key):
         if previous:
             if previous.owner_hidden_at is not None:
                 raise APIError('not_found', 'درخواست پیدا نشد.', 404)
-            expected_hash = '' if previous.reply_depth else previous.recipient_hash
+            expected_hash = '' if previous.reply_depth or previous.preview.is_shared_destination else previous.recipient_hash
             if previous.preview_id != preview_id or expected_hash != phone_hash:
                 raise APIError("idempotency_conflict", "این کلید برای درخواست دیگری استفاده شده است.", 409)
             return previous
@@ -235,6 +242,12 @@ def create_order(user, session_key, data, idempotency_key):
             reply_depth = check_turn(parent, user)
             phone = counterpart_phone(parent, user)
             phone_hash = digest(phone)
+        elif preview.is_shared_destination:
+            if phone:
+                raise APIError('server_snapshot_required', 'مقصد این پیام از لینک شخصی انتخاب می‌شود.', 422)
+            from .personal_share import target_phone
+            phone = target_phone(user, preview.personal_share_token, lock=True)
+            phone_hash = digest(phone)
         elif not phone:
             raise APIError('invalid_input', 'شماره موبایل معتبر ایران را وارد کنید.')
         if user.account.phone_hash == phone_hash:
@@ -251,7 +264,7 @@ def create_order(user, session_key, data, idempotency_key):
         consent = data.get("consent") is True and data.get("terms_version") == preview.terms_version
         if settings.PROVIDER_NETWORK_MODE == "external" and preview.terms_version != settings.TERMS_VERSION:
             raise APIError("preview_expired", "شرایط ارسال تغییر کرده؛ متن نهایی را دوباره آماده کن.", 409)
-        if (settings.PROVIDER_NETWORK_MODE == "external" or preview.reply_to_id) and not consent:
+        if (settings.PROVIDER_NETWORK_MODE == "external" or preview.reply_to_id or preview.is_shared_destination) and not consent:
             raise APIError("consent_required", "نسخه شرایط و رضایت ارسال را پیش از خرید تأیید کن.", 422)
         if preview.expires_at <= now or Order.objects.filter(preview=preview).exists():
             raise APIError("preview_expired", "پیش‌نمایش منقضی یا استفاده شده است؛ دوباره متن را آماده کنید.", 409)
@@ -291,7 +304,8 @@ def create_order(user, session_key, data, idempotency_key):
         if not unlimited and limits.pair_cooldown_hours:
             recent_pair = Order.objects.filter(owner=user, recipient_hash=phone_hash, status__in=sent_statuses,
                                                updated_at__gte=pair_start)
-            if not reply_depth and recent_pair.filter(reply_depth=0).exists():
+            if (not reply_depth and not preview.is_shared_destination
+                    and recent_pair.filter(reply_depth=0, preview__is_shared_destination=False).exists()):
                 raise APIError("pair_cooldown", f"بین ارسال‌های شما به همین شماره باید {limits.pair_cooldown_hours} ساعت فاصله باشد؛ بعد از گذشت این زمان دوباره تلاش کن.", 409)
             if recent_pair.exists():
                 raise recipient_unavailable()
@@ -420,6 +434,10 @@ def confirm_free_order(user, order_id):
             raise APIError("order_expired", "مهلت سفارش تمام شده؛ متن نهایی را دوباره آماده کن.", 409)
         if order.uses_purchased_credit and order.payment_mode != ('credit_demo' if settings.DEMO_MODE else 'credit_live'):
             raise APIError('credit_environment', 'اعتبار این سفارش متعلق به محیط دیگری است.', 409)
+        if order.preview.is_shared_destination:
+            from .personal_share import target_phone, unavailable
+            if digest(target_phone(user, order.preview.personal_share_token, lock=True)) != order.recipient_hash:
+                raise unavailable()
         validate_confirmation_snapshot(order)
         if user.account.suspended or user.account.deletion_requested_at:
             raise APIError("account_unavailable", "این حساب فعلاً اجازه ارسال ندارد.", 403)

@@ -244,9 +244,15 @@ def logout_view(request):
 def preview(request):
     data = body(request)
     request._message_attempt_data = data
-    if set(data) - {'text', 'category', 'recipient_phone', 'reply_token', 'source_mode', 'payment_method', 'message_tone', 'alternative_token'}:
+    if set(data) - {'text', 'category', 'recipient_phone', 'reply_token', 'source_mode', 'payment_method', 'message_tone', 'alternative_token', 'share_token'}:
         raise APIError('invalid_input', 'فقط متن اولیه و شمارهٔ گیرنده را بفرست؛ نتیجهٔ بررسی در سرور تعیین می‌شود.', 422)
     owner = request.user if is_product_authenticated(request.user) else None
+    has_share = 'share_token' in data
+    if has_share:
+        if not owner:
+            raise APIError('authentication_required', 'ابتدا شمارهٔ خودت را تأیید کن.', 401)
+        if {'recipient_phone', 'reply_token'} & data.keys():
+            raise APIError('invalid_input', 'مقصد این پیام از لینک شخصی انتخاب می‌شود.', 422)
     from .demo_limits import unlimited_demo_sends
     unlimited = unlimited_demo_sends(owner)
     if not unlimited:
@@ -299,6 +305,7 @@ def preview(request):
     if owner and not unlimited:
         limited("preview-user", str(owner.pk), 20, 600)
     recipient_hash, parent, with_reply = '', None, True
+    share_token_id = None
     if is_reply:
         from .anonymous_replies import MAX_REPLIES, check_turn, counterpart_phone, parent_for_token
         parent = parent_for_token(owner, data['reply_token'])
@@ -306,6 +313,12 @@ def preview(request):
         target_phone = counterpart_phone(parent, owner)
         recipient_hash = digest(target_phone)
         request._message_attempt_recipient_phone = target_phone
+    elif has_share:
+        from .personal_share import parse_token, target_phone
+        share_token_id = parse_token(data['share_token'])
+        phone = target_phone(owner, share_token_id)
+        recipient_hash = digest(phone)
+        request._message_attempt_recipient_phone = phone
     elif data.get('recipient_phone'):
         if not owner:
             raise APIError('authentication_required', 'ابتدا شماره خودت را تأیید کن.', 401)
@@ -343,7 +356,9 @@ def preview(request):
             item = Preview.objects.create(owner=owner, session_key=session_key(request), category=category,
                 message_tone=tone, payment_method='credit', wallet_policy_version='', original_text=text,
                 text='' if use_freeform else rewritten, generated_body=rewritten if use_freeform else '',
-                recipient_hash=recipient_hash, reply_to=parent, terms_version=settings.TERMS_VERSION, moderation_mode=mode,
+                recipient_hash=recipient_hash, reply_to=parent, is_shared_destination=has_share,
+                personal_share_token=share_token_id,
+                terms_version=settings.TERMS_VERSION, moderation_mode=mode,
                 expires_at=expires_at, is_free=is_free, price_toman=0)
             from .recipient import issue_grant
             token = issue_grant(item, recipient_hash, with_reply=with_reply and REPLY_SLOT in layout)
@@ -381,7 +396,8 @@ def preview_data(item):
         "rewritten_text": item.generated_body if item.moderation_mode in {'gapgpt', 'ollama'} else item.text,
         "price_toman": item.price_toman, "is_free": item.is_free, "is_reply": is_reply, "message_tone": item.message_tone,
         "expires_at": item.expires_at.isoformat(), "moderation_mode": item.moderation_mode, "terms_version": item.terms_version,
-        "full_sms": sender_sms(item.full_sms, is_reply=is_reply), "sms_segments": sms_segments(item.full_sms)}
+        "full_sms": sender_sms(item.full_sms, hide_recipient_links=is_reply or item.is_shared_destination),
+        "sms_segments": sms_segments(item.full_sms)}
 
 
 @api(["POST"], authenticated=True)
@@ -511,13 +527,14 @@ def request_deletion(request):
     body(request)
     if timezone.now().timestamp() - request.session.get('phone_verified_at', 0) > 300:
         raise APIError('reauthentication_required', 'برای درخواست حذف، شماره خودت را مجدداً تأیید کن.', 403)
-    from .models import OperatorAudit
+    from .models import OperatorAudit, PersonalShareLink
     with transaction.atomic():
         account = Account.objects.select_for_update().get(user=request.user)
         if not account.deletion_requested_at:
             account.deletion_requested_at = timezone.now()
             account.suspended = True
             account.save(update_fields=['deletion_requested_at', 'suspended'])
+            PersonalShareLink.objects.filter(account=account).delete()
             OperatorAudit.objects.create(actor=request.user, action='account_delete_requested', object_id=str(account.pk), reason='verified_owner_request')
     return {'requested': True, 'redaction_within_days': 30}
 

@@ -66,6 +66,14 @@ export const privatePages = {
     title: "پروفایل من",
     description: "ورود با شمارهٔ تأییدشده، مشاهدهٔ اطلاعات حساب بگم نگم و مدیریت نشست خودت.",
   },
+  "/profile/share": {
+    title: "لینک شخصی دریافت پیام",
+    description: "ساخت و مدیریت لینک شخصی دریافت پیام و کد QR در پروفایل بگم نگم.",
+  },
+  "/send": {
+    title: "نوشتن پیام از لینک شخصی",
+    description: "ورود با شمارهٔ تأییدشده و نوشتن پیام برای صاحب لینک شخصی بگم نگم.",
+  },
   "/history": {
     title: "پیام‌های من",
     description: "مشاهدهٔ سابقه، رسید و وضعیت پردازش پیام‌های حساب خودت در بگم نگم؛ نیازمند ورود با شمارهٔ تأییدشده.",
@@ -212,7 +220,7 @@ export const aiSearchAgents = ["OAI-SearchBot", "ChatGPT-User", "Claude-SearchBo
 export const aiTrainingAgents = ["GPTBot", "ClaudeBot", "Google-Extended", "Applebot-Extended", "CCBot"] as const;
 export const aiPrivatePaths = [
   "/api/", "/admin/", "/static/admin/", "/manage", "/profile", "/history", "/preferences",
-  "/invitations", "/credits", "/wallet", "/r$", "/r?", "/r/", "/offline.html",
+  "/invitations", "/credits", "/wallet", "/send", "/r$", "/r?", "/r/", "/offline.html",
 ] as const;
 
 // Supplementary discovery index, not a ranking signal or an access-control system.

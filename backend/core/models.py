@@ -151,6 +151,14 @@ class Account(models.Model):
         constraints = [models.CheckConstraint(condition=models.Q(free_sends_remaining__lte=models.F('free_sends_earned_total')+3), name="free_sends_within_grants")]
 
 
+class PersonalShareLink(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    account = models.OneToOneField(Account, on_delete=models.CASCADE, related_name='+')
+
+    class Meta:
+        default_permissions = ()
+
+
 class OTPChallenge(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     phone_hash = models.CharField(max_length=64, db_index=True)
@@ -213,6 +221,9 @@ class BotConversationEvent(models.Model):
 
 class Preview(models.Model):
     reply_to = models.ForeignKey('Order', null=True, blank=True, on_delete=models.PROTECT, related_name='+')
+    # The flag keeps receipts masked after private-data retention removes the link reference.
+    is_shared_destination = models.BooleanField(default=False, db_default=False, editable=False)
+    personal_share_token = models.UUIDField(null=True, blank=True, editable=False)
     message_tone = models.CharField(max_length=12, choices=[('polite', 'مودبانه'), ('firm', 'کمی مودبانه'), ('blunt', 'رُک'), ('angry', 'بی‌ادبانه')], default='polite', db_default='polite', editable=False)
     payment_method = models.CharField(max_length=12, default='credit', db_default='credit', editable=False)
     wallet_policy_version = models.CharField(max_length=24, blank=True, default='', db_default='', editable=False)

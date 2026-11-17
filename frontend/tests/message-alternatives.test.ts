@@ -23,11 +23,15 @@ test('only bounded complete alternative records enter the selection UI', () => {
 
 test('selection submits the server token and target, never a replacement body or approval flag', () => {
   const alternative = messageAlternatives({ alternatives: [offer] })[0];
-  const request = alternativeRequest(alternative, '09901234567');
+  const request = alternativeRequest(alternative, { recipient_phone: '09901234567' });
   assert.deepEqual(request, { source_mode: 'reviewed_alternative', alternative_token: 'synthetic-token',
     recipient_phone: '09901234567', message_tone: 'polite' });
   assert.equal('text' in request, false);
   assert.equal('allowed' in request, false);
+  assert.deepEqual(alternativeRequest(alternative, { share_token: 'a'.repeat(32) }), {
+    source_mode: 'reviewed_alternative', alternative_token: 'synthetic-token',
+    share_token: 'a'.repeat(32), message_tone: 'polite',
+  });
 });
 
 test('account count controls require their permission and preserve the difference between null and zero', () => {
@@ -52,5 +56,5 @@ test('blunt alternatives retain their bound tone and exact reviewed body', () =>
   const result = messageAlternatives({ alternatives: [{ ...offer, message_tone: 'blunt', text: 'حلالم کن داداش' }] });
   assert.equal(result.length, 1);
   assert.equal(result[0].text, 'حلالم کن داداش');
-  assert.equal(alternativeRequest(result[0], '09901234567').message_tone, 'blunt');
+  assert.equal(alternativeRequest(result[0], { recipient_phone: '09901234567' }).message_tone, 'blunt');
 });

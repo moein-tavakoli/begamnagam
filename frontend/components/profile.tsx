@@ -53,6 +53,7 @@ export function Profile() {
               <div><dt>جایزهٔ دعوت‌ها</dt><dd>{number.format(data.free_sends_earned_total ?? 0)} <small>ارسال</small></dd></div>
             </dl>
             <nav className="profile-links" aria-label="بخش‌های حساب">
+              <Link href="/profile/share" prefetch={false}><Icon name="send" size={21} /><span>لینک شخصی دریافت پیام<small>لینک، متن آماده و QR برای استوری</small></span><Icon name="arrow" size={18} /></Link>
               <Link href="/wallet" prefetch={false}><Icon name="receipt" size={21} /><span>کیف پول من<small>موجودی، شارژ و گردش اعتبار</small></span><Icon name="arrow" size={18} /></Link>
               <Link href="/credits" prefetch={false}><Icon name="receipt" size={21} /><span>خرید بستهٔ پیام<small>بسته‌های فعال و اعتبار حساب</small></span><Icon name="arrow" size={18} /></Link>
               <Link href="/history" prefetch={false}><Icon name="receipt" size={21} /><span>پیام‌های من<small>سابقه و وضعیت ارسال‌ها</small></span><Icon name="arrow" size={18} /></Link>

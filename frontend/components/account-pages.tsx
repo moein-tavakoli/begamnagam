@@ -240,7 +240,7 @@ export function History() {
                       <span className="recipient-label">
                         {message.is_reply
                           ? <><Icon name="chat" size={17} /> پاسخ ناشناس</>
-                          : <><Icon name="phone" size={17} /> برای <bdi>{message.recipient_phone||'شماره در دسترس نیست'}</bdi></>}
+                          : <><Icon name="phone" size={17} /> برای <bdi>{(message.is_shared_destination ? message.recipient_masked : message.recipient_phone) || 'شماره در دسترس نیست'}</bdi></>}
                       </span>
                       <span
                         className={`status-pill ${message.status === "failed" ? "failed" : ""}`}

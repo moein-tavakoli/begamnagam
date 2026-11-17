@@ -1,3 +1,4 @@
+import json
 import uuid
 from datetime import timedelta
 from unittest.mock import patch
@@ -235,18 +236,40 @@ class FreeformTests(TestCase):
         self.assertEqual(Order.objects.get().status, 'failed')
         self.assertEqual(Account.objects.get(user=self.user).free_sends_remaining, 3)
 
-    def test_live_adapter_sends_exact_approved_sms_once(self):
+    def test_live_adapter_sends_exact_approved_sms_with_emoji_once(self):
         from .provider_delivery import submit_delivery
         from .providers.kavenegar import SMSResult
+        from .test_gapgpt import VERDICT, _Response, _completion
+
+        text = 'از کمکت ممنونم ❤️👩🏽‍💻'
         with override_settings(DEMO_MODE=False, SMS_BACKEND='kavenegar', PAYMENT_BACKEND='disabled',
                 PROVIDER_NETWORK_MODE='external', LIVE_PROVIDERS_ENABLED=True, PROVIDER_ENVIRONMENT='live',
                 SMS_RECIPIENT_POLICY='all', SMS_MAX_COST_RIAL=20000, PROVIDER_DAILY_BUDGET_RIAL=100000,
                 SENDING_WINDOW_ENABLED=False, TERMS_VERSION='v0.10.0-review'):
-            with patch('core.gapgpt.rewrite_message', return_value=BODY): quote = self.quote().json()
+            with patch('core.gapgpt.urllib.request.build_opener') as model:
+                model.return_value.open.side_effect = [
+                    _Response(_completion({'allowed': True, 'message': text})),
+                    _Response(_completion(VERDICT)),
+                ]
+                result = self.post('/messages/preview', {
+                    'text': text, 'recipient_phone': '09901234567',
+                    'source_mode': 'freeform', 'message_tone': 'polite',
+                })
+            self.assertEqual(result.status_code, 200, result.content)
+            requests = [json.loads(call.args[0].data) for call in model.return_value.open.call_args_list]
+            generation, review = [json.loads(request['messages'][1]['content']) for request in requests]
+            self.assertEqual(generation['text'], text)
+            self.assertEqual(review, {'source': text, 'candidate': text})
+            quote = result.json()
+            self.assertEqual(quote['rewritten_text'], text)
+            self.assertIn(text, quote['full_sms'])
             order = self.make_order(quote).json()
-            with self.captureOnCommitCallbacks(execute=False): self.post(f"/orders/{order['id']}/confirm-free")
+            with self.captureOnCommitCallbacks(execute=False):
+                self.assertEqual(self.post(f"/orders/{order['id']}/confirm-free").status_code, 200)
             with patch('core.provider_delivery.Kavenegar.submit', return_value=SMSResult('accepted','101',1000)) as wire:
-                submit_delivery(Outbox.objects.get().pk);submit_delivery(Outbox.objects.get().pk)
+                outbox_id = Outbox.objects.get().pk
+                submit_delivery(outbox_id)
+                submit_delivery(outbox_id)
             wire.assert_called_once()
             self.assertEqual(wire.call_args.kwargs['text'], quote['full_sms'])
 

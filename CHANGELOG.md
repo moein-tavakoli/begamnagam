@@ -9,6 +9,14 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 3.1.1 — 2026-11-17 — Emoji in reviewed messages
+
+- Accept standard Unicode emoji alongside Persian text in freeform messages
+  and anonymous replies. Preserve approved emoji in the SMS confirmed by the
+  sender and count them toward the UTF-16 body limit.
+- Added coverage for compound emoji, the body limit, content checks, and
+  the exact SMS passed to the mocked delivery provider. Local release.
+
 ## 3.1.0 — 2026-11-14 — Sender numbers in staff activity
 
 - Show the sender's phone on received-message cards and in their text dialog.

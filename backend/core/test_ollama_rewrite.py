@@ -35,7 +35,10 @@ class LocalClientTests(TestCase):
         self.patcher.start(); self.addCleanup(self.patcher.stop)
 
     def test_separate_review_is_local_structured_bounded_and_stateless(self):
-        self.assertEqual(rewrite_message(SOURCE, max_units=140, config=self.config), BODY)
+        source, body = SOURCE + ' 🙏🏽', BODY + ' 🙏🏽'
+        self.opener.open.side_effect = [response({'allowed': True, 'message': body}),
+                                       response({key: True for key in REVIEW_KEYS})]
+        self.assertEqual(rewrite_message(source, max_units=140, config=self.config), body)
         self.assertEqual(self.opener.open.call_count, 2)
         for call in self.opener.open.call_args_list:
             request = call.args[0]; data = json.loads(request.data)

@@ -17,6 +17,10 @@ Historical release reports below contain deployment evidence and limitations.
 - Tested drafts with mixed punctuation and emoji and a model response that
   dropped the original marks. The reviewed text reached the mocked SMS provider.
 
+Deployed 3.1.2 with the emoji fix from 3.1.1. Verified 787 tests against
+isolated PostgreSQL on the server image, all six frontend replicas, and the
+`bgam.ir/<code>` SMS format. [Deployment evidence](docs/deployments/ct115-3.1.2.json)
+
 ## 3.1.1 — 2026-11-17 — Emoji in reviewed messages
 
 - Accept standard Unicode emoji alongside Persian text in freeform messages

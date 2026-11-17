@@ -241,6 +241,15 @@ class GapGPTClientTests(SimpleTestCase):
             rewrite_message(SOURCE, max_units=10)
         self.assertEqual(self.opener.open.call_count, 1)
 
+    def test_restored_final_marks_count_toward_the_output_limit(self):
+        text_without_marks = 'از کمکت ممنونم 🙂'
+        source = 'از کمکت ممنونم! 🙂'
+        limit = len(text_without_marks.encode('utf-16-le')) // 2
+        self.opener.open.side_effect = [_Response(_completion({'allowed': True, 'message': text_without_marks}))]
+        with self.assertRaisesRegex(GapGPTRejected, 'candidate_too_long'):
+            rewrite_message(source, max_units=limit)
+        self.assertEqual(self.opener.open.call_count, 1)
+
     def test_output_must_be_exact_json_persian_body_without_controls(self):
         invalid = [None, '', 'English only', BODY + '\nمتن', '\u202e' + BODY,
             ' ' + BODY, BODY + ' ', '`' + BODY + '`', '<p>' + BODY + '</p>',

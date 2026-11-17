@@ -120,7 +120,7 @@ def rewrite_message(cleaned_text, *, max_units, direct=False, message_tone=None,
     result = _chat(opener, config, generation_prompt(REWRITE, message_tone, config),
         {'text': cleaned_text, 'max_utf16_units': max_units,
          'tone': {'polite': 'warm and respectful', 'firm': 'clear and respectful', 'blunt': 'plain direct minimal edits', 'angry': 'terse, frustrated, non-abusive'}[tone]}, schema, deadline, 200)
-    candidate = _candidate(result, max_units)
+    candidate = _candidate(result, max_units, source=cleaned_text)
     from .draft_guard import validate_polite_body
     from .moderation import ModerationRejected
     try:

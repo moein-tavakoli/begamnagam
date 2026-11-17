@@ -6,6 +6,13 @@ from .moderation import ModerationRejected
 
 
 class DraftGuardTests(SimpleTestCase):
+    def test_message_punctuation_reaches_the_model(self):
+        for text in ('امروز فرصت داری؟', 'از کمکت ممنونم!', 'برای فردا وقت داری?',
+                     'فرصت داری؟ ممنونم!', 'منتظر خبرت هستم...', 'خبر میدی؟! ❤️'):
+            with self.subTest(text=text):
+                self.assertEqual(sanitize_draft(text), text)
+        self.assertEqual(sanitize_draft('احمق، برای فردا وقت داری؟'), 'برای فردا وقت داری؟')
+
     def test_draft_preserves_emoji_through_normalization(self):
         text = '*️⃣ از كمكت ممنونم ❤️👩🏽‍💻'
         self.assertEqual(sanitize_draft(text), '*️⃣ از کمکت ممنونم ❤️👩🏽‍💻')

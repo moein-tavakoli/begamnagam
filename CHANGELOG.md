@@ -9,6 +9,14 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 3.1.2 — 2026-11-17 — Keep sentence punctuation during rewriting
+
+- Preserve sentence punctuation in freeform and anonymous reply drafts.
+  Restore final question marks, exclamation marks and periods before the
+  independent reviewer checks the exact candidate, including its length.
+- Tested drafts with mixed punctuation and emoji and a model response that
+  dropped the original marks. The reviewed text reached the mocked SMS provider.
+
 ## 3.1.1 — 2026-11-17 — Emoji in reviewed messages
 
 - Accept standard Unicode emoji alongside Persian text in freeform messages

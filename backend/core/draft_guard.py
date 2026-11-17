@@ -35,6 +35,25 @@ def without_emoji(text):
     return _replace_emoji(text, lambda _sequence: '')
 
 
+def _ending_punctuation_span(text):
+    emoji_starts = {match['match_end']: match['match_start'] for match in emoji_list(text)}
+    end = len(text)
+    while end in emoji_starts:
+        end = len(text[:emoji_starts[end]].rstrip())
+    start = len(text[:end].rstrip('.!?؟'))
+    return start, end
+
+
+def preserve_ending_punctuation(source, candidate):
+    """Keep final sentence marks, which may appear before a run of emoji."""
+    start, end = _ending_punctuation_span(source)
+    marks = source[start:end]
+    if not marks:
+        return candidate
+    start, end = _ending_punctuation_span(candidate)
+    return candidate[:start] + marks + candidate[end:]
+
+
 def _normal(text):
     value = unicodedata.normalize('NFKC', text).translate(_TRANSLATE)
     # Remove vowel marks, tatweel and invisible joiners before matching. Space
@@ -155,8 +174,11 @@ def sanitize_draft(text):
     _check_intent(_normal(text) if emoji_by_marker else value)
     value, removed = _INSULTS.subn(' ', value)
     value, masked_removed = _MASKED_INSULTS.subn(' ', value)
-    value = re.sub(r'\s+', ' ', value).strip(' \t.,،؛:!?؟«»"\'()[]-*_/')
-    value = value.translate(emoji_by_marker)
+    value = re.sub(r'\s+', ' ', value)
+    if removed or masked_removed:
+        # A removed edge word can leave a detached punctuation mark.
+        value = re.sub(r'^ [.,،؛:!?؟]+(?: |$)| [.,،؛:!?؟]+$', ' ', value)
+    value = value.strip(' \t«»"\'[]-*_/').translate(emoji_by_marker)
     # Deleting a token must not assemble a previously separated instruction or
     # contact phrase. Scan the actual text, including digits used in keycaps.
     _check_intent(_normal(value) if emoji_by_marker else value)

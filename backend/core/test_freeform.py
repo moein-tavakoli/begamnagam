@@ -236,19 +236,20 @@ class FreeformTests(TestCase):
         self.assertEqual(Order.objects.get().status, 'failed')
         self.assertEqual(Account.objects.get(user=self.user).free_sends_remaining, 3)
 
-    def test_live_adapter_sends_exact_approved_sms_with_emoji_once(self):
+    def test_live_adapter_sends_exact_approved_sms_with_emoji_and_punctuation_once(self):
         from .provider_delivery import submit_delivery
         from .providers.kavenegar import SMSResult
         from .test_gapgpt import VERDICT, _Response, _completion
 
-        text = 'از کمکت ممنونم ❤️👩🏽‍💻'
+        text = 'میشه فردا خبر بدی؟! ❤️👩🏽‍💻'
+        generated = 'میشه فردا خبر بدی. ❤️👩🏽‍💻'
         with override_settings(DEMO_MODE=False, SMS_BACKEND='kavenegar', PAYMENT_BACKEND='disabled',
                 PROVIDER_NETWORK_MODE='external', LIVE_PROVIDERS_ENABLED=True, PROVIDER_ENVIRONMENT='live',
                 SMS_RECIPIENT_POLICY='all', SMS_MAX_COST_RIAL=20000, PROVIDER_DAILY_BUDGET_RIAL=100000,
                 SENDING_WINDOW_ENABLED=False, TERMS_VERSION='v0.10.0-review'):
             with patch('core.gapgpt.urllib.request.build_opener') as model:
                 model.return_value.open.side_effect = [
-                    _Response(_completion({'allowed': True, 'message': text})),
+                    _Response(_completion({'allowed': True, 'message': generated})),
                     _Response(_completion(VERDICT)),
                 ]
                 result = self.post('/messages/preview', {

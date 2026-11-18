@@ -22,7 +22,10 @@ Historical release reports below contain deployment evidence and limitations.
 - Validation: 828 PostgreSQL/Redis tests, 129 frontend tests, TypeScript,
   migration consistency, Compose configuration, and the production browser
   flow at desktop and 375px with the PWA service worker active.
-- Local release. [Management and consent contract](docs/identity-consent.fa.md).
+- Deployed on 2026-11-18 from `a86bdd0`. Confirmed 3.4.0 on all six frontend
+  instances, applied migrations 0053–0055, and verified the disabled setting
+  over public HTTPS and in the mobile recipient menu. [Deployment evidence](docs/deployments/ct115-3.4.0.json)
+  and [management and consent contract](docs/identity-consent.fa.md).
 
 ## 3.3.0 — 2026-11-17 — Optional, revocable phone disclosure
 

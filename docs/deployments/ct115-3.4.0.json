@@ -1,0 +1,93 @@
+{
+  "version": "3.4.0",
+  "source_commit": "a86bdd05e3304fcabba2a16624af6892bf745cdd",
+  "deployed": true,
+  "verified_at_utc": "2026-11-18T08:14:50.217664+00:00",
+  "backend_image": "sha256:c9de0850594da7643f31efb5b3a850aef6af8b5e998d51bec3c735cc010bd57e",
+  "frontend_image": "sha256:75fc73b640d9a62be399b04ece6bac00a54386dac1e2f0a88874205d8977c241",
+  "asset_bridge_image": "sha256:fbe9bc40a732027727acefb728aed3fe3439633dfaaf807521d5d22b8446c6ae",
+  "services": {
+    "postgres": "healthy",
+    "redis": "healthy",
+    "rabbitmq": "healthy",
+    "proxy": "healthy",
+    "backend": "healthy",
+    "worker": "running",
+    "beat": "running",
+    "frontend": "healthy",
+    "frontend2": "healthy",
+    "frontend3": "healthy",
+    "frontend4": "healthy",
+    "frontend5": "healthy",
+    "frontend6": "healthy"
+  },
+  "frontends": {
+    "frontend": {
+      "version": "3.4.0",
+      "assets_verified": 25,
+      "recipient_routes": "PASS"
+    },
+    "frontend2": {
+      "version": "3.4.0",
+      "assets_verified": 25,
+      "recipient_routes": "PASS"
+    },
+    "frontend3": {
+      "version": "3.4.0",
+      "assets_verified": 25,
+      "recipient_routes": "PASS"
+    },
+    "frontend4": {
+      "version": "3.4.0",
+      "assets_verified": 25,
+      "recipient_routes": "PASS"
+    },
+    "frontend5": {
+      "version": "3.4.0",
+      "assets_verified": 25,
+      "recipient_routes": "PASS"
+    },
+    "frontend6": {
+      "version": "3.4.0",
+      "assets_verified": 25,
+      "recipient_routes": "PASS"
+    }
+  },
+  "postgresql_tests": 828,
+  "frontend_tests": 129,
+  "migrations_applied": [
+    "0053_personal_share_link",
+    "0054_identity_consent",
+    "0055_identity_request_settings"
+  ],
+  "identity_requests_enabled": false,
+  "identity_settings_row_created": false,
+  "encrypted_backup_restore_verified": true,
+  "data_and_proxy_containers_preserved": true,
+  "live_provider_settings_preserved": true,
+  "https": {
+    "version": "3.4.0",
+    "transport": "domain_https_via_internal_nginx",
+    "tls_certificate_verified": true,
+    "feature_bundles": "PASS",
+    "manifest": "PASS",
+    "service_worker": "PASS",
+    "otp_is_real": true,
+    "package_checkout_enabled": false,
+    "anonymous_private_documentation": "denied",
+    "management_headers": "PASS",
+    "sms_edge": {
+      "https_direct_code_ready": true,
+      "http_direct_code_ready": true,
+      "prefixed_links": "PASS",
+      "unchanged_older_root_codes": "PASS",
+      "tls_verified": true
+    },
+    "public_hostname_version_and_bootstrap": "PASS",
+    "mobile_browser_recipient_menu_hidden_and_management_login": "PASS"
+  },
+  "management_settings_requires_authentication": true,
+  "verification_sms_sent": 0,
+  "verification_otp_sent": 0,
+  "verification_payments": 0
+}

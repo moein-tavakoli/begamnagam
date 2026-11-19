@@ -1,0 +1,108 @@
+{
+  "version": "0.34.0",
+  "source_commit": "b1ace9f6ac3f8d5d781ed7eb4cb9e58a70c3d4b2",
+  "deployed": true,
+  "verified_at_utc": "2026-11-09T19:27:05.920071+00:00",
+  "frontend_image": "sha256:4a21b05967ddfef14b236fdb9416750b84820df21ae2b7252409aa880d989694",
+  "backend_image": "sha256:35e40b79e13bc229ce7c1bd69f5c8974e91a26a50765667c5b2f2662ef54afd4",
+  "services": {
+    "backend": "healthy",
+    "worker": "running",
+    "beat": "running",
+    "frontend": "healthy",
+    "frontend2": "healthy",
+    "frontend3": "healthy",
+    "frontend4": "healthy",
+    "frontend5": "healthy",
+    "frontend6": "healthy",
+    "postgres": "healthy",
+    "redis": "healthy",
+    "rabbitmq": "healthy",
+    "proxy": "healthy"
+  },
+  "frontends": {
+    "frontend": {
+      "assets_verified": 13,
+      "version": "0.34.0"
+    },
+    "frontend2": {
+      "assets_verified": 13,
+      "version": "0.34.0"
+    },
+    "frontend3": {
+      "assets_verified": 13,
+      "version": "0.34.0"
+    },
+    "frontend4": {
+      "assets_verified": 13,
+      "version": "0.34.0"
+    },
+    "frontend5": {
+      "assets_verified": 13,
+      "version": "0.34.0"
+    },
+    "frontend6": {
+      "assets_verified": 13,
+      "version": "0.34.0"
+    }
+  },
+  "postgresql_tests": 743,
+  "frontend_tests": 119,
+  "frontend_typecheck": "PASS",
+  "frontend_production_build": "PASS",
+  "frontend_runtime_files": 454,
+  "live_compose_config": "PASS",
+  "migration": "0046_anonymous_sms_replies",
+  "migration_rehearsal": "PASS",
+  "previous_product_fields_preserved": true,
+  "encrypted_pre_and_post_backup_restore": "PASS",
+  "application_env_files_reused": true,
+  "data_and_proxy_containers_preserved": true,
+  "https": {
+    "version": "0.34.0",
+    "https": "PASS",
+    "transport": "domain_https_via_internal_nginx",
+    "tls_certificate_verified": true,
+    "anonymous_entry": "login redirect",
+    "anonymous_private_files": 404,
+    "private_documentation": "PASS",
+    "existing_documentation_credentials": "accepted",
+    "documentation_account_product_access": "denied",
+    "documentation_account_management_access": "denied",
+    "bot_api_without_key": "denied",
+    "reply_api_schema_and_guide": true,
+    "short_reply_and_opt_out_routes": true,
+    "anonymous_reply_request": "denied",
+    "otp_is_real": true,
+    "package_checkout_enabled": false
+  },
+  "features": {
+    "backend_files": 256,
+    "ai_settings_readable": true,
+    "sms_template_settings_readable": true,
+    "recipient_sms_footer_rendering": "PASS",
+    "long_template_warning": "PASS",
+    "max_replies": 3,
+    "private_documentation_enabled": true,
+    "session_days": 30,
+    "otp_sms_profile": "kavenegar_live",
+    "paid_checkout": "disabled"
+  },
+  "isolated_compose_demo": {
+    "status": "PASS",
+    "images": "local_builds_from_the_same_release_artifacts",
+    "source_commit": "b1ace9f6ac3f8d5d781ed7eb4cb9e58a70c3d4b2",
+    "backend_image": "sha256:a3ff4421382d2bb978c94c66b5e1735a7ec0935d70c841a68ae094b621e1ec66",
+    "frontend_image": "sha256:7036a6c75dd8d714e94257df94159481d6ce8c94a1dc76e960eed482c2a8e527",
+    "checks": [
+      "end_to_end_smoke",
+      "database_and_queue_foundation",
+      "private_recipient_redirects",
+      "manifest_and_public_files"
+    ]
+  },
+  "verification_sms_sent": 0,
+  "verification_paid_model_calls": 0,
+  "verification_payments": 0,
+  "public_external_https_probe": "unavailable"
+}

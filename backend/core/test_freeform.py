@@ -1,3 +1,4 @@
+import json
 import uuid
 from datetime import timedelta
 from unittest.mock import patch
@@ -13,6 +14,7 @@ from .moderation import ModerationRejected
 from .gapgpt import GapGPTRejected, GapGPTUnavailable
 from .privacy import digest, encrypt, mask
 from .services import APIError
+from .sms import MAX_REWRITE_BODY_UNITS
 
 BODY = 'لطفاً پولی را که قرض گرفته‌اید، در زمان توافق‌شده برگردانید. از توجهتان ممنونم.'
 
@@ -55,6 +57,29 @@ class FreeformTests(TestCase):
         self.assertEqual(RewriteBudget.objects.get().reserved_requests, 1)
         self.assertEqual(Account.objects.get(user=self.user).free_sends_remaining, 3)
         validate_preview(preview, recipient_hash=digest('09901234567'))
+
+    def test_preview_uses_the_same_layout_before_and_after_model_review(self):
+        path = '/api/v1/manage/sms-template'
+        editor = Client()
+        editor.force_login(get_user_model().objects.create_superuser('freeform-sms-editor'))
+        intro = 'درود از بگم نگم و آرزوی یک روز آرام برای شما. ' * 12
+        first = editor.put(path, {'template': intro + '\n{{message}}\n{{opt_out}}',
+            'variables': [], 'revision': 0}, content_type='application/json')
+        self.assertEqual(first.status_code, 200, first.content)
+
+        def review(*args, **options):
+            self.assertEqual(options['max_units'], MAX_REWRITE_BODY_UNITS)
+            updated = editor.put(path, {'template': 'سلام\n{{message}}\n{{opt_out}}',
+                'variables': [], 'revision': 1}, content_type='application/json')
+            self.assertEqual(updated.status_code, 200, updated.content)
+            return BODY
+
+        with patch('core.gapgpt.rewrite_message', side_effect=review):
+            result = self.quote()
+        self.assertEqual(result.status_code, 200, result.content)
+        self.assertTrue(result.json()['full_sms'].startswith(intro + '\n' + BODY + '\n'))
+        self.assertGreater(result.json()['sms_segments'], 3)
+        validate_preview(Preview.objects.get(pk=result.json()['preview_id']))
 
     def test_threat_contact_pure_insult_and_invalid_recipient_never_reach_api_or_budget(self):
         with patch('core.gapgpt.rewrite_message') as model:
@@ -120,11 +145,12 @@ class FreeformTests(TestCase):
                  ('review_added_claims', 'rewrite_intent_changed', 'منظورت را دقیق'),
                  ('generation_unclear', 'rewrite_intent_unclear', 'روشن نبود'),
                  ('review_format', 'rewrite_output_rejected', 'نسخهٔ آماده‌شده'),
-                 ('review_tone', 'rewrite_output_rejected', 'نسخهٔ آماده‌شده'),
+                 ('review_tone', 'rewrite_output_rejected', 'لحن انتخابی'),
+                 ('candidate_too_long', 'rewrite_output_rejected', 'برای پیامک طولانی بود'),
                  ('candidate_rejected', 'rewrite_output_rejected', 'نسخهٔ آماده‌شده'),
                  ('generation_rejected', 'moderation_rejected', 'تأیید نشد'),
-                 ('generation_unsafe', 'moderation_rejected', 'ضوابط پیام‌رسانی'),
-                 ('review_unsafe', 'moderation_rejected', 'ضوابط پیام‌رسانی'),
+                 ('generation_unsafe', 'moderation_rejected', 'مدل نتوانست'),
+                 ('review_unsafe', 'moderation_rejected', 'بازبین نتوانست'),
                  ('generation_private', 'moderation_rejected', 'حریم خصوصی'),
                  ('review_private', 'moderation_rejected', 'حریم خصوصی')]
         for reason, code, message in cases:
@@ -210,18 +236,41 @@ class FreeformTests(TestCase):
         self.assertEqual(Order.objects.get().status, 'failed')
         self.assertEqual(Account.objects.get(user=self.user).free_sends_remaining, 3)
 
-    def test_live_adapter_sends_exact_approved_sms_once(self):
+    def test_live_adapter_sends_exact_approved_sms_with_emoji_and_punctuation_once(self):
         from .provider_delivery import submit_delivery
         from .providers.kavenegar import SMSResult
+        from .test_gapgpt import VERDICT, _Response, _completion
+
+        text = 'میشه فردا خبر بدی؟! ❤️👩🏽‍💻'
+        generated = 'میشه فردا خبر بدی. ❤️👩🏽‍💻'
         with override_settings(DEMO_MODE=False, SMS_BACKEND='kavenegar', PAYMENT_BACKEND='disabled',
                 PROVIDER_NETWORK_MODE='external', LIVE_PROVIDERS_ENABLED=True, PROVIDER_ENVIRONMENT='live',
                 SMS_RECIPIENT_POLICY='all', SMS_MAX_COST_RIAL=20000, PROVIDER_DAILY_BUDGET_RIAL=100000,
                 SENDING_WINDOW_ENABLED=False, TERMS_VERSION='v0.10.0-review'):
-            with patch('core.gapgpt.rewrite_message', return_value=BODY): quote = self.quote().json()
+            with patch('core.gapgpt.urllib.request.build_opener') as model:
+                model.return_value.open.side_effect = [
+                    _Response(_completion({'allowed': True, 'message': generated})),
+                    _Response(_completion(VERDICT)),
+                ]
+                result = self.post('/messages/preview', {
+                    'text': text, 'recipient_phone': '09901234567',
+                    'source_mode': 'freeform', 'message_tone': 'polite',
+                })
+            self.assertEqual(result.status_code, 200, result.content)
+            requests = [json.loads(call.args[0].data) for call in model.return_value.open.call_args_list]
+            generation, review = [json.loads(request['messages'][1]['content']) for request in requests]
+            self.assertEqual(generation['text'], text)
+            self.assertEqual(review, {'source': text, 'candidate': text})
+            quote = result.json()
+            self.assertEqual(quote['rewritten_text'], text)
+            self.assertIn(text, quote['full_sms'])
             order = self.make_order(quote).json()
-            with self.captureOnCommitCallbacks(execute=False): self.post(f"/orders/{order['id']}/confirm-free")
+            with self.captureOnCommitCallbacks(execute=False):
+                self.assertEqual(self.post(f"/orders/{order['id']}/confirm-free").status_code, 200)
             with patch('core.provider_delivery.Kavenegar.submit', return_value=SMSResult('accepted','101',1000)) as wire:
-                submit_delivery(Outbox.objects.get().pk);submit_delivery(Outbox.objects.get().pk)
+                outbox_id = Outbox.objects.get().pk
+                submit_delivery(outbox_id)
+                submit_delivery(outbox_id)
             wire.assert_called_once()
             self.assertEqual(wire.call_args.kwargs['text'], quote['full_sms'])
 

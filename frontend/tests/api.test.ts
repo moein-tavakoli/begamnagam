@@ -21,6 +21,20 @@ function otpSessionBrowser(context: TestContext) {
   return events;
 }
 
+test("successful website message deletion emits a content-free visibility event", async context => {
+  const events = otpSessionBrowser(context);
+  globalThis.fetch = async () => Response.json({ ok: true });
+  await api('/messages/9cfd58ef-6758-49e9-a5bd-b8b7c83106a0', { method: 'DELETE' });
+  assert.deepEqual(events.map(event => [event.type, event.detail]), [['message-visibility-changed', null]]);
+});
+
+test("failed deletion never invalidates other tabs", async context => {
+  const events = otpSessionBrowser(context);
+  globalThis.fetch = async () => Response.json({ error: { code: 'not_found', message: 'Unavailable' } }, { status: 404 });
+  await assert.rejects(() => api('/messages/9cfd58ef-6758-49e9-a5bd-b8b7c83106a0', { method: 'DELETE' }));
+  assert.deepEqual(events, []);
+});
+
 test("API canonicalizes numeric text in the actual request and retains credentials", async t => {
   otpSessionBrowser(t);
   let sent: unknown;
@@ -29,6 +43,15 @@ test("API canonicalizes numeric text in the actual request and retains credentia
   await api("/numeric-input-check", { method: "POST", body });
   assert.deepEqual(sent, { text: "رسید 12", phone: "0912", values: { reference: "BANK001" }, amount: 1200, password: "رمز۱۲", alternative_token: "Ab۱۲" });
   assert.equal(body.text, "رسید ۱۲");
+});
+
+test('rewrite outages have a specific safe message and never expose upstream details', async context => {
+  otpSessionBrowser(context);
+  globalThis.fetch = async () => Response.json({ error: { code: 'rewrite_unavailable',
+    message: 'private upstream error', details: { internal: 'private' } } }, { status: 503 });
+  await assert.rejects(() => api('/messages/preview', { method: 'POST', body: {} }),
+    (error: unknown) => error instanceof ApiError && error.code === 'rewrite_unavailable' &&
+      error.message.includes('آماده‌سازی متن') && !error.message.includes('private') && error.details === undefined);
 });
 
 test("OTP notifies other tabs immediately while local feedback finishes", async context => {

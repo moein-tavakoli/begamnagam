@@ -1,7 +1,8 @@
-"""Bounded, metadata-only per-user staff activity; plaintext never enters history."""
+"""Bounded per-user staff activity; message text is reviewed separately."""
 import uuid
-from django.db.models import CharField, F, OuterRef, Subquery, Value
-from django.db.models.functions import Cast
+from django.conf import settings
+from django.db.models import CharField, F, OuterRef, Q, Subquery, Value
+from django.db.models.functions import Cast, Coalesce
 
 from . import models as m
 from .privacy import decrypt
@@ -19,20 +20,38 @@ def audit_activity(actor, account, section):
         reason='مشاهدهٔ سابقهٔ کاربر در پنل مدیریت', after={'section': section})
 
 
+def received_order_filter(account):
+    if not account.phone_hash or not account.phone_cipher:
+        return Q(pk__in=[])
+    states = [m.Order.Status.ACCEPTED, m.Order.Status.DELIVERED]
+    if settings.DEMO_MODE:
+        states.append(m.Order.Status.DELIVERED_DEMO)
+    return Q(recipient_hash=account.phone_hash, status__in=states)
+
+
 def message_records(account):
     """Use a database union so pagination never loads full user histories."""
     empty = Value('', output_field=CharField())
-    fields = ('created_at', '_id', '_kind', '_status', '_reason_code', '_message_tone', '_preview_id', '_order_id')
+    fields = ('_activity_at', '_id', '_kind', '_status', '_reason_code', '_message_tone',
+        '_preview_id', '_order_id', '_direction')
 
-    def records(rows, kind, *, identifier='pk', status='status', reason=None, tone=None, preview=None, order=None):
-        return rows.annotate(_id=Cast(identifier, CharField()), _kind=Value(kind, output_field=CharField()),
+    def records(rows, kind, *, identifier='pk', status='status', reason=None, tone=None,
+                preview=None, order=None, direction='', activity_at=F('created_at')):
+        return rows.annotate(_activity_at=activity_at, _id=Cast(identifier, CharField()),
+            _kind=Value(kind, output_field=CharField()),
             _status=F(status), _reason_code=F(reason) if reason else empty,
             _message_tone=F(tone) if tone else empty,
             _preview_id=Cast(preview, CharField()) if preview else empty,
-            _order_id=Cast(order, CharField()) if order else empty).values(*fields)
+            _order_id=Cast(order, CharField()) if order else empty,
+            _direction=Value(direction, output_field=CharField())).values(*fields)
 
     orders = m.Order.objects.filter(owner_id=account.user_id)
-    combined = [records(orders, 'order', tone='preview__message_tone', preview='preview_id', order='pk')]
+    received = m.Order.objects.filter(received_order_filter(account)).exclude(owner_id=account.user_id)
+    combined = [
+        records(orders, 'order', tone='preview__message_tone', preview='preview_id', order='pk', direction='sent'),
+        records(received, 'order', tone='preview__message_tone', preview='preview_id', order='pk', direction='received',
+                activity_at=Coalesce('delivery__resolved_at', 'delivery__accepted_at', 'created_at')),
+    ]
     audits = m.ModerationAudit.objects.filter(owner_id=account.user_id, outcome='rejected')
     attempts = m.MessageAttempt.objects.filter(owner_id=account.user_id)
     # An accepted preview later becomes an order; show its final order only.
@@ -40,7 +59,23 @@ def message_records(account):
     combined.append(records(unconverted, 'attempt', reason='reason_code', tone='message_tone', preview='preview_id'))
     audits = audits.exclude(event_id__in=attempts.filter(moderation_event_id__isnull=False).values('moderation_event_id'))
     combined.append(records(audits, 'moderation', identifier='event_id', status='outcome', reason='reason_code'))
-    return combined[0].union(*combined[1:], all=True).order_by('-created_at', '_kind', '_id')
+    return combined[0].union(*combined[1:], all=True).order_by('-_activity_at', '_kind', '_id')
+
+
+def message_recipient_phones(account, rows):
+    orders = m.Order.objects.filter(Q(owner_id=account.user_id) | received_order_filter(account),
+        pk__in=[row['id'] for row in rows if row['kind'] == 'order'])
+    attempts = m.MessageAttempt.objects.filter(owner_id=account.user_id, pk__in=[row['id'] for row in rows if row['kind'] == 'attempt'])
+    return {
+        **{('order', str(pk)): decrypt(cipher) for pk, cipher in orders.values_list('pk', 'recipient_cipher') if cipher},
+        **{('attempt', str(pk)): phone for pk, phone in attempts.values_list('pk', 'recipient_phone')},
+    }
+
+
+def message_sender_phones(account, rows):
+    received_ids = [row['id'] for row in rows if row.get('direction') == 'received']
+    orders = m.Order.objects.filter(received_order_filter(account), pk__in=received_ids).exclude(owner_id=account.user_id)
+    return {str(pk): decrypt(cipher) for pk, cipher in orders.values_list('pk', 'owner__account__phone_cipher') if cipher}
 
 
 def invitation_records(account, page):
@@ -69,7 +104,16 @@ def activity_payload(account, section, page):
             for key in ('id', 'preview_id', 'order_id'):
                 if row[key]:
                     row[key] = str(uuid.UUID(row[key]))
+            if not row['direction']:
+                del row['direction']
             row['record_id'] = row['id']
+        phones = message_recipient_phones(account, rows)
+        sender_phones = message_sender_phones(account, rows)
+        for row in rows:
+            row['created_at'] = row.pop('activity_at')
+            row['recipient_phone'] = phones.get((row['kind'], row['id']), '')
+            if row.get('direction') == 'received':
+                row['sender_phone'] = sender_phones.get(row['id'], '')
     else:
         total, rows = invitation_records(account, page)
     return {'account': account_summary(account), 'section': section, 'rows': rows,

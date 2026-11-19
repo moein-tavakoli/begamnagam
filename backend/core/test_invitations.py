@@ -9,7 +9,7 @@ from django.db import IntegrityError, connection, transaction
 from django.test import Client, TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 from . import tests as legacy
-from .invitations import CONSENT_VERSION, request_invitation, reward_registration, record_registration, lock_phone
+from .invitations import CONSENT_VERSION, compose, request_invitation, reward_registration, record_registration, lock_phone
 from .invitation_delivery import submit, reconcile
 from .models import Account, Invitation, InvitationSend, RecipientGrant, RecipientState, SafetyControl, SpendBudget, OperatorAudit
 from .privacy import digest, encrypt, mask, decrypt
@@ -154,18 +154,36 @@ class InvitationTests(TestCase):
         self.assertEqual(InvitationSend.objects.get().last_error_code, 'recipient_unavailable')
         self.assertNotIn('لغو', self.client.get('/api/v1/invitations').json()['results'][0]['reason'])
 
+    @override_settings(APP_BASE_URL='https://begamnagam.ir', SMS_LINK_HOST='bgam.ir', SMS_LINK_ROOT_PATH=True)
     def test_link_works_with_explicit_stop_and_report_without_sender_identity(self):
         self.invite()
-        submit(InvitationSend.objects.get().pk)
+        with override_settings(SMS_LINK_ROOT_PATH=False):
+            submit(InvitationSend.objects.get().pk)
         send = InvitationSend.objects.get()
-        token = send.full_sms.rsplit('/r/', 1)[-1]
-        self.assertTrue(token.isalnum() and token.isascii() and len(token)==8)
+        self.assertRegex(send.full_sms, r'\nbgam\.ir/i[A-Za-z0-9]{5}\nلغو: bgam\.ir/c[A-Za-z0-9]{5}$')
+        invitation_code = send.full_sms.splitlines()[-2].rsplit('/', 1)[-1]
+        self.assertEqual(self.post('/recipient/actions/inspect', {'token': invitation_code}).status_code, 404)
+        token = send.full_sms.rsplit('/', 1)[-1]
         result = self.post('/recipient/actions/inspect', {'token':token})
         self.assertEqual(result.json(), {'active':True, 'can_report':True})
-        self.assertEqual(self.post('/recipient/actions/stop', {'token':token}).status_code, 200)
+        self.assertEqual(self.post('/recipient/actions/stop', {'token':token, 'phone':'09901234567'}).status_code, 200)
         self.assertTrue(RecipientState.objects.get(phone_hash=Invitation.objects.get().phone_hash).blocked)
         self.age_sends()
         self.assertEqual(self.resend(Invitation.objects.get()).status_code, 409)
+
+    @override_settings(APP_BASE_URL='https://begamnagam.ir', SMS_LINK_HOST='')
+    def test_queued_legacy_invitation_keeps_its_link_after_short_domain_activation(self):
+        with patch('core.recipient.generate_short_code', return_value='Ab12Cd34'):
+            self.invite()
+        send = InvitationSend.objects.get()
+        send.full_sms = compose('Ab12Cd34')
+        send.save(update_fields=['full_sms'])
+        self.assertTrue(send.full_sms.endswith('begamnagam.ir/r/Ab12Cd34'))
+        with override_settings(SMS_LINK_HOST='bgam.ir', SMS_LINK_ROOT_PATH=True):
+            submit(send.pk)
+        self.assertEqual(InvitationSend.objects.get(pk=send.pk).full_sms, send.full_sms)
+        self.assertEqual(self.post('/recipient/actions/inspect', {'token': 'Ab12Cd34'}).json(),
+                         {'active': True, 'can_report': True})
 
     def test_expiry_retention_and_key_rotation_preserve_unique_claim(self):
         self.invite()
@@ -181,7 +199,10 @@ class InvitationTests(TestCase):
 
     def test_bad_snapshot_rejected_and_queue_expires_without_network(self):
         self.invite()
-        InvitationSend.objects.update(full_sms='unreviewed input')
+        send = InvitationSend.objects.get()
+        lines = send.full_sms.splitlines()
+        lines[-2] = 'other.invalid/r/i56Yc2'
+        InvitationSend.objects.update(full_sms='\n'.join(lines))
         with patch('core.invitation_delivery.Kavenegar.submit') as wire:
             submit(InvitationSend.objects.get().pk)
         wire.assert_not_called()

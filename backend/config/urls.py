@@ -11,7 +11,10 @@ from core import ai_management
 from core import wallet_views
 from core import package_views
 from core import example_views
+from core import kavenegar_settings, sms_template_settings
 from core import manual_payment_views, support_views, provider_balances
+from core import personal_share
+from core import identity_consent, identity_settings
 
 handler404 = "core.views.not_found"
 handler500 = "core.views.server_error"
@@ -27,6 +30,9 @@ urlpatterns = [
     path('api/v1/manage/message-examples/<str:kind>', example_views.save),
     path('api/v1/manage/message-examples/<str:kind>/<int:record_id>', example_views.save),
     path('api/v1/manage/message-examples/<str:kind>/<int:record_id>/delete', example_views.delete),
+    path('api/v1/manage/sms-template', sms_template_settings.configuration),
+    path('api/v1/manage/sms-template/preview', sms_template_settings.preview),
+    path('api/v1/manage/sms-template/kavenegar-key', kavenegar_settings.configuration),
     path("api/v1/manage/provider-balances/<str:provider>", provider_balances.balance),
     path('api/v1/support/summary', support_views.summary),
     path('api/v1/support/messages', support_views.messages),
@@ -61,6 +67,7 @@ urlpatterns = [
     path("api/v1/manage/monitoring", management_monitoring.monitoring),
     path('api/v1/manage/monitoring/access', monitoring_access.access),
     path('api/v1/manage/monitoring/settings', monitoring_access.configuration),
+    path('api/v1/manage/identity-settings', identity_settings.configuration),
     path("api/v1/manage/records/<slug:resource>", management.records),
     path("api/v1/manage/users/<int:account_id>", management.user_summary),
     path("api/v1/manage/users/<int:account_id>/activity", management.user_activity),
@@ -76,8 +83,14 @@ urlpatterns = [
     path("api/v1/auth/request-otp", views.request_otp),
     path("api/v1/auth/verify-otp", views.verify_otp),
     path("api/v1/auth/logout", views.logout_view),
+    path("api/v1/personal-share", personal_share.manage),
+    path("api/v1/personal-share/resolve", personal_share.resolve),
+    path("api/v1/identity-requests", identity_consent.collection),
+    path("api/v1/identity-requests/<uuid:consent_id>", identity_consent.decision),
+    path("api/v1/identity-requests/<uuid:consent_id>/phone", identity_consent.phone),
     path("api/v1/messages/preview", views.preview),
     path("api/v1/messages", views.messages),
+    path("api/v1/messages/<uuid:order_id>", views.hide_message),
     path("api/v1/orders", views.create_order),
     path("api/v1/orders/<uuid:order_id>/pay-demo", views.pay_demo),
     path("api/v1/orders/<uuid:order_id>/confirm-free", views.confirm_free),

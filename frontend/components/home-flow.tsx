@@ -9,6 +9,7 @@ import { HomeTrustMarks } from "./home-trust-marks";
 import { ThemeToggle } from "./theme-toggle";
 import { changeHomeView, useComposeView } from "@/lib/use-compose-view";
 import { HomeLogout } from "./home-logout";
+import { AppVersion } from "./app-version";
 
 export function HomeFlow() {
   const composing = useComposeView();
@@ -80,7 +81,7 @@ export function HomeFlow() {
           </h1>
           <p className="hero-description">
             <span className="hero-text-line" data-home-enter="description-first">تشکر، دلگرمی یا یه یادآوری دوستانه؛</span>
-            <span className="hero-text-line" data-home-enter="description-last">حرفت رو با احترام برسون، بدون نمایش اسمت به گیرنده.</span>
+            <span className="hero-text-line" data-home-enter="description-last">شماره‌ات پنهونه؛ مگر با درخواست گیرنده و تأیید تو در پروفایل.</span>
           </p>
           <button type="button" className="button primary hero-cta" data-home-enter="primary" onClick={() => showComposer(true)}>
             بعدی؛ حرفم رو بگم <Icon name="arrow" size={20} />
@@ -90,9 +91,10 @@ export function HomeFlow() {
         </div>
         <div className="hero-art"><LetterFlight active={!composing} /><HomeTrustMarks /></div>
         <HomeLogout />
+        <AppVersion />
       </section>
       <div className="home-slide compose-slide" hidden={!composing} aria-roledescription="اسلاید" aria-label="نوشتن پیام؛ صفحه دوم">
-        <Composer onExit={() => showComposer(false)} />
+        <Composer active={composing} onExit={() => showComposer(false)} />
       </div>
     </div>
   );

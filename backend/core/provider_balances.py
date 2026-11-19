@@ -1,6 +1,5 @@
 """Staff-only provider credit observations, independent of send and spend paths."""
 import json
-import re
 import socket
 import ssl
 import time
@@ -12,6 +11,8 @@ from django.core.cache import cache
 from django.utils import timezone
 from .management_api import staff_api
 from .privacy import digest
+from .providers.http import ProviderRejected
+from .providers.kavenegar import current_api_key, valid_api_key
 from .services import APIError, limited
 
 TIMEOUT = 4
@@ -75,8 +76,8 @@ def _read_json(request):
         raise BalanceUnavailable() from None
 
 
-def _kavenegar_balance():
-    request=urllib.request.Request('https://api.kavenegar.com/v1/'+settings.KAVENEGAR_API_KEY+'/account/info.json',
+def _kavenegar_balance(key):
+    request=urllib.request.Request('https://api.kavenegar.com/v1/'+key+'/account/info.json',
         headers={'Accept':'application/json','Accept-Encoding':'identity'},method='GET')
     value=_read_json(request)
     result,entry=value.get('return'),value.get('entries')
@@ -96,7 +97,10 @@ def _record(provider,status,*,amount=None,observed_at=None,reason=None):
 
 def observe(provider):
     if provider not in PROVIDERS:raise APIError('not_found','سرویس پیدا نشد.',404)
-    key=settings.KAVENEGAR_API_KEY if provider=='kavenegar' else settings.GAPGPT_API_KEY
+    try:
+        key=current_api_key() if provider=='kavenegar' else settings.GAPGPT_API_KEY
+    except ProviderRejected:
+        return _record(provider,'not_configured',reason='invalid_configuration')
     if not key or not isinstance(key,str):return _record(provider,'not_configured',reason='missing_key')
     if (settings.DEMO_MODE or settings.PROVIDER_NETWORK_MODE!='external' or not settings.LIVE_PROVIDERS_ENABLED):
         return _record(provider,'disabled',reason='network_disabled')
@@ -104,7 +108,7 @@ def observe(provider):
         # The official wallet uses a web login. No API-key balance contract was
         # found; do not probe guessed endpoints or reuse web-session credentials.
         return _record(provider,'unsupported',reason='api_not_documented')
-    if settings.KAVENEGAR_BASE_URL!='https://api.kavenegar.com' or not re.fullmatch(r'[A-Za-z0-9_-]{1,256}',key):
+    if settings.KAVENEGAR_BASE_URL!='https://api.kavenegar.com' or not valid_api_key(key):
         return _record(provider,'not_configured',reason='invalid_configuration')
     if settings.SMS_BACKEND!='kavenegar' and settings.OTP_BACKEND!='kavenegar':
         return _record(provider,'disabled',reason='provider_disabled')
@@ -119,7 +123,7 @@ def observe(provider):
     except Exception:
         return _record(provider,'unavailable',reason='cache_unavailable')
     try:
-        amount=_kavenegar_balance()
+        amount=_kavenegar_balance(key)
         result=_record(provider,'available',amount=amount,observed_at=timezone.now().isoformat())
     except BalanceUnavailable as error:
         result=_record(provider,'stale' if good else 'unavailable',amount=good['amount'] if good else None,

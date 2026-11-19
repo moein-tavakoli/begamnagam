@@ -1,5 +1,6 @@
-// The SMS URL has a plain alphanumeric code. Move it to the existing private
-// recipient screen without doing any lookup, opt-out or report on a GET/HEAD.
+import { isInvitationPathCode, isRecipientPathCode } from "../../../lib/recipient-links.ts";
+
+// GET and HEAD only redirect. The recipient page handles explicit actions.
 export async function GET(_request: Request, context: { params: Promise<{ code: string }> }) {
   const { code } = await context.params;
   const headers = {
@@ -7,8 +8,10 @@ export async function GET(_request: Request, context: { params: Promise<{ code: 
     "Referrer-Policy": "no-referrer",
     "X-Robots-Tag": "noindex, nofollow, noarchive, nosnippet",
   };
-  if (!/^[A-Za-z0-9]{8}$/.test(code)) return new Response(null, { status: 404, headers });
-  return new Response(null, { status: 307, headers: { ...headers, Location: `/r#${code}` } });
+  const invitation = isInvitationPathCode(code);
+  if (!invitation && !isRecipientPathCode(code)) return new Response(null, { status: 404, headers });
+  const location = invitation ? "/" : `/r#${code}`;
+  return new Response(null, { status: 307, headers: { ...headers, Location: location } });
 }
 
 export const HEAD = GET;

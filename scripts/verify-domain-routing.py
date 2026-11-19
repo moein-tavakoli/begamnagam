@@ -12,6 +12,8 @@ import urllib.request
 from html.parser import HTMLParser
 from pathlib import Path
 
+SMS_LINK_ORIGIN = "https://bgam.ir"
+
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
@@ -31,6 +33,27 @@ class Assets(HTMLParser):
             self.urls.add(values["href"])
 
 
+def check_private_link_headers(headers):
+    assert "no-store" in headers.get("Cache-Control", "")
+    assert headers.get("Referrer-Policy") == "no-referrer"
+    assert "noindex" in headers.get("X-Robots-Tag", "")
+
+
+def check_typed_sms_links(request, origin):
+    destinations = {"a56Yc2": "/r#a56Yc2", "r56Yc2": "/r#r56Yc2", "c56Yc2": "/r#c56Yc2", "i56Yc2": "/"}
+    for code, destination in destinations.items():
+        path = "/r/" + code
+        body, headers = request(path, 307)
+        assert not body and headers.get("Location") == destination
+        check_private_link_headers(headers)
+        _, headers = request(path, 301, request_origin=SMS_LINK_ORIGIN, method="HEAD")
+        assert headers.get("Location") == origin + path
+        check_private_link_headers(headers)
+        _, headers = request("/" + code, 307, request_origin=SMS_LINK_ORIGIN, method="HEAD")
+        assert headers.get("Location") == origin + destination
+        check_private_link_headers(headers)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base-url", default="https://begamnagam.ir")
@@ -40,6 +63,7 @@ def main():
     parser.add_argument("--product-session", help="Optional private JSON containing a synthetic diagnostic session")
     parser.add_argument("--expect-live-gifts", action="store_true", help="Expect real SMS/OTP and disabled paid checkout")
     parser.add_argument("--expect-plain-recipient-links", action="store_true", help="Check plain alphanumeric SMS links without using a real recipient code")
+    parser.add_argument("--expect-typed-sms-links", action="store_true", help="Check combined action, reply, cancel and invite redirects at bgam.ir and the main app")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     origin = args.base_url.rstrip("/")
@@ -49,9 +73,12 @@ def main():
     if args.connect_ip:
         address = str(ipaddress.ip_address(args.connect_ip))
         original_resolver = socket.getaddrinfo
+        edge_hosts = {parsed.hostname}
+        if args.expect_typed_sms_links:
+            edge_hosts.add(urllib.parse.urlparse(SMS_LINK_ORIGIN).hostname)
 
         def resolver(host, port, *rest, **kwargs):
-            return original_resolver(address if host == parsed.hostname else host, port, *rest, **kwargs)
+            return original_resolver(address if host in edge_hosts else host, port, *rest, **kwargs)
 
         socket.getaddrinfo = resolver
     context = ssl.create_default_context(cafile=args.ca_file)
@@ -60,15 +87,18 @@ def main():
         urllib.request.HTTPSHandler(context=context), urllib.request.HTTPCookieProcessor(cookies))
     results = {"origin": origin, "connect_ip": args.connect_ip, "tls_verification": True, "routes": [], "checks": {}}
 
-    def request(path, expected=200, data=None, headers=None):
-        req = urllib.request.Request(origin + path, data=data, headers=headers or {})
+    def request(path, expected=200, data=None, headers=None, *, request_origin=origin, method=None):
+        req = urllib.request.Request(request_origin + path, data=data, headers=headers or {}, method=method)
         try:
             response = opener.open(req, timeout=15)
         except urllib.error.HTTPError as exc:
             response = exc
         with response:
             body = response.read()
-            results["routes"].append({"path": path, "method": req.get_method(), "status": response.code, "bytes": len(body)})
+            route = {"path": path, "method": req.get_method(), "status": response.code, "bytes": len(body)}
+            if request_origin != origin:
+                route["origin"] = request_origin
+            results["routes"].append(route)
             assert response.code == expected, (path, response.code, expected)
             assert not response.headers.get("Location", "").startswith("http://"), path
             return body, response.headers
@@ -90,13 +120,12 @@ def main():
         assert not body and link_headers.get("Location") == "/r#Ab12Cd34"
         for path, status in [("/r/too-short", 404), ("/r", 200)]:
             _, private_headers = request(path, status)
-            assert "no-store" in private_headers.get("Cache-Control", "")
-            assert private_headers.get("Referrer-Policy") == "no-referrer"
-            assert "noindex" in private_headers.get("X-Robots-Tag", "")
-        assert "no-store" in link_headers.get("Cache-Control", "")
-        assert link_headers.get("Referrer-Policy") == "no-referrer"
-        assert "noindex" in link_headers.get("X-Robots-Tag", "")
+            check_private_link_headers(private_headers)
+        check_private_link_headers(link_headers)
         results["checks"]["plain_recipient_link_redirect_and_privacy"] = True
+    if args.expect_typed_sms_links:
+        check_typed_sms_links(request, origin)
+        results["checks"]["typed_sms_links_and_privacy"] = True
     for path in ["/history", "/invitations", "/preferences", "/help"]:
         page, page_headers = request(path)
         assert len(page) > 1024 and 'lang="fa"' in page.decode(), path

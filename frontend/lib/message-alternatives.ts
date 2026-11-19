@@ -9,8 +9,8 @@ export function messageAlternatives(details: unknown): MessageAlternative[] {
     typeof v.token === 'string' && v.token.length > 0 && v.token.length <= 4096 &&
     ['polite', 'firm', 'blunt', 'angry'].includes(v.message_tone) && typeof v.expires_at === 'string' && Number.isFinite(Date.parse(v.expires_at)));
 }
-export function alternativeRequest(alternative: MessageAlternative, recipient: string) {
+export function alternativeRequest(alternative: MessageAlternative, destination: { recipient_phone: string } | { share_token: string }) {
   // No browser-owned message body or moderation verdict may replace this token.
   return { source_mode: 'reviewed_alternative', alternative_token: alternative.token,
-    recipient_phone: recipient, message_tone: alternative.message_tone };
+    ...destination, message_tone: alternative.message_tone };
 }

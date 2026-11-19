@@ -1,0 +1,105 @@
+.page {
+  max-width: 900px;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 44px;
+  margin-block-end: 8px;
+  color: var(--muted);
+}
+
+.content {
+  display: grid;
+  gap: 28px;
+}
+
+.links,
+.story,
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  min-inline-size: 0;
+}
+
+.links h2,
+.story h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.links label {
+  margin-block-start: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.links input,
+.links textarea {
+  inline-size: 100%;
+  min-inline-size: 0;
+  font-size: 16px;
+}
+
+.links textarea {
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.story {
+  align-items: center;
+  text-align: center;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--soft);
+}
+
+.qr {
+  display: grid;
+  place-items: center;
+  inline-size: min(100%, 264px);
+  padding: 6px;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.qr canvas {
+  display: block;
+  max-inline-size: 100%;
+  block-size: auto !important;
+}
+
+.empty p,
+.story p {
+  margin: 0;
+}
+
+.disable {
+  padding-block-start: 8px;
+  border-block-start: 1px solid var(--line);
+}
+
+.disable > button {
+  min-block-size: 44px;
+}
+
+@media (min-width: 700px) {
+  .content {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .disable {
+    grid-column: 1 / -1;
+  }
+}

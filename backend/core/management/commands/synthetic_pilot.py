@@ -91,7 +91,7 @@ class Command(BaseCommand):
             token=records[0][3]['full_sms'].rsplit('/r/', 1)[1]
             before=call(public,'/recipient/actions/inspect',{'token':token})
             assert set(before)=={'active','can_report'}
-            report={'token':token,'reason':'unwanted','details':'گزارش مصنوعی پایلوت محلی'}
+            report={'token':token,'phone':records[0][1]['recipient_phone'],'reason':'unwanted','details':'گزارش مصنوعی پایلوت محلی'}
             receipt=call(public,'/recipient/actions/report',report)
             assert call(public,'/recipient/actions/report',report)==receipt
             assert AbuseReport.objects.count()==1

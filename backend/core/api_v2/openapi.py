@@ -28,7 +28,7 @@ def specification():
             if not spec['bot']:
                 parameters.append({'name': 'X-Bot-Key', 'in': 'header', 'required': False,
                                    'schema': {'type': 'string'},
-                                   'description': 'Required only when using a bot-owned session. Server-side adapter secret; ordinary web sessions omit it.'})
+                                   'description': 'Server-side adapter secret required only for bot-owned sessions.'})
             if unsafe:
                 parameters.append({'name': 'X-CSRFToken', 'in': 'header', 'required': True,
                                    'schema': {'type': 'string'}, 'description': 'Current session.csrf_token; refresh after login/logout.'})
@@ -62,11 +62,12 @@ def specification():
                 value['requestBody'] = {'required': True, 'content': {'application/json': {'schema': ref(spec['request'])}}}
             paths[path][method] = value
     return {'openapi': '3.0.3', 'info': {'title': 'BegamNagam integration API', 'version': '2.1.0',
-            'description': 'REST API for the frontend, Telegram and Bale adapters. One verified phone account and isolated cookie jar per messenger user. '
+            'description': 'REST API for the frontend and messenger adapters. One verified phone account and isolated cookie jar per messenger user. '
                            'All mutations require CSRF. No messenger id, contact, admin session or API documentation permission replaces phone verification. '
                            'Trusted bot adapters can persist/resume isolated sessions and encrypted conversation stages. '
                            'Every request using a bot-owned session additionally requires its X-Bot-Key. '
-                           'Integer toman amounts; wallet balances are decimal strings to preserve precision. '
+                           'Send integer JSON values for amounts and counts. Integer fields also accept digit strings containing Persian or Arabic digits. '
+                           'Wallet balances are decimal strings to preserve precision. '
                            'See /api/v2/document/guide for the Persian integration walkthrough. '
                            'The specification version is independent of the project release version.'},
             'servers': [{'url': '/api/v2', 'description': 'Same-origin API'}],

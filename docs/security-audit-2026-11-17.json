@@ -1,0 +1,358 @@
+{
+  "checked_at_utc": "2026-11-17T14:27:22.700758+00:00",
+  "baseline_commit": "9a172aaa4b105a76dd81a78eb94b95e4f305ae99",
+  "local_version": "3.1.3",
+  "deployed_version_observed": "3.1.2",
+  "deployed_new_changes": false,
+  "scope": [
+    "website/PWA message access",
+    "application authorization review",
+    "dependency audits",
+    "read-only loaded production configuration"
+  ],
+  "backend_tests": {
+    "count": 791,
+    "database": "isolated PostgreSQL 17.11",
+    "cache": "isolated Redis 7.4.12",
+    "result": "PASS"
+  },
+  "frontend_tests": {
+    "count": 129,
+    "result": "PASS"
+  },
+  "typecheck": "PASS",
+  "migration_consistency": "PASS",
+  "compose_config": "PASS",
+  "browser": {
+    "runtime": "Next.js 16.4.6 development, real Chromium, isolated synthetic HTTP fixture",
+    "passed": [
+      "two-tab deletion",
+      "resume masks private content during revalidation",
+      "changed server visibility revision clears old content",
+      "failed revalidation clears private state",
+      "delayed history response cannot resurrect content",
+      "375px viewport has no horizontal overflow",
+      "rejected OTP after tab switch restores visible error without waiting for polling"
+    ],
+    "real_sms_or_paid_ai": false,
+    "physical_phone_installation_tested": false
+  },
+  "dependencies": {
+    "python_packages": 29,
+    "python_known_vulnerabilities": 0,
+    "npm_packages": 183,
+    "npm_known_vulnerabilities": 0,
+    "fixed_next_advisory": "GHSA-mfr8-8qww-v76h",
+    "next_before": "16.4.3",
+    "next_after": "16.4.6"
+  },
+  "live_configuration": {
+    "scope": "loaded_process_configuration",
+    "read_only": true,
+    "checks": [
+      {
+        "check": "debug_disabled",
+        "state": "pass",
+        "detail": "Public deployments require DEBUG=false"
+      },
+      {
+        "check": "secure_cookies",
+        "state": "pass",
+        "detail": "Both session and CSRF cookies must require HTTPS"
+      },
+      {
+        "check": "host_only_cookies",
+        "state": "pass",
+        "detail": "Cookie scope must remain limited to the application host"
+      },
+      {
+        "check": "csrf_enabled",
+        "state": "pass",
+        "detail": "All mutations, including capability actions, require CSRF"
+      },
+      {
+        "check": "admin_login_throttle",
+        "state": "pass",
+        "detail": "Admin password attempts need a shared, fail-closed rate limiter"
+      },
+      {
+        "check": "cache_json_serializer",
+        "state": "pass",
+        "detail": "Redis must never deserialize executable pickle values"
+      },
+      {
+        "check": "celery_json_only",
+        "state": "pass",
+        "detail": "Only JSON task messages are accepted"
+      },
+      {
+        "check": "celery_remote_control_disabled",
+        "state": "pass",
+        "detail": "Broker clients must not control worker processes"
+      },
+      {
+        "check": "rabbitmq_credentials",
+        "state": "pass",
+        "detail": "Use a dedicated broker credential"
+      },
+      {
+        "check": "rabbitmq_dedicated_vhost",
+        "state": "pass",
+        "detail": "Use a dedicated vhost and restrict its configure/write/read permissions"
+      },
+      {
+        "check": "redis_credentials",
+        "state": "pass",
+        "detail": "Use dedicated Redis ACL credentials"
+      },
+      {
+        "check": "postgres_least_privilege_role",
+        "state": "pass",
+        "detail": "Runtime role must have no superuser/CREATEDB/CREATEROLE/REPLICATION/BYPASSRLS privileges"
+      },
+      {
+        "check": "postgres_separate_schema_owner",
+        "state": "pass",
+        "detail": "Use a separate migration owner; runtime should not own tables or create schema objects"
+      },
+      {
+        "check": "postgres_transport_tls",
+        "state": "warning",
+        "detail": "TLS is required across untrusted networks; loopback/isolated-host transport is a documented exception"
+      },
+      {
+        "check": "redis_anonymous_ping",
+        "state": "pass",
+        "detail": "Unauthenticated connection was rejected"
+      },
+      {
+        "check": "network_firewall_and_rabbitmq_acls",
+        "state": "unknown",
+        "detail": "Verify listeners, firewall, Redis ACLs and broker permissions on the actual host; config is not runtime evidence"
+      }
+    ],
+    "errors": 0
+  },
+  "live_host": {
+    "scope": "current_host_configuration_read_only",
+    "sshd": {
+      "permitrootlogin": "without-password",
+      "pubkeyauthentication": "yes",
+      "passwordauthentication": "no",
+      "x11forwarding": "no",
+      "allowtcpforwarding": "no"
+    },
+    "containers": [
+      {
+        "service": "backend",
+        "privileged": false,
+        "readonly_rootfs": true,
+        "network": "host",
+        "user": "app",
+        "cap_drop": [
+          "ALL"
+        ],
+        "security_opt": [
+          "no-new-privileges:true"
+        ]
+      },
+      {
+        "service": "beat",
+        "privileged": false,
+        "readonly_rootfs": true,
+        "network": "host",
+        "user": "app",
+        "cap_drop": [
+          "ALL"
+        ],
+        "security_opt": [
+          "no-new-privileges:true"
+        ]
+      },
+      {
+        "service": "worker",
+        "privileged": false,
+        "readonly_rootfs": true,
+        "network": "host",
+        "user": "app",
+        "cap_drop": [
+          "ALL"
+        ],
+        "security_opt": [
+          "no-new-privileges:true"
+        ]
+      },
+      {
+        "service": "frontend6",
+        "privileged": false,
+        "readonly_rootfs": true,
+        "network": "host",
+        "user": "app",
+        "cap_drop": [
+          "ALL"
+        ],
+        "security_opt": [
+          "no-new-privileges:true"
+        ]
+      },
+      {
+        "service": "frontend5",
+        "privileged": false,
+        "readonly_rootfs": true,
+        "network": "host",
+        "user": "app",
+        "cap_drop": [
+          "ALL"
+        ],
+        "security_opt": [
+          "no-new-privileges:true"
+        ]
+      },
+      {
+        "service": "frontend4",
+        "privileged": false,
+        "readonly_rootfs": true,
+        "network": "host",
+        "user": "app",
+        "cap_drop": [
+          "ALL"
+        ],
+        "security_opt": [
+          "no-new-privileges:true"
+        ]
+      },
+      {
+        "service": "frontend3",
+        "privileged": false,
+        "readonly_rootfs": true,
+        "network": "host",
+        "user": "app",
+        "cap_drop": [
+          "ALL"
+        ],
+        "security_opt": [
+          "no-new-privileges:true"
+        ]
+      },
+      {
+        "service": "frontend",
+        "privileged": false,
+        "readonly_rootfs": true,
+        "network": "host",
+        "user": "app",
+        "cap_drop": [
+          "ALL"
+        ],
+        "security_opt": [
+          "no-new-privileges:true"
+        ]
+      },
+      {
+        "service": "frontend2",
+        "privileged": false,
+        "readonly_rootfs": true,
+        "network": "host",
+        "user": "app",
+        "cap_drop": [
+          "ALL"
+        ],
+        "security_opt": [
+          "no-new-privileges:true"
+        ]
+      },
+      {
+        "service": "proxy",
+        "privileged": false,
+        "readonly_rootfs": true,
+        "network": "host",
+        "user": "",
+        "cap_drop": [
+          "ALL"
+        ],
+        "security_opt": [
+          "no-new-privileges:true"
+        ]
+      },
+      {
+        "service": "redis",
+        "privileged": false,
+        "readonly_rootfs": false,
+        "network": "host",
+        "user": "",
+        "cap_drop": null,
+        "security_opt": null
+      },
+      {
+        "service": "postgres",
+        "privileged": false,
+        "readonly_rootfs": false,
+        "network": "host",
+        "user": "",
+        "cap_drop": null,
+        "security_opt": null
+      },
+      {
+        "service": "rabbitmq",
+        "privileged": false,
+        "readonly_rootfs": false,
+        "network": "host",
+        "user": "",
+        "cap_drop": null,
+        "security_opt": null
+      }
+    ]
+  },
+  "live_http": {
+    "result": "PASS",
+    "requests": 22,
+    "read_only": true,
+    "failures": [],
+    "route": "HTTPS domain via internal edge; certificate verification enabled; GET only"
+  },
+  "tracked_file_secret_scan": {
+    "scope": "tracked_current_files_high_specificity_patterns",
+    "files": 766,
+    "findings": [],
+    "limits": "Not an entropy scan or full Git-history secret audit; no matched values printed."
+  },
+  "independent_review": "No remaining blocking findings after OTP-resume fix",
+  "limits": [
+    "No new deployment",
+    "Bot checkpoint implementation unchanged by user request",
+    "No aggressive penetration test or independent Internet port scan",
+    "No full OS/container-image CVE or Git-history secret scan",
+    "No recall of already received/copied content",
+    "Backup restore must reconcile newer deletion tombstones before exposing historical messages",
+    "Admin web MFA not implemented"
+  ],
+  "log_sha256": {
+    "backend-full.log": "219113b32536047e3ccda8ef8954d1c358a86c5393d6e36595241466697bd62d",
+    "frontend-tests-final.log": "3414ab2fa699bec6d0f4034d9454d0e7cf5dead1ef37c03f4a1202cdf64786e6",
+    "frontend-typecheck-final.log": "04022c0629054dafc639898f9e073435c95027dc8a7d28b6c3511dbfa0e9d1be",
+    "pip-audit.json": "30807f51f5e5585f24aef6c913fd27024196fb36489659a8099389cc57fa7991",
+    "npm-audit-after.json": "f7525ed7b42912b655928d999be434ff1dee719ea97149e1106178210c6b7abf",
+    "frontend-build.log": "7fbd673716b6cb5b8b4d2d14b11605e47cc248cff5ba2763094f1eceef52c4de"
+  },
+  "production_build": {
+    "result": "PASS",
+    "version": "3.1.3",
+    "next": "16.4.6",
+    "output": "standalone"
+  },
+  "production_http": {
+    "result": "PASS",
+    "requests": 19,
+    "read_only": true,
+    "failures": []
+  },
+  "production_seo": {
+    "result": "PASS",
+    "requests": 103,
+    "public_pages": 6,
+    "private_pages": 8,
+    "share_crawlers": 7,
+    "ai_crawlers": 6,
+    "indexable": true
+  },
+  "seo_check_adjustment": "Initial check required a server heading on existing fragment-only /r shell; allow that route to have no SSR heading while retaining all private metadata assertions."
+}

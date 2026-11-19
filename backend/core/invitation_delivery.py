@@ -1,4 +1,5 @@
 from datetime import timedelta
+import re
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
@@ -7,7 +8,9 @@ from .invitations import compose, lock_phone
 from .models import Account, Invitation, InvitationSend, Order, RecipientGrant, SafetyControl
 from .privacy import decrypt, digest
 from .providers import Kavenegar, ProviderDisabled, ProviderRejected, ProviderUnknown
+from .recipient_codes import INVITE_CODE_PATTERN, STOP_TOKEN_PATTERN
 from .services import models_busy_query
+from .sms import site_sms_origin, sms_origin
 
 
 def locked(send_id):
@@ -56,8 +59,21 @@ def apply_result(state, send, result):
 
 
 def check_snapshot(send):
-    token = send.full_sms.rsplit('/r/', 1)[-1]
-    return (len(token) == 8 and token.isascii() and token.isalnum() and send.full_sms == compose(token)
+    lines = send.full_sms.split('\n')
+    if len(lines) != 4:
+        return False
+    landing, link = lines[-2:]
+    origin, separator, path = link.removeprefix('لغو: ').partition('/')
+    if not separator or origin not in {sms_origin(), site_sms_origin()}:
+        return False
+    token = path.rsplit('/', 1)[-1]
+    root_path = path == token
+    invite_code = landing.rsplit('/', 1)[-1] if landing != origin else ''
+    if invite_code and not re.fullmatch(INVITE_CODE_PATTERN, invite_code):
+        return False
+    return (re.fullmatch(STOP_TOKEN_PATTERN, token) is not None
+        and (not root_path or origin == settings.SMS_LINK_HOST)
+        and send.full_sms == compose(token, origin=origin, root_path=root_path, invite_code=invite_code)
         and RecipientGrant.objects.filter(invitation_send=send, token_digest=digest('recipient-token:'+token)).exists())
 
 

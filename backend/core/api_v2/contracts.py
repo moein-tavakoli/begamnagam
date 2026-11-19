@@ -6,6 +6,9 @@ from functools import wraps
 from django.http import JsonResponse
 
 from core.input_digits import ascii_digits
+from core.models import BotPlatform
+from core.privacy import MAX_PHONE_INPUT_LENGTH
+from core.recipient_codes import REPLY_TOKEN_PATTERN
 from core.services import APIError, api, error_response, is_product_authenticated, limited
 from core.views import body
 
@@ -42,7 +45,9 @@ UUID = string(format='uuid')
 DATE = string(format='date-time')
 NULL_DATE = {**DATE, 'nullable': True}
 NULL_STRING = string(nullable=True)
-PHONE = string(minLength=11, maxLength=32, description='Iran mobile; Persian/Arabic digits and +98 are accepted.', example='09123456789')
+PHONE = string(minLength=11, maxLength=MAX_PHONE_INPUT_LENGTH,
+               description='Iran mobile as a string. Whitespace, parentheses and hyphens are ignored. Persian/Arabic digits and +98 are accepted.',
+               example='09123456789')
 TONE = string(enum=['polite', 'firm', 'blunt', 'angry'])
 TEXT = string(minLength=1, maxLength=280)
 TOKEN = string(minLength=1, maxLength=4096, description='Opaque capability. Preserve exactly; never put in a URL or log.')
@@ -97,7 +102,10 @@ SCHEMAS = {
                          'delivery_status': string(enum=['accepted', 'unknown']),
                          'debug_code': string(description='Isolated demo tests only; never returned by the real OTP provider.')},
                         ['challenge_id', 'expires_in', 'demo_mode']),
-    'LoginInput': obj({'challenge_id': UUID, 'code': string(pattern='^[0-9]{4}$', description='Keep leading zeroes; Persian/Arabic digits are canonicalized.')},
+    'LoginInput': obj({'challenge_id': UUID, 'code': string(pattern='^[0-9]{4}$', description='Keep leading zeroes; Persian/Arabic digits are canonicalized.'),
+                       'signup_source': string(enum=['', *BotPlatform.values], default='',
+                           description='Optional source for new accounts in ordinary sessions. Empty means direct API signup. '
+                                       'Bot-owned sessions use the authenticated integration platform.')},
                       ['challenge_id', 'code'], closed=True),
     'RecipientValidation': obj({'valid': BOOL, 'phone': string(pattern='^09[0-9]{9}$'), 'phone_masked': string()},
                                ['valid', 'phone', 'phone_masked']),
@@ -106,22 +114,31 @@ SCHEMAS = {
                            ['recipient_phone', 'source_mode', 'category', 'text'], closed=True),
     'FreeformInput': obj({'recipient_phone': PHONE, 'source_mode': string(enum=['freeform']), 'text': TEXT, 'message_tone': TONE},
                          ['recipient_phone', 'source_mode', 'text'], closed=True),
+    'ReplyPreviewInput': obj({'reply_token': string(pattern=f'^{REPLY_TOKEN_PATTERN}$',
+        description='Use the entire six-character code, including a for a combined action link or r for a previous reply link. For five-character links use the whole code. For /r/p links use the eight characters after /r/p. Verify the receiving phone first.'),
+        'source_mode': string(enum=['freeform']), 'text': TEXT, 'message_tone': TONE}, ['reply_token', 'source_mode', 'text'], closed=True),
     'AlternativeInput': obj({'recipient_phone': PHONE, 'source_mode': string(enum=['reviewed_alternative']),
                              'alternative_token': TOKEN, 'message_tone': TONE},
                             ['recipient_phone', 'source_mode', 'alternative_token'], closed=True),
-    'PreviewInput': {'oneOf': [ref('SuggestionInput'), ref('FreeformInput'), ref('AlternativeInput')]},
+    'PreviewInput': {'oneOf': [ref('SuggestionInput'), ref('FreeformInput'), ref('AlternativeInput'), ref('ReplyPreviewInput')]},
     'Preview': obj({'preview_id': UUID, 'payment_method': string(), 'wallet_terms_version': string(),
-                    'rewritten_text': string(), 'price_toman': integer(), 'is_free': BOOL, 'message_tone': TONE,
+                    'rewritten_text': string(), 'price_toman': integer(), 'is_free': BOOL, 'is_reply': BOOL, 'message_tone': TONE,
                     'expires_at': DATE, 'moderation_mode': string(), 'terms_version': string(),
-                    'full_sms': string(), 'sms_segments': integer()},
+                    'full_sms': string(description='For anonymous replies and personal receive links, recipient-only links are shown as labels.'),
+                    'sms_segments': integer(description='Estimated number of SMS parts for the delivered snapshot.')},
                    ['preview_id', 'full_sms', 'terms_version', 'expires_at', 'price_toman', 'is_free']),
-    'MessageInput': obj({'preview_id': UUID, 'recipient_phone': PHONE, 'consent': CONSENT,
+    'OrdinaryMessageInput': obj({'preview_id': UUID, 'recipient_phone': PHONE, 'consent': CONSENT,
                          'terms_version': string(minLength=1, maxLength=40)},
                         ['preview_id', 'recipient_phone', 'consent', 'terms_version'], closed=True),
+    'ReplyMessageInput': obj({'preview_id': UUID, 'consent': CONSENT, 'terms_version': string(minLength=1, maxLength=40)},
+                            ['preview_id', 'consent', 'terms_version'], closed=True),
+    'MessageInput': {'oneOf': [ref('OrdinaryMessageInput'), ref('ReplyMessageInput')]},
     'Message': obj({'id': UUID, 'status': STATUS, 'financial_status': string(), 'payment_method': string(),
                     'uses_purchased_credit': BOOL, 'status_reason': {**obj({'code': string(), 'message': string()}), 'nullable': True}, 'delivery_status': string(),
-                    'amount_toman': integer(), 'payment_mode': string(), 'recipient_phone': string(), 'recipient_masked': string(),
-                    'is_free': BOOL, 'text': string(), 'category': string(), 'paid_at': NULL_DATE,
+                    'amount_toman': integer(), 'payment_mode': string(),
+                    'recipient_phone': string(description='Empty for anonymous replies and messages sent via a personal receive link.'),
+                    'recipient_masked': string(), 'is_shared_destination': BOOL,
+                    'is_free': BOOL, 'is_reply': BOOL, 'text': string(), 'category': string(), 'paid_at': NULL_DATE,
                     'created_at': DATE, 'payment_expires_at': DATE},
                    ['id', 'status', 'delivery_status', 'recipient_masked', 'text', 'amount_toman', 'created_at']),
     'PreferencesInput': obj({'blocked': BOOL}, ['blocked'], closed=True),
@@ -174,7 +191,11 @@ SCHEMAS = {
     'ReadInput': obj({'through_sequence': integer(minimum=0, maximum=2147483647)}, ['through_sequence'], closed=True),
     'OK': obj({'ok': BOOL}, ['ok']),
     'CapabilityInput': obj({'token': TOKEN}, ['token'], closed=True),
+    'CapabilityPreferenceInput': obj({'token': TOKEN, 'phone': {
+        **PHONE, 'description': 'Required with six-character c codes and legacy five-character stop codes.'}},
+        ['token'], closed=True),
     'ReportInput': obj({'token': TOKEN, 'reason': string(enum=['unwanted', 'harassment', 'wrong_number', 'other']),
+                        'phone': {**PHONE, 'description': 'Required with six-character c codes and legacy five-character stop codes.'},
                         'details': string(maxLength=500)}, ['token', 'reason'], closed=True),
     'Capability': obj({'active': BOOL, 'can_report': BOOL}, ['active', 'can_report']),
     'Report': obj({'receipt': UUID, 'blocked': BOOL}, ['receipt', 'blocked']),
@@ -206,7 +227,7 @@ SCHEMAS.update({
         'preview_id': UUID, 'message_id': UUID, 'idempotency_key': UUID, 'challenge_id': UUID,
         'last_message_id': BOT_ID, 'last_notified_status': STATUS}, [], closed=True),
     'BotIdentityInput': obj({'user_id': BOT_ID, 'chat_id': BOT_ID, 'chat_type': string(enum=['private'])}, closed=True),
-    'BotConversation': obj({'id': UUID, 'platform': string(enum=['telegram', 'bale']), 'bot_id': BOT_ID,
+    'BotConversation': obj({'id': UUID, 'platform': string(enum=BotPlatform.values), 'bot_id': BOT_ID,
         'user_id': BOT_ID, 'chat_id': BOT_ID, 'account_id': string(nullable=True), 'step': BOT_STEP,
         'resume_action': string(enum=['authenticate', 'enter_otp', 'continue', 'refresh_preview', 'reconcile_message']),
         'data': ref('BotFlowData'), 'revision': integer(minimum=0), 'state_expires_at': NULL_DATE}),

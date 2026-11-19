@@ -9,6 +9,7 @@ export type Category = {
   example: string;
 };
 export type Bootstrap = {
+  identity_requests_enabled?: boolean;
   message_tones?: MessageToneOption[];
   default_message_tone?: MessageTone;
   wallet_balance_toman?: string;
@@ -33,6 +34,7 @@ export type Bootstrap = {
   recent_auth?: boolean;
   support_contact?: string;
   session_identity?: string;
+  message_visibility_revision?: string;
 };
 export type Preview = {
   message_tone?: MessageTone;
@@ -52,6 +54,8 @@ export type Order = {
   payment_method?: 'legacy' | 'credit' | 'wallet' | 'gateway';
   uses_purchased_credit?: boolean;
   is_free?: boolean;
+  is_reply?: boolean;
+  is_shared_destination?: boolean;
   id: string;
   status: string;
   amount_toman: number;
@@ -90,6 +94,7 @@ export class ApiError extends Error {
 }
 
 const requestUnavailable = "درخواست فعلاً انجام نشد؛ کمی بعد دوباره تلاش کن.";
+const rewriteUnavailable = "آماده‌سازی متن موقتاً در دسترس نیست. کمی بعد دوباره تلاش کن.";
 
 // randomUUID is unavailable on a phone opening a local HTTP LAN address.
 // getRandomValues remains available there and keeps retry keys unpredictable.
@@ -156,10 +161,12 @@ export async function api<T>(
     });
     const data = await response.json().catch(() => null);
     if (!response.ok) {
+      const code = data?.error?.code || "service_error";
+      const safeServiceMessage = code === 'rewrite_unavailable' ? rewriteUnavailable : requestUnavailable;
       throw new ApiError(
-        (response.status >= 500 ? requestUnavailable : data?.error?.message) ||
+        (response.status >= 500 ? safeServiceMessage : data?.error?.message) ||
           "سرویس در دسترس نیست. چند لحظه دیگر دوباره تلاش کنید.",
-        data?.error?.code || "service_error",
+        code,
         response.status >= 500 ? undefined : data?.error?.fields,
         response.status >= 500 ? undefined : data?.error?.details,
       );
@@ -169,6 +176,9 @@ export async function api<T>(
         "پاسخ سرویس معتبر نیست. دوباره تلاش کنید.",
         "invalid_response",
       );
+    if (typeof window !== 'undefined' && method === 'DELETE' && /^\/messages\/[a-f0-9-]+$/.test(path)) {
+      window.dispatchEvent(new CustomEvent('message-visibility-changed'));
+    }
     if (typeof window !== "undefined" && method === "POST" &&
         ["/auth/logout", "/auth/verify-otp", "/manage/login", "/manage/logout"].includes(path)) {
       // Both phone and staff authentication replace the shared Django session.

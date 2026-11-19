@@ -1,8 +1,23 @@
 import re
 from dataclasses import dataclass
+from cryptography.fernet import InvalidToken
 from django.conf import settings
+from ..models import KavenegarSettings
 from ..otp import otp_sms, valid_otp
+from ..sms import current_sms_sender
 from .http import post, ProviderRejected, ProviderUnknown
+
+
+def valid_api_key(key):
+    return isinstance(key, str) and re.fullmatch(r'[A-Za-z0-9_-]{1,256}', key) is not None
+
+
+def current_api_key():
+    try:
+        key = KavenegarSettings.objects.filter(pk=1).values_list('api_key', flat=True).first()
+    except InvalidToken:
+        raise ProviderRejected('missing_sms_key') from None
+    return key or settings.KAVENEGAR_API_KEY
 
 
 @dataclass(frozen=True)
@@ -14,8 +29,8 @@ class SMSResult:
 
 class Kavenegar:
     def _call(self, method, payload, *, otp=False):
-        key = settings.KAVENEGAR_API_KEY
-        if not re.fullmatch(r'[A-Za-z0-9_-]{1,256}', key):
+        key = current_api_key()
+        if not valid_api_key(key):
             raise ProviderRejected('missing_sms_key')
         result = post(settings.KAVENEGAR_BASE_URL, f'/v1/{key}/{method}.json', payload,
                       {'api.kavenegar.com'}, form=True, otp=otp)
@@ -51,7 +66,7 @@ class Kavenegar:
 
     def submit(self, *, phone, text, local_id):
         return self._result(self._call('sms/send', {'receptor': phone, 'message': text,
-            'sender': settings.KAVENEGAR_SENDER, 'localid': local_id, 'hide': 1}))
+            'sender': current_sms_sender(), 'localid': local_id, 'hide': 1}))
 
     def status(self, *, local_id, message_id=''):
         # A missing local ID after the vendor's12h window is NOT permission to resend.
@@ -67,7 +82,7 @@ class Kavenegar:
             text = otp_sms(code)
             return self._result(self._call('sms/send', {'receptor': phone,
                 'message': text,
-                'sender': settings.KAVENEGAR_SENDER, 'hide': 1}, otp=True))
+                'sender': current_sms_sender(), 'hide': 1}, otp=True))
         if settings.KAVENEGAR_OTP_MODE == 'lookup' and settings.KAVENEGAR_OTP_TEMPLATE:
             return self._result(self._call('verify/lookup', {'receptor': phone, 'token': code,
                 'template': settings.KAVENEGAR_OTP_TEMPLATE, 'type': 'sms'}, otp=True))

@@ -93,7 +93,17 @@ do not invent current APIs.
   budgets. Login OTP accepts all valid phone numbers; do not reintroduce a
   recipient allowlist for authentication. This permission applies only to fixed OTP
   text and does not activate order SMS, payment providers or public deployment.
-- Recipients must never see sender identity. Sender-facing errors must not expose
+- Never attach sender account/profile identity to recipient messages. Personal
+  names explicitly supplied in the user's message are allowed and should be
+  preserved when otherwise safe; never infer or append names from account data.
+  The optional website-only identity-request feature defaults to off and is
+  managed in Site Settings by staff with `core.manage_site_limits`. While
+  enabled, only a verified recipient's
+  request plus the phone owner's profile approval may reveal that phone to that
+  requester. Consent is directed, environment-specific and revocable; never
+  expose a stable account-pair identifier or re-enable a retired phone handle.
+  See [the consent contract](docs/identity-consent.fa.md). Bot behavior is unchanged.
+  Sender-facing errors must not expose
   whether a target opted out or has an account. The explicitly requested authenticated
   invitation panel alone reports existing membership and signup after a phone invitation;
   it must not reveal opt-out or another inviter's identity. Preferences apply to the verified

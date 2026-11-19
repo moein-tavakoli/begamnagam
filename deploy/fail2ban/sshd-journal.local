@@ -1,0 +1,4 @@
+# Debian hosts using journald without /var/log/auth.log.
+# Preserve the distribution's SSH filter, retry limits and firewall action.
+[sshd]
+backend = systemd

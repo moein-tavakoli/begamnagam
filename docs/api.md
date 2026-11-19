@@ -7,19 +7,30 @@
 حافظهٔ مکالمه و اتصال حساب ربات در v2 با کلید اختصاصی adapter، OTP و
 cookie/CSRF پیاده شده است؛ نشست ربات روی v1 قابل استفاده نیست.
 
+وب و PWA برای ساخت و انتخاب مقصد از لینک شخصی از `/api/v1/personal-share`
+استفاده می‌کنند. پیش‌نمایش این مسیر `share_token` می‌گیرد و ثبت سفارش، مقصد
+را از پیش‌نمایش سرور می‌خواند. فیلد شمارهٔ کامل در رسید این سفارش‌ها خالی و
+شمارهٔ پوشیده در `recipient_masked` است. [قرارداد لینک شخصی](personal-share.fa.md)
+
 نمایش عددها در رابط فارسی است؛ مقادیر عددی JSON و رشته‌های استاندارد شماره،
 OTP، شناسه، تاریخ و مرجع بانکی برای API/ذخیره‌سازی با قالب مستند و ارقام انگلیسی
 باقی می‌مانند. نمایش قلم snapshot امضاشده را تغییر نمی‌دهد. ورودی انسانی تازه
 در کلاینت و مستقلاً در parser مشترک JSON سرور، پیش از اعتبارسنجی/ثبت به ارقام
-ASCII یکسان‌سازی می‌شود؛ متن تازه نیز شامل این قاعده است. عدد/Boolean/null
-نوع JSON خود را حفظ می‌کنند و رشتهٔ عددی جای عدد JSON پذیرفته نمی‌شود. رمز و
-نام کاربری ورود، توکن، امضا، شناسهٔ غیرشفاف، نسخهٔ قرارداد و authority عیناً
-حفظ می‌شوند؛ snapshot قبلی و پاسخ/callback درگاه بازنویسی نمی‌شوند.
+ASCII یکسان‌سازی می‌شود. این قاعده متن تازه را هم شامل می‌شود. سرور فاصله،
+پرانتز و خط تیرهٔ شمارهٔ موبایل را پیش از اعتبارسنجی حذف می‌کند. برای فیلد
+عددی، مقدار صحیح JSON بفرستید. سرور رشتهٔ صحیح با رقم فارسی یا عربی را هم
+در این فیلدها به عدد تبدیل می‌کند و محدودیت دامنهٔ همان فیلد را بررسی می‌کند.
+رمز، نام کاربری ورود، توکن، امضا، شناسهٔ غیرشفاف، نسخهٔ قرارداد، authority،
+پیش‌نمایش قبلی و پاسخ یا callback درگاه عیناً حفظ می‌شوند.
 [جزئیات و بررسی‌ها](persian-digits.fa.md).
+
+مدیر دارای مجوز تنظیمات سایت می‌تواند پوستهٔ پیامک گیرنده را تغییر دهد.
+وب و API از همان قالب برای پیش‌نمایش تازه استفاده می‌کنند و سفارش متن کامل
+تأییدشده را نگه می‌دارد. [ویرایشگر قالب و قرارداد خصوصی مدیریت](sms-template.fa.md).
 
 ## پیشنهاد جایگزین و سقف اختصاصی حساب — محلی
 
-خطای محتوایی پیش‌نمایش می‌تواند `error.details.alternatives` داشته باشد: فهرست `{id,label,text,token,message_tone,expires_at}`. این متن‌ها پیشنهادهای مستقل و از قالب‌های بررسی‌شده‌اند؛ خطای۵۰۰/۵۰۳جزئیات یا پیشنهاد جایگزین ندارد. علت رد در صورت شاهد پالایش محلی می‌تواند عبارت کوتاه خود نویسنده را ذکر کند؛ مدلِ بدون شاهد، واژهٔ مشکل‌دار حدس نمی‌زند و اطلاعات تماس تکرار نمی‌شوند.
+هنگام رد پیش‌نمایش، `error.message` را به نویسنده نشان دهید. `error.details.alternatives` در رد محتوایی می‌تواند دو گزینهٔ مرتبط از متن‌های بررسی‌شده داشته باشد. هر گزینه شامل `{id,label,text,token,message_tone,expires_at}` است. فهرست برای منظور مبهم یا پشتیبانی‌نشده، تهدید و اطلاعات خصوصی خالی است. خطای فنی ۵۰۰ یا ۵۰۳ جزئیات یا پیشنهاد جایگزین ندارد. روی رسید سفارش، توضیح عمومی `status_reason.message` را در صورت وجود نمایش دهید.
 
 پس از انتخاب صریح، `POST /messages/preview` با `{source_mode:"reviewed_alternative", alternative_token, recipient_phone, message_tone}` یک پیش‌نمایش معمول می‌سازد. `text`، `category` یا نتیجهٔ بررسی کلاینت در این درخواست پذیرفته نمی‌شوند. مجوز رمز/امضاشده پنج‌دقیقه‌ای و وابسته به حساب، نشست، گیرنده، لحن و بدنهٔ دقیق قالب است؛ نامعتبر/منقضی با۴۰۹و `alternative_expired` رد می‌شود. این مسیر AI را صدا نمی‌زند و اصل متن ردشده را ارسال نمی‌کند. ثبت سفارش و تأیید نهایی قرارداد قبلی را دارند.
 
@@ -65,7 +76,21 @@ bootstrap فهرست `message_tones:[{id,label,description}]` از لحن‌ها
 
 ## نشست و CSRF
 
-ابتدا `GET /bootstrap` فراخوانی می‌شود تا cookie `csrftoken` تنظیم شود. درخواست‌های تغییردهنده باید JSON، cookie نشست و هدر `X-CSRFToken` را داشته باشند. پس از ورود، CSRF دوباره از cookie خوانده می‌شود، چون Django توکن را می‌چرخاند. cookie نشست HttpOnly است؛ bearer token در localStorage نگهداری نمی‌شود.
+درخواست شناختن فرستنده و رضایت نمایش فقط شمارهٔ موبایل پیش‌فرض خاموش‌اند.
+`bootstrap.identity_requests_enabled` وضعیت تنظیم مدیر را برمی‌گرداند. سرور با
+خاموش‌کردن تنظیم، مسیرهای درخواست، فهرست، تأیید و مشاهده را می‌بندد.
+[قرارداد رضایت وب](identity-consent.fa.md)
+
+اصلاح محلی۳٫۱٫۳: bootstrap وب برای حساب واردشده فیلد opaque
+`message_visibility_revision` دارد. تغییر این مقدار باید state خصوصیِ قبلی را
+باطل کند؛ مقدار، شماره یا متن نیست و برای احراز هویت استفاده نمی‌شود.
+حذف پیام با `DELETE /api/v1/messages/{id}` فقط دسترسی کاربر را برای همیشه
+می‌بندد. درخواست تکراری ساخت با کلید همان سفارش، خواندن رسید/پیش‌نمایش و
+تأیید یا پرداختِ دوبارهٔ سفارش پنهان‌شده404می‌گیرند؛ حذف تکراری موفق است.
+ارسالِ ازقبل تأییدشده، حسابداری و مشاهدهٔ مجاز مدیر ادامه دارند. پرچم حذف
+در نگهداری داده پاک نمی‌شود. کد checkpoint ربات در این تغییر دست نخورده است.
+
+ابتدا `GET /bootstrap` فراخوانی می‌شود تا cookie `csrftoken` تنظیم شود. درخواست‌های تغییردهنده به cookie نشست و هدر `X-CSRFToken` نیاز دارند. بدنهٔ درخواست، در مسیرهایی که بدنه می‌خواهند، JSON است. پس از ورود، CSRF دوباره از cookie خوانده می‌شود، چون Django توکن را می‌چرخاند. cookie نشست HttpOnly است؛ bearer token در localStorage نگهداری نمی‌شود.
 
 ```js
 await fetch('/api/v1/messages/preview', {
@@ -139,6 +164,14 @@ OTP به نشست درخواست‌کننده متصل، زمان‌دار و م
 
 پیش‌نمایش به نشست سازنده متصل است و پس از تأیید شماره در همان نشست قابل استفاده می‌ماند. متن و مبلغ قابل تغییر از سمت کلاینت نیستند. تغییر موضوع یا متن نیازمند پیش‌نمایش تازه است.
 
+برای پاسخ ناشناس، ابتدا شمارهٔ دریافت‌کننده را تأیید کنید.
+`POST /recipient/actions/reply` با `{token}` نوبت فعال را بررسی می‌کند.
+`POST /messages/preview` با `reply_token`، `text`، `message_tone` و
+`source_mode: "freeform"` پیش‌نمایش می‌سازد. برای رزرو همان پیش‌نمایش در
+`POST /orders` شمارهٔ گیرنده را حذف کنید. سرور مقصد را تعیین می‌کند.
+پاسخ و رسید `is_reply: true` دارند و شماره‌های مقصد و نشانی‌های فعال را
+نمایش نمی‌دهند. جزئیات نسخهٔ دوم در [راهنمای خصوصی API](../backend/core/api_v2/integration/guide.fa.md) آمده است.
+
 ## سفارش و تأیید ارسال
 
 ### سهمیهٔ رایگان۰٫۸٫۹
@@ -175,6 +208,13 @@ OTP به نشست درخواست‌کننده متصل، زمان‌دار و م
 
 `GET /orders/{id}` فقط برای صاحب سفارش است. `GET /messages` سابقه همان فرد را در `{ "results": [...] }` می‌دهد. هر ردیف شامل شناسه، شماره پوشیده، متن بررسی‌شده، وضعیت، مبلغ و زمان ساخت است. این وضعیت‌ها رسید محلی‌اند و در فاز provider واقعی باید از افشای رفتار گیرنده جلوگیری شود.
 
+`DELETE /messages/{id}` همان گزینهٔ «حذف» در «پیام‌های من» است. درخواست بدون بدنه با
+نشست صاحب پیام و `X-CSRFToken` فرستاده می‌شود و `200` با `{"ok":true}` می‌دهد.
+تکرار درخواست برای همان پیام موفق است. شناسهٔ ناموجود یا متعلق به حساب دیگر
+`404` می‌دهد. پس از حذف، پیام از فهرست صاحب حساب کنار می‌رود و
+`GET /orders/{id}` برای آن `404` می‌دهد. سفارش، ارسال، اعتبار و سابقهٔ مجاز
+مدیر مطابق روال خود باقی می‌مانند.
+
 ## ترجیح دریافت
 
 `GET /preferences` و `POST /preferences` نیازمند تأیید شماره و نشست‌اند و فقط ترجیح شمارهٔ خود کاربر را می‌خوانند یا تغییر می‌دهند:
@@ -195,7 +235,8 @@ OTP به نشست درخواست‌کننده متصل، زمان‌دار و م
 recipient-bound quote requires a verified sender and cannot be retargeted at
 checkout. The UI always uses this bound form. Response adds `full_sms` and
 `sms_segments`; `rewritten_text` remains the reviewed body for existing clients.
-The server rejects final messages over three Unicode SMS segments.
+Starting in 0.34.0, the segment estimate is advisory and longer reviewed
+snapshots can be confirmed.
 
 Order responses add `financial_status` and `delivery_status`. `text` now exposes
 the frozen full SMS including the service/footer URL; internal reviewed body is
@@ -214,15 +255,15 @@ UI همیشه quote دارای گیرنده می‌سازد. `terms_version` ه�
 
 وضعیت‌های افزوده: `accepted` یعنی پذیرش ارائه‌دهنده، `delivered` یعنی DLR تحویل، `unknown` یعنی نتیجه نیازمند تطبیق. هیچ‌کدام خوانده‌شدن یا هویت گیرنده را ثابت نمی‌کند. پاسخ سفارش، `financial_status` و `delivery_status` مستقل دارد؛ refund باز `refund_pending` و refund تأییدشده `refunded` است. توقف بعد پرداخت، موفقیت دیرهنگام و مبلغ نامطابق به رسیدگی مستقل می‌روند؛ ارسال دوم از حدس نتیجه مجاز نیست. تاریخچه پس از retention متن پاک‌شده را با placeholder نشان می‌دهد.
 
-لینک پیامک تازه از نسخه۰٫۸٫۱۶ به‌شکل `begamnagam.ir/r/A7k2P9xQ` است؛ کد فقط۸حرف انگلیسی و عدد دارد و `#` در متن پیامک نیست. GET/HEAD مسیر `/r/<code>` بدون lookup یا تغییر ترجیحات، با۳۰۷ به `/r#<code>` می‌روند؛ سپس صفحهٔ موجود، کد را با JSON و CSRF ارسال می‌کند. پاسخ redirect و صفحه `no-store`، `no-referrer` و `noindex` دارند. لینک‌های fragment قبلی معتبر می‌مانند و snapshot قدیمی تغییر نمی‌کند. مسیر تازه به proxy می‌رسد؛ پیش از فعال‌سازی باید ثبت URI این مسیر در همهٔ proxyها، access/error log و analytics بسته یا حذف شود. APP_BASE_URL و HTTPS تغییری نمی‌کنند. ابتدا bootstrap و CSRF دریافت و سپس:
+پیام دارای نوبت پاسخ یک لینک «پاسخ یا لغو» مانند `bgam.ir/a56Yc2` دارد و پیام بدون نوبت پاسخ لینک `bgam.ir/c56Yc2` می‌گیرد. GET/HEAD این مسیرها یا مسیر `/r/<code>` با ۳۰۷ به `/r#<code>` می‌رود. صفحهٔ کد `a` ابتدا دو گزینه را نشان می‌دهد. اقدام گیرنده با درخواست جداگانهٔ JSON و CSRF انجام می‌شود. پیوند دعوت با کد `i` به صفحهٔ اصلی می‌رود. [پیکربندی مسیر کوتاه](operations.md)
 
 | مسیر POST | JSON | خروجی |
 | --- | --- | --- |
 | `/recipient/actions/inspect` | `token` | `active`, `can_report`؛ بدون هویت/متن |
-| `/recipient/actions/stop` | `token` | `blocked:true` |
-| `/recipient/actions/report` | `token`, `reason`, `details` | `receipt` UUID و `blocked:true` |
+| `/recipient/actions/stop` | `token` و برای کد کوتاه لغو `phone` | `blocked:true` |
+| `/recipient/actions/report` | `token`، `reason`، `details` و برای کد کوتاه لغو `phone` | `receipt` UUID و `blocked:true` |
 
-`reason` یکی از `unwanted`, `harassment`, `wrong_number`, `other` و توضیح حداکثر۵۰۰نویسه است. از نسخه۰٫۸٫۱۳ کد تازه۸نویسهٔ تصادفی از حروف انگلیسی بزرگ/کوچک و اعداد است؛ لینک‌های قبلی۴۳نویسه‌ای نیز پذیرفته می‌شوند. کد فقط پس از پذیرش ارسال فعال می‌شود؛ stop۳۶۵روز و report۳۰روز معتبر است. GET هیچ تغییری نمی‌دهد. گزارش تکراری همان پرونده را می‌دهد؛ علت خصوصی/شماره/فرستنده بازگردانده نمی‌شوند. پاسخ همه این مسیرها `no-store` و `no-referrer` است.
+`reason` یکی از `unwanted`، `harassment`، `wrong_number` یا `other` است و توضیح تا ۵۰۰ نویسه دارد. برای کد کوتاه لغو، شمارهٔ دریافت‌کننده در `phone` با هش همان گیرنده تطبیق داده می‌شود. کد پس از پذیرش ارسال فعال می‌شود. لغو ۳۶۵ روز و گزارش ۳۰ روز اعتبار دارد. گزارش تکراری همان رسید را برمی‌گرداند. پاسخ‌ها `no-store` و `no-referrer` هستند.
 
 `POST /account/deletion` با `{}` و OTP تازه، درخواست حذف شماره طی۳۰روز را ثبت و ارسال جدید حساب را متوقف می‌کند؛ رکورد حداقلی مالی و منع دریافت باقی می‌مانند. `GET /operations/status` فقط برای staff فعال با `core.view_operations` مجاز و خروجی آن جمعی است. اقدام‌های مدیریتی حساس از admin با مجوز مستقل، دلیل و audit انجام می‌شوند. bootstrap یک `session_identity` غیرقابل‌استفاده به‌عنوان اعتبارنامه دارد؛ فقط برای تشخیص تعویض حساب و پاک‌کردن حافظه خصوصی تب‌هاست.
 
@@ -232,11 +273,11 @@ UI همیشه quote دارای گیرنده می‌سازد. `terms_version` ه�
 
 تیک `unlimited_demo_sends` فقط از پنل مدیریت با مجوز `manage_test_sending` و ثبت دلیل قابل تنظیم است. فقط سقف‌ها و فاصله‌های ارسال/پیش‌نمایش مربوط به همان حساب را در محیط بستهٔ demo کنار می‌گذارد؛ محدودیت IP، OTP، بودجه، قطع دریافت، تعلیق، ارسال به خود و رزرو باز حفظ می‌شوند. تیک `direct_message_tone` مجوز مستقل `manage_message_tone` دارد. هیچ‌کدام فیلد قابل‌ویرایش API عمومی یا profile نیستند.
 
-## لینک کوتاه لغو۰٫۸٫۱۳
+## کد لینک‌های گیرنده
 
-کدهای تازه دقیقاً۸نویسه از `A–Z`, `a–z`, `0–9` و حساس به بزرگی/کوچکی‌اند؛۴یا۶نویسه پذیرفته نمی‌شود. کد تصادفی است و از شماره یا شناسهٔ ترتیبی ساخته نمی‌شود. هش HMAC کد، unique است؛ برخورد احتمالی در savepoint با کد تازه تکرار می‌شود و شکست مکرر پاسخ۵۰۳ می‌دهد و کل پیش‌نمایش rollback می‌شود. Digest کدهای ارسال‌شده پس از انقضا هم رزرو می‌ماند، ولی اتصال به گیرنده پاک می‌شود تا کد قدیمی به گیرندهٔ تازه اختصاص پیدا نکند.
+کدهای تازه شش نویسه دارند. حرف اول `a` برای «پاسخ یا لغو»، `c` برای لغو و `i` برای دعوت است. پنج نویسهٔ بعد از حروف انگلیسی و ارقام انتخاب می‌شوند، دست‌کم یک رقم دارند و به بزرگی و کوچکی حروف حساس‌اند. کدهای قبلی `r`، کدهای پنج‌نویسه‌ای، لغو هشت‌نویسه‌ای و ۴۳نویسه‌ای و پاسخ هشت‌نویسه‌ای پشتیبانی می‌شوند. کد مشترک در دو فضای HMAC موجود برای پاسخ و لغو نگهداری می‌شود. برخورد با کد تازه در savepoint تکرار می‌شود و برخورد مکرر پاسخ ۵۰۳ می‌دهد.
 
-هر سه مسیر recipient/actions سقف۳۰درخواست در۱۰دقیقه برای نشست و کد، و۱۲۰درخواست در۱۰دقیقه برای IP دارند؛ تغییر نشست یا کد، محدودیت IP را دور نمی‌زند. کوتاه‌شدن کد مجوز مشاهدهٔ شماره، فرستنده یا متن نمی‌دهد؛ GET تغییری ایجاد نمی‌کند و POST نیازمند CSRF است. snapshot و لینک پیام‌های قبلی بازنویسی نمی‌شوند. تعداد بخش پیامک از متن کامل تازه محاسبه می‌شود و الزاماً برای هر موضوع کاهش نمی‌یابد.
+مسیرهای `recipient/actions` سقف ۳۰ درخواست در ۱۰ دقیقه برای نشست و کد و ۱۲۰ درخواست در ۱۰ دقیقه برای IP دارند. برای کدهای کوتاه پنج و شش‌نویسه‌ای، سقف مشترک جداگانهٔ ۳۰ درخواست در ۱۰ دقیقه برای IP اعمال می‌شود. پاسخ با شمارهٔ تأییدشدهٔ گیرنده امکان‌پذیر است. برای `reply_token` کل کد شش‌نویسه‌ای را با حرف آغازین `a` یا `r` بفرستید. برای لغو یا گزارش کد مشترک، همان کد کامل و شمارهٔ دریافت‌کننده را بفرستید.
 
 ## توضیح وضعیت ارسال۰٫۸٫۱۷
 
@@ -280,6 +321,13 @@ bootstrap فقط با AI_MODE=gapgpt، کلید/مدل و سقف مثبت، rewr
 
 حساب تأییدشده و گیرندهٔ معتبر پیش از تماس AI لازم‌اند. ورودی۲۸۰نویسه، پالایش محلی، تولید و بررسی مستقل مدل و کنترل محلی خروجی برقرارند؛ تهدید/دادهٔ تماس/دستور دورزدن و فحش بدون منظور پیش از شبکه رد می‌شوند. خطا یا پاسخ نامعتبر، قالب جایگزین یا retry خودکار ندارد. rewrite_daily_limit با۴۲۹سقف حساب را توضیح می‌دهد؛ خطاهای فنی/اعتبار عمومی‌اند.
 
+متن دلخواه و پاسخ ناشناس می‌توانند همراه متن فارسی ایموجی استاندارد داشته
+باشند. بازبین ایموجی را همراه متن ارزیابی می‌کند. ایموجی تأییدشده دقیقاً به همان
+شکل در `rewritten_text` و `full_sms` می‌آید و در شمارش طول UTF-16 لحاظ می‌شود.
+علامت‌های نگارشی هنگام آماده‌سازی متن حفظ می‌شوند. اگر بازنویسی علامت پایان
+جمله را حذف یا جایگزین کند، بک‌اند آن را پیش از بازبینی مستقل برمی‌گرداند و
+طول متن نهایی را بررسی می‌کند.
+
 اصلاح نسخهٔ۰٫۱۲٫۲، خطای معنایی را از رد محتوایی جدا می‌کند. پاسخ‌ها همچنان در قالب معمول `error.code` و `error.message` هستند و پیش‌نمایش ارسال تولید نمی‌کنند:
 
 | HTTP | کد | معنی |
@@ -302,7 +350,7 @@ bootstrap فقط با AI_MODE=gapgpt، کلید/مدل و سقف مثبت، rewr
 
 `rewrite_mode` and preview `moderation_mode` may be `ollama` for locally generated, independently reviewed freeform text. Both `ollama` and `gapgpt` previews retain encrypted bodies and exact signed snapshots. Legacy `ollama_curated` remains a reviewed-template snapshot type. New AI requests run synchronously, with no background job or provider fallback. Local admission is immediate; `429 ai_busy` means capacity is occupied and the caller may explicitly retry. A model timeout or uncertain review yields `503 rewrite_unavailable`; no draft is queued for later dispatch.
 
-Staff with `core.manage_ai` may GET/POST `/api/v1/manage/ai`; writes require CSRF, `values`, `revision`, and `reason`. Editable values are `provider` (`template`, `ollama`, `gapgpt`), `ollama_model`, `gapgpt_model`, `timeout_seconds` (2–20), `parallel_requests` (1–2), `daily_limit`, and `user_daily_limit`. Endpoints and credentials remain server-owned. Selecting GapGPT requires existing credentials and positive paid-provider limits. `POST /api/v1/manage/ai/test` accepts a transient `text` of up to 280 characters, tests only the saved local model, and returns `allowed`, `message`, and `elapsed_seconds`; it never creates an SMS, preview or order. The payload never returns credentials. See [Ollama operating guide](ai-ollama.fa.md).
+Staff with `core.manage_ai` may GET/POST `/api/v1/manage/ai`. Writes require CSRF, `values`, `revision`, and `reason`. Editable values include `provider` (`template`, `ollama`, `gapgpt`), `ollama_model`, `gapgpt_model`, `timeout_seconds` (2–20), `parallel_requests` (1–2), `daily_limit`, `user_daily_limit`, and `rewrite_prompt`. The optional `rewrite_prompt` is multiline wording guidance up to 600 characters. It supplements the fixed instructions for generation by either AI provider and defaults to an empty string. The independent reviewer keeps its fixed instructions. The operator audit stores a keyed digest of changed guidance. Endpoints and credentials remain server-owned. Selecting GapGPT requires existing credentials and positive paid-provider limits. `POST /api/v1/manage/ai/test` accepts a transient `text` of up to 280 characters, tests only the saved local model, and returns `allowed`, `message`, and `elapsed_seconds`. It creates no SMS, preview or order. See [Ollama operating guide](ai-ollama.fa.md).
 
 ### Message submission trust boundary
 

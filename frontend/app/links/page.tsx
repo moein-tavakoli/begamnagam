@@ -1,4 +1,5 @@
 import { Icon } from "@/components/icons";
+import { AppVersion } from "@/components/app-version";
 import { StructuredData } from "@/components/structured-data";
 import { pageJsonLd, publicMetadata } from "@/lib/seo";
 import styles from "./page.module.css";
@@ -32,6 +33,7 @@ export default function LinksPage() {
       <header className={styles.intro}>
         <span className={styles.mark} aria-hidden="true"><Icon name="chat" size={32} /></span>
         <h1>بگم نگم<span>.</span></h1>
+        <AppVersion />
         <p>حرف‌های کوچیک، حالِ بهتر.</p>
       </header>
       <nav className={styles.links} aria-label="سایت و شبکه‌های اجتماعی بگم نگم">

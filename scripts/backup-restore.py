@@ -102,11 +102,15 @@ def validate_ciphertexts(pg, db):
         raise RuntimeError('Application encryption key required for restore validation')
     crypto = MultiFernet([Fernet(k.encode()) for k in [key, *filter(None, env.get('PHONE_ENCRYPTION_FALLBACK_KEYS','').split(','))]])
     count = 0
-    for table, field in [('core_account','phone_cipher'),('core_otpchallenge','phone_cipher'),('core_order','recipient_cipher'),('core_order','full_sms'),('core_preview','full_sms'),('core_abusereport','details')]:
+    fields = [('core_account','phone_cipher'),('core_otpchallenge','phone_cipher'),('core_order','recipient_cipher'),
+              ('core_order','full_sms'),('core_preview','full_sms'),('core_abusereport','details')]
+    if pg.sql("SELECT to_regclass('public.core_kavenegarsettings') IS NOT NULL;", db) == 't':
+        fields.append(('core_kavenegarsettings', 'api_key'))
+    for table, field in fields:
         for row in pg.rows(f'SELECT {field} AS cipher FROM {table} WHERE {field}<>\'\'', db):
             value = row['cipher']
-            if field in {'full_sms','details'}:
-                if not value.startswith('enc:v1:'): raise RuntimeError('Unencrypted capability snapshot found')
+            if field in {'full_sms', 'details', 'api_key'}:
+                if not value.startswith('enc:v1:'): raise RuntimeError('Unencrypted private field found')
                 value = value[7:]
             crypto.decrypt(value.encode())
             count += 1

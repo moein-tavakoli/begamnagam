@@ -12,9 +12,9 @@ from core.freeform import available as freeform_available
 from core.limits import policy
 from core.message_examples import public_catalog
 from core.message_tones import choices as tone_choices, resolve as resolve_tone
-from core.models import Account, CreditEntry, Invitation, InvitationSend, MessagePackage, Order, Preview, WalletEntry, WalletTopup
+from core.models import Account, CreditEntry, Invitation, InvitationSend, MessagePackage, Preview, WalletEntry, WalletTopup
 from core.otp import OTP_LENGTH
-from core.packages import balance_field, checkout_enabled, credit_environment, package_data, purchase_data
+from core.packages import balance_field, checkout_enabled, credit_environment, credit_required, package_data, purchase_data
 from core.payment_options import options as payment_options
 from core.privacy import decrypt, digest, mask, normalize_phone
 from core.services import APIError, is_product_authenticated
@@ -119,13 +119,24 @@ def otp_challenges(request):
                   request='LoginInput', auth=False, status=201,
                   description='Send challenge_id from the matching OTP response and the code as a four-digit string, '
                               'using the same sessionid that requested that challenge. Valid CSRF alone does not restore a lost session. '
+                              'An adapter using ordinary cookies can send signup_source (telegram, bale or rubika) '
+                              'without a bot key. An empty value records direct API signup. '
+                              'A bot-owned session uses its authenticated platform and rejects a different declared source. '
+                              'The source is recorded only for a newly created account. '
                               'invalid_otp can mean a different session, an expired/consumed challenge, exhausted attempts or an incorrect code. '
                               'On success merge Set-Cookie and replace csrf_token before the next request. Do not automatically replay login. '
                               'Verified product login lasts a fixed 30 days from successful OTP verification, including browser restarts; reads/writes do not renew it. '
                               'Logout revokes it. Sensitive-action recent authentication remains five minutes. '
                               'A messenger contact alone does not authenticate.'))
 def sessions(request):
-    result = delegate(request, legacy.verify_otp)
+    declared = request.api_data.get('signup_source')
+    source = declared or Account.SignupSource.API
+    conversation = getattr(request, 'bot_conversation', None)
+    if conversation:
+        source = conversation.integration.platform
+        if declared and declared != source:
+            raise APIError('signup_source_mismatch', 'مبدأ ثبت‌نام باید با پلتفرم کلید ربات یکی باشد.', 403)
+    result = delegate(request, legacy.verify_otp, signup_source=source)
     return session_data(request) if isinstance(result, dict) else result
 
 
@@ -178,48 +189,59 @@ def recipient_validations(request):
 
 @resource(post=op('createMessagePreview', 'Messages', 'Review and seal an exact recipient-bound SMS preview', 'Preview',
                   request='PreviewInput', status=201,
-                  description='Show full_sms and obtain explicit consent. Freeform uses minimal edits and preserves meaning and colloquial/formal register; '
+                  description='Returns 409 credit_required when no gift, purchased or sponsored sends are available. '
+                              'A 201 response only prepares the preview. Show full_sms and obtain explicit consent. '
+                              'Freeform uses minimal edits and preserves meaning and colloquial/formal register; '
                               'safe suitable text can remain unchanged. Public tones are polite, firm (default), and blunt (plain minimal edits). '
                               'An independent review must approve meaning, register and selected tone; blunt never bypasses safety. '
-                              'Freeform never silently falls back. Changing the phone or text requires a new preview.'))
+                              'Show error.message on rejection. A content 422 may include two reviewed choices in error.details.alternatives. '
+                              'Use the chosen token with source_mode=reviewed_alternative to prepare a fresh preview. '
+                              'Freeform never silently falls back. Changing the phone or text requires a new preview. '
+                              'For an anonymous reply use reply_token instead of recipient_phone and source_mode=freeform. '
+                              'The session must belong to the SMS recipient. An inactive reply turn returns 404 reply_unavailable.'))
 def previews(request):
+    account = Account.objects.get(user=request.user)
+    if not account.unlimited_free_sends and account.free_sends_remaining == 0 and getattr(account, balance_field()) == 0:
+        raise credit_required()
     return delegate(request, legacy.preview)
 
 
 @resource(get=op('getMessagePreview', 'Messages', 'Retrieve your unexpired sealed preview', 'Preview',
-                 description='Reads the stored snapshot without another AI call. Expired previews require a new review and consent.'))
+                 description='Reads the stored snapshot without another AI call. Expired previews require a new review and consent. '
+                             'A preview linked to a message removed by its owner returns 404.'))
 def preview(request, preview_id):
-    item = Preview.objects.filter(owner=request.user, pk=preview_id).first()
+    item = Preview.objects.filter(owner=request.user, pk=preview_id, order__owner_hidden_at__isnull=True).first()
     if not item:
         raise APIError('not_found', 'پیش‌نمایش پیدا نشد.', 404)
     if item.expires_at <= timezone.now():
         raise APIError('preview_expired', 'پیش‌نمایش منقضی شده است؛ دوباره متن را آماده کن.', 409)
-    units = len(item.full_sms.encode('utf-16-le')) // 2
-    return {'preview_id': str(item.pk), 'payment_method': item.payment_method,
-            'wallet_terms_version': item.wallet_policy_version,
-            'rewritten_text': item.generated_body if item.moderation_mode in {'gapgpt', 'ollama'} else item.text,
-            'price_toman': item.price_toman, 'is_free': item.is_free, 'message_tone': item.message_tone,
-            'expires_at': item.expires_at.isoformat(), 'moderation_mode': item.moderation_mode,
-            'terms_version': item.terms_version, 'full_sms': item.full_sms,
-            'sms_segments': 1 if units <= 70 else (units + 66) // 67}
+    return legacy.preview_data(item)
 
 
 @resource(get=op('listMessages', 'Messages', 'List the current account’s message history', 'MessagePage',
-                 query={**PAGE_QUERY, 'status': STATUS}),
+                 query={**PAGE_QUERY, 'status': STATUS}, description='Messages removed by the owner are excluded.'),
           post=op('createMessage', 'Messages', 'Reserve one credit for a reviewed message', 'Message', request='MessageInput', key=True,
-                  description='Does not send yet. Store the returned id, then PUT its submission resource. Retries return the same message and never reserve a second credit.'))
+                  description='Does not send yet. Store the returned id, then PUT its submission resource. '
+                              'Omit recipient_phone for anonymous replies or website previews with a personal receive link. '
+                              'Anonymous replies leave both recipient fields empty. Personal receive links show only recipient_masked. '
+                              'Retries return the same message and never reserve a second credit.'))
 def messages(request):
     if request.method == 'POST':
         return delegate(request, legacy.create_order)
-    rows = Order.objects.filter(owner=request.user)
+    rows = services.visible_orders(request.user)
     status = request.api_query.get('status')
     if status:
         rows = rows.filter(status=status)
     return paginate(request, rows, services.serialize_order, 'messages:' + (status or '*'), serialize_many=services.serialize_orders)
 
 
-@resource(get=op('getMessage', 'Messages', 'Get receipt and delivery status', 'Message'))
+@resource(get=op('getMessage', 'Messages', 'Get receipt and delivery status', 'Message',
+                 description='A message removed by its owner returns 404.'),
+          delete=op('hideMessage', 'Messages', 'Remove a message from your history', 'OK', request='Empty',
+                    description='Only the owner can remove it. Repeating the request succeeds. Delivery, credits and staff history are preserved.'))
 def message(request, message_id):
+    if request.method == 'DELETE':
+        return delegate(request, legacy.hide_message, order_id=message_id)
     return services.serialize_order(services.get_owned_order(request.user, message_id))
 
 
@@ -376,7 +398,7 @@ def capability(request):
     return delegate(request, legacy.recipient_action, action='inspect')
 
 
-@resource(put=op('stopRecipientMessages', 'Recipient controls', 'Stop receiving using a received private link', 'Preferences', request='CapabilityInput', auth=False))
+@resource(put=op('stopRecipientMessages', 'Recipient controls', 'Stop receiving using a received private link', 'Preferences', request='CapabilityPreferenceInput', auth=False))
 def recipient_preferences(request):
     return delegate(request, legacy.recipient_action, method='POST', action='stop')
 

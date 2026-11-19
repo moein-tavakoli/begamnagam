@@ -1,4 +1,4 @@
-"""REST resources for the trusted Telegram and Bale adapters."""
+"""REST resources for trusted messenger adapters."""
 from datetime import timedelta
 
 from django.db.models import Q

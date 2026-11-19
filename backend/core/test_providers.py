@@ -13,7 +13,7 @@ from django.conf import settings
 from django.test import TestCase, override_settings
 from django.utils import timezone
 from .tests import APITestCase
-from .models import PaymentAttempt, FinancialEvent, MessageDelivery, Outbox, Refund, SpendBudget, Order
+from .models import PaymentAttempt, FinancialEvent, MessageDelivery, Outbox, Refund, SpendBudget, Order, SMSTemplateSettings
 from .provider_fixture import LocalProviders
 from .providers import Kavenegar, Zarinpal, ProviderDisabled, ProviderUnknown, ProviderRejected
 from .provider_services import begin_payment, verify_payment, process_refund, request_refund
@@ -21,6 +21,7 @@ from .provider_delivery import submit_delivery, reconcile_delivery
 from .budget import reserve_cost
 from .services import APIError
 from .privacy import digest
+from .sms import DEFAULT_SMS_TEMPLATE
 
 
 class ProviderContracts(TestCase):
@@ -212,13 +213,15 @@ class ProviderContracts(TestCase):
         verified = self.post('/auth/verify-otp', {'challenge_id':response.json()['challenge_id'], 'code':code})
         self.assertEqual(verified.status_code, 200)
 
-    @override_settings(OTP_BACKEND='kavenegar', APP_BASE_URL='https://begamnagam.ir')
+    @override_settings(OTP_BACKEND='kavenegar', APP_BASE_URL='https://begamnagam.ir', SMS_LINK_HOST='bgam.ir')
     def test_public_otp_sms_binds_autofill_to_site_without_changing_verification(self):
+        SMSTemplateSettings.objects.create(template=DEFAULT_SMS_TEMPLATE, sender='30001500')
         response = self.post('/auth/request-otp', {'phone': '09911234567'})
         self.assertEqual(response.status_code, 200)
         self.assertNotIn('debug_code', response.json())
         code = self.fixture.codes['09911234567']
         message = self.fixture.otp_requests[0]['message']
+        self.assertEqual(self.fixture.otp_requests[0]['sender'], '30001500')
         self.assertEqual(message.splitlines()[-1], f'@begamnagam.ir #{code}')
         self.assertEqual(self.fixture.calls.count('send'), 1)
         self.assertLessEqual(len(message), 134)  # Stays within two Unicode SMS parts.
@@ -227,11 +230,13 @@ class ProviderContracts(TestCase):
 
     @override_settings(KAVENEGAR_OTP_MODE='lookup', KAVENEGAR_OTP_TEMPLATE='approved-login')
     def test_lookup_remains_explicit_and_uses_approved_template(self):
+        SMSTemplateSettings.objects.create(template=DEFAULT_SMS_TEMPLATE, sender='30001500')
         result = Kavenegar().otp(phone='09911234567', code='0123')
         self.assertEqual(result.status, 'accepted')
         self.assertEqual(self.fixture.calls.count('lookup'), 1)
         self.assertNotIn('send', self.fixture.calls)
         self.assertEqual(self.fixture.otp_requests[0]['template'], 'approved-login')
+        self.assertNotIn('sender', self.fixture.otp_requests[0])
         self.assertEqual(self.fixture.codes['09911234567'], '0123')
 
     def test_invalid_otp_input_or_configuration_does_not_dispatch(self):

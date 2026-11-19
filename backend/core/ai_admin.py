@@ -32,6 +32,8 @@ class AIConfigurationAdmin(admin.ModelAdmin):
             'description': 'فقط لحن‌های تیک‌خورده زیر کادر متن نمایش داده می‌شوند. پیش‌فرض کمی مودبانه است؛ اگر خاموش باشد اولین لحن فعال انتخاب می‌شود. بدون تیک، حالت مودبانه برقرار است. هیچ لحنی توهین، تهدید یا اطلاعات خصوصی را مجاز نمی‌کند.'}),
         ('Ollama — اجرای محلی', {'fields': ('ollama_model', 'timeout_seconds', 'parallel_requests', 'daily_limit', 'user_daily_limit')}),
         ('GapGPT', {'fields': ('gapgpt_model',), 'description': 'کلید فقط از env سرور خوانده می‌شود؛ فعال‌سازی به سهمیهٔ مثبت GapGPT نیاز دارد.'}),
+        ('پرامپت بازنویسی', {'fields': ('rewrite_prompt',),
+            'description': 'راهنمای اختیاری برای سبک نوشتن. بازبین مستقل از ضوابط ثابت استفاده می‌کند.'}),
         ('ثبت تغییر', {'fields': ('reason', 'source_revision', 'revision', 'updated_at')}),
     )
 

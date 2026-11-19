@@ -216,26 +216,25 @@ from django.contrib.admin.helpers import ActionForm
 from .models import AbuseReport, OperatorAudit, SafetyControl, OperationalAlert, SpendBudget
 from .safety import operator_action
 from .services import APIError
+from .privacy import MAX_PHONE_INPUT_LENGTH, normalize_phone
 
 
 class DemoLimitResetForm(forms.Form):
-    sender_phone = forms.CharField(label="شمارهٔ فرستندهٔ تست", max_length=32,
+    sender_phone = forms.CharField(label="شمارهٔ فرستندهٔ تست", max_length=MAX_PHONE_INPUT_LENGTH,
         help_text="شماره‌ای که قبلاً با آن وارد محصول شده‌ای.",
         widget=forms.TextInput(attrs={"type": "tel", "inputmode": "tel", "dir": "ltr", "autocomplete": "off", "data-normalize-digits": ""}))
-    recipient_phone = forms.CharField(label="شمارهٔ گیرندهٔ تست", max_length=32,
+    recipient_phone = forms.CharField(label="شمارهٔ گیرندهٔ تست", max_length=MAX_PHONE_INPUT_LENGTH,
         widget=forms.TextInput(attrs={"type": "tel", "inputmode": "tel", "dir": "ltr", "autocomplete": "off", "data-normalize-digits": ""}))
     reason = AutomaticReasonField(audit_default="django_admin:admin", label="دلیل تست", min_length=3, max_length=200,
         help_text="فقط دلیل کوتاه بنویس؛ شماره، کد ورود یا اطلاعات خصوصی ننویس.")
 
     def clean_sender_phone(self):
-        from .privacy import normalize_phone
         try:
             return normalize_phone(self.cleaned_data["sender_phone"])
         except ValueError as exc:
             raise forms.ValidationError(str(exc)) from None
 
     def clean_recipient_phone(self):
-        from .privacy import normalize_phone
         try:
             return normalize_phone(self.cleaned_data["recipient_phone"])
         except ValueError as exc:

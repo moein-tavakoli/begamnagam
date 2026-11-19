@@ -1,0 +1,161 @@
+{
+  "version": "2.0.0",
+  "source_commit": "64c1d306ea2eb344f479545c0d0d68a1b5958875",
+  "deployed": true,
+  "verified_at_utc": "2026-11-12T11:02:01.752901+00:00",
+  "backend_image": "sha256:67104a5756dd8e272ffc1df0b2c517cd853ea540dd25b2908515d7791ce79474",
+  "frontend_image": "sha256:6702e64775c197259097f54d13fa74e199f575a134ad1ccc54fc3e2f7e88e234",
+  "asset_bridge_image": "sha256:65c3aea4772c0d992b309477a219e7addbe5007c87e48987de6369ef35c43679",
+  "services": {
+    "backend": "healthy",
+    "worker": "running",
+    "beat": "running",
+    "frontend": "healthy",
+    "frontend2": "healthy",
+    "frontend3": "healthy",
+    "frontend4": "healthy",
+    "frontend5": "healthy",
+    "frontend6": "healthy",
+    "postgres": "healthy",
+    "redis": "healthy",
+    "rabbitmq": "healthy",
+    "proxy": "healthy"
+  },
+  "frontends": {
+    "frontend": {
+      "version": "2.0.0",
+      "assets_verified": 16,
+      "recipient_routes": "PASS"
+    },
+    "frontend2": {
+      "version": "2.0.0",
+      "assets_verified": 16,
+      "recipient_routes": "PASS"
+    },
+    "frontend3": {
+      "version": "2.0.0",
+      "assets_verified": 16,
+      "recipient_routes": "PASS"
+    },
+    "frontend4": {
+      "version": "2.0.0",
+      "assets_verified": 16,
+      "recipient_routes": "PASS"
+    },
+    "frontend5": {
+      "version": "2.0.0",
+      "assets_verified": 16,
+      "recipient_routes": "PASS"
+    },
+    "frontend6": {
+      "version": "2.0.0",
+      "assets_verified": 16,
+      "recipient_routes": "PASS"
+    }
+  },
+  "postgresql_tests": 778,
+  "frontend_tests": 122,
+  "frontend_typecheck": "PASS",
+  "frontend_production_build": "PASS",
+  "frontend_candidate_pages": "PASS",
+  "frontend_feature_bundles": [
+    "direct_message_review",
+    "emoji_template",
+    "kavenegar_key_settings",
+    "recipient_phone_check"
+  ],
+  "live_compose_config": "PASS",
+  "migration": "0052_kavenegar_settings",
+  "migration_rehearsal": "PASS",
+  "previous_product_fields_preserved": true,
+  "encrypted_pre_and_post_backup_restore": "PASS",
+  "data_and_proxy_containers_preserved": true,
+  "application_env_files_reused": false,
+  "sms_template_settings_preserved": true,
+  "kavenegar_table_runtime_permissions": "PASS",
+  "https": {
+    "version": "2.0.0",
+    "https": "PASS",
+    "transport": "domain_https_via_internal_nginx",
+    "tls_certificate_verified": true,
+    "anonymous_entry": "login redirect",
+    "anonymous_private_files": 404,
+    "private_documentation": "PASS",
+    "existing_documentation_credentials": "accepted",
+    "documentation_account_product_access": "denied",
+    "documentation_account_management_access": "denied",
+    "bot_api_without_key": "denied",
+    "reply_api_schema_and_guide": true,
+    "signup_source_schema_and_guide": true,
+    "message_hide_schema_and_guide": true,
+    "typed_reply_and_confirmation_schema": "PASS",
+    "short_reply_and_opt_out_routes": true,
+    "anonymous_reply_request": "denied",
+    "otp_is_real": true,
+    "package_checkout_enabled": false,
+    "reply_review_enabled": true,
+    "reply_review_mode": "gapgpt"
+  },
+  "sms_edge": {
+    "tls_verified_for_both_domains": true,
+    "short_host_prefixed_links": "PASS",
+    "legacy_links": "PASS",
+    "typed_root_paths": {
+      "r": {
+        "status": 307,
+        "location": "https://begamnagam.ir/r#r56Yc2",
+        "private_headers": true,
+        "ready": true
+      },
+      "c": {
+        "status": 307,
+        "location": "https://begamnagam.ir/r#c56Yc2",
+        "private_headers": true,
+        "ready": true
+      },
+      "i": {
+        "status": 307,
+        "location": "https://begamnagam.ir/",
+        "private_headers": true,
+        "ready": true
+      }
+    },
+    "typed_http_root_paths": {
+      "r": {
+        "status": 307,
+        "location": "https://begamnagam.ir/r#r56Yc2",
+        "private_headers": true,
+        "ready": true
+      },
+      "c": {
+        "status": 307,
+        "location": "https://begamnagam.ir/r#c56Yc2",
+        "private_headers": true,
+        "ready": true
+      },
+      "i": {
+        "status": 307,
+        "location": "https://begamnagam.ir/",
+        "private_headers": true,
+        "ready": true
+      }
+    },
+    "root_short_link_ready": true
+  },
+  "features": {
+    "backend_files_verified": 265,
+    "sms_link_host": "bgam.ir",
+    "sms_link_root_path_enabled": true,
+    "typed_recipient_links": "PASS",
+    "typed_invitation_and_opt_out": "PASS",
+    "kavenegar_key_settings": "PASS",
+    "active_template_opt_out": "PASS",
+    "active_template_includes_reply": true,
+    "emoji_template_rendering": "PASS",
+    "anonymous_reply_link_redaction": "PASS"
+  },
+  "verification_sms_sent": 0,
+  "verification_otp_sent": 0,
+  "verification_paid_model_calls": 0,
+  "verification_payments": 0
+}

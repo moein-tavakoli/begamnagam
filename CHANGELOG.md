@@ -9,6 +9,489 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 3.4.0 — 2026-11-17 — Admin switch for identity requests
+
+- Add a default-off «میخوام بدونم» switch to Site Settings for authorized staff.
+  Save and audit the state in the database with revision checks. Migration
+  `0055_identity_request_settings` adds the setting.
+- Use the same state for the SMS menu, profile and server authorization.
+  Disabling pauses requests, approvals and number reads and preserves the
+  owner's ability to revoke consent. Enabling restores only valid consents.
+- Revalidate open identity views on the same-browser notification or their next
+  refresh. Keep guest background checks out of response and report forms.
+- Validation: 828 PostgreSQL/Redis tests, 129 frontend tests, TypeScript,
+  migration consistency, Compose configuration, and the production browser
+  flow at desktop and 375px with the PWA service worker active.
+- Deployed on 2026-11-18 from `a86bdd0`. Confirmed 3.4.0 on all six frontend
+  instances, applied migrations 0053–0055, and verified the disabled setting
+  over public HTTPS and in the mobile recipient menu. [Deployment evidence](docs/deployments/ct115-3.4.0.json)
+  and [management and consent contract](docs/identity-consent.fa.md).
+
+## 3.3.0 — 2026-11-17 — Optional, revocable phone disclosure
+
+- Implement «میخوام بدونم» behind `IDENTITY_REQUESTS_ENABLED=0`. Its recipient
+  menu option, profile controls and disclosure APIs stay closed by default.
+  A verified recipient can explicitly request disclosure from a delivered message;
+  only its sender can approve it in their website profile.
+- Show only the approved phone to that requester in their profile. Scope consent
+  to a directed pair and delivery environment. «ناشناس شدن» closes future reads;
+  retired approvals, deleted accounts and stale browser responses cannot reopen it.
+- Keep outward handles independent of anonymous sender pairs, preserve neutral
+  unapproved requests, and separate consent generations. Add migration
+  `0054_identity_consent`. Preserve hidden-message access rules and bot behavior.
+- Update home, composer, profile, help and privacy explanations. Consent is
+  optional and person-specific; an already-seen or copied number cannot be recalled.
+- Validation: 826 PostgreSQL/Redis regressions plus 17 final consent checks,
+  129 frontend tests, TypeScript,
+  migration and Compose checks, production build, desktop/375px browser approval
+  and revocation flows, late-response protection, hidden controls and PWA cache
+  exclusion. All provider calls in automated testing stay isolated and mocked.
+- Local release only; no push or deployment. [Behavior and API](docs/identity-consent.fa.md).
+
+## 3.2.0 — 2026-11-17 — Personal receive links and story QR
+
+- Add an opt-in link in the profile with copyable Persian text, native sharing
+  where available and a 1080×1920 PNG story. Downloaded QR codes encode the
+  complete link.
+- After phone verification, select the destination on the server and show its
+  masked number in the composer and receipts. The link remains bound to the
+  reviewed preview through order confirmation.
+- Allow owners to disable their link and create a fresh one. Confirmed deliveries
+  keep their existing queue authorization. Add migration `0053_personal_share_link`.
+- Validation includes 125 final PostgreSQL/Redis tests, 129 frontend tests and a
+  local production build. The desktop and 375px browser journeys passed with the
+  service worker active, and a QR reader decoded the downloaded PNG to the exact link.
+- Local release. [Usage, API and rollout notes](docs/personal-share.fa.md)
+
+## 3.1.5 — 2026-11-17 — Allow personal names in message text
+
+- Permit source-supplied first names, surnames and full names in generation and
+  independent review for both AI providers and every tone. Preserve these names
+  without inventing names or attaching sender account/profile identity.
+- Stop treating the literal surname label as contact data. Threats, harassment,
+  impersonation, contact details and sensitive disclosures remain blocked;
+  negative or uncertain independent reviews still fail closed.
+- Regression tests reproduce the former prompt/surname rejections, cover both
+  client request payloads and local guards, and retain approved names through
+  sealed delivery to a mocked SMS provider. All 798 backend tests pass against
+  isolated PostgreSQL/Redis; migration and Persian release-note checks pass.
+  No real model or SMS call was made. This version is local and not deployed.
+
+## 3.1.4 — 2026-11-17 — Production security assessment and image hardening
+
+- Add bounded, TLS-verified web security probes with health guards and regression
+  checks against false-positive redirect/SSRF results. Record exact image,
+  package, runtime binary and scanner database evidence in the
+  [Persian assessment](docs/production-security-assessment-2026-11-17.fa.md).
+- Repair the live SSH Fail2Ban journal backend and update 48 host packages after
+  simulations, preserving SSH configuration and all 13 application containers.
+  Explicitly retain pending runtime/library activation and maintenance findings.
+- Pin reviewed Python, Node and infrastructure bases; patch zlib, remove build
+  installers from application runtimes, and record six scanned amd64 candidate
+  digests. These application/container changes are local, not deployed.
+- Validation: 53 live bounded probes; 791 backend tests on the final image with
+  isolated PostgreSQL/Redis; 129 frontend tests and typecheck; four probe helper
+  tests; production image builds; 19 final frontend HTTP checks; Compose checks;
+  isolated native RabbitMQ startup. Remaining advisory matches and deployment
+  requirements are documented without claiming complete security.
+
+## 3.1.3 — 2026-11-17 — Permanent website message access removal
+
+- Reject hidden-order receipt, retry, submission and historical payment access;
+  recheck visibility before serializing records loaded before deletion. Preserve
+  administrative records, accounting and already-authorized queued delivery.
+- Invalidate retained website/PWA state across tabs and on the account's
+  visibility revision. Mask private views during resume revalidation, discard
+  stale requests and clear them when revalidation fails. Preserve OTP feedback
+  when a user switches away during reauthentication. Bot checkpoint code unchanged.
+- Update Next.js from 16.4.3 to 16.4.6. Review access controls, browser/provider
+  boundaries, dependencies and live security configuration without changing the
+  server or sending SMS. Record backup-recovery requirements and remaining limits
+  in the [security report](docs/security-audit-2026-11-17.fa.md).
+- Validation: 791 isolated PostgreSQL/Redis backend tests, 129 frontend tests,
+  TypeScript, migration consistency, Compose configuration, and browser checks
+  for cross-tab deletion, resumed/offline views, stale responses and 375px width.
+  The standalone build and 19 production HTTP security checks passed. Update the
+  SEO check to recognize the existing fragment-only /r shell; all 103 checks pass
+  with private metadata protections retained. Dependency audits report no known
+  vulnerabilities after the update.
+
+Local release only; no push, promotion or server deployment.
+
+## 3.1.2 — 2026-11-17 — Keep sentence punctuation during rewriting
+
+- Preserve sentence punctuation in freeform and anonymous reply drafts.
+  Restore final question marks, exclamation marks and periods before the
+  independent reviewer checks the exact candidate, including its length.
+- Tested drafts with mixed punctuation and emoji and a model response that
+  dropped the original marks. The reviewed text reached the mocked SMS provider.
+
+Deployed 3.1.2 with the emoji fix from 3.1.1. Verified 787 tests against
+isolated PostgreSQL on the server image, all six frontend replicas, and the
+`bgam.ir/<code>` SMS format. [Deployment evidence](docs/deployments/ct115-3.1.2.json)
+
+## 3.1.1 — 2026-11-17 — Emoji in reviewed messages
+
+- Accept standard Unicode emoji alongside Persian text in freeform messages
+  and anonymous replies. Preserve approved emoji in the SMS confirmed by the
+  sender and count them toward the UTF-16 body limit.
+- Added coverage for compound emoji, the body limit, content checks, and
+  the exact SMS passed to the mocked delivery provider. Local release.
+
+## 3.1.0 — 2026-11-14 — Sender numbers in staff activity
+
+- Show the sender's phone on received-message cards and in their text dialog.
+  Read the number from the sender's account under the existing staff
+  permissions. Display an unavailable label when the number has been removed.
+- Remove the visible record ID from all account activity cards. Keep the IDs
+  used by the text dialog and the existing API contract.
+- Verified PostgreSQL integration tests, the frontend suite and TypeScript.
+  Checked cards and the text dialog in Chromium at 375px and 1440px.
+
+Deployed commit `4c336bb` to the application server. Verified all six frontend
+replicas, 782 PostgreSQL tests on the server image, and the sender phone field
+for 24 received messages in a read-only check. The browser check used the live
+HTTPS frontend with isolated staff fixtures. The operator network could not
+connect to the public address before or after the rollout.
+[Deployment evidence](docs/deployments/ct115-3.1.0.json)
+
+Updated the 3.1.0 server configuration so new SMS links use `bgam.ir/<code>`.
+Verified the combined link on HTTP and HTTPS, opened both options in Chrome
+and checked earlier links. [Deployment evidence](docs/deployments/ct115-3.1.0-sms-root-links.json)
+
+## 3.0.0 — 2026-11-14 — Received messages and a shared SMS action link
+
+- Show received and sent messages in the staff account activity feed with the
+  same cards and separate, audited permission to view the text. Distinguish
+  messages accepted by the SMS provider from confirmed deliveries.
+- Use one labeled SMS link for messages that allow a reply. Its landing page
+  offers «پاسخ» and «لغو دریافت» and opens the existing flow for each choice.
+  Retain stop-only links for messages with no reply turn.
+- Move the 9px product version under the logo and into the bottom of the home
+  card on the welcome screen.
+- SMS parsers must accept the new six-character `a` code and pass it in full
+  as `reply_token`. Previously issued links and sealed message texts remain
+  usable as issued.
+- Verified PostgreSQL and frontend tests, TypeScript, a production build and
+  an isolated Compose smoke test. Checked browser flows and version placement
+  at mobile and desktop widths and short-domain routing in isolated Nginx.
+
+Deployed commit `067e0c1` to the application server. Verified the six frontend
+replicas, 781 PostgreSQL tests on the server image, and the recipient choices
+over HTTPS through the internal Nginx. The new SMS links use `bgam.ir/r/<code>`.
+Previously issued links continue to use their original routes. The operator
+network could not connect to the public address before or after deployment.
+Physical Android testing remains pending. [Deployment evidence](docs/deployments/ct115-3.0.0.json)
+
+## 2.1.0 — 2026-11-13 — Choose a recipient from device contacts
+
+- Open the device contact picker beside the recipient field on supported
+  browsers. Fill a single valid Iranian mobile number or let the sender
+  choose between several. On Safari for iPhone, type or paste the number.
+- Request only phone numbers for one contact. Send the final destination to
+  the existing preview endpoint when the sender asks to prepare the message.
+  Changing the destination requires a fresh preview and confirmation.
+- Verified 126 frontend tests, TypeScript, three staff changelog tests, and a
+  production build. Checked browser flows at 375px and 1440px, service worker
+  registration and offline fallback. The contact picker was stubbed in Chromium
+  and the iPhone fallback was tested in WebKit emulation.
+
+Deployed commit `ac32482` to the application server. Verified all six
+frontend replicas, 778 PostgreSQL tests, the isolated Compose smoke test,
+and the contact picker bundle over HTTPS through the internal Nginx.
+The database schema stayed the same. The operator network could not connect
+to the public address before or after the rollout. The physical Android
+test remains pending. [Deployment evidence](docs/deployments/ct115-2.1.0.json)
+
+## 2.0.0 — 2026-11-12 — Put the link type inside short SMS codes
+
+- Use one lowercase type letter and five random characters in each new SMS
+  link. `r` opens a reply, `c` opens opt-out and `i` opens the home page
+  from an invitation. Each invitation also carries its own opt-out link.
+- Route all three types directly from the short host when the Nginx root
+  redirects and `SMS_LINK_ROOT_PATH` are enabled. Accept previously issued
+  recipient codes and preserve sealed invitation and message texts.
+- SMS parsers must accept six-character reply codes and pass the initial
+  `r` to the API as part of `reply_token`. The receiving number remains
+  required for opt-out and report actions that use a short code.
+- Verified 778 PostgreSQL tests, 122 frontend tests, TypeScript and Next.js
+  routes. Checked HTTPS redirects, legacy paths, privacy headers and ACME
+  routing in an isolated Nginx instance.
+
+Deployed to the application server with six verified frontend replicas. Applied the encrypted Kavenegar settings migration after a backup restore rehearsal. Verified existing private Swagger access and direct reply, cancel and invite links on the short domain over HTTP and HTTPS.
+[Deployment evidence](docs/deployments/ct115-2.0.0.json)
+
+## 1.1.0 — 2026-11-12 — Change the Kavenegar API key in SMS settings (local)
+
+- Let superusers save an encrypted Kavenegar key in the SMS template page and
+  restore the server's key. Show the key source and audit the actor, source
+  and revision of each change.
+- Use the active key for OTP, SMS delivery, status and balance checks. Include
+  the stored key in encrypted backup verification and encryption-key rotation.
+- Verified 776 PostgreSQL tests, 121 frontend tests, TypeScript, migration
+  consistency and browser checks at 375px and 1440px.
+
+## 1.0.0 — 2026-11-11 — Shorter recipient links and direct message review
+
+- Issue five-character codes for new stop and reply links. The dedicated SMS
+  host can redirect a root path directly into the private recipient page.
+  Keep existing eight-character and legacy stop links usable.
+- API clients that extracted only eight characters after `/r/p` must accept
+  the new reply code format. Stop and report requests using a five-character
+  code also take the receiving mobile number. The recipient needs no account
+  or OTP to stop receiving.
+- Show the recorded recipient in staff user history and load message texts
+  on the initial click, with the existing permissions and audit. Add emoji
+  insertion and preserve combined emoji in SMS templates.
+- Verified 770 PostgreSQL tests, 121 frontend tests, TypeScript, migration
+  consistency, isolated HTTPS redirects and desktop/mobile browser flows.
+
+Deployed to the application server with six verified frontend replicas. Applied
+the SMS template migration after an encrypted backup restore rehearsal and
+verified the existing private Swagger access. Fresh five-character links use
+`bgam.ir/r/`. Root-path links await updated routing on the central Nginx.
+[Deployment evidence](docs/deployments/ct115-1.0.0.json)
+
+## 0.42.0 — 2026-11-11 — Free SMS template layout (local)
+
+- Place or repeat the reviewed message and recipient links anywhere in the SMS
+  template. Add optional reply and main site address variables and allow
+  multiline custom values. Keep a working opt-out link if the slot is omitted.
+- Preserve the rendering of existing templates and the content of sealed
+  messages. Keep recipient link tokens out of anonymous reply previews and history.
+- Verified 762 PostgreSQL tests, 120 frontend tests, TypeScript checks,
+  migration consistency and the template editor at 375px and 1440px.
+
+## 0.41.0 — 2026-11-11 — Archive old unknown sends from management
+
+- Add an archive action in the send queue for operations staff. Show the queue
+  creation time and an Archived filter to locate retained records.
+- Reuse the 48-hour eligibility rule and record the acting staff member.
+  Archiving removes the item from active queue age and retains delivery history.
+- Verified 757 PostgreSQL tests, 120 frontend tests, TypeScript checks and
+  isolated browser confirmation, cancellation and conflict handling at 375px and 1440px.
+
+Deployed to the application server with six verified frontend replicas. Applied the sender and personal history migrations after backup restore rehearsal. Private Swagger remained available with the existing access. The short SMS hostname is pending valid HTTPS at the edge.
+[Deployment evidence](docs/deployments/ct115-0.41.0.json)
+
+## 0.40.0 — 2026-11-11 — Short domain for SMS links (local)
+
+- Use `SMS_LINK_HOST=bgam.ir` for links in new recipient and invitation SMS.
+  Preserve approved snapshots and the main site's OTP autofill origin.
+- Add an Nginx configuration that sends HTTP and HTTPS links to the main
+  domain with the original path and query string.
+- Verified 756 PostgreSQL tests, Compose environment wiring and isolated
+  Nginx TLS, redirect and ACME checks. The current edge presents the main
+  domain's certificate for the short hostname, so HTTPS needs the short
+  domain's virtual host before activation.
+
+## 0.39.0 — 2026-11-11 — Remove messages from personal history (local)
+
+- Add a Delete button to each entry in My Messages. After confirmation, the
+  entry disappears from the owner's site and API history across sessions.
+- Preserve the server record, staff access, delivery and credits. Add the
+  owner-only DELETE operation to the private Swagger contract.
+- Verified with 756 PostgreSQL tests, 120 frontend tests, TypeScript checks
+  and isolated browser checks at 375px and 1440px.
+
+## 0.38.0 — 2026-11-11 — Change the SMS sender in management (local)
+
+- Allow staff to choose an authorized Kavenegar line in SMS settings. Clearing
+  the field restores the server default.
+- Read the active line at submission for recipient messages, replies, invitations
+  and direct OTP SMS. Queued sends retain their approved text.
+- Verified with 754 PostgreSQL tests, 120 frontend tests, TypeScript checks and
+  isolated browser checks at 375px and 1440px. Provider responses were simulated.
+
+## 0.37.4 — 2026-11-10 — Combine the monitoring activity rows
+
+- Show all seven messenger and account activity cards in one row. The row scrolls horizontally on narrow screens.
+- Verified card alignment, values and keyboard scrolling from 320px to 1440px.
+
+Deployed to all six frontend replicas, including the ordinary composer change
+from 0.37.3. Browser checks on the production build verified the seven-card
+row at desktop and mobile widths and ordinary previews using the default
+tone. The server passed health, backup restore and private Swagger checks.
+[Deployment evidence](docs/deployments/ct115-0.37.4.json)
+
+## 0.37.3 — 2026-11-10 — Use the default tone for ordinary messages (local)
+
+- Hide the tone picker for ordinary messages and prepare drafts with the configured default tone.
+- Verified the draft and preview at 375px and 1440px, including single- and multi-tone anonymous replies.
+
+## 0.37.2 — 2026-11-10 — Optional bot key for ordinary OTP verification
+
+- Allow ordinary API sessions to record the declared messenger signup source
+  at OTP verification without an adapter key. Update the private Swagger
+  contract and n8n guide.
+- Verified all three sources, original-session and CSRF checks, and platform
+  matching for managed conversations.
+
+Deployed to all six frontend replicas. The encrypted backup restore and the
+existing database schema were verified. Isolated Compose checks completed OTP
+verification with and without a messenger token in the header. The live API
+reached OTP validation in both cases using a nonexistent challenge. Private
+Swagger accepted the existing documentation account. [Deployment evidence](docs/deployments/ct115-0.37.2.json)
+
+## 0.37.1 — 2026-11-10 — Clear messenger registration counts (local)
+
+- Place the Telegram, Bale, and Rubika registration cards in one row above
+  the summary, with separately labeled daily and total counts.
+- Verified the card layout and values at 320px, 375px, and 1440px.
+
+## 0.37.0 — 2026-11-10 — Anonymous replies and messenger registration cards
+
+- Show the tone picker for anonymous replies when several tones are active.
+  A single active tone is applied automatically. The reply form opens as a
+  free-text editor and starts review when the user selects Next.
+- Accept `rubika` alongside `telegram` and `bale` as a signup source. An
+  empty or omitted field follows the regular login flow. A declared platform
+  requires its matching adapter key.
+- Show today's and lifetime registrations separately for each messenger in
+  monitoring, and include Rubika in the bot totals.
+
+Validation passed 750 PostgreSQL tests, 120 frontend tests and TypeScript.
+Browser checks at 375px and 1440px covered reply preview and retry, sending,
+history, preferences and all three registration cards.
+
+Deployed to all six frontend replicas. Migration `0048` preserved existing
+fields on the restored backup and applied on the server. The production
+monitoring endpoint returned the three messenger counts under the existing access rules.
+The deployed reply and monitoring bundles were verified on each replica.
+The isolated Compose smoke test used the same release artifacts. Private
+Swagger access and the signup source contract were verified over the internal HTTPS route.
+[Deployment evidence](docs/deployments/ct115-0.37.0.json)
+
+## 0.36.0 — 2026-11-10 — Trusted bot signup source (local)
+
+- Let Telegram and Bale workflows using ordinary API cookies declare
+  `signup_source` when verifying OTP. Require the matching platform's
+  `X-Bot-Key` and record the source only on first account creation.
+- Document the optional field and credential in private Swagger and the n8n
+  guide. Existing OTP, session and managed bot flows remain compatible.
+
+Passed 749 PostgreSQL tests, including both platforms, invalid credentials,
+CSRF, challenge ownership and preserving the source on subsequent logins.
+The 120 frontend tests and TypeScript check also passed.
+
+## 0.35.0 — 2026-11-10 — Monitoring signup and activity counts
+
+- Show four cards below the main monitoring metrics for today's bot and
+  direct API signups, known bot signups by platform, accounts without a
+  successful send, and users who sent three gifts without a credited package
+  purchase. Display the counts behind both percentages.
+- Record the signup channel on first verified account creation. Existing
+  accounts with no recorded channel are shown as unknown.
+
+Validation covered PostgreSQL, frontend tests and TypeScript, the signup
+source migration, and browser checks at 375px and 1440px.
+
+Deployed to all six frontend replicas. Migration `0047` preserved existing
+fields on the restored backup and applied on the server. The production
+monitoring endpoint returned the new counts under the existing access rules.
+The isolated Compose smoke test used the same release artifacts; private
+Swagger access was verified over the internal HTTPS route.
+[Deployment evidence](docs/deployments/ct115-0.35.0.json)
+
+## 0.34.0 — 2026-11-09 — Anonymous SMS replies and length warnings
+
+### Added
+
+- Put short reply and opt-out links in new recipient messages. The verified
+  recipient can use the normal tone, AI review, consent and credit flow. An
+  exchange closes after three replies to the initial message.
+- Resolve reply destinations on the server and omit the counterpart’s phone
+  and active recipient links from sender-facing reply previews and receipts.
+  Extend the private API guide and schemas for reply previews and submission.
+
+### Changed
+
+- Allow longer SMS templates and reviewed messages. Display estimated parts
+  and a length warning in the template editor and composer. Provider cost
+  controls still apply.
+
+Validation covered 743 PostgreSQL tests, 119 frontend tests, TypeScript, Django
+migration checks, Compose configuration, and isolated browser flows at 375px
+and 1440px. Provider transport was mocked.
+
+Deployed to all six frontend replicas. Migration `0046` preserved existing
+data on the restored backup and passed on the server. The isolated Compose
+smoke test used images built from the same release artifacts. The internal
+HTTPS check verified the short reply and opt-out routes and private API
+documentation. [Deployment evidence](docs/deployments/ct115-0.34.0.json)
+
+## 0.33.0 — 2026-11-09 — Clear rejection reasons and editable AI guidance
+
+### Added
+
+- Add optional wording guidance to AI settings for authorized staff. The
+  generation stage for GapGPT and Ollama reads the saved guidance. Independent
+  review applies the fixed safety, intent and tone checks.
+
+### Fixed
+
+- Explain rejection causes in Persian during preparation and on failed receipts.
+  Let the sender return to editing after a failed final review.
+- Offer two reviewed texts for a recognized safe request. Match the whole
+  request to preserve its direction and intent. Selecting a choice prepares an
+  exact preview for explicit confirmation.
+- Describe error handling and reviewed choices in the API and bot guides.
+
+Validation covered 736 PostgreSQL tests, 119 frontend tests, TypeScript,
+migration consistency and isolated browser checks at 375px and 1440px.
+
+This release ran on all six frontend replicas. The deployed images
+passed the isolated Compose smoke test. Migrations `0044` and `0045` passed on
+the restored backup before rollout. HTTPS and the existing private Swagger
+login were verified via the internal edge. The external probe was unavailable.
+[Deployment evidence](docs/deployments/ct115-0.33.0.json).
+
+## 0.32.0 — 2026-11-09 — Recipient SMS template editor (local)
+
+### Added
+
+- Add a management page for a recipient SMS template with fixed custom variables,
+  a sample preview, segment count and reset to the default template.
+- Require the reviewed message and the recipient opt-out footer. Validate the
+  rendering budget and record revisioned settings updates in the operator audit.
+
+### Changed
+
+- Use the current template for new web and API previews. The worker sends the
+  exact stored snapshot, including when the template changes after a preview.
+
+Validation passed for 730 PostgreSQL tests, 117 frontend tests, TypeScript,
+migration consistency, and desktop and mobile checks of the editor and preview.
+
+## 0.31.1 — 2026-11-09 — Cyberpunk monitoring display (local)
+
+### Changed
+
+- Give monitoring its own dark MUI theme with a layered grid, neon metric accents,
+  a chart palette for dark surfaces, and a status pulse that respects reduced motion.
+- Style the monitoring access screen and update-period menu with the same palette.
+
+Validation passed for 116 frontend tests and TypeScript. Browser checks covered
+full-screen layouts at 1466×827 and 1920×1080, reflow from 375px, menu and refresh
+controls, reduced motion, and theme isolation on the users page.
+
+## 0.31.0 — 2026-11-09 — Localized API input, credit errors and blacklist count (local)
+
+### Added
+
+- Count currently blocked recipients in the monitoring dashboard.
+
+### Fixed
+
+- Remove phone spacing before validating the canonical number and accept localized
+  digit strings in integer API fields. Preserve leading zeroes in phone and OTP strings.
+- Return `409 credit_required` before creating a v2 preview when gift and package
+  credits are exhausted and unlimited sending is off. Check credit again during
+  reservation and document how n8n should handle errors and delivery statuses.
+
+Validation passed for 724 PostgreSQL tests, 116 frontend tests, TypeScript,
+migration consistency, and the monitoring card at 1466px and 375px.
+
 ## 0.30.1 — 2026-11-08 — Align release smoke with owner phone display
 
 ### Fixed

@@ -6,6 +6,7 @@ from django.test import Client, TestCase, override_settings
 from . import tests as legacy
 from .models import AIConfiguration, Order, Outbox
 from .moderation import CATEGORIES, DIRECT_TEMPLATES, ANGRY_TEMPLATES, TEMPLATES, moderate, is_reviewed_template
+from .sms import sms_segments
 from .tasks import deliver_message
 
 
@@ -33,8 +34,6 @@ class MessageTopicTests(TestCase):
             for text in TEMPLATES[item['id']] + DIRECT_TEMPLATES[item['id']] + ANGRY_TEMPLATES[item['id']]:
                 moderate(text)
                 self.assertTrue(is_reviewed_template(item['id'],text))
-                snapshot = text + '\nبگم نگم | لغو: begamnagam.ir/r/Ab12Cd34'
-                self.assertLessEqual(len(snapshot.encode('utf-16-le'))//2, 201)
             for tone, pool in [('polite', TEMPLATES), ('firm', DIRECT_TEMPLATES), ('angry', ANGRY_TEMPLATES)]:
                 # A local synthetic contract covers each topic without weakening
                 # the real per-user or per-session request limits.
@@ -46,8 +45,8 @@ class MessageTopicTests(TestCase):
                 self.assertEqual(data['message_tone'], tone)
                 self.assertIn(data['rewritten_text'],pool[item['id']])
                 self.assertTrue(data['full_sms'].startswith('نمیدونم بهت بگم یا نگم؟\n' + data['rewritten_text'] + '\n'))
-                self.assertLessEqual(len(data['full_sms'].encode('utf-16-le'))//2, 201)
-                self.assertRegex(data['full_sms'].split('لغو: ')[1],r'^begamnagam\.ir/r/[A-Za-z0-9]{8}$')
+                self.assertEqual(data['sms_segments'], sms_segments(data['full_sms']))
+                self.assertRegex(data['full_sms'], r'\nپاسخ یا لغو: begamnagam\.ir/r/a[A-Za-z0-9]{5}$')
 
     def test_new_topic_keeps_moderation_before_and_after_preview(self):
         rejected=self.post('/messages/preview',{'category':'parking','text':'احمق'})

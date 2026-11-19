@@ -34,8 +34,31 @@ class LocalClientTests(TestCase):
         self.patcher = patch('core.ollama_rewrite.urllib.request.build_opener', return_value=self.opener)
         self.patcher.start(); self.addCleanup(self.patcher.stop)
 
+    def test_source_names_are_allowed_by_both_model_instructions_in_every_tone(self):
+        source = 'سارا احمدی، از کمکت ممنونم!'
+        for tone in [None, 'polite', 'firm', 'blunt', 'angry']:
+            with self.subTest(tone=tone):
+                self.opener.open.reset_mock()
+                checks = (*REVIEW_KEYS, 'tone_matched') if tone in {'firm', 'blunt', 'angry'} else REVIEW_KEYS
+                self.opener.open.side_effect = [response({'allowed': True, 'message': source}),
+                                               response({key: True for key in checks})]
+                self.assertEqual(rewrite_message(source, max_units=140, config=self.config, message_tone=tone), source)
+                generation, review = [json.loads(call.args[0].data) for call in self.opener.open.call_args_list]
+                self.assertEqual(json.loads(generation['messages'][1]['content'])['text'], source)
+                self.assertEqual(json.loads(review['messages'][1]['content']), {'source': source, 'candidate': source})
+                for payload in [generation, review]:
+                    prompt = payload['messages'][0]['content']
+                    self.assertIn('Personal names supplied in the source are allowed', prompt)
+                    self.assertIn('A name alone must not fail no_private_data', prompt)
+                    self.assertNotIn('No names,', prompt)
+                    self.assertNotIn('Names, identifying details', prompt)
+
     def test_separate_review_is_local_structured_bounded_and_stateless(self):
-        self.assertEqual(rewrite_message(SOURCE, max_units=140, config=self.config), BODY)
+        source = 'میشه وسایل رو سر جاش بذاری? 🙏🏽'
+        body = 'میشه وسایل رو سر جاش بذاری? 🙏🏽'
+        self.opener.open.side_effect = [response({'allowed': True, 'message': 'میشه وسایل رو سر جاش بذاری 🙏🏽'}),
+                                       response({key: True for key in REVIEW_KEYS})]
+        self.assertEqual(rewrite_message(source, max_units=140, config=self.config), body)
         self.assertEqual(self.opener.open.call_count, 2)
         for call in self.opener.open.call_args_list:
             request = call.args[0]; data = json.loads(request.data)
@@ -48,11 +71,23 @@ class LocalClientTests(TestCase):
         self.assertEqual(json.loads(self.opener.open.call_args_list[1].args[0].data)['format']['required'], list(REVIEW_KEYS))
 
     def test_negative_or_uncertain_review_never_returns_candidate(self):
-        for key in REVIEW_KEYS:
+        reasons = {'safe': 'review_unsafe', 'intent_preserved': 'review_intent',
+            'no_added_claims': 'review_added_claims', 'no_private_data': 'review_private',
+            'only_message': 'review_format', 'register_preserved': 'review_register', 'tone_matched': 'review_tone'}
+        keys = (*REVIEW_KEYS, 'tone_matched')
+        for key in keys:
             self.opener.open.side_effect = [response({'allowed': True, 'message': BODY}),
-                                           response({name: name != key for name in REVIEW_KEYS})]
-            with self.assertRaises(GapGPTRejected):
-                rewrite_message(SOURCE, max_units=140, config=self.config)
+                                           response({name: name != key for name in keys})]
+            with self.subTest(key=key), self.assertRaises(GapGPTRejected) as error:
+                rewrite_message(SOURCE, max_units=140, config=self.config, message_tone='firm')
+            self.assertEqual(error.exception.reason, reasons[key])
+
+    def test_unsafe_model_wording_does_not_report_an_unsafe_source(self):
+        self.opener.open.side_effect = [response({'allowed': True, 'message': 'تو را می کشم'})]
+        with self.assertRaises(GapGPTRejected) as error:
+            rewrite_message(SOURCE, max_units=140, config=self.config)
+        self.assertEqual(error.exception.reason, 'candidate_rejected')
+        self.assertEqual(self.opener.open.call_count, 1)
 
     def test_refusal_or_bad_output_does_not_proceed_to_review(self):
         for value in [{'allowed': False, 'message': ''}, {'allowed': True, 'message': 'احمق، کنار برو'},
@@ -169,6 +204,21 @@ class AIManagementTests(TestCase):
         with patch('core.ollama_rewrite.rewrite_message') as model:
             response = self.post('/test', {'text': 'احمق نفهم'})
             self.assertFalse(response.json()['allowed']); model.assert_not_called()
+
+    def test_prompt_edit_is_versioned_and_kept_out_of_general_audit_payload(self):
+        self.client.force_login(self.admin)
+        prompt = 'واژه‌های روزمره را حفظ کن و اگر لازم بود فقط یک واژه را تغییر بده.'
+        change = {'values': {'rewrite_prompt': prompt}, 'revision': 0, 'reason': 'ویرایش سبک بازنویسی'}
+        response = self.post('', change)
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json()['values']['rewrite_prompt'], prompt)
+        self.assertEqual(self.client.get('/api/v1/manage/ai').json()['values']['rewrite_prompt'], prompt)
+        self.assertNotIn(prompt, str(OperatorAudit.objects.get().after))
+        self.assertEqual(self.post('', change).status_code, 409)
+        change.update(revision=1, values={'rewrite_prompt': 'ا' * 601})
+        self.assertEqual(self.post('', change).status_code, 422)
+        change['values']['rewrite_prompt'] = '\u202eعبارت'
+        self.assertEqual(self.post('', change).status_code, 422)
 
 
 class AdmissionConcurrencyTests(TransactionTestCase):

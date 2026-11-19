@@ -9,7 +9,7 @@ import "./theme.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import { AppProvider } from "@/components/app-provider";
-import { Header, Footer, MobileNav, AppVersion } from "@/components/chrome";
+import { Header, Footer, MobileNav, SkipToContent } from "@/components/chrome";
 
 import { SupportWidget } from "@/components/support-widget";
 import { PWAFoundation } from "@/components/pwa-foundation";
@@ -34,17 +34,14 @@ export default async function RootLayout({
         <script id="theme-init" nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body>
-        <a className="skip-link" href="#main-content">
-          رفتن به محتوای اصلی
-        </a>
+        <SkipToContent />
         <ThemeProvider>
           <AppProvider>
             <PWAFoundation />
             <Header />
-            <main id="main-content">{children}</main>
+            <main id="main-content" tabIndex={-1}>{children}</main>
             <Footer />
             <MobileNav />
-            <AppVersion />
             <SupportWidget />
           </AppProvider>
         </ThemeProvider>

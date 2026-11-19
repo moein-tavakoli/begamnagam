@@ -1,0 +1,5 @@
+# Rebuild the exact reviewed infrastructure image with Alpine's zlib fix.
+# The upstream entrypoint, command, user and volumes are preserved.
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+RUN apk add --no-cache zlib=1.4-r0

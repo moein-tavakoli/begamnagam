@@ -1,9 +1,11 @@
 import io
 from datetime import timedelta
 from unittest.mock import patch
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
 from django.core.management import call_command
 from django.db import transaction
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.utils import timezone
 from . import test_live_sms as live
 from .models import Account, MessageDelivery, OperatorAudit, Order, Outbox, RecipientState
@@ -81,3 +83,38 @@ class QueueArchiveTests(TestCase):
         call_command('archive_unknown_outbox',id=event.pk,reason='پاک‌سازی صف فعال',apply=True,stdout=io.StringIO())
         event.refresh_from_db();self.assertEqual(event.state,'archived')
         order.refresh_from_db();self.assertEqual(order.status,'unknown')
+
+    def test_management_lists_and_archives_old_unknown_send_with_operator_permissions(self):
+        order, event, delivery = self.unknown()
+        actor = get_user_model().objects.create_user('queue-operator', is_staff=True)
+        actor.user_permissions.add(Permission.objects.get(content_type__app_label='core', codename='view_outbox'))
+        staff = Client(enforce_csrf_checks=True)
+        staff.force_login(actor)
+        staff.get('/api/v1/manage/session')
+        headers = {'content_type': 'application/json', 'HTTP_X_CSRFTOKEN': staff.cookies['csrftoken'].value}
+        action = '/api/v1/manage/actions'
+        records = '/api/v1/manage/records/outbox'
+        payload = {'action': 'archive_unknown_outbox', 'object_id': str(event.pk)}
+        self.assertEqual(staff.post(action, payload, **headers).status_code, 403)
+
+        actor.user_permissions.add(Permission.objects.get(content_type__app_label='core', codename='operate_safety'))
+        self.assertEqual(staff.post(action, payload, content_type='application/json').status_code, 403)
+        rows = staff.post(records, {'status': 'unknown'}, **headers).json()['rows']
+        self.assertEqual(len(rows), 1)
+        self.assertTrue(rows[0]['can_archive'])
+        self.assertIn('created_at', rows[0])
+
+        for _ in range(2):
+            result = staff.post(action, payload, **headers)
+            self.assertEqual(result.status_code, 200, result.content)
+        audit = OperatorAudit.objects.get(action='archive_unknown_outbox', object_id=str(event.pk))
+        self.assertEqual(audit.actor, actor)
+        self.assertEqual(staff.post(records, {'status': 'unknown'}, **headers).json()['rows'], [])
+        archive = staff.post(records, {'status': 'archived'}, **headers).json()
+        self.assertIn(['archived', 'archived'], archive['statuses'])
+        self.assertEqual(archive['rows'][0]['state'], 'archived')
+        self.assertFalse(archive['rows'][0]['can_archive'])
+        self.assertEqual(snapshot()['oldest_queue_seconds'], 0)
+        order.refresh_from_db()
+        delivery.refresh_from_db()
+        self.assertEqual((order.status, delivery.status), ('unknown', 'unknown'))

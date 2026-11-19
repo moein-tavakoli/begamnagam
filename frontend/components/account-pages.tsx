@@ -2,7 +2,7 @@
 import { FreeSendsBalance } from "./free-sends";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api, errorMessage, type Message } from "@/lib/api";
 import { statusLabel, toman } from "@/lib/format";
 import { useApp } from "./app-provider";
@@ -143,23 +143,52 @@ export function History() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
+  const historyHeading = useRef<HTMLHeadingElement>(null);
+  const historyRequest = useRef<AbortController | null>(null);
   const load = useCallback(async () => {
+    historyRequest.current?.abort();
+    const controller = new AbortController();
+    historyRequest.current = controller;
     setLoading(true);
+    setMessages([]);
     setError("");
+    setNotice("");
     try {
-      const result = await api<{ results: Message[] }>("/messages");
-      setMessages(result.results);
+      const result = await api<{ results: Message[] }>("/messages", { signal: controller.signal });
+      if (!controller.signal.aborted) setMessages(result.results);
     } catch (error) {
-      setError(errorMessage(error));
+      if (!controller.signal.aborted) setError(errorMessage(error));
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
   }, []);
   useEffect(() => {
     if (data?.authenticated) void load();
     else setMessages([]);
+    return () => historyRequest.current?.abort();
   }, [data?.authenticated, load]);
+
+  async function removeMessage(id: string) {
+    if (!window.confirm("این پیام برای همیشه از دسترس شما خارج شود؟ سابقه برای مدیر باقی می‌ماند و ارسالِ تأییدشده ادامه پیدا می‌کند.")) return;
+    setDeletingId(id);
+    setError("");
+    setNotice("");
+    try {
+      await api(`/messages/${id}`, { method: "DELETE" });
+      historyRequest.current?.abort();
+      setLoading(false);
+      setMessages(current => current.filter(message => message.id !== id));
+      setNotice("پیام برای همیشه از دسترس شما خارج شد.");
+      historyHeading.current?.focus();
+    } catch (error) {
+      setError(errorMessage(error));
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   async function logout() {
     setLoggingOut(true);
@@ -187,16 +216,18 @@ export function History() {
         {data?.authenticated && (
           <>
             <div className="history-toolbar">
-              <h2>درخواست‌های ارسال شما</h2>
+              <h2 ref={historyHeading} tabIndex={-1}>درخواست‌های ارسال شما</h2>
               <BusyButton
                 className="button ghost compact"
                 busy={loading}
+                disabled={deletingId !== null || loggingOut}
                 onClick={() => void load()}
               >
                 <Icon name="refresh" size={17} /> تازه‌سازی
               </BusyButton>
             </div>
             <ErrorBox message={error} />
+            <p className="success-notice" role="status">{notice}</p>
             {loading ? (
               <p className="service-loading" role="status">
                 <span className="spinner" /> در حال دریافت پیام‌ها…
@@ -207,8 +238,9 @@ export function History() {
                   <article key={message.id} className="history-message">
                     <div className="history-message-top">
                       <span className="recipient-label">
-                        <Icon name="phone" size={17} /> برای{" "}
-                        <bdi>{message.recipient_phone||'شماره در دسترس نیست'}</bdi>
+                        {message.is_reply
+                          ? <><Icon name="chat" size={17} /> پاسخ ناشناس</>
+                          : <><Icon name="phone" size={17} /> برای <bdi>{(message.is_shared_destination ? message.recipient_masked : message.recipient_phone) || 'شماره در دسترس نیست'}</bdi></>}
                       </span>
                       <span
                         className={`status-pill ${message.status === "failed" ? "failed" : ""}`}
@@ -230,10 +262,21 @@ export function History() {
                       </time>
                       <span>{message.is_free ? "رایگان" : toman(message.amount_toman)}</span>
                     </div>
-                    <details className="order-details">
-                      <summary>شناسه پیگیری</summary>
-                      <bdi>{message.id}</bdi>
-                    </details>
+                    <div className="history-message-actions">
+                      <details className="order-details">
+                        <summary>شناسه پیگیری</summary>
+                        <bdi>{message.id}</bdi>
+                      </details>
+                      <BusyButton
+                        className="button ghost compact history-delete"
+                        type="button"
+                        busy={deletingId === message.id}
+                        disabled={deletingId !== null || loggingOut}
+                        onClick={() => void removeMessage(message.id)}
+                      >
+                        <Icon name="trash" size={16} /> حذف
+                      </BusyButton>
+                    </div>
                   </article>
                 ))}
               </div>
@@ -241,12 +284,12 @@ export function History() {
               !error && (
                 <div className="empty-state">
                   <Icon name="receipt" size={40} />
-                  <h3>هنوز پیامی ثبت نکردی.</h3>
+                  <h3>پیامی برای نمایش نیست.</h3>
                   <p>
                     هر وقت حرفی از سرِ توجه داشتی، از یک پیام کوتاه شروع کن.
                   </p>
                   <Link href="/#compose" className="button primary">
-                    نوشتن اولین پیام <Icon name="arrow" size={17} />
+                    نوشتن پیام <Icon name="arrow" size={17} />
                   </Link>
                 </div>
               )
@@ -255,6 +298,7 @@ export function History() {
               <BusyButton
                 className="text-button"
                 busy={loggingOut}
+                disabled={deletingId !== null}
                 onClick={logout}
               >
                 خروج از حساب

@@ -7,6 +7,7 @@ from django.db import transaction
 from django.utils import timezone
 from .models import Account, Invitation, InvitationSend, RecipientState
 from .privacy import decrypt, digest, encrypt, mask, normalize_phone
+from .recipient_codes import generate_short_code
 from .services import APIError, api, limited, recipient_unavailable
 
 CONSENT_VERSION = 'invitations-v1'
@@ -14,12 +15,14 @@ ACTIVE = ['pending', 'submitting', 'unknown', 'accepted']
 INVITE_BODY = 'یکی از آشناهایت به بگم نگم دعوتت کرده. با ثبت‌نام ۳ ارسال رایگان داری:'
 
 
-def compose(token):
-    from .sms import SMS_INTRO, SMSTooLong
-    origin = settings.APP_BASE_URL.removeprefix('https://').removeprefix('http://').rstrip('/')
-    text = SMS_INTRO + '\n' + INVITE_BODY + '\n' + origin + '\nلغو: ' + origin + '/r/' + token
+def compose(token, *, origin=None, root_path=None, invite_code=''):
+    from .sms import SMS_INTRO, recipient_sms_url, sms_origin
+    origin = origin or sms_origin()
+    landing = recipient_sms_url(origin, invite_code, root_path=root_path) if invite_code else origin
+    stop = recipient_sms_url(origin, token, root_path=root_path)
+    text = f'{SMS_INTRO}\n{INVITE_BODY}\n{landing}\nلغو: {stop}'
     if len(text.encode('utf-16-le'))//2 > 201:
-        raise SMSTooLong()
+        raise APIError('invitation_unavailable', 'ثبت دعوت فعلاً ممکن نیست.', 503)
     return text
 
 
@@ -97,10 +100,7 @@ def new_send(invitation, key):
         available_at=now, consent_at=now, consent_version=CONSENT_VERSION,
         provider='console' if settings.DEMO_MODE and settings.SMS_BACKEND == 'console' else 'kavenegar')
     token = issue_grant(None, invitation.phone_hash, invitation_send=send)
-    try:
-        send.full_sms = compose(token)
-    except Exception:
-        raise APIError('invitation_unavailable', 'ثبت دعوت فعلاً ممکن نیست.', 503) from None
+    send.full_sms = compose(token, invite_code=generate_short_code('i'))
     send.save(update_fields=['full_sms'])
     transaction.on_commit(lambda: publish(send.pk))
     return send

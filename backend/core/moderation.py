@@ -129,12 +129,22 @@ def rejection_feedback(reason):
         return ('rewrite_intent_changed', 'بازنویسی نتوانست منظورت را دقیق حفظ کند؛ پیام ارسال نشد. لطفاً جمله را روشن‌تر بنویس.')
     if reason == 'generation_unclear':
         return ('rewrite_intent_unclear', 'منظور جمله برای بازنویسی روشن نبود؛ احساس یا منظورت را کمی واضح‌تر بنویس.')
-    if reason in {'review_format', 'review_tone', 'review_register', 'candidate_rejected', 'invalid_polite_body'}:
+    if reason == 'candidate_too_long':
+        return ('rewrite_output_rejected', 'نسخهٔ آماده‌شده برای پیامک طولانی بود. بخش اصلی خواسته‌ات را کوتاه‌تر بنویس.')
+    if reason == 'review_register':
+        return ('rewrite_output_rejected', 'بازنویسی زبان خودمانی یا رسمی جمله‌ات را عوض کرد. خواسته‌ات را با همان زبان خودت ساده‌تر بنویس.')
+    if reason == 'review_tone':
+        return ('rewrite_output_rejected', 'متن آماده‌شده با لحن انتخابی جور نبود. جمله را ساده‌تر بنویس یا لحن دیگری انتخاب کن.')
+    if reason in {'review_format', 'candidate_rejected', 'invalid_polite_body'}:
         return ('rewrite_output_rejected', 'نسخهٔ آماده‌شده تأیید نشد؛ پیام ارسال نشد. می‌توانی متن را ساده‌تر بنویسی و دوباره امتحان کنی.')
     if reason in {'contact_details', 'generation_private', 'review_private'}:
         return ('moderation_rejected', 'متن یا بازنویسی آن از نظر حریم خصوصی تأیید نشد؛ اطلاعات شخصی، نشانی و راه تماس را در پیام ننویس.')
-    if reason in {'unsafe_content', 'generation_unsafe', 'review_unsafe'}:
-        return ('moderation_rejected', 'این متن با ضوابط پیام‌رسانی سازگار تشخیص داده نشد؛ پیام باید بدون تهدید، تحقیر یا آزار باشد.')
+    if reason == 'unsafe_content':
+        return ('moderation_rejected', 'در متن عبارت نامجاز تشخیص داده شد. خواسته‌ات را دربارهٔ رفتار مشخص و بدون توهین، تهدید یا آزار بنویس.')
+    if reason == 'generation_unsafe':
+        return ('moderation_rejected', 'مدل نتوانست این متن را به شکل ایمن آماده کند. خواسته‌ات را بدون تحقیر، تهدید یا آزار بیان کن.')
+    if reason == 'review_unsafe':
+        return ('moderation_rejected', 'بازبین نتوانست ایمنی پیام را تأیید کند. خواسته‌ات را بدون تحقیر، تهدید یا آزار بیان کن.')
     return ('moderation_rejected', 'این متن برای آماده‌سازی تأیید نشد؛ منظورت را روشن‌تر و ساده‌تر بنویس.')
 
 
@@ -249,5 +259,32 @@ ANGRY_TEMPLATES = {
 }
 
 
+# Each pair expresses the same request without adding claims, names or details.
+# These choices are offered only after a full match to the draft's safe intent.
+RELATED_TEMPLATE_CHOICES = {
+    'appreciation': ('ممنونم که کمکم کردی.', 'از کمکت متشکرم.'),
+    'encouragement': ('به تلاشت ادامه بده.', 'امیدوارم با دلگرمی به تلاشت ادامه بدی.'),
+    'congratulations': ('موفقیتت رو تبریک می‌گم.', 'تبریک بابت موفقیتت.'),
+    'body': ('لطفاً بیشتر به بهداشت بدنت توجه کن.', 'میشه به بهداشت بدنت کمی بیشتر رسیدگی کنی؟'),
+    'breath': ('لطفاً بیشتر به بهداشت دهان توجه کن.', 'میشه کمی بیشتر به تازگی نفست توجه کنی؟'),
+    'noise': ('لطفاً کمی آروم‌تر غذا بخور.', 'میشه موقع غذا خوردن کمی آرام‌تر باشی؟'),
+    'shared_space': ('لطفاً فضای مشترک رو تمیز نگه دار.', 'میشه فضای مشترک رو تمیز بذاری؟'),
+    'punctuality': ('لطفاً به‌موقع بیا.', 'میشه سر وقت برسی؟'),
+    'listening': ('لطفاً بذار حرفم تموم بشه.', 'میشه صبر کنی تا حرفم رو کامل بگم؟'),
+    'conversation': ('لطفاً با احترام صحبت کن.', 'میشه محترمانه‌تر حرف بزنیم؟'),
+    'personal_space': ('لطفاً قبل از استفاده از وسایلم ازم اجازه بگیر.', 'میشه قبل از برداشتن وسایلم ازم بپرسی؟'),
+    'phone_etiquette': ('لطفاً صدای گوشیت رو کم کن.', 'میشه صدای تلفنت رو پایین بیاری؟'),
+    'neighbor': ('لطفاً وقت استراحت همسایه‌ها سروصدا نکن.', 'میشه موقع استراحت همسایه‌ها آرامش رو رعایت کنی؟'),
+    'parking': ('لطفاً جلوی ورودی پارک نکن.', 'میشه ماشین رو جایی به‌جز جلوی ورودی پارک کنی؟'),
+    'teamwork': ('لطفاً سهمت از کار گروهی رو انجام بده.', 'میشه بخش خودت از کار گروهی رو انجام بدی؟'),
+    'apology': ('لطفاً منو ببخش.', 'امیدوارم بتونی منو ببخشی.'),
+    'good_wishes': ('روز خوبی داشته باشی.', 'امیدوارم روز خوشی داشته باشی.'),
+    'environment': ('لطفاً زباله رو روی زمین نریز.', 'میشه زباله رو در جای مناسب بذاری؟'),
+    'repayment': ('لطفاً پولم رو برگردون.', 'میشه پولم رو بهم پس بدی؟'),
+    'save_water': ('لطفاً آب رو هدر نده.', 'میشه توی مصرف آب صرفه‌جویی کنی؟'),
+    'save_electricity': ('لطفاً برق رو هدر نده.', 'میشه توی مصرف برق صرفه‌جویی کنی؟'),
+}
+
+
 def is_reviewed_template(category, text):
-    return any(text in pool.get(category, []) for pool in (TEMPLATES, DIRECT_TEMPLATES, ANGRY_TEMPLATES))
+    return any(text in pool.get(category, ()) for pool in (TEMPLATES, DIRECT_TEMPLATES, ANGRY_TEMPLATES, RELATED_TEMPLATE_CHOICES))

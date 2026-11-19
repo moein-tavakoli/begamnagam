@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, createIdempotencyKey, errorMessage } from "@/lib/api";
-import { latinDigits, normalizePhone, validPhone } from "@/lib/format";
+import { normalizePhone, validPhone } from "@/lib/format";
 import { Invitation, InvitationList, invitationDeliveryLabel, resendExplanation } from "@/lib/invitations";
 import { useApp } from "./app-provider";
 import { FreeSendsBalance } from "./free-sends";
@@ -92,8 +92,8 @@ export function Invitations() {
           <h2>افزودن یک آشنا</h2>
           <label htmlFor="invite-phone">شماره موبایل مخاطب</label>
           <div className="inline-form">
-            <input id="invite-phone" type="tel" inputMode="tel" autoComplete="off" dir="ltr" maxLength={32}
-              placeholder="0912 345 6789" value={phone} disabled={!!busy} onChange={e => { setPhone(latinDigits(e.target.value)); setFieldError(""); }}
+            <input id="invite-phone" type="tel" inputMode="tel" autoComplete="off" dir="ltr"
+              placeholder="09123456789" value={phone} disabled={!!busy} onChange={e => { setPhone(normalizePhone(e.target.value)); setFieldError(""); }}
               aria-invalid={!!fieldError} aria-describedby={fieldError ? "invite-phone-error invite-rules" : "invite-rules"} />
             <BusyButton className="button primary" busy={busy === "new"} disabled={!list || !!busy || !consent || list.daily_remaining === 0}>افزودن و دعوت</BusyButton>
           </div>

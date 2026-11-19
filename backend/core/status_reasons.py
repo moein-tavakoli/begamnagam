@@ -6,11 +6,13 @@ from django.utils import timezone
 
 
 REQUEST_UNAVAILABLE = 'درخواست فعلاً انجام نشد؛ کمی بعد دوباره تلاش کن.'
+REWRITE_UNAVAILABLE = 'آماده‌سازی متن موقتاً در دسترس نیست. کمی بعد دوباره تلاش کن.'
+PUBLIC_SERVICE_ERRORS = {'rewrite_unavailable': REWRITE_UNAVAILABLE}
 RECIPIENT_LIMIT = 'به‌دلیل محدودیت ارسال یا دریافت برای این شماره، ارسال فعلاً ممکن نیست. بعداً دوباره تلاش کن.'
 PUBLIC_REASONS = {
     'recipient_unavailable': RECIPIENT_LIMIT,
     'account_unavailable': 'ارسال از حساب شما محدود شده است. برای پیگیری با پشتیبانی تماس بگیر.',
-    'moderation_rejected': 'این پیام با قوانین محتوا سازگار نیست؛ متن را بدون توهین، تهدید یا اطلاعات خصوصی دوباره آماده کن.',
+    'moderation_rejected': 'متن در بررسی نهایی برای ارسال تأیید نشد. متن را دوباره آماده کن و پیش‌نمایش تازه را بررسی کن.',
     'queue_expired': 'مهلت ارسال این پیام تمام شد و پیام ارسال نشد. برای ارسال، متن نهایی را دوباره آماده کن.',
     'order_expired': 'مهلت تأیید سفارش تمام شد و پیام ارسال نشد. متن نهایی را دوباره آماده کن.',
 }

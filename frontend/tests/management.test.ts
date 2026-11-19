@@ -33,6 +33,15 @@ test("management routes are stable deep links and accounts keep their API resour
   assert.deepEqual(management.managementRoute("/manage"), { resource: "dashboard" });
 });
 
+test('SMS template route is visible only with the site settings permission', () => {
+  assert.equal(management.managementHref('sms-template'), '/manage/sms-template');
+  assert.deepEqual(management.managementRoute('/manage/sms-template'), {resource:'sms-template'});
+  assert.equal(management.managementNavigation({authenticated:true,permissions:['manage_site_limits']})
+    .find(item => item.key === 'sms-template')?.title, 'قالب پیامک');
+  assert.equal(management.managementNavigation({authenticated:true,permissions:['support_chat']})
+    .some(item => item.key === 'sms-template'), false);
+});
+
 test("users follow overview and user activity leaves the global menu", () => {
   const navigation = management.managementNavigation({ authenticated: true, permissions: ["view_operations"], resources: [
     { key: "orders", title: "پیام‌ها" }, { key: "accounts", title: "حساب‌ها" }, { key: "invitations", title: "دعوت‌ها" }, { key: "alerts", title: "هشدارها" },

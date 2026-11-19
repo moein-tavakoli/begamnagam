@@ -34,6 +34,7 @@ import ArrowBackRounded from '@mui/icons-material/ArrowBackRounded';
 import ReceiptLongOutlined from '@mui/icons-material/ReceiptLongOutlined';
 import CheckCircleOutline from '@mui/icons-material/CheckCircleOutlined';
 import HistoryOutlined from '@mui/icons-material/HistoryOutlined';
+import ArchiveOutlined from '@mui/icons-material/ArchiveOutlined';
 import MailOutlineRounded from '@mui/icons-material/MailOutlineRounded';
 import SettingsOutlined from '@mui/icons-material/SettingsOutlined';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -53,12 +54,15 @@ import { ManualPaymentDialog } from './manual-payment-dialog';
 import { SupportInbox, useSupportBadge } from './support-inbox';
 import { PackageSettings } from './package-settings';
 import { ExampleSettings } from './example-settings';
+import type { SmsTemplateDraftMemory } from './sms-template-settings';
 import { ManagementChangelog } from './management-changelog';
 import { ManagementDataGrid } from './management-data-grid';
 
 const ManagementStaff=dynamic(()=>import('./management-staff').then(module=>module.ManagementStaff),{loading:()=> <Loading/>});
 const ManagementMonitoring=dynamic(()=>import('./management-monitoring').then(module=>module.ManagementMonitoring),{loading:()=> <Loading/>});
 const MonitoringAccessSettings=dynamic(()=>import('./monitoring-access-settings').then(module=>module.MonitoringAccessSettings),{loading:()=> <Loading/>});
+const IdentityRequestSettings=dynamic(()=>import('./identity-request-settings').then(module=>module.IdentityRequestSettings),{loading:()=> <Loading/>});
+const SmsTemplateSettings=dynamic(()=>import('./sms-template-settings').then(module=>module.SmsTemplateSettings),{loading:()=> <Loading/>});
 
 function ContentCard({children}: {children:ReactNode}) { return <Card sx={{p:{xs:2,sm:3},minWidth:0}}><Stack spacing={2.5}>{children}</Stack></Card>; }
 function SectionTitle({title,icon,action}: {title:string;icon:string;action?:ReactNode}) { return <Stack direction="row" sx={{alignItems:'center',justifyContent:'space-between',gap:1,flexWrap:'wrap'}}><Stack direction="row" spacing={1} sx={{alignItems:'center'}}><ManagementIcon name={icon} color="primary"/><Typography component="h2" variant="h6">{title}</Typography></Stack>{action}</Stack>; }
@@ -92,15 +96,17 @@ function MonitoringEntry({children}:{children:ReactNode}) {
     return()=>{generation.current++;window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',visible);};
   },[load]);
   const failed=useCallback(()=>{void load();},[load]);
-  return allowed?<ManagementMonitoringLayout><ManagementMonitoring onFailure={failed}/>{children}</ManagementMonitoringLayout>:
-    <Stack sx={{maxWidth:500,mx:'auto',px:2,py:{xs:4,sm:7},gap:3}}><ManagementBrand/><ContentCard>
-      <Stack direction="row" spacing={1} sx={{alignItems:'center'}}><ShieldOutlined color="primary"/><Typography component="h1" variant="h5">ورود به مانیتورینگ</Typography></Stack>
-      {error?<Failure message={error} retry={()=>void load()}/>:allowed===null?<Loading/>:<>
-        <Typography color="text.secondary">با نام کاربری و رمز حساب دارای مجوز مانیتورینگ وارد شوید.</Typography>
-        <Login onLogin={current=>{if(!current.permissions?.includes('view_operations'))setError('این حساب مجوز مشاهدهٔ مانیتورینگ را ندارد.');else void load();}}/>
-      </>}
-      <Button component={Link} href="/manage" startIcon={<ArrowForwardRounded/>}>ورود به مدیریت</Button>
-    </ContentCard></Stack>;
+  return <ManagementMonitoringLayout active={allowed === true}>
+    {allowed ? <><ManagementMonitoring onFailure={failed}/>{children}</> :
+      <Stack sx={{maxWidth:500,mx:'auto',px:2,py:{xs:4,sm:7},gap:3}}><ManagementBrand/><ContentCard>
+        <Stack direction="row" spacing={1} sx={{alignItems:'center'}}><ShieldOutlined color="primary"/><Typography component="h1" variant="h5">ورود به مانیتورینگ</Typography></Stack>
+        {error?<Failure message={error} retry={()=>void load()}/>:allowed===null?<Loading/>:<>
+          <Typography color="text.secondary">با نام کاربری و رمز حساب دارای مجوز مانیتورینگ وارد شوید.</Typography>
+          <Login onLogin={current=>{if(!current.permissions?.includes('view_operations'))setError('این حساب مجوز مشاهدهٔ مانیتورینگ را ندارد.');else void load();}}/>
+        </>}
+        <Button component={Link} href="/manage" startIcon={<ArrowForwardRounded/>}>ورود به مدیریت</Button>
+      </ContentCard></Stack>}
+  </ManagementMonitoringLayout>;
 }
 
 function StaffConsole({children,supportIdentity,supportMemory}:{children:ReactNode;supportIdentity:{current:string|undefined};supportMemory:{current:SupportWorkspaceMemory}}) {
@@ -112,6 +118,7 @@ function StaffConsole({children,supportIdentity,supportMemory}:{children:ReactNo
   const [busy, setBusy] = useState(false);
   const [epoch, setEpoch] = useState(0);
   const [action, setAction] = useState<ManagementAction | null>(null);
+  const smsTemplateMemory = useRef<SmsTemplateDraftMemory>(null);
   const sessionGeneration = useRef(0);
   const loadSession = useCallback(async () => {
     const generation = ++sessionGeneration.current;
@@ -119,6 +126,7 @@ function StaffConsole({children,supportIdentity,supportMemory}:{children:ReactNo
     try {
       const current = await api<ManagementSession>("/manage/session");
       if (generation === sessionGeneration.current) {
+        if (!current.authenticated || !current.permissions?.includes('manage_site_limits') || supportIdentity.current !== current.session_identity) smsTemplateMemory.current = null;
         if (!current.authenticated || !current.permissions?.includes('support_chat') || supportIdentity.current !== current.session_identity) supportMemory.current={thread:null,composer:{draft:"",pending:null}};
         supportIdentity.current=current.session_identity;
         setSession(current);
@@ -140,13 +148,14 @@ function StaffConsole({children,supportIdentity,supportMemory}:{children:ReactNo
   }, [loadSession]);
   const failed = useCallback((e: unknown) => {
     if (e instanceof ApiError && ['management_login_required','forbidden'].includes(e.code)) {
+      smsTemplateMemory.current = null;
       supportMemory.current={thread:null,composer:{draft:"",pending:null}}; supportIdentity.current=undefined; setAction(null);
       if(e.code==='management_login_required')setSession({authenticated:false});else void loadSession();
     }
   }, [loadSession]);
   async function signOut() {
     setBusy(true); setError("");
-    try { await api("/manage/logout", { method: "POST", body: {} }); supportMemory.current={thread:null,composer:{draft:"",pending:null}}; supportIdentity.current=undefined; setSession({ authenticated: false }); }
+    try { await api("/manage/logout", { method: "POST", body: {} }); smsTemplateMemory.current = null; supportMemory.current={thread:null,composer:{draft:"",pending:null}}; supportIdentity.current=undefined; setSession({ authenticated: false }); }
     catch (e) { setError(errorMessage(e)); }
     finally { setBusy(false); }
   }
@@ -163,7 +172,7 @@ function StaffConsole({children,supportIdentity,supportMemory}:{children:ReactNo
       {managementShowsBalances(active,permissions)&&<ProviderBalances onFailure={failed}/>}
       {error&&<Failure message={error}/>}
       {!allowed&&<Alert severity="warning" action={<Button component={Link} href={managementLanding(session||{authenticated:false})||'/manage'}>بازگشت به بخش مجاز</Button>}>این بخش برای حساب شما در دسترس نیست. از فهرست بخش‌های مجاز انتخاب کنید.</Alert>}
-      {allowed&&(route.userId?<UserActivity key={`${route.userId}-${epoch}`} userId={route.userId} permissions={permissions} resources={session?.resources||[]} onAction={setAction} onFailure={failed}/>:active==='staff'?<ManagementStaff view={pathname.endsWith('/roles')?'roles':'employees'} onFailure={failed}/>:active==='changelog'?<ManagementChangelog onFailure={failed}/>:active==='examples'?<ExampleSettings onFailure={failed}/>:active==='support'?<SupportInbox onFailure={supportFailure} memory={supportMemory}/>:active==='dashboard'?<Dashboard key={`dashboard-${epoch}`} canOperate={permissions.includes('operate_safety')} onAction={setAction} onFailure={failed}/>:active==='limits'?<Limits canManageMonitoringAccess={permissions.includes('manage_monitoring_access')} onFailure={failed}/>:active==='ai'?<AISettings onFailure={failed}/>:active==='manual-settings'?<ManualPaymentSettings onFailure={failed}/>:active==='packages'?<PackageSettings onFailure={failed}/>:active&&<Records key={`${active}-${epoch}`} resource={active} permissions={permissions} onAction={setAction} onFailure={failed}/>)}
+      {allowed&&(route.userId?<UserActivity key={`${route.userId}-${epoch}`} userId={route.userId} permissions={permissions} resources={session?.resources||[]} onFailure={failed}/>:active==='staff'?<ManagementStaff view={pathname.endsWith('/roles')?'roles':'employees'} onFailure={failed}/>:active==='changelog'?<ManagementChangelog onFailure={failed}/>:active==='examples'?<ExampleSettings onFailure={failed}/>:active==='support'?<SupportInbox onFailure={supportFailure} memory={supportMemory}/>:active==='dashboard'?<Dashboard key={`dashboard-${epoch}`} canOperate={permissions.includes('operate_safety')} onAction={setAction} onFailure={failed}/>:active==='limits'?<Limits canManageMonitoringAccess={permissions.includes('manage_monitoring_access')} onFailure={failed}/>:active==='sms-template'?<SmsTemplateSettings onFailure={failed} memory={smsTemplateMemory} canManageKavenegarKey={permissions.includes('manage_kavenegar_key')}/>:active==='ai'?<AISettings onFailure={failed}/>:active==='manual-settings'?<ManualPaymentSettings onFailure={failed}/>:active==='packages'?<PackageSettings onFailure={failed}/>:active&&<Records key={`${active}-${epoch}`} resource={active} permissions={permissions} onAction={setAction} onFailure={failed}/>)}
       {children}
       {action&&(['grant_package','approve_card','reject_card'].includes(action.name)?<ManualPaymentDialog action={action} onClose={()=>setAction(null)} onComplete={()=>{setAction(null);setEpoch(v=>v+1);}} onFailure={failed}/>:<ActionDialog action={action} onClose={()=>setAction(null)} onComplete={()=>{setAction(null);setEpoch(v=>v+1);}} onFailure={failed}/>)}
   </>;
@@ -245,7 +254,7 @@ function Limits({ onFailure, canManageMonitoringAccess }: { onFailure: (e: unkno
   const onSaved = (updated: LimitSettings) => { setData(updated); setSaved(true); };
   const load = useCallback(async () => { setError(""); try { setData(await api<LimitSettings>("/manage/limits")); } catch (e) { setError(errorMessage(e)); onFailure(e); } }, [onFailure]);
   useEffect(() => { void load(); }, [load]);
-  return <Stack spacing={3}>{canManageMonitoringAccess&&<MonitoringAccessSettings onFailure={onFailure}/>} {error&&<Failure message={error} retry={()=>void load()}/>} {saved&&<Alert severity="success">تنظیمات ذخیره شد.</Alert>}{!data?!error&&<Loading/>:<>
+  return <Stack spacing={3}><IdentityRequestSettings onFailure={onFailure}/>{canManageMonitoringAccess&&<MonitoringAccessSettings onFailure={onFailure}/>} {error&&<Failure message={error} retry={()=>void load()}/>} {saved&&<Alert severity="success">تنظیمات ذخیره شد.</Alert>}{!data?!error&&<Loading/>:<>
     <Alert severity="info">سه ارسال هدیهٔ اولیه رایگان می‌مانند. صفر در بازه‌های شمارش و فاصله‌ها همان محدودیت را خاموش می‌کند. برای ارسال در تمام شبانه‌روز، گزینهٔ «ارسال فقط در ساعت مجاز» را بردارید.</Alert>
     {data.gateway_problem&&<Alert severity="warning">درگاه آمادهٔ فعال‌سازی نیست: {data.gateway_problem}</Alert>}
     <SiteLimits key={`site-${data.revision}`} data={data} onSaved={onSaved} onFailure={onFailure}/><RequestLimits rules={data.requests} onSaved={onSaved} onFailure={onFailure}/>
@@ -296,7 +305,8 @@ function RequestRule({ rule, onSaved, onFailure }: { rule: LimitRule; onSaved: (
 function ActionDialog({ action, onClose, onComplete, onFailure }: { action: ManagementAction; onClose: () => void; onComplete: () => void; onFailure: (e: unknown) => void }) {
   const [busy, setBusy] = useState(false), [error, setError] = useState("");
   const [report, setReport] = useState<{ details: string; reviewed_text: string; reason: string; status: string } | null>(null);
-  const [texts, setTexts] = useState<{ original_text: string; original_available: boolean; final_text: string; mode: string } | null>(null);
+  const [texts, setTexts] = useState<MessageTexts | null>(null);
+  const archiving = action.name === 'archive_unknown_outbox';
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); const form = new FormData(event.currentTarget); setBusy(true); setError("");
     try {
@@ -305,20 +315,81 @@ function ActionDialog({ action, onClose, onComplete, onFailure }: { action: Mana
       const values = { action: action.name, object_id: action.object_id, value: action.value, reason: managementReason(action.name), reference: form.get("reference") || "",
         ...(action.name === 'account_limits' ? { values: countValues } : {}) };
       if (action.name === "review") setReport(await api(`/manage/reports/${action.object_id}/review`, { method: "POST", body: values }));
-      else if (action.name === "attempt_texts") { const result = await api<{ original_text: string; original_available?: boolean; reviewed_text: string | null }>(`/manage/users/${action.userId}/attempts/${action.object_id}/texts`, { method: "POST", body: values }); setTexts({ original_text: result.original_text, original_available: result.original_available ?? !!result.original_text, final_text: result.reviewed_text || "", mode: "attempt" }); }
       else if (action.name === "message_texts") setTexts(await api(`/manage/orders/${action.object_id}/texts`, { method: "POST", body: values }));
       else { await api("/manage/actions", { method: "POST", body: values }); onComplete(); }
     } catch (e) { setError(errorMessage(e)); onFailure(e); } finally { setBusy(false); }
   }
   return <ManagementDialog title={action.label} onClose={onClose} busy={busy}>
     <Typography variant="caption" color="text.secondary" sx={{overflowWrap:'anywhere'}}>رکورد: {action.object_id}</Typography>{error&&<Failure message={error}/>}
-    {texts?<Stack spacing={2}><Chip icon={<ShieldOutlined/>} label="فقط مدیریت · مشاهده ثبت شد" sx={{alignSelf:'flex-start'}}/><Typography component="h3" variant="subtitle1">متن اولیهٔ کاربر</Typography><Typography sx={{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{texts.original_available?texts.original_text:'متن اولیه برای این سابقه موجود نیست؛ ممکن است قدیمی یا پاک‌سازی‌شده باشد.'}</Typography><Typography component="h3" variant="subtitle1">متن نهایی بررسی‌شده</Typography><Typography sx={{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{texts.final_text||(texts.mode==='attempt'?'متن نهایی تأییدشده‌ای برای این سابقه موجود نیست.':'متن طبق سیاست نگهداری حذف شده است.')}</Typography></Stack>:report?<Stack spacing={2}><Chip label={managementState(report.status)} sx={{alignSelf:'flex-start'}}/><Typography component="h3" variant="subtitle1">موضوع گزارش</Typography><Typography>{report.reason}</Typography><Typography component="h3" variant="subtitle1">توضیحات دریافت‌کننده</Typography><Typography sx={{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{report.details||'توضیحی ثبت نشده است.'}</Typography><Typography component="h3" variant="subtitle1">متن بررسی‌شدهٔ مرتبط</Typography><Typography sx={{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{report.reviewed_text}</Typography><Alert severity="info">مشاهدهٔ این پرونده در سوابق مدیریت ثبت شد.</Alert></Stack>:<Stack component="form" onSubmit={submit} spacing={3}>
+    {texts?<MessageTextsContent texts={texts}/>:report?<Stack spacing={2}><Chip label={managementState(report.status)} sx={{alignSelf:'flex-start'}}/><Typography component="h3" variant="subtitle1">موضوع گزارش</Typography><Typography>{report.reason}</Typography><Typography component="h3" variant="subtitle1">توضیحات دریافت‌کننده</Typography><Typography sx={{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{report.details||'توضیحی ثبت نشده است.'}</Typography><Typography component="h3" variant="subtitle1">متن بررسی‌شدهٔ مرتبط</Typography><Typography sx={{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{report.reviewed_text}</Typography><Alert severity="info">مشاهدهٔ این پرونده در سوابق مدیریت ثبت شد.</Alert></Stack>:<Stack component="form" onSubmit={submit} spacing={3}>
       {action.name==='free_sending'&&<Alert severity="warning">{action.value?'این حساب بدون مصرف هدیه یا اعتبار بسته ارسال می‌کند و هزینهٔ واقعی بر عهدهٔ سرویس است.':'ارسال‌های بعدی از هدیه و اعتبار بسته مصرف می‌کنند؛ سفارش‌های قبلی تغییر نمی‌کنند.'} سقف روزانه، کنترل گیرنده و محتوا مستقل‌اند.</Alert>}
       {action.name==='account_limits'&&<Box component="fieldset" disabled={busy} sx={{border:0,p:0,m:0,minWidth:0}}><Stack spacing={3}><Alert severity="info">تنظیم فقط برای همین حساب است. تعداد نامحدود، اعتبار پیام یا کنترل‌های محتوا و گیرنده را حذف نمی‌کند.</Alert><AccountLimitInput name="sender_daily_limit" label="سقف تعداد ارسال در ۲۴ ساعت" value={action.accountLimits?.sender_daily_limit??null}/><AccountLimitInput name="rewrite_daily_limit" label="بازنویسی در روز" value={action.accountLimits?.rewrite_daily_limit??null}/></Stack></Box>}
       {action.name==='confirm_refund'&&<><Alert severity="warning">ابتدا بازپرداخت را خارج از سایت انجام دهید؛ این اقدام فقط ثبت سند است.</Alert><ManagementInput label="مرجع سند بازپرداخت" name="reference" minLength={3} maxLength={100} required/></>}
-      <ManagementButton disabled={busy} startIcon={['message_texts','attempt_texts','review'].includes(action.name)?<VisibilityOutlined/>:<CheckCircleOutline/>}>{busy?'در حال ثبت…':['message_texts','attempt_texts'].includes(action.name)?'ثبت مشاهده و نمایش متن‌ها':action.name==='review'?'ثبت مشاهده و بازکردن پرونده':'تأیید و ثبت اقدام'}</ManagementButton>
+      {archiving && <Alert severity="warning">این مورد از صف فعال و استعلام خودکار خارج می‌شود. نتیجهٔ نامعلوم و سابقهٔ ارسال برای پیگیری حفظ می‌شوند.</Alert>}
+      <ManagementButton disabled={busy} startIcon={archiving ? <ArchiveOutlined/> : ['message_texts','review'].includes(action.name) ? <VisibilityOutlined/> : <CheckCircleOutline/>}>
+        {busy ? 'در حال ثبت…' : archiving ? 'بایگانی مورد' : action.name === 'message_texts' ? 'ثبت مشاهده و نمایش متن‌ها' : action.name === 'review' ? 'ثبت مشاهده و بازکردن پرونده' : 'تأیید و ثبت اقدام'}
+      </ManagementButton>
     </Stack>}
   </ManagementDialog>;
+}
+
+type MessageTexts = { original_text: string; original_available: boolean; final_text: string | null };
+
+function MessageTextsContent({ texts, isAttempt = false }: { texts: MessageTexts; isAttempt?: boolean }) {
+  const missingResult = isAttempt ? 'متن نهایی تأییدشده‌ای برای این سابقه موجود نیست.' : 'متن طبق سیاست نگهداری حذف شده است.';
+  return <Stack spacing={2}>
+    <Chip icon={<ShieldOutlined/>} label="فقط مدیریت · مشاهده ثبت شد" sx={{alignSelf:'flex-start'}}/>
+    <Typography component="h3" variant="subtitle1">متن اولیهٔ کاربر</Typography>
+    <Typography sx={{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{texts.original_available ? texts.original_text : 'متن اولیه برای این سابقه موجود نیست؛ ممکن است قدیمی یا پاک‌سازی‌شده باشد.'}</Typography>
+    <Typography component="h3" variant="subtitle1">متن نهایی بررسی‌شده</Typography>
+    <Typography sx={{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{texts.final_text || missingResult}</Typography>
+  </Stack>;
+}
+
+type MessageReview = { status: 'loading' } | { status: 'ready'; texts: MessageTexts } | { status: 'error'; message: string };
+
+function UserMessageTextsButton({ userId, kind, recordId, phone, phoneLabel, onFailure }: {
+  userId: string; kind: 'order' | 'attempt'; recordId: string; phone?: string; phoneLabel: string; onFailure: (error: unknown) => void;
+}) {
+  const [review, setReview] = useState<MessageReview | null>(null);
+  const request = useRef<AbortController | null>(null);
+  useEffect(() => () => request.current?.abort(), []);
+
+  function close() {
+    request.current?.abort();
+    request.current = null;
+    setReview(null);
+  }
+
+  const isAttempt = kind === 'attempt';
+  async function show() {
+    if (request.current) return;
+    const controller = new AbortController();
+    request.current = controller;
+    setReview({status:'loading'});
+    const path = isAttempt ? `/manage/users/${userId}/attempts/${recordId}/texts` : `/manage/orders/${recordId}/texts`;
+    try {
+      const texts = await api<MessageTexts>(path, {method:'POST', body:{reason:managementReason(isAttempt ? 'attempt_texts' : 'message_texts')}, signal:controller.signal});
+      if (!controller.signal.aborted) setReview({status:'ready', texts});
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        setReview({status:'error', message:errorMessage(error)});
+        onFailure(error);
+      }
+    } finally {
+      if (request.current === controller) request.current = null;
+    }
+  }
+
+  return <Box>
+    <ManagementButton type="button" variant="outlined" startIcon={<VisibilityOutlined/>} onClick={()=>void show()}>مشاهدهٔ متن اولیه و نتیجه</ManagementButton>
+    {review&&<ManagementDialog title="متن اولیه و نتیجه" onClose={close}>
+      {phone&&<Typography variant="body2">{phoneLabel} <bdi dir="ltr">{phone}</bdi></Typography>}
+      {review.status === 'loading' && <Loading/>}
+      {review.status === 'ready' && <MessageTextsContent texts={review.texts} isAttempt={isAttempt}/>}
+      {review.status === 'error' && <Failure message={review.message} retry={()=>void show()}/>}
+    </ManagementDialog>}
+  </Box>;
 }
 
 function AccountLimitInput({ name, label, value }: { name: string; label: string; value: number | null }) {
@@ -342,14 +413,17 @@ function RowActions({ resource, row, permissions, onAction, tabIndex=0 }: { reso
         <MenuItem key="messages" component={Link} href={managementUserHref(row.record_id, "messages")} onClick={close}><ListItemIcon><MailOutlineRounded/></ListItemIcon>پیام‌های کاربر</MenuItem>,
         <MenuItem key="invitations" component={Link} href={managementUserHref(row.record_id, "invitations")} onClick={close}><ListItemIcon><ManagementIcon name="invitations"/></ListItemIcon>دعوت‌های کاربر</MenuItem>,
       ]}
-      {actions.map(item => <MenuItem key={item.name} onClick={() => { close(); onAction(item); }}><ListItemIcon><SettingsOutlined/></ListItemIcon>{item.label}</MenuItem>)}
+      {actions.map(item => <MenuItem key={item.name} onClick={() => { close(); onAction(item); }}>
+        <ListItemIcon>{item.name === 'archive_unknown_outbox' ? <ArchiveOutlined/> : <SettingsOutlined/>}</ListItemIcon>
+        {item.label}
+      </MenuItem>)}
     </Menu>
   </>;
 }
 
-function UserActivity({ userId, permissions, resources, onAction, onFailure }: {
+function UserActivity({ userId, permissions, resources, onFailure }: {
   userId: string; permissions: string[]; resources: { key: string; title: string }[];
-  onAction: (a: ManagementAction) => void; onFailure: (e: unknown) => void;
+  onFailure: (e: unknown) => void;
 }) {
   const searchParams = useSearchParams();
   const section = searchParams.get("section") === "invitations" ? "invitations" : searchParams.get("section") === "messages" || resources.some(item => item.key === "orders") ? "messages" : "invitations";
@@ -367,12 +441,12 @@ function UserActivity({ userId, permissions, resources, onAction, onFailure }: {
   useEffect(() => {
     const controller = new AbortController(); setError(""); setData(null); setBusy(canRead);
     if (canRead) void api<ManagementActivity>(`/manage/users/${userId}/activity`, { method: "POST", body: { section, page }, signal: controller.signal })
-      .then(result => { setData(result); setAccount(result.account); }).catch(e => { if (!controller.signal.aborted) { setError(errorMessage(e)); onFailure(e); } })
+      .then(result => { if (!controller.signal.aborted) { setData(result); setAccount(result.account); } }).catch(e => { if (!controller.signal.aborted) { setError(errorMessage(e)); onFailure(e); } })
       .finally(() => { if (!controller.signal.aborted) setBusy(false); });
     return () => controller.abort();
   }, [userId, section, page, canRead, epoch, onFailure]);
   const pages = data ? Math.max(1, Math.ceil(data.total / data.page_size)) : 1;
-  const kinds: Record<string, string> = { order: "سفارش پیام", attempt: "تلاش ساخت پیام", moderation: "بررسی محتوای قدیمی", invitation: "دعوت" };
+  const kinds = { order: "پیام ارسالی", attempt: "تلاش ساخت پیام", moderation: "بررسی محتوای قدیمی", invitation: "دعوت" };
   const pageHref = (number: number) => `${managementUserHref(userId, section)}&page=${number}`;
   return <Stack spacing={3}>
     <Box><Button component={Link} href="/manage/users" startIcon={<ArrowForwardRounded/>}>بازگشت به کاربران</Button></Box>
@@ -381,18 +455,34 @@ function UserActivity({ userId, permissions, resources, onAction, onFailure }: {
       <Tabs value={canRead?section:false} aria-label="فعالیت کاربر" variant="scrollable" scrollButtons="auto">{([{key:'messages',resource:'orders',title:'پیام‌ها',icon:<MailOutlineRounded/>},{key:'invitations',resource:'invitations',title:'دعوت‌ها',icon:<ManagementIcon name="invitations"/>}] as const).filter(tab=>resources.some(item=>item.key===tab.resource)).map(tab=><Tab component={Link} key={tab.key} value={tab.key} label={tab.title} icon={tab.icon} iconPosition="start" href={managementUserHref(userId,tab.key)}/>)}</Tabs>
     </ContentCard>
     {error&&<Failure message={error} retry={()=>setEpoch(v=>v+1)}/>} {!canRead&&<Alert severity="warning">مجوز مشاهدهٔ این فعالیت را ندارید.</Alert>}{busy&&<Loading/>}
-    {data&&!busy&&!error&&<ContentCard>
+    {data?.section===section&&data.page===page&&!busy&&!error&&<ContentCard>
       <Stack direction="row" sx={{justifyContent:'space-between',gap:1}}><Typography variant="body2" color="text.secondary">{managementNumber(data.total)} رکورد</Typography><Typography variant="body2" color="text.secondary">صفحهٔ {managementNumber(data.page)} از {managementNumber(pages)}</Typography></Stack>
-      {!data.rows.length?<Empty message="فعالیتی در این بخش ثبت نشده است."/>:data.rows.map(row=><Card component="article" key={`${row.kind}-${row.record_id}`} sx={{p:2}}><Stack spacing={2}>
-        <Stack direction="row" sx={{alignItems:'center',justifyContent:'space-between',gap:1,flexWrap:'wrap'}}><Stack direction="row" spacing={1} sx={{alignItems:'center'}}><HistoryOutlined color="primary"/><Typography component="h3" variant="subtitle1">{kinds[row.kind]||'فعالیت کاربر'}</Typography></Stack><Chip size="small" color={row.status==='rejected'?'warning':row.status==='failed'?'error':'default'} label={managementState(row.status)}/></Stack>
-        <Typography variant="caption" color="text.secondary">{managementDate(row.created_at)}</Typography>
-        {row.phone&&<Typography variant="body2">مخاطب: {row.phone}</Typography>}
-        {row.reason_code&&<Alert severity={row.status==='rejected'?'warning':row.status==='failed'?'error':'info'}>علت: {managementExplanation(row.reason_code)}</Alert>}
-        {row.kind==='invitation'&&<Stack spacing={1}><Typography variant="body2">ثبت‌نام مخاطب: {row.registered_at?managementDate(row.registered_at):'هنوز ثبت‌نام نکرده است'}</Typography><Typography variant="body2">جایزهٔ دعوت: {row.reward_awarded_at?managementDate(row.reward_awarded_at):'ثبت نشده است'}</Typography></Stack>}
-        {row.kind==='moderation'&&<Typography variant="body2" color="text.secondary">این سابقهٔ قدیمی فقط نتیجهٔ بررسی را دارد؛ متن اولیه در آن زمان ذخیره نشده است.</Typography>}
-        <Accordion disableGutters elevation={0}><AccordionSummary expandIcon={<ExpandMoreRounded/>}><Typography variant="caption">شناسهٔ سابقه</Typography></AccordionSummary><AccordionDetails><Typography variant="caption" sx={{overflowWrap:'anywhere'}}>{row.id}</Typography></AccordionDetails></Accordion>
-        {permissions.includes('view_private_message_text')&&['order','attempt'].includes(row.kind)&&<Box><ManagementButton type="button" variant="outlined" startIcon={<VisibilityOutlined/>} onClick={()=>onAction({name:row.kind==='order'?'message_texts':'attempt_texts',label:'مشاهدهٔ متن‌ها',object_id:String(row.kind==='order'?row.order_id||row.id:row.id),userId})}>مشاهدهٔ متن اولیه و نتیجه</ManagementButton></Box>}
-      </Stack></Card>)}
+      {!data.rows.length?<Empty message="فعالیتی در این بخش ثبت نشده است."/>:data.rows.map(row=>{
+        const received = row.direction === 'received';
+        const phone = received ? row.sender_phone : row.recipient_phone;
+        const phoneLabel = received ? 'شمارهٔ فرستنده' : 'شمارهٔ مقصد';
+        return <Card component="article" key={`${row.kind}-${row.record_id}`} sx={{p:2}}><Stack spacing={2}>
+          <Stack direction="row" sx={{alignItems:'center',justifyContent:'space-between',gap:1,flexWrap:'wrap'}}>
+            <Stack direction="row" spacing={1} sx={{alignItems:'center'}}>
+              <HistoryOutlined color="primary"/>
+              <Typography component="h3" variant="subtitle1">{received ? 'پیام دریافتی' : kinds[row.kind]}</Typography>
+            </Stack>
+            <Chip size="small" color={row.status==='rejected'?'warning':row.status==='failed'?'error':'default'}
+              label={received && row.status === 'accepted' ? 'پذیرفته‌شده توسط سرویس پیامک' : managementState(row.status)}/>
+          </Stack>
+          <Typography variant="caption" color="text.secondary">{managementDate(row.created_at)}</Typography>
+          {row.phone&&<Typography variant="body2">مخاطب: {row.phone}</Typography>}
+          {row.kind!=='invitation'&&<Typography variant="body2">
+            {phoneLabel}{phone ? <> <bdi dir="ltr">{phone}</bdi></> : ' در دسترس نیست'}
+          </Typography>}
+          {row.reason_code&&<Alert severity={row.status==='rejected'?'warning':row.status==='failed'?'error':'info'}>علت: {managementExplanation(row.reason_code)}</Alert>}
+          {row.kind==='invitation'&&<Stack spacing={1}><Typography variant="body2">ثبت‌نام مخاطب: {row.registered_at?managementDate(row.registered_at):'هنوز ثبت‌نام نکرده است'}</Typography><Typography variant="body2">جایزهٔ دعوت: {row.reward_awarded_at?managementDate(row.reward_awarded_at):'ثبت نشده است'}</Typography></Stack>}
+          {row.kind==='moderation'&&<Typography variant="body2" color="text.secondary">این سابقهٔ قدیمی فقط نتیجهٔ بررسی را دارد؛ متن اولیه در آن زمان ذخیره نشده است.</Typography>}
+          {permissions.includes('view_private_message_text')&&(row.kind==='order'||row.kind==='attempt')&&<UserMessageTextsButton
+            userId={userId} kind={row.kind} recordId={row.kind==='order' ? row.order_id || row.id : row.id}
+            phone={phone} phoneLabel={received ? phoneLabel : 'شمارهٔ گیرنده'} onFailure={onFailure}/>}
+        </Stack></Card>;
+      })}
       <Stack component="nav" aria-label="صفحه‌بندی فعالیت کاربر" direction="row" spacing={1} sx={{justifyContent:'flex-end'}}>{page>1&&<Button component={Link} variant="outlined" startIcon={<ArrowForwardRounded/>} href={pageHref(page-1)}>قبلی</Button>}{page<pages&&<Button component={Link} variant="outlined" endIcon={<ArrowBackRounded/>} href={pageHref(page+1)}>بعدی</Button>}</Stack>
     </ContentCard>}
   </Stack>;

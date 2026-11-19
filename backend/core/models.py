@@ -18,6 +18,30 @@ class MonitoringAccessSettings(models.Model):
         constraints = [models.CheckConstraint(condition=models.Q(id=1), name='single_monitoring_access_settings')]
 
 
+class SMSTemplateSettings(models.Model):
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    template = models.TextField()
+    variables = models.JSONField(default=list)
+    legacy_reply_footer = models.BooleanField(default=True, db_default=True, editable=False)
+    sender = models.CharField(max_length=20, blank=True, default='', db_default='')
+    revision = models.PositiveIntegerField(default=0, editable=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        default_permissions = ()
+        constraints = [models.CheckConstraint(condition=models.Q(id=1), name='single_sms_template_settings')]
+
+
+class KavenegarSettings(models.Model):
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    api_key = EncryptedTextField(default='', blank=True, editable=False)
+    revision = models.PositiveIntegerField(default=0, editable=False)
+
+    class Meta:
+        default_permissions = ()
+        constraints = [models.CheckConstraint(condition=models.Q(id=1), name='single_kavenegar_settings')]
+
+
 class StaffRole(models.Model):
     name = models.CharField(max_length=80, unique=True)
     group = models.OneToOneField('auth.Group', on_delete=models.PROTECT, related_name='staff_role')
@@ -76,7 +100,23 @@ class MessageExample(models.Model):
         return self.label
 
 
+class BotPlatform(models.TextChoices):
+    TELEGRAM = "telegram", "Telegram"
+    BALE = "bale", "Bale"
+    RUBIKA = "rubika", "Rubika"
+
+
 class Account(models.Model):
+    class SignupSource(models.TextChoices):
+        UNKNOWN = "unknown", "نامشخص"
+        WEB = "web", "وب"
+        API = "api", "API"
+        TELEGRAM = BotPlatform.TELEGRAM.value, "تلگرام"
+        BALE = BotPlatform.BALE.value, "بله"
+        RUBIKA = BotPlatform.RUBIKA.value, "روبیکا"
+
+    signup_source = models.CharField(max_length=8, choices=SignupSource, default=SignupSource.UNKNOWN,
+        db_default=SignupSource.UNKNOWN, editable=False)
     wallet_balance_toman = models.PositiveBigIntegerField('موجودی کیف پول (تومان)', default=0, db_default=0, editable=False)
     demo_wallet_balance_toman = models.PositiveBigIntegerField(default=0, db_default=0, editable=False)
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="account")
@@ -111,6 +151,14 @@ class Account(models.Model):
         constraints = [models.CheckConstraint(condition=models.Q(free_sends_remaining__lte=models.F('free_sends_earned_total')+3), name="free_sends_within_grants")]
 
 
+class PersonalShareLink(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    account = models.OneToOneField(Account, on_delete=models.CASCADE, related_name='+')
+
+    class Meta:
+        default_permissions = ()
+
+
 class OTPChallenge(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     phone_hash = models.CharField(max_length=64, db_index=True)
@@ -124,9 +172,9 @@ class OTPChallenge(models.Model):
 
 
 class BotIntegration(models.Model):
-    """A trusted server-side adapter; never a Telegram/Bale vendor token."""
+    """A trusted server-side messenger adapter."""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    platform = models.CharField(max_length=12, choices=[('telegram', 'Telegram'), ('bale', 'Bale')])
+    platform = models.CharField(max_length=12, choices=BotPlatform)
     bot_id = models.CharField(max_length=32)
     secret_digest = models.CharField(max_length=64, editable=False)
     active = models.BooleanField(default=True)
@@ -172,6 +220,10 @@ class BotConversationEvent(models.Model):
 
 
 class Preview(models.Model):
+    reply_to = models.ForeignKey('Order', null=True, blank=True, on_delete=models.PROTECT, related_name='+')
+    # The flag keeps receipts masked after private-data retention removes the link reference.
+    is_shared_destination = models.BooleanField(default=False, db_default=False, editable=False)
+    personal_share_token = models.UUIDField(null=True, blank=True, editable=False)
     message_tone = models.CharField(max_length=12, choices=[('polite', 'مودبانه'), ('firm', 'کمی مودبانه'), ('blunt', 'رُک'), ('angry', 'بی‌ادبانه')], default='polite', db_default='polite', editable=False)
     payment_method = models.CharField(max_length=12, default='credit', db_default='credit', editable=False)
     wallet_policy_version = models.CharField(max_length=24, blank=True, default='', db_default='', editable=False)
@@ -198,6 +250,59 @@ class RecipientState(models.Model):
     blocked = models.BooleanField(default=False)
     last_sent_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+
+class IdentityRequestSettings(models.Model):
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    enabled = models.BooleanField(default=False, db_default=False)
+    revision = models.PositiveIntegerField(default=0, editable=False)
+
+    class Meta:
+        default_permissions = ()
+        constraints = [models.CheckConstraint(condition=models.Q(id=1), name='single_identity_request_settings')]
+
+
+class IdentityConsent(models.Model):
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'منتظر تأیید'
+        APPROVED = 'approved', 'نمایش شماره مجاز'
+        DECLINED = 'declined', 'ردشده'
+        REVOKED = 'revoked', 'ناشناس'
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    decision_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    subject = models.ForeignKey(Account, on_delete=models.CASCADE, related_name='+')
+    requester = models.ForeignKey(Account, on_delete=models.CASCADE, related_name='+')
+    environment = models.CharField(max_length=8)
+    source_order = models.ForeignKey('Order', on_delete=models.SET_NULL, null=True, related_name='+')
+    status = models.CharField(max_length=10, choices=Status, default=Status.PENDING)
+    revision = models.PositiveIntegerField(default=0)
+    generation = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        default_permissions = ()
+        constraints = [
+            models.UniqueConstraint(fields=['subject', 'requester', 'environment'], name='unique_directed_identity_pair'),
+            models.CheckConstraint(condition=~models.Q(subject=models.F('requester')), name='identity_consent_distinct_parties'),
+            models.CheckConstraint(condition=models.Q(status__in=['pending', 'approved', 'declined', 'revoked']), name='identity_consent_valid_status'),
+        ]
+
+
+class IdentityReceipt(models.Model):
+    """An outward handle never identifies the internal directed account pair."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    consent = models.ForeignKey(IdentityConsent, on_delete=models.CASCADE, related_name='requests')
+    source_order = models.ForeignKey('Order', on_delete=models.SET_NULL, null=True, related_name='+')
+    generation = models.PositiveIntegerField()
+    status = models.CharField(max_length=10, choices=IdentityConsent.Status, default=IdentityConsent.Status.PENDING)
+    approved_once = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        default_permissions = ()
+        constraints = [models.UniqueConstraint(fields=['consent', 'source_order', 'generation'], name='unique_identity_source_generation')]
 
 
 class RewriteBudget(models.Model):
@@ -230,6 +335,8 @@ class DemoLimitReset(models.Model):
 
 
 class Order(models.Model):
+    reply_to = models.ForeignKey('self', null=True, blank=True, on_delete=models.PROTECT, related_name='replies')
+    reply_depth = models.PositiveSmallIntegerField(default=0, db_default=0, editable=False)
     payment_method = models.CharField(max_length=12, default='legacy', db_default='legacy', editable=False)
     wallet_refund_consent = models.BooleanField(default=False, db_default=False, editable=False)
     is_sponsored = models.BooleanField(default=False, db_default=False, editable=False)
@@ -253,6 +360,7 @@ class Order(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="orders")
+    owner_hidden_at = models.DateTimeField(null=True, blank=True, editable=False)
     preview = models.OneToOneField(Preview, on_delete=models.PROTECT)
     idempotency_key = models.UUIDField()
     recipient_hash = models.CharField(max_length=64, db_index=True)
@@ -270,6 +378,8 @@ class Order(models.Model):
     class Meta:
         permissions = [("view_private_message_text", "View original and reviewed message text with an audit trail")]
         constraints = [models.UniqueConstraint(fields=["owner", "idempotency_key"], name="unique_owner_idempotency"),
+            models.UniqueConstraint(fields=['reply_to'], condition=models.Q(reply_to__isnull=False) &
+                ~models.Q(status__in=['failed', 'cancelled']), name='one_active_reply_per_order'),
             models.CheckConstraint(condition=models.Q(is_free=True, amount_toman=0, uses_purchased_credit=False) | models.Q(is_free=False, amount_toman__gt=0, uses_purchased_credit=False) | models.Q(is_free=False, amount_toman=0, uses_purchased_credit=True, payment_mode__in=['credit_live', 'credit_demo']), name="order_free_or_positive_price")]
         indexes = [models.Index(fields=["owner", "created_at"]), models.Index(fields=["recipient_hash", "status"])]
 
@@ -500,6 +610,7 @@ class RecipientGrant(models.Model):
     preview = models.OneToOneField(Preview, null=True, blank=True, on_delete=models.CASCADE, related_name='recipient_grant')
     invitation_send = models.OneToOneField('InvitationSend', null=True, blank=True, on_delete=models.CASCADE, related_name='recipient_grant')
     token_digest = models.CharField(max_length=64, unique=True)
+    reply_token_digest = models.CharField(max_length=64, unique=True, null=True, blank=True)
     recipient_hash = models.CharField(max_length=64, db_index=True)
     activated_at = models.DateTimeField(null=True, blank=True)
     stop_expires_at = models.DateTimeField(null=True, blank=True)
@@ -569,6 +680,7 @@ class AIConfiguration(models.Model):
     tone_angry_enabled = models.BooleanField('بی‌ادبانه — خیلی جدی، بدون توهین و تهدید', default=False, db_default=False)
     ollama_model = models.CharField("مدل محلی", max_length=100, default="qwen3:4b-instruct-2507-q4_K_M")
     gapgpt_model = models.CharField("مدل GapGPT", max_length=100, blank=True)
+    rewrite_prompt = models.TextField('راهنمای بازنویسی (پرامپت)', max_length=600, blank=True, default='', db_default='')
     timeout_seconds = models.PositiveSmallIntegerField("مهلت کل بازنویسی و بازبینی محلی (ثانیه)", default=20)
     parallel_requests = models.PositiveSmallIntegerField("درخواست محلی هم‌زمان؛ بدون صف", default=2)
     daily_limit = models.PositiveIntegerField("سقف روزانهٔ بازنویسی محلی", default=10000)
@@ -587,6 +699,7 @@ class AIConfiguration(models.Model):
 
     def clean(self):
         import re
+        import unicodedata
         from django.core.exceptions import ValidationError
         errors = {}
         if (not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._:/-]{0,99}', self.ollama_model)
@@ -594,6 +707,12 @@ class AIConfiguration(models.Model):
             errors['ollama_model'] = "نام یک مدل نصب‌شدهٔ محلی وارد کن؛ مدل ابری مجاز نیست."
         if self.gapgpt_model and not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._:/-]{0,99}', self.gapgpt_model):
             errors['gapgpt_model'] = "نام مدل معتبر نیست."
+        prompt = self.rewrite_prompt or ''
+        if len(prompt) > self._meta.get_field('rewrite_prompt').max_length:
+            errors['rewrite_prompt'] = 'راهنمای بازنویسی باید حداکثر ۶۰۰ نویسه باشد.'
+        elif any(unicodedata.category(char).startswith('C') and char not in '\n\r\t\u200c'
+                 for char in prompt):
+            errors['rewrite_prompt'] = 'راهنما را بدون نویسهٔ کنترلی وارد کنید.'
         for name, low, high in [('timeout_seconds', 2, 20), ('parallel_requests', 1, 2),
                               ('daily_limit', 1, 100000), ('user_daily_limit', 1, 10000)]:
             if not low <= getattr(self, name) <= high:

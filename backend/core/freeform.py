@@ -6,9 +6,10 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
 from .models import Account, Preview, RewriteBudget, RewriteUsage
-from .privacy import digest
+from .privacy import decrypt, digest
 from .services import APIError
 from .moderation import ModerationRejected, RewriteUnavailable, moderate, is_reviewed_template
+from .sms import MAX_REWRITE_BODY_UNITS
 
 
 def available(config=None):
@@ -89,6 +90,10 @@ def signature(preview):
         value += ['payment-v1', preview.payment_method, preview.wallet_policy_version]
     if preview.message_tone != 'polite':
         value += ['tone-v1', preview.message_tone]
+    if preview.reply_to_id:
+        value += ['reply-v1', str(preview.reply_to_id)]
+    if preview.is_shared_destination:
+        value += ['personal-share-v1', str(preview.personal_share_token)]
     return digest('approved-gapgpt-v1:'+json.dumps(value, ensure_ascii=False, separators=(',', ':')))
 
 
@@ -99,13 +104,33 @@ def validate_preview(preview, *, recipient_hash=None):
             or not hmac.compare_digest(preview.review_signature, signature(preview))
             or (recipient_hash is not None and recipient_hash != preview.recipient_hash)):
         raise ModerationRejected('unreviewed_snapshot')
-    validate_polite_body(preview.generated_body, max_units=201)
-    if len(preview.full_sms.encode('utf-16-le'))//2 > 201:
-        raise ModerationRejected('unreviewed_snapshot')
+    validate_polite_body(preview.generated_body, max_units=MAX_REWRITE_BODY_UNITS)
 
 
 def validate_order(order):
     preview = order.preview
+    if order.reply_to_id != preview.reply_to_id or bool(order.reply_to_id) != bool(order.reply_depth):
+        raise ModerationRejected('unreviewed_snapshot')
+    if preview.is_shared_destination:
+        from cryptography.fernet import InvalidToken
+        try:
+            actual_hash = digest(decrypt(order.recipient_cipher))
+        except InvalidToken:
+            raise ModerationRejected('unreviewed_snapshot') from None
+        if order.recipient_hash != preview.recipient_hash or actual_hash != order.recipient_hash:
+            raise ModerationRejected('unreviewed_snapshot')
+    if order.reply_to_id:
+        from cryptography.fernet import InvalidToken
+        from .anonymous_replies import counterpart_phone
+        try:
+            phone = counterpart_phone(order.reply_to, order.owner)
+            if (order.reply_depth != order.reply_to.reply_depth + 1 or order.recipient_hash != digest(phone)
+                    or decrypt(order.recipient_cipher) != phone):
+                raise ModerationRejected('unreviewed_snapshot')
+        except (APIError, InvalidToken):
+            raise ModerationRejected('unreviewed_snapshot') from None
+        if preview.moderation_mode not in {'gapgpt', 'ollama'}:
+            raise ModerationRejected('unreviewed_snapshot')
     if preview.moderation_mode in {'gapgpt', 'ollama'}:
         validate_preview(preview, recipient_hash=order.recipient_hash)
         if order.owner_id != preview.owner_id or order.text != '' or order.category != 'custom' or order.full_sms != preview.full_sms:

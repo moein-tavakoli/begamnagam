@@ -1,0 +1,120 @@
+{
+  "version": "1.0.0",
+  "source_commit": "e15098d317a98cc16900c84ab251f46ae967e69e",
+  "deployed": true,
+  "verified_at_utc": "2026-11-11T20:43:57.084915+00:00",
+  "backend_image": "sha256:cff1e9c189d97e91a5b92ce045b602dd15a47ed62deaf31266b63105c6150585",
+  "frontend_image": "sha256:ad13d28312612d036e345f2ebb5e55676cf2a4fde53c956ed0f5cfe7d4499686",
+  "asset_bridge_image": "sha256:75b555447cb67d9daff036a762258933230e2777a96b61b35761fad5e3eb5cbb",
+  "services": {
+    "backend": "healthy",
+    "worker": "running",
+    "beat": "running",
+    "frontend": "healthy",
+    "frontend2": "healthy",
+    "frontend3": "healthy",
+    "frontend4": "healthy",
+    "frontend5": "healthy",
+    "frontend6": "healthy",
+    "postgres": "healthy",
+    "redis": "healthy",
+    "rabbitmq": "healthy",
+    "proxy": "healthy"
+  },
+  "frontends": {
+    "frontend": {
+      "version": "1.0.0",
+      "assets_verified": 16,
+      "recipient_routes": "PASS"
+    },
+    "frontend2": {
+      "version": "1.0.0",
+      "assets_verified": 16,
+      "recipient_routes": "PASS"
+    },
+    "frontend3": {
+      "version": "1.0.0",
+      "assets_verified": 16,
+      "recipient_routes": "PASS"
+    },
+    "frontend4": {
+      "version": "1.0.0",
+      "assets_verified": 16,
+      "recipient_routes": "PASS"
+    },
+    "frontend5": {
+      "version": "1.0.0",
+      "assets_verified": 16,
+      "recipient_routes": "PASS"
+    },
+    "frontend6": {
+      "version": "1.0.0",
+      "assets_verified": 16,
+      "recipient_routes": "PASS"
+    }
+  },
+  "postgresql_tests": 770,
+  "frontend_tests": 121,
+  "frontend_typecheck": "PASS",
+  "frontend_production_build": "PASS",
+  "frontend_candidate_pages": "PASS",
+  "frontend_feature_bundles": [
+    "direct_message_review",
+    "emoji_template",
+    "recipient_phone_check"
+  ],
+  "live_compose_config": "PASS",
+  "migration": "0051_sms_template_legacy_reply_footer",
+  "migration_rehearsal": "PASS",
+  "previous_product_fields_preserved": true,
+  "encrypted_pre_and_post_backup_restore": "PASS",
+  "data_and_proxy_containers_preserved": true,
+  "application_env_files_reused": true,
+  "sms_template_settings_preserved": true,
+  "https": {
+    "version": "1.0.0",
+    "https": "PASS",
+    "transport": "domain_https_via_internal_nginx",
+    "tls_certificate_verified": true,
+    "anonymous_entry": "login redirect",
+    "anonymous_private_files": 404,
+    "private_documentation": "PASS",
+    "existing_documentation_credentials": "accepted",
+    "documentation_account_product_access": "denied",
+    "documentation_account_management_access": "denied",
+    "bot_api_without_key": "denied",
+    "reply_api_schema_and_guide": true,
+    "signup_source_schema_and_guide": true,
+    "message_hide_schema_and_guide": true,
+    "five_character_reply_and_confirmation_schema": "PASS",
+    "short_reply_and_opt_out_routes": true,
+    "anonymous_reply_request": "denied",
+    "otp_is_real": true,
+    "package_checkout_enabled": false,
+    "reply_review_enabled": true,
+    "reply_review_mode": "gapgpt"
+  },
+  "sms_edge": {
+    "tls_verified_for_both_domains": true,
+    "short_host_prefixed_links": "PASS",
+    "legacy_links": "PASS",
+    "root_short_link_http_status": 301,
+    "root_short_link_redirect": "https://begamnagam.ir/S0TOP",
+    "root_short_link_ready": false
+  },
+  "features": {
+    "backend_files_verified": 262,
+    "sms_link_host": "bgam.ir",
+    "sms_link_root_path_enabled": false,
+    "five_character_recipient_links": "PASS",
+    "five_character_invitation_opt_out": "PASS",
+    "active_template_opt_out": "PASS",
+    "active_template_includes_reply": true,
+    "emoji_template_rendering": "PASS",
+    "anonymous_reply_link_redaction": "PASS"
+  },
+  "verification_sms_sent": 0,
+  "verification_otp_sent": 0,
+  "verification_paid_model_calls": 0,
+  "verification_payments": 0
+}

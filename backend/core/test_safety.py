@@ -25,7 +25,7 @@ class RecipientSafetyTests(TestCase):
         self.client = Client()
         self.user = self.authenticate()
         self.quote = self.post('/messages/preview', {'category':'appreciation','text':'ممنون از همراهی تو','recipient_phone':'09901234567'}).json()
-        self.token = self.quote['full_sms'].split('/r/')[1]
+        self.token = self.quote['full_sms'].rsplit('/r/', 1)[1]
         self.o = self.order(recipient='09901234567', preview=self.quote).json()
 
     def deliver(self):
@@ -33,12 +33,13 @@ class RecipientSafetyTests(TestCase):
             self.post('/orders/'+self.o['id']+'/pay-demo')
 
     def test_bound_quote_has_short_path_capability_and_encrypted_snapshot(self):
-        self.assertRegex(self.token, r'^[A-Za-z0-9]{8}$')
+        self.assertRegex(self.token, r'^a[A-Za-z0-9]{5}$')
         self.assertNotIn('https://', self.quote['full_sms'])
         self.assertNotIn('http://', self.quote['full_sms'])
         self.assertEqual(RecipientGrant.objects.get().token_digest, digest('recipient-token:'+self.token))
+        self.assertEqual(RecipientGrant.objects.get().reply_token_digest, digest('reply-token:'+self.token))
         with connection.cursor() as cursor:
-            cursor.execute('SELECT full_sms FROM core_order WHERE id=%s', [self.o['id']])
+            cursor.execute('SELECT full_sms FROM core_order')
             raw = cursor.fetchone()[0]
         self.assertTrue(raw.startswith('enc:v1:'))
         self.assertNotIn(self.token, raw)
@@ -59,7 +60,7 @@ class RecipientSafetyTests(TestCase):
         self.assertEqual(self.post('/recipient/actions/stop', {'token':self.token}, other).status_code, 403)
         headers = {'HTTP_X_CSRFTOKEN':other.cookies['csrftoken'].value}
         for _ in range(2):
-            r = self.post('/recipient/actions/stop', {'token':self.token}, other, **headers)
+            r = self.post('/recipient/actions/stop', {'token':self.token, 'phone':'09901234567'}, other, **headers)
             self.assertEqual(r.json(), {'blocked':True})
             self.assertEqual(r['Referrer-Policy'], 'no-referrer')
             self.assertEqual(r['Cache-Control'], 'no-store')
@@ -72,16 +73,18 @@ class RecipientSafetyTests(TestCase):
 
     def test_tampered_expired_or_unknown_grants_have_same_response(self):
         self.deliver()
-        wrong = ('x' if self.token[0]!='x' else 'y') + self.token[1:]
-        a = self.post('/recipient/actions/stop', {'token':wrong}, Client())
+        wrong = self.token[:-1] + ('7' if self.token[-1] != '7' else '8')
+        a = self.post('/recipient/actions/stop', {'token':wrong, 'phone':'09901234567'}, Client())
         RecipientGrant.objects.update(stop_expires_at=timezone.now()-timedelta(seconds=1))
-        b = self.post('/recipient/actions/stop', {'token':self.token}, Client())
+        b = self.post('/recipient/actions/stop', {'token':self.token, 'phone':'09901234567'}, Client())
         self.assertEqual(a.json(), b.json())
         self.assertEqual(a.status_code, 404)
 
     def test_report_duplicate_is_one_encrypted_case_and_stops_globally(self):
         self.deliver()
-        payload = {'token':self.token, 'reason':'harassment', 'details':'گزارش مصنوعی بدون اطلاعات واقعی'}
+        payload = {'token':self.token, 'phone':'09901234567', 'reason':'harassment', 'details':'گزارش مصنوعی بدون اطلاعات واقعی'}
+        wrong = self.post('/recipient/actions/report', {**payload, 'phone':'09901234568'}, Client())
+        self.assertEqual(wrong.status_code, 404)
         a = self.post('/recipient/actions/report', payload, Client())
         b = self.post('/recipient/actions/report', payload, Client())
         self.assertEqual(a.json(), b.json())
@@ -96,8 +99,8 @@ class RecipientSafetyTests(TestCase):
     def test_report_expiry_does_not_remove_longer_stop_right(self):
         self.deliver()
         RecipientGrant.objects.update(report_expires_at=timezone.now()-timedelta(seconds=1))
-        self.assertEqual(self.post('/recipient/actions/report', {'token':self.token,'reason':'unwanted'}, Client()).status_code,404)
-        self.assertEqual(self.post('/recipient/actions/stop', {'token':self.token}, Client()).status_code,200)
+        self.assertEqual(self.post('/recipient/actions/report', {'token':self.token,'phone':'09901234567','reason':'unwanted'}, Client()).status_code,404)
+        self.assertEqual(self.post('/recipient/actions/stop', {'token':self.token,'phone':'09901234567'}, Client()).status_code,200)
 
     def test_old_session_cannot_reenable_receipt_without_fresh_otp(self):
         self.post('/preferences', {'blocked':True})
@@ -142,7 +145,7 @@ class RecipientSafetyTests(TestCase):
 
     def test_legal_hold_is_time_limited_and_prevents_content_redaction(self):
         self.deliver()
-        self.post('/recipient/actions/report', {'token':self.token,'reason':'unwanted','details':'مصنوعی'}, Client())
+        self.post('/recipient/actions/report', {'token':self.token,'phone':'09901234567','reason':'unwanted','details':'مصنوعی'}, Client())
         AbuseReport.objects.update(hold_until=timezone.now()+timedelta(days=1))
         Order.objects.update(updated_at=timezone.now()-timedelta(days=32))
         call_command('prune_private_data', stdout=io.StringIO())

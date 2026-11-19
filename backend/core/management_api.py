@@ -6,7 +6,7 @@ from functools import wraps
 from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
-from django.db.models import CharField, Q
+from django.db.models import CharField, Exists, OuterRef, Q
 from django.db.models.functions import Cast
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -92,7 +92,8 @@ RESOURCES = {
         ("attempts", "تلاش", "number"), ("environment", "محیط", "text"), ("last_error_code", "علت اخیر", "text"), ("updated_at", "به‌روزرسانی", "date")]),
     "outbox": (m.Outbox, "صف ارسال", "created_at", "state", [
         ("id", "شناسه", "id"), ("order_id", "سفارش", "id"), ("state", "وضعیت", "status"),
-        ("attempts", "تلاش", "number"), ("last_error_code", "علت اخیر", "text"), ("available_at", "نوبت بررسی", "date")]),
+        ("created_at", "ثبت در صف", "date"), ("attempts", "تلاش", "number"),
+        ("last_error_code", "علت اخیر", "text"), ("available_at", "نوبت بررسی", "date")]),
     "reports": (m.AbuseReport, "گزارش‌های کاربران", "created_at", "status", [
         ("id", "پرونده", "id"), ("reason", "موضوع گزارش", "text"), ("status", "وضعیت", "status"),
         ("created_at", "ثبت", "date"), ("hold_until", "نگهداری تا", "date"), ("closed_at", "بسته‌شدن", "date")]),
@@ -136,7 +137,9 @@ def resource_permission(spec):
 
 def context(user):
     from .staff_roles import can_support, can_view_changelog
-    role_permissions = (['support_chat'] if can_support(user) else []) + (['view_changelog'] if can_view_changelog(user) else []) + (['manage_staff', 'manage_monitoring_access'] if user.is_superuser else [])
+    role_permissions = (['support_chat'] if can_support(user) else []) + (['view_changelog'] if can_view_changelog(user) else [])
+    if user.is_superuser:
+        role_permissions += ['manage_staff', 'manage_monitoring_access', 'manage_kavenegar_key']
     return {"authenticated": True, "session_identity": digest("staff-session-actor:"+str(user.pk)), "username": "مدیر" if hasattr(user, "account") else user.get_username(),
         "permissions": role_permissions + [name for name in ("view_operations", "manage_site_limits", "manage_account_limits", "manage_free_sending", "manage_manual_payments", "approve_manual_payments", "manage_ai", "manage_message_packages", "manage_message_examples", "view_private_message_text", "operate_safety", "suspend_account", "manage_message_tone", "triage_report", "confirm_refund") if user.has_perm("core." + name)],
         "resources": [{"key": key, "title": spec[1]} for key, spec in RESOURCES.items() if user.has_perm(resource_permission(spec)) and (key != "blacklist" or user.has_perm("core.view_account"))]}
@@ -232,6 +235,10 @@ def records(request, resource):
     else:
         total = rows.count()
         fields = list(dict.fromkeys([model._meta.pk.name] + [col[0] for col in columns]))
+        if resource == 'outbox' and request.user.has_perm('core.operate_safety'):
+            from .queue_archive import archivable_outbox
+            rows = rows.annotate(can_archive=Exists(archivable_outbox(timezone.now()).filter(pk=OuterRef('pk'))))
+            fields.append('can_archive')
         if phone_fields:
             display_field, cipher_field, legacy_field = phone_fields
             fields = [cipher_field if field == display_field else field for field in fields]
@@ -251,7 +258,7 @@ def records(request, resource):
         field = model._meta.get_field(status_field)
         choices = list(field.flatchoices) if field.choices else [(v, v) for v in {
             "invitation-sends": ["pending", "submitting", "accepted", "delivered", "delivered_demo", "failed", "unknown", "suppressed", "expired", "cancelled"],
-            "outbox": ["pending", "submitting", "sent", "failed", "cancelled", "unknown"],
+            "outbox": ["pending", "submitting", "sent", "failed", "cancelled", "unknown", "archived"],
             "reports": ["open", "closed"], "moderation": ["accepted", "rejected"]}.get(resource, [])]
     return {"title": title, "columns": [{"key": k, "label": label, "type": kind} for k, label, kind in columns],
         "rows": values, "total": total, "page": page, "page_size": page_size, "statuses": choices}

@@ -1,0 +1,130 @@
+{
+  "version": "0.37.2",
+  "source_commit": "402b3508dae22da0c96e66a41d92cac0640acdb9",
+  "deployed": true,
+  "verified_at_utc": "2026-11-10T09:53:00.024172+00:00",
+  "frontend_image": "sha256:0d1a14aa0f5b2e8b86af174841536674e5e7c3a02d2d86dec3cb4d4e829f861c",
+  "backend_image": "sha256:8b8488885b8a797c0193cbf93d5441abd2f46615f93e5b6ff49b563207c407c4",
+  "services": {
+    "backend": "healthy",
+    "worker": "running",
+    "beat": "running",
+    "frontend": "healthy",
+    "frontend2": "healthy",
+    "frontend3": "healthy",
+    "frontend4": "healthy",
+    "frontend5": "healthy",
+    "frontend6": "healthy",
+    "postgres": "healthy",
+    "redis": "healthy",
+    "rabbitmq": "healthy",
+    "proxy": "healthy"
+  },
+  "frontends": {
+    "frontend": {
+      "assets_verified": 13,
+      "version": "0.37.2",
+      "monitoring_bundle": "PASS",
+      "reply_bundle": "PASS"
+    },
+    "frontend2": {
+      "assets_verified": 13,
+      "version": "0.37.2",
+      "monitoring_bundle": "PASS",
+      "reply_bundle": "PASS"
+    },
+    "frontend3": {
+      "assets_verified": 13,
+      "version": "0.37.2",
+      "monitoring_bundle": "PASS",
+      "reply_bundle": "PASS"
+    },
+    "frontend4": {
+      "assets_verified": 13,
+      "version": "0.37.2",
+      "monitoring_bundle": "PASS",
+      "reply_bundle": "PASS"
+    },
+    "frontend5": {
+      "assets_verified": 13,
+      "version": "0.37.2",
+      "monitoring_bundle": "PASS",
+      "reply_bundle": "PASS"
+    },
+    "frontend6": {
+      "assets_verified": 13,
+      "version": "0.37.2",
+      "monitoring_bundle": "PASS",
+      "reply_bundle": "PASS"
+    }
+  },
+  "postgresql_tests": 751,
+  "frontend_tests": 120,
+  "frontend_typecheck": "PASS",
+  "frontend_production_build": "PASS",
+  "frontend_runtime_files": 454,
+  "live_compose_config": "PASS",
+  "migration": "0048_rubika_signup_source",
+  "database_migration_required": false,
+  "migration_rehearsal": "PASS",
+  "previous_product_fields_preserved": true,
+  "encrypted_pre_and_post_backup_restore": "PASS",
+  "application_env_files_reused": true,
+  "data_and_proxy_containers_preserved": true,
+  "https": {
+    "version": "0.37.2",
+    "https": "PASS",
+    "transport": "domain_https_via_internal_nginx",
+    "tls_certificate_verified": true,
+    "anonymous_entry": "login redirect",
+    "anonymous_private_files": 404,
+    "private_documentation": "PASS",
+    "existing_documentation_credentials": "accepted",
+    "documentation_account_product_access": "denied",
+    "documentation_account_management_access": "denied",
+    "bot_api_without_key": "denied",
+    "reply_api_schema_and_guide": true,
+    "signup_source_schema_and_guide": true,
+    "ordinary_otp_probe_with_and_without_bot_key": "invalid_otp",
+    "short_reply_and_opt_out_routes": true,
+    "anonymous_reply_request": "denied",
+    "otp_is_real": true,
+    "package_checkout_enabled": false,
+    "reply_review_enabled": true,
+    "reply_review_mode": "gapgpt"
+  },
+  "features": {
+    "backend_files": 258,
+    "monitoring_account_activity": "PASS",
+    "monitoring_messenger_breakdown": "PASS",
+    "monitoring_anonymous_without_allowed_ip": "denied",
+    "ai_settings_readable": true,
+    "sms_template_settings_readable": true,
+    "recipient_sms_footer_rendering": "PASS",
+    "long_template_warning": "PASS",
+    "max_replies": 3,
+    "private_documentation_enabled": true,
+    "session_days": 30,
+    "otp_sms_profile": "kavenegar_live",
+    "paid_checkout": "disabled"
+  },
+  "isolated_compose_demo": {
+    "status": "PASS",
+    "images": "local_builds_from_the_same_release_artifacts",
+    "source_commit": "402b3508dae22da0c96e66a41d92cac0640acdb9",
+    "backend_image": "sha256:15e80f7a837dd016fe5a176464f90885e9b9c973caf0e5fd3a58467ce1967515",
+    "frontend_image": "sha256:66ff7a2568fd43f51103a6a7d082e602ebe61c88d3d119ea5df72ba3ddc5bfbb",
+    "checks": [
+      "end_to_end_smoke",
+      "database_and_queue_foundation",
+      "private_recipient_redirects",
+      "manifest_and_public_files",
+      "otp_signup_without_bot_key",
+      "otp_signup_with_messenger_token"
+    ]
+  },
+  "verification_sms_sent": 0,
+  "verification_paid_model_calls": 0,
+  "verification_payments": 0,
+  "public_external_https_probe": "unavailable"
+}

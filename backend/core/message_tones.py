@@ -15,7 +15,7 @@ TONES = (
 LEGACY_TONES = (
     {'id': 'angry', 'field': 'tone_angry_enabled', 'label': 'بی‌ادبانه',
      'description': 'خیلی جدی و ناراضی؛ بدون توهین یا تهدید.',
-     'instruction': 'Use terse, emphatic, very serious Persian. Express frustration with the specific situation when consistent with the source. Avoid pleasantries and unnecessary softening. Never invent anger, hostility or a complaint for a positive message. No insults, humiliation, sarcasm, threats, coercion, intimidation, harassment, identifying details or addresses. This tone changes intensity only; it never permits abuse.'},
+     'instruction': 'Use terse, emphatic, very serious Persian. Express frustration with the specific situation when consistent with the source. Avoid pleasantries and unnecessary softening. Never invent anger, hostility or a complaint for a positive message. No insults, humiliation, sarcasm, threats, coercion, intimidation, harassment, other private identifiers or addresses. This tone changes intensity only; it never permits abuse.'},
 )
 
 

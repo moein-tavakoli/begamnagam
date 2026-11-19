@@ -6,7 +6,14 @@ from .models import MessageDelivery, OperatorAudit, Order, Outbox
 from .services import APIError
 
 
-def archive_unknown_outbox(event_id, reason):
+def archivable_outbox(now):
+    cutoff = now - timedelta(hours=48)
+    return Outbox.objects.filter(state='unknown', created_at__lte=cutoff,
+        order__status=Order.Status.UNKNOWN, order__delivery__status=MessageDelivery.Status.UNKNOWN,
+        order__delivery__created_at__lte=cutoff)
+
+
+def archive_unknown_outbox(event_id, reason, *, actor=None):
     if not isinstance(reason, str) or not 3 <= len(reason.strip()) <= 200:
         raise APIError('reason_required', 'دلیل بایگانی باید بین ۳ تا ۲۰۰ نویسه باشد.')
     order_id = Outbox.objects.values_list('order_id', flat=True).get(pk=event_id)
@@ -16,13 +23,13 @@ def archive_unknown_outbox(event_id, reason):
         delivery = MessageDelivery.objects.select_for_update().get(order=order)
         if event.state == 'archived':
             return event
-        if (event.state != 'unknown' or order.status != 'unknown' or delivery.status != 'unknown'
-                or max(event.created_at, delivery.created_at) > timezone.now() - timedelta(hours=48)):
+        now = timezone.now()
+        if not archivable_outbox(now).filter(pk=event.pk).exists():
             raise APIError('archive_conflict', 'فقط ارسال نامعلوم قدیمی‌تر از ۴۸ ساعت قابل بایگانی است.', 409)
         event.state = 'archived'
-        event.processed_at = timezone.now()
+        event.processed_at = now
         event.save(update_fields=['state', 'processed_at'])
-        OperatorAudit.objects.create(action='archive_unknown_outbox', object_id=str(event.pk),
+        OperatorAudit.objects.create(actor=actor, action='archive_unknown_outbox', object_id=str(event.pk),
             reason=reason.strip(), before={'queue_state': 'unknown'},
             after={'queue_state': 'archived', 'order_status': order.status, 'delivery_status': delivery.status})
         return event

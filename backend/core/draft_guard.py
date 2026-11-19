@@ -7,6 +7,8 @@ are still required. Rejections contain only a fixed code, never private input.
 import re
 import unicodedata
 
+from emoji import emoji_list
+
 from .moderation import ModerationRejected, moderate
 from .privacy import DIGITS
 
@@ -14,6 +16,42 @@ from .privacy import DIGITS
 MAX_DRAFT_CHARACTERS = 280
 _PERSIAN = re.compile(r'[\u0621-\u063a\u0641-\u064a\u067e\u0686\u0698\u06a9\u06af\u06cc]')
 _TRANSLATE = str.maketrans({'ي': 'ی', 'ى': 'ی', 'ك': 'ک', 'أ': 'ا', 'إ': 'ا', 'ٱ': 'ا', 'ة': 'ه'})
+
+
+def _replace_emoji(text, replacement):
+    # Slice around recognized sequences so unmatched format characters survive
+    # for the caller to normalize or reject.
+    parts = []
+    end = 0
+    for match in emoji_list(text):
+        start = match['match_start']
+        parts.extend((text[end:start], replacement(match['emoji'])))
+        end = match['match_end']
+    parts.append(text[end:])
+    return ''.join(parts)
+
+
+def without_emoji(text):
+    return _replace_emoji(text, lambda _sequence: '')
+
+
+def _ending_punctuation_span(text):
+    emoji_starts = {match['match_end']: match['match_start'] for match in emoji_list(text)}
+    end = len(text)
+    while end in emoji_starts:
+        end = len(text[:emoji_starts[end]].rstrip())
+    start = len(text[:end].rstrip('.!?؟'))
+    return start, end
+
+
+def preserve_ending_punctuation(source, candidate):
+    """Keep final sentence marks, which may appear before a run of emoji."""
+    start, end = _ending_punctuation_span(source)
+    marks = source[start:end]
+    if not marks:
+        return candidate
+    start, end = _ending_punctuation_span(candidate)
+    return candidate[:start] + marks + candidate[end:]
 
 
 def _normal(text):
@@ -94,7 +132,7 @@ _CONTACT = re.compile(
     r'(?:ir|com|net|org|io|app|me|co|dev|info|online|site|xyz|edu|gov)(?!\w)|'
     r'تلگرام|واتساپ|واتس\s*اپ|اینستاگرام|ایمیل|'
     r'کد\s*ملی|شماره\s*(?:کارت|حساب|تماس|تلفن|موبایل|شناسنامه)|'
-    r'رمز\s*(?:عبور|کارت)|شماره\s*شبا|نام\s*خانوادگی|'
+    r'رمز\s*(?:عبور|کارت)|شماره\s*شبا|'
     r'(?:آدرس|نشانی)\s*(?:خانه|منزل|محل|او|شما|من|ما)|'
     r'خیابان.+(?:کوچه|پلاک)|پلاک\s*[\d۰-۹٠-٩]', re.I | re.X)
 
@@ -123,36 +161,47 @@ def sanitize_draft(text):
             or any(unicodedata.category(char) in {'Cs', 'Co'} for char in text)
             or any(unicodedata.category(char) == 'Cc' and char not in '\r\n\t' for char in text)):
         raise ModerationRejected('invalid_draft')
-    value = _normal(text)
-    _check_intent(value)
+    # Protect whole emoji while normalizing and stripping punctuation, including
+    # joiners and keycap bases. Private-use markers cannot occur in the input.
+    emoji_by_marker = {}
+
+    def preserve(sequence):
+        codepoint = 0xE000 + len(emoji_by_marker)
+        emoji_by_marker[codepoint] = sequence
+        return chr(codepoint)
+
+    value = _normal(_replace_emoji(text, preserve))
+    _check_intent(_normal(text) if emoji_by_marker else value)
     value, removed = _INSULTS.subn(' ', value)
     value, masked_removed = _MASKED_INSULTS.subn(' ', value)
-    value = re.sub(r'\s+', ' ', value).strip(' \t.,،؛:!?؟«»"\'()[]-*_/')
+    value = re.sub(r'\s+', ' ', value)
+    if removed or masked_removed:
+        # A removed edge word can leave a detached punctuation mark.
+        value = re.sub(r'^ [.,،؛:!?؟]+(?: |$)| [.,،؛:!?؟]+$', ' ', value)
+    value = value.strip(' \t«»"\'[]-*_/').translate(emoji_by_marker)
     # Deleting a token must not assemble a previously separated instruction or
-    # contact phrase that would otherwise get passed to the model unchecked.
-    _check_intent(value)
+    # contact phrase. Scan the actual text, including digits used in keycaps.
+    _check_intent(_normal(value) if emoji_by_marker else value)
     meaningful = [word for word in re.findall(r'[^\W\d_]+', value)
                   if word not in _FILLER and _PERSIAN.search(word)]
     if (not meaningful or ((removed or masked_removed) and len(meaningful) < 2)
             or not _PERSIAN.search(value)):
         raise ModerationRejected('draft_without_intent')
-    # Existing moderation remains a second fail-closed local check. Its return
-    # value applies the same normal form used by the existing preview flow.
-    return moderate(value)
+    checked = moderate(value)
+    return value if emoji_by_marker else checked
 
 
 def validate_polite_body(text, *, max_units):
     """Validate one plain, short Persian message body; never repair a model body."""
     if (not isinstance(text, str) or not text or text != text.strip()
-            or type(max_units) is not int or not 1 <= max_units <= 201
-            or len(text) > 201
-            or any(unicodedata.category(char) in {'Cc', 'Cs', 'Co', 'So'} for char in text)
-            or any(unicodedata.category(char) == 'Cf' and char != '\u200c' for char in text)
+            or type(max_units) is not int or not 1 <= max_units <= 201 or len(text) > 201):
+        raise ModerationRejected('invalid_polite_body')
+    plain = without_emoji(text)
+    if (any(unicodedata.category(char) in {'Cc', 'Cs', 'Co', 'So'} for char in plain)
+            or any(unicodedata.category(char) == 'Cf' and char != '\u200c' for char in plain)
             or len(text.encode('utf-16-le')) // 2 > max_units
-            or not _PERSIAN.search(text)
-            or any(char in text for char in ('`', '<', '>', '{', '}', '[', ']', '|'))
-            or not re.fullmatch(r'[\u0600-\u06ff\s\d.,!?;:()،؛؟٪%\u200c\u2013\u2014-]+', text)
-            or text[0] in '"\'«' or text[-1] in '"\'»'):
+            or not _PERSIAN.search(plain)
+            or not re.fullmatch(r'[\u0600-\u06ff\s\d.,!?;:()،؛؟٪%\u200c\u2013\u2014-]+', plain)):
         raise ModerationRejected('invalid_polite_body')
     value = _normal(text)
     _check_intent(value)
@@ -160,7 +209,7 @@ def validate_polite_body(text, *, max_units):
             or re.search(r'نمیدونم\s*بهت\s*بگم|نمی\s*دونم\s*بهت\s*بگم|'
                          r'بگم\s*نگم|لغو\s*(?:دریافت)?\s*:|'
                          r'^(?:متن|پیام|پاسخ|بازنویسی|ترجمه)\s*(?:نهایی|اصلاحشده|محترمانه)?\s*:|'
-                         r'^(?:حتما|البته)[،,:]|^(?:نسخه|بازنویسی)\s*(?:محترمانه|اصلاحشده)', value)):
+                         r'^(?:حتما|البته)[،,:]|^(?:نسخه|بازنویسی)\s*(?:محترمانه|اصلاحشده)', _normal(plain))):
         raise ModerationRejected('invalid_polite_body')
     moderate(value)
     return text

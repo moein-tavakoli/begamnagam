@@ -81,7 +81,6 @@ def health(request):
 @ensure_csrf_cookie
 @api(["GET"])
 def bootstrap(request):
-    session_key(request)
     from .payment_options import options as payment_options
     authenticated = is_product_authenticated(request.user)
     from .freeform import available as freeform_available
@@ -147,12 +146,15 @@ def request_otp(request):
     if demo_otp:
         return {"challenge_id": str(challenge_id), "debug_code": code, "demo_mode": True, "expires_in": limits.otp_validity_seconds}
     from .providers import Kavenegar, ProviderDisabled, ProviderUnknown, ProviderRejected
-    from .budget import reserve_cost
+    from .budget import lock_dispatch_control, observe_cost, reserve_cost
     delivery_status = 'accepted'
     try:
+        if hasattr(request, 'bot_conversation'):
+            # The bot session transaction holds the day lock until this
+            # response commits. Follow the overrun lock order before reserving.
+            lock_dispatch_control()
         reserve_cost('otp:' + str(challenge_id), 'otp', limits.otp_max_cost_rial)
         result = Kavenegar().otp(phone=phone, code=code)
-        from .budget import observe_cost
         observe_cost("otp:" + str(challenge_id), result.cost_rial)
         if result.status == 'failed':
             raise ProviderRejected('sms_delivery_failed')

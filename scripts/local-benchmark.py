@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-"""Low-activity1000-account benchmark: isolated PostgreSQL/cache/queue; demo only.
+"""Low-activity 1000-account benchmark: isolated PostgreSQL/cache/queue; demo only.
 
 Use backend/.venv/bin/python. Supply BENCH_DATABASE_URL, BENCH_REDIS_URL (DB14),
 BENCH_BROKER_URL via the environment, never CLI credentials. No image build.
+Exercises 30 gift sends, then reports scheduled read arrivals by phase and route.
 """
 import argparse
 import base64
 import hashlib
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
 import json
 import math
 import os
@@ -17,7 +19,6 @@ import secrets
 import socket
 import subprocess
 import sys
-import threading
 import time
 from urllib.parse import urlparse, urlunparse
 import urllib.request
@@ -27,10 +28,69 @@ from psycopg import sql
 from redis import Redis
 
 ROOT = Path(__file__).resolve().parent.parent
+OPERATIONS = ('/bootstrap', '/messages', '/preferences')
+ACTIVE_SESSIONS = 10
+GIFTS_PER_SESSION = 3
 
 
 def percentile(values, p):
     return round(sorted(values)[max(0,math.ceil(len(values)*p)-1)],3) if values else None
+
+
+def summarize(rows):
+    timings = [row['ms'] for row in rows if row['outcome'] == 'success']
+    failures = sum(row['outcome'] == 'error' for row in rows)
+    dropped = sum(row['outcome'] == 'dropped' for row in rows)
+    completed = len(timings) + failures
+    return {
+        'requests': completed,
+        'offered': len(rows),
+        'completed': completed,
+        'dropped': dropped,
+        'successful': len(timings),
+        'unexpected_errors': failures,
+        'p50_ms': percentile(timings, .5),
+        'p95_ms': percentile(timings, .95),
+        'p99_ms': percentile(timings, .99),
+        'error_rate': failures / completed if completed else 0,
+        'dropped_rate': dropped / len(rows) if rows else 0,
+    }
+
+
+def measure_request(client, path, phase, due):
+    try:
+        client.call(path)
+    except Exception:
+        outcome = 'error'
+    else:
+        outcome = 'success'
+    return {'phase': phase, 'operation': path, 'ms': (time.monotonic() - due) * 1000, 'outcome': outcome}
+
+
+def load(clients, phase, duration, rate):
+    interval = 1 / rate
+    rows = []
+    futures = []
+    pending = {}
+    with ThreadPoolExecutor(max_workers=len(clients)) as pool:
+        began = time.monotonic()
+        for index in range(duration * rate):
+            due = began + index * interval
+            remaining = due - time.monotonic()
+            if remaining > 0:
+                time.sleep(remaining)
+            path = OPERATIONS[index % len(OPERATIONS)]
+            client_index = index % len(clients)
+            previous = pending.get(client_index)
+            # A late arrival or busy session counts as dropped instead of joining a client-side backlog.
+            if time.monotonic() >= due + interval or (previous is not None and not previous.done()):
+                rows.append({'phase': phase, 'operation': path, 'ms': None, 'outcome': 'dropped'})
+                continue
+            future = pool.submit(measure_request, clients[client_index], path, phase, due)
+            pending[client_index] = future
+            futures.append(future)
+        rows.extend(future.result() for future in futures)
+    return rows
 
 
 def main():
@@ -49,9 +109,12 @@ def main():
         raise ValueError('Benchmark only permits loopback dependencies and isolated RedisDB14')
     with socket.socket() as probe:
         probe.bind(('127.0.0.1',args.port))
-    runtime_sources = [ROOT/'backend/config/settings.py', ROOT/'backend/config/urls.py', *[ROOT/'backend/core'/name for name in ['models.py','views.py','services.py','tasks.py','safety.py','recipient.py','privacy.py','fields.py','budget.py','provider_services.py','provider_delivery.py','moderation.py','middleware.py']]]
-    def source_hash(): return hashlib.sha256(b''.join(p.read_bytes() for p in runtime_sources)).hexdigest()
-    runtime_sources += sorted((ROOT/'backend/core/providers').glob('*.py'))
+    def source_hash():
+        runtime_sources = sorted(
+            path for directory in ('config', 'core')
+            for path in (ROOT / 'backend' / directory).rglob('*.py')
+        )
+        return hashlib.sha256(b''.join(path.read_bytes() for path in runtime_sources)).hexdigest()
     initial_source_hash=source_hash()
     run_id=uuid.uuid4().hex[:12]
     db='begamnagam_bench_'+run_id
@@ -62,6 +125,7 @@ def main():
     parsed=urlparse(dsn)
     runtime=dict(os.environ,DATABASE_URL=urlunparse(parsed._replace(path='/'+db)),REDIS_URL=redis_url,
         CELERY_BROKER_URL=broker,CELERY_TASK_DEFAULT_QUEUE='bench_'+run_id,CACHE_KEY_PREFIX='bench:'+run_id,
+        DJANGO_SETTINGS_MODULE='config.settings',PROVIDER_DAILY_BUDGET_UNLIMITED='0',
         BENCHMARK_RUN_ID=run_id,DEBUG='0',DEMO_MODE='1',DJANGO_TESTING='0',CELERY_TASK_ALWAYS_EAGER='0',
         DJANGO_SECRET_KEY=secrets.token_urlsafe(48),PHONE_HASH_KEY=secrets.token_urlsafe(48),
         PHONE_ENCRYPTION_KEY=base64.urlsafe_b64encode(os.urandom(32)).decode(),
@@ -78,7 +142,6 @@ def main():
     setup_log.close()
     server_log=(folder/'server.log').open('w');worker_log=(folder/'worker.log').open('w')
     children=[]
-    samples=[];lock=threading.Lock();client_locks=[threading.Lock() for _ in range(10)]
     try:
         children.append(subprocess.Popen([python,'-m','gunicorn','config.wsgi:application','--bind','127.0.0.1:'+str(args.port),'--workers','2','--threads','2','--timeout','30','--access-logfile','-','--access-logformat','%(m)s %(U)s %(s)s %(L)s'],cwd=ROOT/'backend',env=runtime,stdout=server_log,stderr=subprocess.STDOUT))
         children.append(subprocess.Popen([python,'-m','celery','-A','config','worker','--hostname=bench_'+run_id+'@%h','--pool=threads','--concurrency=2','--loglevel=WARNING'],cwd=ROOT/'backend',env=runtime,stdout=worker_log,stderr=subprocess.STDOUT))
@@ -95,13 +158,14 @@ def main():
         os.environ['SMOKE_BASE_URL']=base
         sys.path.insert(0,str(ROOT/'scripts'))
         from smoke import Client
-        clients=[Client() for _ in range(10)]
+        clients=[Client() for _ in range(ACTIVE_SESSIONS)]
         flow_latencies=[]
         for i,client in enumerate(clients):
-            client.call('/bootstrap')
+            bootstrap = client.call('/bootstrap')
+            if not bootstrap['demo_mode'] or bootstrap.get('otp_is_real'):
+                raise RuntimeError('Benchmark requires demo-only SMS and OTP')
             client.login('099'+str(i).zfill(8))
-        # Thirty complete successful journeys, respecting the3/day sender cap.
-        for j in range(3):
+        for j in range(GIFTS_PER_SESSION):
             for i,client in enumerate(clients):
                 started=time.monotonic()
                 recipient='098'+str(j*10+i).zfill(8)
@@ -109,60 +173,102 @@ def main():
                 key=str(uuid.uuid4())
                 order=client.call('/orders',{'preview_id':preview['preview_id'],'recipient_phone':recipient},key=key)
                 assert client.call('/orders',{'preview_id':preview['preview_id'],'recipient_phone':recipient},key=key)['id']==order['id']
-                client.call('/orders/'+order['id']+'/pay-demo',{})
+                assert order['is_free'] and order['amount_toman'] == 0
+                client.call(f"/orders/{order['id']}/confirm-free", {})
+                client.call(f"/orders/{order['id']}/confirm-free", {})
                 for _ in range(50):
                     result=client.call('/orders/'+order['id'])
                     if result['status']=='delivered_demo': break
                     time.sleep(.1)
                 else: raise RuntimeError('Successful-flow queue did not complete')
                 flow_latencies.append((time.monotonic()-started)*1000)
-        print('Prepared1000 accounts/10 active sessions;30 successful demo journeys complete.',flush=True)
+        exhausted_gift_balances = sum(client.call('/bootstrap')['free_sends_remaining'] == 0 for client in clients)
+        gift_count = ACTIVE_SESSIONS * GIFTS_PER_SESSION
+        print(f'Prepared 1000 accounts, {ACTIVE_SESSIONS} active sessions and {gift_count} demo gift sends.', flush=True)
 
-        def request_one(index,phase):
-            path=['/bootstrap','/messages','/preferences'][index%3]
-            client_index=index%10
-            with client_locks[client_index]:
-                start=time.monotonic();success=True
-                try: clients[client_index].call(path)
-                except Exception: success=False
-                elapsed=(time.monotonic()-start)*1000
-            with lock: samples.append({'phase':phase,'operation':path,'ms':elapsed,'success':success})
-
-        def load(phase,duration,rate):
-            began=time.monotonic()
-            with ThreadPoolExecutor(max_workers=10) as pool:
-                futures=[]
-                for n in range(duration*rate):
-                    remaining=began+n/rate-time.monotonic()
-                    if remaining>0: time.sleep(remaining)
-                    futures.append(pool.submit(request_one,n,phase))
-                for f in futures:f.result()
-            print(phase+' complete; measured requests='+str(duration*rate),flush=True)
-
-        load('baseline',args.duration,args.rate)
-        load('burst',args.burst_duration,args.burst_rate)
-        phase_results={}
-        for phase in ['baseline','burst']:
-            rows=[r for r in samples if r['phase']==phase]
-            timings=[r['ms'] for r in rows if r['success']]
-            failures=sum(not r['success'] for r in rows)
-            phase_results[phase]={'requests':len(rows),'successful':len(timings),'unexpected_errors':failures,
-                'p50_ms':percentile(timings,.5),'p95_ms':percentile(timings,.95),'p99_ms':percentile(timings,.99),
-                'error_rate':failures/len(rows) if rows else 0,'operations':{p:sum(r['operation']==p for r in rows) for p in ['/bootstrap','/messages','/preferences']}}
+        samples = []
+        phase_results = {}
+        for phase, duration, rate in (
+            ('baseline', args.duration, args.rate),
+            ('burst', args.burst_duration, args.burst_rate),
+        ):
+            rows = load(clients, phase, duration, rate)
+            samples.extend(rows)
+            result = summarize(rows)
+            by_operation = {
+                path: summarize([row for row in rows if row['operation'] == path])
+                for path in OPERATIONS
+            }
+            phase_results[phase] = {
+                **result,
+                'operations': {path: operation['completed'] for path, operation in by_operation.items()},
+                'by_operation': by_operation,
+            }
+            print(f"{phase} complete: {result['completed']}/{result['offered']} completed.", flush=True)
         with psycopg.connect(runtime['DATABASE_URL']) as conn:
-            counts=conn.execute("SELECT (SELECT count(*) FROM core_account),(SELECT count(*) FROM core_order WHERE status='delivered_demo'),(SELECT count(*) FROM core_financialevent WHERE kind='payment'),(SELECT count(*) FROM core_messagedelivery WHERE attempts<>1),(SELECT count(*) FROM core_outbox WHERE state<>'sent')").fetchone()
+            database_version = conn.execute('SHOW server_version').fetchone()[0]
+            counts = conn.execute("""
+                SELECT (SELECT count(*) FROM core_account),
+                    (SELECT count(*) FROM core_order WHERE status = 'delivered_demo' AND is_free AND amount_toman = 0),
+                    (SELECT count(*) FROM core_financialevent WHERE kind = 'payment'),
+                    (SELECT count(*) FROM core_messagedelivery WHERE attempts <> 1 OR status <> 'delivered_demo'),
+                    (SELECT count(*) FROM core_outbox WHERE state <> 'sent'),
+                    (SELECT count(*) FROM core_order),
+                    (SELECT count(*) FROM core_messagedelivery),
+                    (SELECT count(*) FROM core_outbox)
+            """).fetchone()
         (folder/'samples.json').write_text(json.dumps(samples))
         from kombu import Connection
         with Connection(broker, connect_timeout=5) as broker_connection:
             broker_connection.connect()
             broker_version=broker_connection.connection.server_properties.get('version','unknown')
-        report={'runtime_source_sha256':initial_source_hash,'source_unchanged_during_run':source_hash()==initial_source_hash,'rabbitmq_version':broker_version,'redis_version':redis.info()['redis_version'],'run_id':run_id,'date_utc':__import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat(),
-            'database':db,'environment':{'platform':platform.platform(),'logical_cpu_count':os.cpu_count(),'python':platform.python_version(),'http_server':'native gunicorn2 workers x2 threads','queue_worker':'Celery threads concurrency2','dependencies':'local Docker PostgreSQL17/Redis/RabbitMQ; shared development host'},
-            'configured':{'baseline_duration_seconds':args.duration,'baseline_rps':args.rate,'burst_duration_seconds':args.burst_duration,'burst_rps':args.burst_rate},
-            'seeded_accounts':counts[0],'active_sessions':10,'successful_message_flows':counts[1],'payment_captures':counts[2],
-            'delivery_attempt_mismatches':counts[3],'outbox_not_sent':counts[4],'full_demo_flow_p95_ms':percentile(flow_latencies,.95),
-            'http':phase_results,'real_provider_capacity_measured':False,'frontend_or_device_performance_measured':False}
-        report['passed']=all(v['error_rate']<.01 and (v['p95_ms'] is None or v['p95_ms']<=800) for v in phase_results.values()) and counts==(1000,30,30,0,0) and report['source_unchanged_during_run']
+        account_count, gift_deliveries, payment_captures, delivery_mismatches, unsent_outbox, orders, deliveries, outbox_events = counts
+        report = {
+            'runtime_source_sha256': initial_source_hash,
+            'source_unchanged_during_run': source_hash() == initial_source_hash,
+            'postgresql_version': database_version,
+            'rabbitmq_version': broker_version,
+            'redis_version': redis.info()['redis_version'],
+            'run_id': run_id,
+            'date_utc': datetime.now(timezone.utc).isoformat(),
+            'database': db,
+            'environment': {
+                'platform': platform.platform(),
+                'logical_cpu_count': os.cpu_count(),
+                'python': platform.python_version(),
+                'http_server': 'native Gunicorn, 2 workers × 2 threads',
+                'queue_worker': 'Celery threads, concurrency 2',
+                'dependencies': 'loopback PostgreSQL/Redis/RabbitMQ',
+            },
+            'configured': {
+                'baseline_duration_seconds': args.duration, 'baseline_rps': args.rate,
+                'burst_duration_seconds': args.burst_duration, 'burst_rps': args.burst_rate,
+            },
+            'seeded_accounts': account_count,
+            'active_sessions': len(clients),
+            'exhausted_gift_balances': exhausted_gift_balances,
+            'successful_message_flows': gift_deliveries,
+            'payment_captures': payment_captures,
+            'orders': orders,
+            'deliveries': deliveries,
+            'outbox_events': outbox_events,
+            'delivery_attempt_mismatches': delivery_mismatches,
+            'outbox_not_sent': unsent_outbox,
+            'full_demo_flow_p95_ms': percentile(flow_latencies, .95),
+            'http': phase_results,
+            'real_provider_capacity_measured': False,
+            'frontend_or_device_performance_measured': False,
+        }
+        report['passed'] = (
+            report['source_unchanged_during_run']
+            and exhausted_gift_balances == ACTIVE_SESSIONS
+            and counts == (1000, gift_count, 0, 0, 0, gift_count, gift_count, gift_count)
+            and all(
+                result['error_rate'] < .01 and result['dropped'] == 0
+                and all(stats['p95_ms'] is None or stats['p95_ms'] <= 800 for stats in result['by_operation'].values())
+                for result in phase_results.values()
+            )
+        )
         output=Path(args.output);output.parent.mkdir(parents=True,exist_ok=True);output.write_text(json.dumps(report,indent=2)+'\n')
         print(json.dumps(report,indent=2),flush=True)
         if not report['passed']: raise SystemExit(2)

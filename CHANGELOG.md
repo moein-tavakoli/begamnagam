@@ -9,6 +9,23 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 3.4.1 — 2026-11-21 — Reduce read load and fix queue races
+
+- Create anonymous website sessions only when an action needs one. Keep CSRF
+  initialization and OTP session binding. Group monitoring queue counts and
+  account aggregates to reduce SQL statements and repeated database work.
+- Load the home composer on first use and keep the welcome page available if
+  loading fails. In a visible, online wallet tab, reconcile pending or
+  ambiguous top-ups with reads and preserve the original payment intent.
+- Select eligible provider checks and unsent expirations before applying batch
+  limits. Guard refund results against stale claims and acquire provider
+  overrun locks in a consistent order, including the bot OTP transaction.
+- Validate duplicate-confirmation gift flows and report offered, completed and
+  dropped requests with per-route latency in the isolated local benchmark.
+- Validate on PostgreSQL and Redis, with browser regressions on the production
+  build. See the [Persian performance audit](docs/performance-audit-2026-11-21.fa.md).
+  Local release.
+
 ## 3.4.0 — 2026-11-17 — Admin switch for identity requests
 
 - Add a default-off «میخوام بدونم» switch to Site Settings for authorized staff.

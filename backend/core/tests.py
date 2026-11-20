@@ -9,9 +9,11 @@ from unittest.mock import patch
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.sessions.models import Session
 from django.core.cache import cache
 from django.db import close_old_connections, connection, connections
 from django.test import Client, TestCase, TransactionTestCase, override_settings
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
 from .models import Account, ModerationAudit, OTPChallenge, Order, Outbox, Preview, RecipientState
@@ -61,6 +63,27 @@ class APITestCase(TestCase):
         self.assertEqual({item["id"] for item in response.json()["categories"]},
             {item["id"] for item in CATEGORIES})
         self.assertEqual(self.client.get("/healthz").json()["status"], "ok")
+
+    def test_public_bootstrap_defers_session_until_otp(self):
+        visitor = Client(enforce_csrf_checks=True)
+        with CaptureQueriesContext(connection) as queries:
+            bootstrap = visitor.get("/api/v1/bootstrap")
+        self.assertEqual(bootstrap.status_code, 200)
+        self.assertFalse(bootstrap.json()["authenticated"])
+        self.assertEqual([query["sql"] for query in queries if '"django_session"' in query["sql"]], [])
+        self.assertNotIn(settings.SESSION_COOKIE_NAME, visitor.cookies)
+
+        token = visitor.cookies[settings.CSRF_COOKIE_NAME].value
+        otp = self.post("/auth/request-otp", {"phone": "09123456789"}, visitor, HTTP_X_CSRFTOKEN=token)
+        self.assertEqual(otp.status_code, 200)
+        session_cookie = visitor.cookies[settings.SESSION_COOKIE_NAME].value
+        self.assertTrue(Session.objects.filter(session_key=session_cookie).exists())
+        challenge = otp.json()
+        verified = self.post("/auth/verify-otp", {
+            "challenge_id": challenge["challenge_id"], "code": challenge["debug_code"],
+        }, visitor, HTTP_X_CSRFTOKEN=token)
+        self.assertEqual(verified.status_code, 200)
+        self.assertTrue(visitor.get("/api/v1/bootstrap").json()["authenticated"])
 
     def test_positive_topics_complete_the_same_reviewed_delivery_flow(self):
         self.authenticate()

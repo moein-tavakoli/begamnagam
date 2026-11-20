@@ -54,8 +54,9 @@ const categoryIcons: Record<string, IconName> = {
 };
 const stepLabels = ["حرفت رو بنویس", "متن نهایی و ارسال"];
 
-export function Composer({ active = true, onExit, replyToken, onReplyUnavailable, sharedRecipient }: {
+export function Composer({ active = true, focusOnActivate = false, onExit, replyToken, onReplyUnavailable, sharedRecipient }: {
   active?: boolean;
+  focusOnActivate?: boolean;
   onExit?: () => void;
   replyToken?: string;
   onReplyUnavailable?: (message: string) => void;
@@ -104,6 +105,10 @@ export function Composer({ active = true, onExit, replyToken, onReplyUnavailable
   const idempotencyKey = useRef("");
   const heading = useRef<HTMLHeadingElement>(null);
   const previousStage = useRef(`${step}:${awaitingPayment}:${finished}`);
+  useEffect(() => {
+    if (active && focusOnActivate) heading.current?.focus({ preventScroll: true });
+  }, [active, focusOnActivate]);
+
   useEffect(() => {
     setAlternatives([]); setSelectedAlternative(null);
   }, [text, recipient, messageTone, step, data?.session_identity]);

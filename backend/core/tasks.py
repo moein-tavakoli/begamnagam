@@ -8,6 +8,7 @@ from django.utils import timezone
 
 from .models import Order, Outbox, RecipientState, MessageDelivery
 from .moderation import is_reviewed_template, ModerationRejected, moderate
+from .reconciliation import due_reconciliation_ids
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +99,7 @@ def expire_unpaid_orders():
     now = timezone.now()
     from .services import release_free_credit
     expired = Order.objects.filter(status=Order.Status.AWAITING_PAYMENT,
-        created_at__lt=now-timedelta(minutes=15)).values_list("pk", flat=True)[:100]
+        created_at__lt=now-timedelta(minutes=15)).order_by('created_at', 'pk').values_list("pk", flat=True)[:100]
     for order_id in expired:
         with transaction.atomic():
             order = Order.objects.select_for_update().get(pk=order_id)
@@ -109,7 +110,9 @@ def expire_unpaid_orders():
             release_free_credit(order)
     # An emergency/broker outage must not hold an unsubmitted paid order forever.
     # Leased/accepted/unknown submissions are queried, never expired as unsent.
-    due = Order.objects.filter(status=Order.Status.QUEUED, paid_at__lt=now-timedelta(hours=24)).values_list('pk', flat=True)[:100]
+    due = (Order.objects.filter(status=Order.Status.QUEUED, paid_at__lt=now-timedelta(hours=24),
+                                outbox__state='pending', delivery__status='queued')
+           .order_by('paid_at', 'pk').values_list('pk', flat=True)[:100])
     for order_id in due:
         with transaction.atomic():
             order = Order.objects.select_for_update().get(pk=order_id)
@@ -143,18 +146,16 @@ def reconcile_providers():
     from .safety import refresh_alerts
     refresh_alerts()
     reconcile_payments()
-    for delivery_id in MessageDelivery.objects.filter(provider='kavenegar', status__in=['submitting', 'unknown', 'accepted']).exclude(order__outbox__state='archived').values_list('pk', flat=True)[:100]:
+    deliveries = MessageDelivery.objects.filter(provider='kavenegar', status__in=['submitting', 'unknown', 'accepted']).exclude(
+        order__outbox__state='archived')
+    for delivery_id in due_reconciliation_ids(deliveries, now=timezone.now(), cooldown=timedelta(seconds=30)):
         reconcile_delivery(delivery_id)
     for refund_id in Refund.objects.exclude(status='refunded').values_list('pk', flat=True)[:100]:
         process_refund(refund_id)
     from .models import InvitationSend
     from .invitation_delivery import reconcile
-    from django.db.models import Q
-    now = timezone.now()
-    due = InvitationSend.objects.filter(provider='kavenegar', status__in=['submitting', 'unknown', 'accepted']).filter(
-        Q(checked_at__isnull=True) | Q(checked_at__lte=now-timedelta(minutes=5))).filter(
-        Q(lease_until__isnull=True) | Q(lease_until__lte=now))
-    for send_id in due.order_by('created_at').values_list('pk', flat=True)[:100]:
+    invitations = InvitationSend.objects.filter(provider='kavenegar', status__in=['submitting', 'unknown', 'accepted'])
+    for send_id in due_reconciliation_ids(invitations, now=timezone.now(), cooldown=timedelta(minutes=5)):
         reconcile(send_id)
 
 

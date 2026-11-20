@@ -1,8 +1,8 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useEffect, useRef } from "react";
-import { Composer } from "./composer";
+import { useEffect, useRef, useState } from "react";
 import { Icon } from "./icons";
 import { LetterFlight } from "./letter-flight";
 import { HomeTrustMarks } from "./home-trust-marks";
@@ -11,8 +11,30 @@ import { changeHomeView, useComposeView } from "@/lib/use-compose-view";
 import { HomeLogout } from "./home-logout";
 import { AppVersion } from "./app-version";
 
+type HomeComposerProps = { active: boolean; focusOnActivate: boolean; onExit: () => void };
+
+function ComposerUnavailable({ active, onExit }: HomeComposerProps) {
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (active) heading.current?.focus({ preventScroll: true });
+  }, [active]);
+  return <div className="account-card">
+    <h2 ref={heading} tabIndex={-1}>فرم پیام بارگیری نشد.</h2>
+    <button type="button" className="button primary" onClick={() => window.location.reload()}>تلاش دوباره</button>
+    <button type="button" className="button secondary" onClick={onExit}>بازگشت</button>
+  </div>;
+}
+
+const Composer = dynamic<HomeComposerProps>(() => import("./composer").then(
+  module => module.Composer,
+  () => ComposerUnavailable,
+), {
+  loading: () => <p role="status">در حال آماده کردن فرم پیام…</p>,
+});
+
 export function HomeFlow() {
   const composing = useComposeView();
+  const [composerOpened, setComposerOpened] = useState(false);
   const touch = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
@@ -37,7 +59,8 @@ export function HomeFlow() {
   }, []);
 
   useEffect(() => {
-    document.getElementById(composing ? "compose-title" : "welcome-title")?.focus({ preventScroll: true });
+    if (composing) setComposerOpened(true);
+    else document.getElementById("welcome-title")?.focus({ preventScroll: true });
   }, [composing]);
 
   function showComposer(value: boolean) {
@@ -94,7 +117,7 @@ export function HomeFlow() {
         <AppVersion />
       </section>
       <div className="home-slide compose-slide" hidden={!composing} aria-roledescription="اسلاید" aria-label="نوشتن پیام؛ صفحه دوم">
-        <Composer active={composing} onExit={() => showComposer(false)} />
+        {(composing || composerOpened) && <Composer active={composing} focusOnActivate onExit={() => showComposer(false)} />}
       </div>
     </div>
   );

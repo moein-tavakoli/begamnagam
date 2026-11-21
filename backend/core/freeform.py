@@ -82,9 +82,9 @@ def prepare(owner, text, *, max_units, direct=False, message_tone=None, config=N
                 output = local_rewrite(cleaned, max_units=max_units, direct=direct, config=config, **rewrite_options)
         else:
             reserve(owner, config)
-            # Preserve the legacy call contract when no DB override exists.
+            # Use the interactive deadline for both regular and pre-purchase previews.
             options = {'config': config} if not config._state.adding else {}
-            output = rewrite_message(cleaned, max_units=max_units, direct=direct, **options, **rewrite_options)
+            output = rewrite_message(cleaned, max_units=max_units, direct=direct, preview=True, **options, **rewrite_options)
     except GapGPTRejected as exc:
         raise ModerationRejected(exc.reason) from None
     except GapGPTUnavailable:

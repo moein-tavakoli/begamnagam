@@ -922,6 +922,18 @@ class BotClientTests(SimpleTestCase):
         self.assertTrue(client.require_real_delivery)
         self.assertEqual(len(client.jar), 0)
 
+    def test_preview_transport_allows_review_to_finish_and_respects_explicit_client_timeouts(self):
+        for options, expected in [({}, [35, 45]), ({'timeout': 9}, [9, 9]),
+                                  ({'timeout': None}, [None, None])]:
+            with self.subTest(options=options):
+                client = self.module.BotAPI('https://begamnagam.ir/api/v2', **options)
+                client.csrf_token = 'synthetic'
+                with patch.object(client.opener, 'open',
+                                  side_effect=[io.BytesIO(b'{}'), io.BytesIO(b'{}')]) as transport:
+                    client.credits()
+                    client.preview('09901234567', source_mode='freeform', text='ممنونم')
+                self.assertEqual([call.kwargs['timeout'] for call in transport.call_args_list], expected)
+
     def test_client_enforces_https_except_loopback_and_has_separate_cookie_jars(self):
         for url in ('http://example.com/api/v2', 'https://a.test/api/v1', 'https://x:secret@a.test/api/v2',
                     'https://a.test/api/v2?x=1', 'https://a.test/api/v2#token'):

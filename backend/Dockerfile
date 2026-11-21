@@ -22,4 +22,4 @@ RUN python -c "import os; os.environ['DJANGO_SETTINGS_MODULE']='config.settings'
     && rm -rf /app/wheels /root/.cache/pip
 USER app
 EXPOSE 8000
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "2", "--timeout", "30", "--access-logfile", "-", "--access-logformat", "%(m)s %(U)s %(s)s %(L)s"]
+CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "2", "--timeout", "45", "--access-logfile", "-", "--access-logformat", "%(m)s %(U)s %(s)s %(L)s"]

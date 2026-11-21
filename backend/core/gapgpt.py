@@ -1,10 +1,11 @@
 """Bounded GapGPT rewriting; callers own input moderation and spend limits.
 
 Only already sanitized text belongs here. The two stateless requests generate a
-candidate and then check it in a fresh context. Neither request sends account,
+candidate and check it in a fresh context. Neither request sends account,
 phone, recipient, session or order data. Invalid or uncertain responses fail
 closed, without falling back to an unrelated category template.
 """
+import http.client
 import json
 import logging
 import math
@@ -14,6 +15,9 @@ import time
 import unicodedata
 import urllib.error
 import urllib.request
+from concurrent.futures import FIRST_EXCEPTION, ThreadPoolExecutor, wait
+from functools import partial
+from threading import BoundedSemaphore
 
 from django.conf import settings
 
@@ -28,6 +32,12 @@ MAX_INPUT_CHARACTERS = 500
 GENERATION_MAX_TOKENS = 256
 REVIEW_MAX_TOKENS = 256
 logger = logging.getLogger(__name__)
+
+# Each admitted worker owns one bounded call. Keep timed-out transports inside
+# the same process limit until they really finish, including during DNS/TLS.
+_MAX_PREVIEW_CALLS = 16
+_PREVIEW_SLOTS = BoundedSemaphore(_MAX_PREVIEW_CALLS)
+_PREVIEW_WORKERS = ThreadPoolExecutor(max_workers=_MAX_PREVIEW_CALLS, thread_name_prefix='gapgpt-preview')
 
 
 class GapGPTUnavailable(Exception):
@@ -251,7 +261,7 @@ def _completion(opener, key, model, instruction, data, deadline, timeout, *, out
         if exc.args == ('provider_timeout',):
             failure = 'timeout'
         raise
-    except (OSError, ValueError, TypeError, OverflowError, RecursionError):
+    except (http.client.HTTPException, OSError, ValueError, TypeError, OverflowError, RecursionError):
         raise GapGPTUnavailable('invalid_response') from None
     finally:
         if failure:
@@ -300,7 +310,89 @@ def _review_rejection(verdict):
     return next((reason for key, reason in reasons if verdict.get(key) is False), 'checks_uncertain')
 
 
-def rewrite_message(cleaned_text, *, max_units, direct=False, message_tone=None, config=None, wording=None):
+def _local_body(body, max_units):
+    try:
+        validate_polite_body(body, max_units=max_units)
+    except ModerationRejected:
+        logger.warning('gapgpt_rejected stage=candidate reason=candidate_rejected')
+        raise GapGPTRejected('candidate_rejected') from None
+
+
+def _generated_body(result, source, max_units, wording, parallel_exact):
+    try:
+        body = _candidate(result, max_units, source=source, wording=wording)
+        # Punctuation restoration is a regular rewrite feature. In parallel
+        # exact mode even that difference means the model approved other bytes.
+        if parallel_exact and result['message'] != source:
+            raise GapGPTRejected('trial_wording_unavailable')
+    except GapGPTRejected as exc:
+        logger.warning('gapgpt_rejected stage=generation reason=%s', exc.reason)
+        raise
+    except GapGPTUnavailable:
+        candidate = result.get('message')
+        units = len(candidate.encode('utf-16-le', errors='replace')) // 2 if isinstance(candidate, str) else 0
+        logger.warning('gapgpt_candidate_failed actual_units=%s max_units=%s schema_valid=%s',
+                       units, max_units, set(result) == {'allowed', 'message'} and type(result.get('allowed')) is bool)
+        raise
+    _local_body(body, max_units)
+    return body
+
+
+def _check_review(verdict, checks):
+    if set(verdict) != checks or any(type(value) is not bool for value in verdict.values()):
+        logger.warning('gapgpt_review_failed reason=invalid_schema missing=%s unknown_count=%s non_boolean=%s',
+                       ','.join(sorted(checks - set(verdict))), len(set(verdict) - checks),
+                       ','.join(sorted(key for key in checks & set(verdict) if type(verdict[key]) is not bool)))
+        raise GapGPTUnavailable('invalid_response')
+    if reason := _review_rejection(verdict):
+        failed = ','.join(sorted(key for key, passed in verdict.items() if not passed))
+        logger.warning('gapgpt_rejected stage=review reason=%s failed_checks=%s', reason, failed)
+        raise GapGPTRejected(reason)
+
+
+def _opener(context):
+    return urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect(),
+        urllib.request.HTTPSHandler(context=context))
+
+
+def _preview_results(deadline, *stages):
+    """Wait only until the common deadline, even if an underlying socket stalls."""
+    futures = []
+    reserved = 0
+    slots = _PREVIEW_SLOTS
+
+    def run(stage):
+        try:
+            return stage(deadline)
+        finally:
+            slots.release()
+
+    try:
+        # Reserve the entire group before submitting. No queued rewrites or
+        # partial pairs when capacity is exhausted.
+        for _ in stages:
+            if not slots.acquire(blocking=False):
+                raise GapGPTUnavailable('provider_unavailable')
+            reserved += 1
+        for stage in stages:
+            futures.append(_PREVIEW_WORKERS.submit(run, stage))
+            reserved -= 1
+    except RuntimeError:
+        raise GapGPTUnavailable('provider_unavailable') from None
+    finally:
+        if reserved:
+            slots.release(reserved)
+
+    done, unfinished = wait(futures, timeout=max(0, deadline - time.monotonic()), return_when=FIRST_EXCEPTION)
+    # A finished rejection already decides the request. A success needs every
+    # stage; any remaining transport still owns its slot until run() exits.
+    results = [future.result() for future in futures if future in done]
+    if unfinished or time.monotonic() >= deadline:
+        raise GapGPTUnavailable('provider_timeout')
+    return results
+
+
+def rewrite_message(cleaned_text, *, max_units, direct=False, message_tone=None, config=None, wording=None, preview=False):
     """Return one verified body, using at most two requests and one deadline.
 
     ``max_units`` is the space left after the server-owned SMS intro and footer.
@@ -320,48 +412,49 @@ def rewrite_message(cleaned_text, *, max_units, direct=False, message_tone=None,
     except UnicodeError:
         raise GapGPTRejected('invalid_input') from None
     key, model, timeout = _configuration(config)
-    # Share the existing total budget: a generation taking >10s may still
-    # leave enough time for its independent review. Never start a fresh budget.
-    total_timeout = 2 * timeout
-    deadline = time.monotonic() + total_timeout
+    stage_timeout = 2.5 * timeout if preview else 2 * timeout
+    total_timeout = min(4 * timeout, 38) if preview else 2 * timeout
+    started = time.monotonic()
+    deadline = started + total_timeout
+    parallel_exact = preview and wording is not None and wording.get('exact_wording') is True
+    if parallel_exact:
+        _local_body(cleaned_text, max_units)
+
     try:
-        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}),
-            _NoRedirect(), urllib.request.HTTPSHandler(context=ssl.create_default_context()))
+        context = ssl.create_default_context()
+        generation_opener = _opener(context)
+        review_opener = _opener(context) if parallel_exact else generation_opener
     except OSError:
         raise GapGPTUnavailable('configuration_unavailable') from None
-    result = _completion(opener, key, model, generation_prompt(_REWRITE_INSTRUCTION, message_tone, config, wording),
-        {'text': cleaned_text, 'max_utf16_units': max_units, **(wording or {}),
-         'tone': {'polite': 'warm_and_respectful', 'firm': 'clear_and_respectful', 'blunt': 'plain_direct_minimal_edits', 'angry': 'terse_frustrated_non_abusive'}[tone]},
-        deadline, total_timeout, output_tokens=GENERATION_MAX_TOKENS)
-    try:
-        body = _candidate(result, max_units, source=cleaned_text, wording=wording)
-    except GapGPTRejected as exc:
-        logger.warning('gapgpt_rejected stage=generation reason=%s', exc.reason)
-        raise
-    except GapGPTUnavailable:
-        candidate = result.get('message')
-        units = len(candidate.encode('utf-16-le', errors='replace')) // 2 if isinstance(candidate, str) else 0
-        logger.warning('gapgpt_candidate_failed actual_units=%s max_units=%s schema_valid=%s',
-                       units, max_units, set(result) == {'allowed', 'message'} and type(result.get('allowed')) is bool)
-        raise
-    # Do not spend another API call on a candidate the backend already rejects.
-    try:
-        validate_polite_body(body, max_units=max_units)
-    except ModerationRejected:
-        logger.warning('gapgpt_rejected stage=candidate reason=candidate_rejected')
-        raise GapGPTRejected('candidate_rejected') from None
+
+    instruction = generation_prompt(_REWRITE_INSTRUCTION, message_tone, config, wording)
+    data = {'text': cleaned_text, 'max_utf16_units': max_units, **(wording or {}),
+            'tone': {'polite': 'warm_and_respectful', 'firm': 'clear_and_respectful',
+                     'blunt': 'plain_direct_minimal_edits', 'angry': 'terse_frustrated_non_abusive'}[tone]}
     checks = {'safe', 'intent_preserved', 'no_added_claims', 'no_private_data', 'only_message', 'register_preserved'}
     if message_tone in {'firm', 'blunt', 'angry'}:
         checks.add('tone_matched')
-    verdict = _completion(opener, key, model, _review_prompt(checks, message_tone),
-        {'source': cleaned_text, 'candidate': body}, deadline, total_timeout, output_tokens=REVIEW_MAX_TOKENS)
-    if set(verdict) != checks or any(type(value) is not bool for value in verdict.values()):
-        logger.warning('gapgpt_review_failed reason=invalid_schema missing=%s unknown_count=%s non_boolean=%s',
-                       ','.join(sorted(checks - set(verdict))), len(set(verdict) - checks),
-                       ','.join(sorted(key for key in checks & set(verdict) if type(verdict[key]) is not bool)))
-        raise GapGPTUnavailable('invalid_response')
-    if reason := _review_rejection(verdict):
-        failed = ','.join(sorted(key for key, passed in verdict.items() if not passed))
-        logger.warning('gapgpt_rejected stage=review reason=%s failed_checks=%s', reason, failed)
-        raise GapGPTRejected(reason)
+    review_prompt = _review_prompt(checks, message_tone)
+
+    def generate(by):
+        result = _completion(generation_opener, key, model, instruction, data, by, stage_timeout,
+                             output_tokens=GENERATION_MAX_TOKENS)
+        return _generated_body(result, cleaned_text, max_units, wording, parallel_exact)
+
+    def review(candidate, by):
+        verdict = _completion(review_opener, key, model, review_prompt, {'source': cleaned_text, 'candidate': candidate},
+                              by, stage_timeout, output_tokens=REVIEW_MAX_TOKENS)
+        _check_review(verdict, checks)
+
+    if not preview:
+        body = generate(deadline)
+        review(body, deadline)
+        return body
+
+    first_deadline = started + stage_timeout
+    if parallel_exact:
+        body, _ = _preview_results(first_deadline, generate, partial(review, cleaned_text))
+    else:
+        body, = _preview_results(first_deadline, generate)
+        _preview_results(min(deadline, time.monotonic() + stage_timeout), partial(review, body))
     return body

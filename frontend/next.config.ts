@@ -11,6 +11,9 @@ const config: NextConfig = {
   poweredByHeader: false,
   devIndicators: false,
   productionBrowserSourceMaps: false,
+  // External rewrites share one upstream socket timeout. Allow the 38-second
+  // review to finish before the preview client's 45-second request deadline.
+  experimental: { proxyTimeout: 43_000 },
   // Public settings remain fixed by the image build when pages render with
   // per-request CSP nonces. Never add provider credentials to this object.
   env: {

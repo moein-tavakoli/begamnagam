@@ -1,8 +1,11 @@
 import io
 import json
 import ssl
+import time
 import urllib.error
+from concurrent.futures import ThreadPoolExecutor
 from email.message import Message
+from threading import Barrier, BoundedSemaphore, Event
 from unittest.mock import Mock, patch
 
 from django.test import SimpleTestCase, override_settings
@@ -355,6 +358,149 @@ class GapGPTClientTests(SimpleTestCase):
             with self.assertRaises(GapGPTUnavailable):
                 rewrite_message(SOURCE, max_units=130)
         self.assertEqual(self.opener.open.call_count, 1)
+
+    @override_settings(GAPGPT_TIMEOUT_SECONDS=10)
+    def test_preview_reviews_the_generated_body_with_remaining_shared_time(self):
+        body = 'ممنونم که وسایل رو جمع کردی.'
+        elapsed = 0.
+
+        def respond(request, timeout):
+            nonlocal elapsed
+            data = json.loads(json.loads(request.data)['messages'][1]['content'])
+            if 'text' in data:
+                self.assertEqual(timeout, 25)
+                elapsed = 24.9
+                return _Response(_completion({'allowed': True, 'message': body}))
+            self.assertEqual(data, {'source': SOURCE, 'candidate': body})
+            self.assertAlmostEqual(timeout, 13.1)
+            elapsed = 37.9
+            return _Response(_completion(VERDICT))
+
+        self.opener.open.side_effect = respond
+        with patch('core.gapgpt.time', wraps=time) as clock:
+            clock.monotonic.side_effect = lambda: elapsed
+            self.assertEqual(rewrite_message(SOURCE, max_units=130, preview=True), body)
+        self.assertEqual(self.opener.open.call_count, 2)
+
+    def test_exact_preview_overlaps_two_independent_requests_and_requires_both_decisions(self):
+        for generated, reviewed, error in [
+            ({'allowed': True, 'message': SOURCE}, VERDICT, None),
+            ({'allowed': True, 'message': SOURCE[:-1]}, VERDICT, 'trial_wording_unavailable'),
+            ({'allowed': False, 'message': '', 'reason': 'unsafe'}, VERDICT, 'generation_unsafe'),
+            ({'allowed': True, 'message': SOURCE}, {**VERDICT, 'safe': False}, 'review_unsafe'),
+            ({'allowed': True, 'message': SOURCE}, {**VERDICT, 'safe': 'yes'}, 'invalid_response'),
+            ({'allowed': 'yes', 'message': SOURCE}, VERDICT, 'invalid_response'),
+        ]:
+            overlap = Barrier(2, timeout=2)
+            transports = []
+
+            def respond(request, timeout):
+                data = json.loads(json.loads(request.data)['messages'][1]['content'])
+                overlap.wait()
+                self.assertGreater(timeout, 0)
+                self.assertLessEqual(timeout, 12.5)
+                if 'text' in data:
+                    self.assertIs(data['exact_wording'], True)
+                    return _Response(_completion(generated))
+                self.assertEqual(data, {'source': SOURCE, 'candidate': SOURCE})
+                return _Response(_completion(reviewed))
+
+            def transport(*handlers):
+                opener = Mock()
+                opener.open.side_effect = respond
+                transports.append(opener)
+                return opener
+
+            with self.subTest(error=error, generated=generated):
+                self.build_opener.side_effect = transport
+                options = dict(max_units=130, preview=True, wording={'exact_wording': True})
+                if error:
+                    with self.assertRaisesRegex((GapGPTRejected, GapGPTUnavailable), error):
+                        rewrite_message(SOURCE, **options)
+                else:
+                    self.assertEqual(rewrite_message(SOURCE, **options), SOURCE)
+                self.assertEqual([opener.open.call_count for opener in transports], [1, 1])
+
+    def test_exact_preview_cannot_start_half_a_pair_when_workers_are_busy(self):
+        with patch('core.gapgpt._PREVIEW_SLOTS', BoundedSemaphore(1)):
+            with self.assertRaises(GapGPTUnavailable):
+                rewrite_message(SOURCE, max_units=130, preview=True, wording={'exact_wording': True})
+            self.opener.open.assert_not_called()
+            self.assertEqual(rewrite_message(SOURCE, max_units=130, preview=True), BODY)
+        self.assertEqual(self.opener.open.call_count, 2)
+
+    @override_settings(GAPGPT_TIMEOUT_SECONDS=10)
+    def test_exact_rejection_returns_while_the_other_transport_still_holds_its_slot(self):
+        options = dict(max_units=130, preview=True, wording={'exact_wording': True})
+        for rejecting, reason in [('generation', 'generation_unsafe'), ('review', 'review_unsafe')]:
+            blocked, release = Event(), Event()
+            slots = BoundedSemaphore(2)
+
+            def respond(request, timeout):
+                data = json.loads(json.loads(request.data)['messages'][1]['content'])
+                stage = 'generation' if 'text' in data else 'review'
+                if stage == rejecting:
+                    self.assertTrue(blocked.wait(timeout=2))
+                    answer = ({'allowed': False, 'message': '', 'reason': 'unsafe'}
+                              if stage == 'generation' else {**VERDICT, 'safe': False})
+                else:
+                    blocked.set()
+                    # Shorter than the stage deadline. Waiting out that deadline
+                    # would release this slot before the caller saw the rejection.
+                    self.assertTrue(release.wait(timeout=5))
+                    answer = {'allowed': True, 'message': SOURCE} if stage == 'generation' else VERDICT
+                return _Response(_completion(answer))
+
+            self.opener.open.reset_mock()
+            self.opener.open.side_effect = respond
+            with self.subTest(rejecting=rejecting), patch('core.gapgpt._PREVIEW_SLOTS', slots):
+                with ThreadPoolExecutor(max_workers=2) as workers, patch('core.gapgpt._PREVIEW_WORKERS', workers):
+                    try:
+                        with self.assertRaisesRegex(GapGPTRejected, reason):
+                            rewrite_message(SOURCE, **options)
+                        # One slot is still occupied. A new pair cannot send either call.
+                        with self.assertRaises(GapGPTUnavailable):
+                            rewrite_message(SOURCE, **options)
+                        self.assertEqual(self.opener.open.call_count, 2)
+                    finally:
+                        release.set()
+                self.assertTrue(slots.acquire(blocking=False))
+                self.assertTrue(slots.acquire(blocking=False))
+                self.assertFalse(slots.acquire(blocking=False))
+
+    @override_settings(GAPGPT_TIMEOUT_SECONDS=1)
+    def test_blocked_preview_transport_cannot_hold_the_caller_past_the_stage_window(self):
+        for blocked_stage in ['generation', 'review', 'both']:
+            with self.subTest(blocked_stage=blocked_stage):
+                release = Event()
+                started = []
+                finished = Barrier(3 if blocked_stage == 'both' else 2, timeout=5)
+
+                def respond(request, timeout):
+                    data = json.loads(json.loads(request.data)['messages'][1]['content'])
+                    stage = 'generation' if 'text' in data else 'review'
+                    started.append(stage)
+                    if blocked_stage in {stage, 'both'}:
+                        try:
+                            release.wait(timeout=6)
+                            raise TimeoutError()
+                        finally:
+                            finished.wait()
+                    return _Response(_completion({'allowed': True, 'message': SOURCE}))
+
+                self.opener.open.side_effect = respond
+                wording = {'exact_wording': True} if blocked_stage == 'both' else None
+                start = time.monotonic()
+                try:
+                    with self.assertRaises(GapGPTUnavailable):
+                        rewrite_message(SOURCE, max_units=130, preview=True, wording=wording)
+                    self.assertLess(time.monotonic() - start, 4.5)
+                    expected = ['generation'] if blocked_stage == 'generation' else ['generation', 'review']
+                    self.assertCountEqual(started, expected)
+                finally:
+                    release.set()
+                    if started:
+                        finished.wait()
 
     def test_generation_can_use_spare_review_time_without_extending_total_deadline(self):
         with patch('core.gapgpt.time.monotonic', side_effect=[0, 0, 0, 0, 6, 6, 6, 6, 8]):

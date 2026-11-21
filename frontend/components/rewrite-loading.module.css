@@ -15,7 +15,6 @@
 .dialog::backdrop { background: #201c2973; }
 .dialog h2 { margin: 20px 0 8px; font-size: 20px; line-height: 1.7; }
 .dialog p { margin: 0; font-size: 15px; }
-.dialog .note { margin-top: 8px; color: var(--muted); font-size: 13px; }
 .symbol { position: relative; display: grid; place-items: center; width: 68px; height: 68px; margin-inline: auto; background: var(--pale); border-radius: 50%; color: var(--focus); }
 .spinner { position: absolute; inset: -5px; border: 3px solid var(--pale); border-top-color: var(--focus); border-radius: 50%; animation: rotate 1s linear infinite; }
 @keyframes rotate { to { transform: rotate(360deg); } }

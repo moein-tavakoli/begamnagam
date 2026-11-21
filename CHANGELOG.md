@@ -21,6 +21,10 @@ Historical release reports below contain deployment evidence and limitations.
   through the Next.js proxy, and six synthetic drafts with the real GapGPT
   provider (twelve calls, six approved first attempts).
   [Measured timings and regression scenarios](docs/deployments/local-preview-latency-3.7.1.json)
+- Deployed on 2026-11-21 after promotion PR #14. Verified the production image
+  with 882 PostgreSQL tests, all six frontends, public health and the updated
+  preview UI bundle. The public pricing-to-trial path passed on mobile and desktop.
+  [Deployment evidence](docs/deployments/ct115-3.7.1.json)
 
 ## 3.7.0 — 2026-11-21 — Keep chosen words during pre-purchase review
 

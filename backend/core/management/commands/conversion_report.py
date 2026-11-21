@@ -88,7 +88,7 @@ class Command(BaseCommand):
     help = 'Compare first live purchases and contribution per exposed eligible account. Output contains aggregates only.'
 
     def add_arguments(self, parser):
-        parser.add_argument('experiment', choices=SURFACES)
+        parser.add_argument('experiment', choices=[*SURFACES, 'text-trial'])
         parser.add_argument('--since', type=date.fromisoformat, help='First enrollment date, inclusive, project time zone')
         parser.add_argument('--until', type=date.fromisoformat, help='End enrollment date, exclusive, project time zone')
         parser.add_argument('--window-days', type=int, default=7)
@@ -101,6 +101,15 @@ class Command(BaseCommand):
         if days < 1 or days > 365 or (since and until and since >= until):
             raise CommandError('Use an increasing date interval and a window of 1–365 days.')
         now = timezone.now()
+        if key == 'text-trial':
+            from core.trial_conversion import trial_report
+            if any(options[arm + '_cost_toman'] is not None for arm in ('control', 'treatment')):
+                raise CommandError('Experiment arm costs do not apply to the text trial cohort.')
+            result = {'environment': 'live', 'cohort': key, 'window_days': days, 'as_of': now.isoformat(),
+                      'since_inclusive': since, 'until_exclusive': until, 'historical_backfill': False,
+                      'trial_conversion': trial_report(now, since=since, until=until, days=days)}
+            self.stdout.write(json.dumps(result, sort_keys=True, default=str))
+            return
         exposures = ConversionExposure.objects.filter(environment='live', experiment=key)
         if since:
             exposures = exposures.filter(exposed_at__date__gte=since)

@@ -158,6 +158,7 @@ def begin_purchase(user, data, key, *, session_key=None):
             raise APIError('payment_disabled', 'درگاه محیط واقعی آماده نیست.', 409)
         purchase = CreditPurchase.objects.create(owner=user, package=package, idempotency_key=key,
             resume_preview_id=preview_id, resume_reference_digest=reference_digest,
+            from_measured_text_trial=purchase_resume.is_measured_trial(user, preview_id, environment),
             payment_method=method, wallet_refund_consent=accepted, wallet_terms_version=WALLET_TERMS_VERSION if accepted else '',
             package_name=package.name, message_count=package.message_count, amount_toman=package.price_toman, environment=environment)
         if method == 'wallet':

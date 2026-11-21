@@ -177,7 +177,9 @@ def logout_view(request):
 
 @staff_api(["GET"], "core.view_operations")
 def dashboard(request):
-    return {"operations": snapshot(), "totals": {
+    from .trial_conversion import trial_report
+    now = timezone.now()
+    return {"live_trial_conversion": trial_report(now), "operations": snapshot(), "totals": {
         "accounts": m.Account.objects.count(), "orders": m.Order.objects.count(),
         "invitations": m.Invitation.objects.count(), "registered_invitations": m.Invitation.objects.filter(registered_at__isnull=False).count(),
         "delivered": m.MessageDelivery.objects.filter(status="delivered").count(),
@@ -185,7 +187,7 @@ def dashboard(request):
         "environment": {"demo": settings.DEMO_MODE, "sms": settings.SMS_BACKEND,
             "otp": settings.OTP_BACKEND, "payment": settings.PAYMENT_BACKEND,
             "paid_enabled": not settings.DEMO_MODE and settings.PAYMENT_BACKEND == "zarinpal"},
-        "updated_at": timezone.now()}
+        "updated_at": now}
 
 
 @staff_api(["POST"])

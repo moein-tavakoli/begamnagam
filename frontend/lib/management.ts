@@ -33,6 +33,13 @@ export type LimitSettings = {
   requests: LimitRule[];
 };
 export type ManagementDashboard = {
+  live_trial_conversion?: {
+    trial_senders: number;
+    eligible_senders_with_full_window: number;
+    awaiting_full_window: number;
+    confirmed_linked_buyers: number;
+    linked_purchase_rate: number | null;
+  };
   operations: Record<string, number | boolean | null>;
   totals: Record<string, number>;
   environment: { demo: boolean; sms: string; otp: string; payment: string; paid_enabled: boolean };

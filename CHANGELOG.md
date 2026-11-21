@@ -9,6 +9,17 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 3.7.0 — 2026-11-21 — Keep chosen words during pre-purchase review
+
+- Preserve the sender’s chosen phrase or entire SMS body through a private text
+  trial. Show word changes and require another review for direct edits. Add the
+  film-club example and allowlisted example drafts from pricing.
+- Measure confirmed, linked live package purchases among verified senders who
+  received a successful trial. Exclude test activity and incomplete windows.
+- Validate the local UI on desktop and mobile. Six synthetic drafts used twelve
+  authorized model calls including one retry. Two drafts produced a preview;
+  upstream timeouts prevented four from producing a result.
+
 ## 3.6.0 — 2026-11-21 — Try a personal draft before buying
 
 - Add a private trial from pricing and credits. A verified sender can compare their

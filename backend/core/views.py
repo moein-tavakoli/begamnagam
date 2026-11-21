@@ -252,9 +252,16 @@ def preview(request):
 @api(["POST"], authenticated=True)
 def text_trial(request):
     data = body(request)
-    if set(data) != {'text'} or not isinstance(data['text'], str):
-        raise APIError('invalid_input', 'فقط متن پیام را وارد کن.', 422)
-    return prepare_preview(request, {**data, 'source_mode': 'freeform'}, text_trial=True)
+    if set(data) - {'text', 'preserve_phrase', 'exact_wording'} or not isinstance(data.get('text'), str):
+        raise APIError('invalid_input', 'متن و شیوهٔ بازبینی را بررسی کن.', 422)
+    exact = data.get('exact_wording', False)
+    phrase = data.get('preserve_phrase', '')
+    if type(exact) is not bool or not isinstance(phrase, str):
+        raise APIError('invalid_input', 'شیوهٔ حفظ متن معتبر نیست.', 422)
+    if 'preserve_phrase' in data and (not phrase.strip() or phrase not in data['text']):
+        raise APIError('trial_phrase_not_found', 'عبارت را دقیقاً از متن خودت انتخاب کن.', 422)
+    return prepare_preview(request, {'text': data['text'], 'source_mode': 'freeform'},
+                           text_trial=True, exact_wording=exact, preserve_phrase=phrase)
 
 
 def limit_preview_origin(request, unlimited):
@@ -264,7 +271,7 @@ def limit_preview_origin(request, unlimited):
 
 
 @capture_preview_attempt
-def prepare_preview(request, data, *, text_trial=False):
+def prepare_preview(request, data, *, text_trial=False, exact_wording=False, preserve_phrase=''):
     request._message_attempt_data = data
     if set(data) - {'text', 'category', 'recipient_phone', 'reply_token', 'source_mode', 'payment_method', 'message_tone', 'alternative_token', 'share_token'}:
         raise APIError('invalid_input', 'فقط متن اولیه و شمارهٔ گیرنده را بفرست؛ نتیجهٔ بررسی در سرور تعیین می‌شود.', 422)
@@ -367,7 +374,9 @@ def prepare_preview(request, data, *, text_trial=False):
             moderate(alternative_body)
             rewritten, mode = alternative_body, 'template'
         elif use_freeform:
-            rewritten, mode = prepare(owner, text, max_units=MAX_REWRITE_BODY_UNITS, message_tone=tone, config=ai), ai.provider
+            rewritten = prepare(owner, text, max_units=MAX_REWRITE_BODY_UNITS, message_tone=tone, config=ai,
+                                exact_wording=exact_wording, preserve_phrase=preserve_phrase)
+            mode = ai.provider
             category = 'custom'
         else:
             rewritten, mode = rewrite(category, text, message_tone=tone, provider_mode='template')
@@ -412,7 +421,8 @@ def prepare_preview(request, data, *, text_trial=False):
     except RewriteUnavailable:
         raise APIError("rewrite_unavailable", "آماده‌سازی متن موقتاً در دسترس نیست؛ کمی بعد تلاش کنید.", 503)
     if text_trial:
-        return {'trial_id': str(item.pk), 'full_sms': item.full_sms, 'expires_at': item.expires_at.isoformat()}
+        return {'trial_id': str(item.pk), 'reviewed_body': item.generated_body,
+                'full_sms': item.full_sms, 'expires_at': item.expires_at.isoformat()}
     return preview_data(item)
 
 

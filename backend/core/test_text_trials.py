@@ -1,3 +1,4 @@
+import json
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
@@ -58,7 +59,8 @@ class TextTrialTests(ManualFixture, TestCase):
         self.assertEqual(response['Cache-Control'], 'no-store')
         self.assertEqual(opener.open.call_count, 2)
         trial = response.json()
-        self.assertEqual(set(trial), {'trial_id', 'full_sms', 'expires_at'})
+        self.assertEqual(set(trial), {'trial_id', 'full_sms', 'reviewed_body', 'expires_at'})
+        self.assertEqual(trial['reviewed_body'], BODY)
         self.assertIn(BODY, trial['full_sms'])
         self.assertIn(SAMPLE_ACTION_CODE, trial['full_sms'])
         preview = Preview.objects.get(pk=trial['trial_id'])
@@ -80,6 +82,128 @@ class TextTrialTests(ManualFixture, TestCase):
         self.assertFalse(CreditPurchase.objects.exists())
         self.assertFalse(Outbox.objects.exists())
         self.assertEqual(Account.objects.get(user=self.user).free_sends_remaining, 3)
+
+    def reviewed_request(self, payload, candidate, **verdict):
+        opener = Mock()
+        opener.open.side_effect = [_Response(_completion({'allowed': True, 'message': candidate})),
+                                   _Response(_completion({**VERDICT, 'tone_matched': True, **verdict}))]
+        with patch('core.gapgpt.urllib.request.build_opener', return_value=opener):
+            response = self.post(self.path, payload)
+        return response, [json.loads(call.args[0].data)['messages'] for call in opener.open.call_args_list]
+
+    def test_exact_edit_preserves_orthography_and_canonical_digits_through_order(self):
+        entered = 'جمله‌ات رو در تمرین ۲ دوباره بگو.'
+        approved = 'جمله‌ات رو در تمرین 2 دوباره بگو.'
+        response, calls = self.reviewed_request({'text': entered, 'exact_wording': True}, approved)
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(json.loads(calls[0][1]['content'])['text'], approved)
+        self.assertEqual(json.loads(calls[1][1]['content']), {'source': approved, 'candidate': approved})
+        trial = response.json()
+        self.assertEqual(trial['reviewed_body'], approved)
+        bound = self.bind(trial['trial_id']).json()
+        self.assertEqual(bound['rewritten_text'], approved)
+        self.assertIn(approved, bound['full_sms'])
+        self.assertEqual(self.order(trial['trial_id']).status_code, 200)
+        self.assertEqual(Order.objects.get().full_sms, bound['full_sms'])
+        validate_order(Order.objects.get())
+        self.assertEqual(RewriteUsage.objects.count(), 1)
+
+    def test_protected_phrase_is_data_and_only_exact_match_can_create_trial(self):
+        entered = 'این دفعه جمله‌ات رو در تمرین ۲ خودت اصلاح کردی.'
+        phrase = 'جمله‌ات رو در تمرین ۲'
+        kept = 'جمله‌ات رو در تمرین 2 خودت اصلاح کردی.'
+        response, calls = self.reviewed_request({'text': entered, 'preserve_phrase': phrase}, kept)
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json()['reviewed_body'], kept)
+        self.assertNotIn('جمله‌ات', calls[0][0]['content'])
+        self.assertEqual(json.loads(calls[0][1]['content'])['preserve_phrase'], 'جمله‌ات رو در تمرین 2')
+        for controls, changed in [({'preserve_phrase': phrase}, kept.replace('جمله‌ات','جمله‌هات')),
+                                  ({'exact_wording': True}, kept)]:
+            with self.subTest(controls=controls):
+                failed, calls = self.reviewed_request({'text': entered, **controls}, changed)
+                self.assertEqual(len(calls), 1)
+                self.assertEqual(failed.status_code, 422)
+                self.assertEqual(failed.json()['error']['code'], 'trial_wording_unavailable')
+                self.assertNotIn('trial_id', failed.json())
+        self.assertEqual(Preview.objects.count(), 1)
+
+    def test_preserving_a_whole_word_rejects_new_prefix_suffix_and_combining_mark(self):
+        # These candidates would otherwise pass literal substring matching.
+        for entered, selected, candidate in [
+            ('این بار خواستم مکث کنی.', 'خواستم', 'این بار نخواستم مکث کنی.'),
+            ('تمرین امروز خوب بود.', 'تمرین', 'تمرین‌ها امروز خوب بود.'),
+            ('تمرین امروز خوب بود.', 'تمرین', 'تمرینِ امروز خوب بود.'),
+            ('هر تمرین با تمرین‌ها فرق داره.', 'تمرین', 'این تمرین‌ها فرق داره.'),
+        ]:
+            with self.subTest(selected=selected, candidate=candidate):
+                rejected, calls = self.reviewed_request({'text': entered, 'preserve_phrase': selected}, candidate)
+                self.assertEqual(rejected.status_code, 422)
+                self.assertEqual(rejected.json()['error']['code'], 'trial_wording_unavailable')
+                self.assertEqual(len(calls), 1)
+        self.assertFalse(Preview.objects.exists())
+
+    def test_whole_phrase_accepts_punctuation_and_intentional_partial_selection(self):
+        for entered, selected, candidate in [
+            ('تمرین‌ها رو انجام دادی.', 'تمرین', 'همه تمرین‌ها رو انجام دادی.'),
+            ('هر تمرین رو انجام بده.', 'تمرین', 'تمرین، با مکث بهتره.'),
+            ('جمله‌ات رو در تمرین خوب گفتی.', 'جمله‌ات رو', 'دوباره جمله‌ات رو خوب گفتی.'),
+        ]:
+            with self.subTest(selected=selected, candidate=candidate):
+                accepted, _ = self.reviewed_request({'text': entered, 'preserve_phrase': selected}, candidate)
+                self.assertEqual(accepted.status_code, 200, accepted.content)
+                self.assertEqual(accepted.json()['reviewed_body'], candidate)
+
+    def test_final_check_uses_original_word_edges_even_if_provider_returns_approved_body(self):
+        entered = 'جمله‌ات رو در تمرین خوب گفتی.'
+        changed = 'جمله‌ات رو در تمرین‌ها خوب گفتی.'
+        with patch('core.gapgpt.rewrite_message', return_value=changed):
+            result = self.post(self.path, {'text': entered, 'preserve_phrase': 'جمله‌ات رو در تمرین'})
+        self.assertEqual(result.status_code, 422)
+        self.assertEqual(result.json()['error']['code'], 'trial_wording_unavailable')
+        self.assertFalse(Preview.objects.exists())
+
+    @override_settings(OLLAMA_URL='http://127.0.0.1:11434')
+    def test_local_model_keeps_constraint_in_data_and_reviews_accepted_candidate(self):
+        from .test_ollama_rewrite import response as local_response
+        AIConfiguration.objects.create(provider='ollama')
+        source = 'این بار جمله‌ات رو درست گفتی.'
+        opener = Mock()
+        opener.open.side_effect = [local_response({'allowed': True, 'message': source}),
+                                   local_response({**VERDICT, 'tone_matched': True})]
+        with patch('core.ollama_rewrite.urllib.request.build_opener', return_value=opener):
+            result = self.post(self.path, {'text': source, 'preserve_phrase': 'جمله‌ات'})
+        self.assertEqual(result.status_code, 200, result.content)
+        self.assertEqual(result.json()['reviewed_body'], source)
+        self.assertEqual(opener.open.call_count, 2)
+        first, review = [json.loads(call.args[0].data)['messages'] for call in opener.open.call_args_list]
+        self.assertEqual(json.loads(first[1]['content'])['preserve_phrase'], 'جمله‌ات')
+        self.assertEqual(json.loads(review[1]['content'])['candidate'], source)
+        opener.reset_mock()
+        opener.open.side_effect = [local_response({'allowed': True, 'message': source.replace('جمله‌ات', 'جمله‌هات')})]
+        with patch('core.ollama_rewrite.urllib.request.build_opener', return_value=opener):
+            failed = self.post(self.path, {'text': source, 'exact_wording': True})
+        self.assertEqual(failed.json()['error']['code'], 'trial_wording_unavailable')
+        self.assertEqual(opener.open.call_count, 1)
+        self.assertEqual(Preview.objects.count(), 1)
+
+    def test_constraints_cannot_override_local_or_independent_rejection(self):
+        with patch('core.gapgpt.rewrite_message') as generator:
+            for payload in [{'text': BODY, 'preserve_phrase': 'عبارت غایب'},
+                            {'text': BODY, 'preserve_phrase': 12}, {'text': BODY, 'exact_wording': 'true'},
+                            {'text': 'شماره‌ام ۰۹۱۲۳۴۵۶۷۸۹ است.', 'exact_wording': True},
+                            {'text': 'احمق، جمله‌ات رو خودت اصلاح کردی.', 'preserve_phrase': 'احمق'},
+                            {'text': 'جمله‌ات ' * 30 + 'خوبه', 'exact_wording': True}]:
+                with self.subTest(payload=payload):
+                    self.assertEqual(self.post(self.path, payload).status_code, 422)
+            generator.assert_not_called()
+        for controls in [{'exact_wording': True}, {'preserve_phrase': 'وسایل مشترک'}]:
+            result, calls = self.reviewed_request({'text': BODY, **controls}, BODY, intent_preserved=False)
+            self.assertEqual(len(calls), 2)
+            self.assertEqual(result.status_code, 422)
+            self.assertEqual(result.json()['error']['code'], 'rewrite_intent_changed')
+        self.assertFalse(Preview.objects.exists())
+        self.assertFalse(Order.objects.exists())
 
     def test_both_routes_require_verified_session_and_csrf(self):
         csrf = Client(enforce_csrf_checks=True)

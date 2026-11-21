@@ -55,31 +55,46 @@ def reserve(owner, config=None):
         return RewriteUsage.objects.create(owner=owner, budget=budget)
 
 
-def prepare(owner, text, *, max_units, direct=False, message_tone=None, config=None):
-    from .draft_guard import sanitize_draft, validate_polite_body
+def prepare(owner, text, *, max_units, direct=False, message_tone=None, config=None, exact_wording=False, preserve_phrase=''):
+    from .draft_guard import contains_whole_phrase, sanitize_draft, validate_polite_body, validate_trial_phrase, wording_matches
     from .gapgpt import rewrite_message, GapGPTUnavailable, GapGPTRejected
     from .ai_config import current
     config = config or current()
     cleaned = sanitize_draft(text)
-    tone_options = {'message_tone': message_tone} if message_tone is not None else {}
+    rewrite_options = {'message_tone': message_tone} if message_tone is not None else {}
+    if exact_wording:
+        # A verbatim source must already meet all local output requirements.
+        # Its original typography then reaches both independent model stages.
+        try:
+            cleaned = validate_polite_body(text, max_units=max_units)
+        except ModerationRejected:
+            raise ModerationRejected('trial_wording_unavailable') from None
+        rewrite_options['wording'] = {'exact_wording': True}
+    elif preserve_phrase:
+        validate_trial_phrase(preserve_phrase, text, cleaned, max_units=max_units)
+        rewrite_options['wording'] = {'preserve_phrase': preserve_phrase,
+                                      'whole_words': contains_whole_phrase(text, preserve_phrase)}
     try:
         if config.provider == 'ollama':
             from .ollama_rewrite import slot, rewrite_message as local_rewrite
             with slot(config.parallel_requests):
                 reserve(owner, config)
-                output = local_rewrite(cleaned, max_units=max_units, direct=direct, config=config, **tone_options)
+                output = local_rewrite(cleaned, max_units=max_units, direct=direct, config=config, **rewrite_options)
         else:
             reserve(owner, config)
             # Preserve the legacy call contract when no DB override exists.
             options = {'config': config} if not config._state.adding else {}
-            output = rewrite_message(cleaned, max_units=max_units, direct=direct, **options, **tone_options)
+            output = rewrite_message(cleaned, max_units=max_units, direct=direct, **options, **rewrite_options)
     except GapGPTRejected as exc:
         raise ModerationRejected(exc.reason) from None
     except GapGPTUnavailable:
         raise RewriteUnavailable() from None
     # Only this approved body enters the sealed SMS snapshot. The view stores
     # the original separately in an encrypted, administrator-only field.
-    return validate_polite_body(output, max_units=max_units)
+    approved = validate_polite_body(output, max_units=max_units)
+    if 'wording' in rewrite_options and not wording_matches(approved, text, **rewrite_options['wording']):
+        raise ModerationRejected('trial_wording_unavailable')
+    return approved
 
 
 def signature(preview):

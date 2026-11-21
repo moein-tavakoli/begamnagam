@@ -35,8 +35,15 @@
   margin-block: 20px 12px;
 }
 .input,
-.sms { border: 1px solid var(--line); border-radius: 18px; padding: 16px; }
-.sms { background: var(--soft); }
+.sms,
+.fullSms { border: 1px solid var(--line); border-radius: 18px; padding: 16px; }
+.sms, .fullSms { background: var(--soft); }
+.fullSms { grid-column: 1 / -1; }
+.comparison del { text-decoration-thickness: 2px; background: var(--error-bg); }
+.comparison ins { text-underline-offset: 3px; text-decoration-thickness: 2px; background: var(--pale); }
+.wording { margin-block: 14px 8px; }
+.phrase { margin-block: 8px; }
+.phrase input { width: 100%; }
 .comparison h3 { margin: 0 0 8px; font-size: 14px; }
 .comparison p { margin: 0; font-size: 15px; line-height: 2; overflow-wrap: anywhere; white-space: pre-wrap; }
 .recipient { border-block-start: 1px solid var(--line); padding-block-start: 18px; margin-block-start: 18px; }

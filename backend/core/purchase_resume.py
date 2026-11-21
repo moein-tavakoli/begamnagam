@@ -22,6 +22,12 @@ def resume_reference(data, key):
     return preview_id, digest(f'purchase-resume-v1:{key}:{preview_id}')
 
 
+def is_measured_trial(user, preview_id, environment):
+    # Keep financial attribution after routine preview deletion without copying its content or identifier.
+    return bool(preview_id) and MessageAttempt.objects.filter(owner=user, preview_id=preview_id,
+        preview__from_text_trial=True, status='accepted', trial_environment=environment).exists()
+
+
 def unavailable():
     return APIError('preview_expired', 'این پیش‌نمایش دیگر قابل ادامه نیست. یک پیام تازه آماده کن.', 409)
 

@@ -113,6 +113,7 @@ def _new_purchase(user, package, key, config, consent, *, preview_id=None, refer
     environment = credit_environment()
     purchase = CreditPurchase.objects.create(owner=user, package=package, idempotency_key=key,
         resume_preview_id=preview_id, resume_reference_digest=reference_digest,
+        from_measured_text_trial=purchase_resume.is_measured_trial(user, preview_id, environment),
         package_name=package.name, message_count=package.message_count, amount_toman=package.price_toman,
         environment=environment, payment_method='card', wallet_refund_consent=consent,
         wallet_terms_version=WALLET_TERMS_VERSION if consent else '')

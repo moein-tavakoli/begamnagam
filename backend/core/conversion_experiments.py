@@ -101,7 +101,8 @@ def exposure(request):
             raise APIError('invalid_input', 'شناسهٔ پیش‌نمایش معتبر نیست.', 422) from None
         if (account.free_sends_remaining or getattr(account, balance_field())
                 or not Preview.objects.filter(pk=preview_id, owner=request.user, session_key=request.session.session_key,
-                    is_free=False, payment_method='credit', expires_at__gt=timezone.now(), order__isnull=True).exists()):
+                    is_free=False, payment_method='credit', expires_at__gt=timezone.now(), order__isnull=True)
+                    .exclude(from_text_trial=True, recipient_hash='').exists()):
             return {'recorded': False}
     _, created = ConversionExposure.objects.get_or_create(account=account, environment=credit_environment(),
         defaults={'experiment': key, 'variant': current['variant'], 'surface': surface, 'preview_id': preview_id})

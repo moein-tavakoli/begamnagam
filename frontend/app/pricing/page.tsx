@@ -8,7 +8,9 @@ export const metadata = publicMetadata('/pricing');
 export default function PricingPage() {
   return <div className={`wrap ${styles.page}`}>
     <StructuredData data={pageJsonLd('/pricing')}/>
-    <header className={styles.intro}><span className={styles.eyebrow}>کمی حرف خوب، برای حال بهتر</span><h1>تعرفه‌ها و بسته‌های پیام<span>.</span></h1><p>به اندازهٔ حرف‌هایی که می‌خواهی برسانی، اعتبار بگیر.</p></header>
+    <header className={styles.intro}><span className={styles.eyebrow}>کمی حرف خوب، برای حال بهتر</span><h1>تعرفه‌ها و بسته‌های پیام<span>.</span></h1><p>به اندازهٔ حرف‌هایی که می‌خواهی برسانی، اعتبار بگیر.</p>
+      <Link href="/try-message" prefetch={false} className="button secondary">متن خودم را امتحان کنم</Link>
+    </header>
     <PackageCatalog/>
     <section className={styles.faq} aria-labelledby="pricing-questions"><h2 id="pricing-questions">قبل از خرید</h2>
       <details><summary>هدیه‌ها با خرید بسته چه می‌شوند؟</summary><p>هدیه‌های باقی‌مانده حفظ می‌شوند و اول مصرف می‌شوند؛ پس از آن هر ارسال یک اعتبار از بسته کم می‌کند.</p></details>

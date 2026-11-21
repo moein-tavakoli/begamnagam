@@ -9,6 +9,18 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 3.6.0 — 2026-11-21 — Try a personal draft before buying
+
+- Add a private trial from pricing and credits. A verified sender can compare their
+  original draft with the complete reviewed SMS before choosing a recipient or paying.
+  Editing a draft starts a fresh review. Unavailable or rejected rewrites display a reason.
+- Bind the same approved body to one recipient in its original session. Substitute the
+  recipient link and carry the sealed preview into the existing consent and checkout flow.
+  Unbound trials cannot start orders, payments or sends. Model quotas still apply.
+- Validate locally with nine synthetic drafts and eighteen authorized production-model
+  calls. Eight drafts produced a preview and one was rejected at independent intent
+  review. Check desktop editing, mobile binding, concurrency and private data retention.
+
 ## 3.5.0 — 2026-11-21 — Return to the reviewed message after package checkout
 
 - Offer the current three-message package on an exhausted preview. Carry the sealed

@@ -220,6 +220,8 @@ class BotConversationEvent(models.Model):
 
 
 class Preview(models.Model):
+    # An unbound personal-text trial has no recipient or recipient grant.
+    from_text_trial = models.BooleanField(default=False, db_default=False, editable=False)
     reply_to = models.ForeignKey('Order', null=True, blank=True, on_delete=models.PROTECT, related_name='+')
     # The flag keeps receipts masked after private-data retention removes the link reference.
     is_shared_destination = models.BooleanField(default=False, db_default=False, editable=False)

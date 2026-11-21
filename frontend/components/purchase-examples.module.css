@@ -38,7 +38,8 @@
 .sms { border: 1px solid var(--line); border-radius: 18px; padding: 16px; }
 .sms { background: var(--soft); }
 .comparison h3 { margin: 0 0 8px; font-size: 14px; }
-.comparison p { margin: 0; font-size: 15px; line-height: 2; overflow-wrap: anywhere; }
+.comparison p { margin: 0; font-size: 15px; line-height: 2; overflow-wrap: anywhere; white-space: pre-wrap; }
+.recipient { border-block-start: 1px solid var(--line); padding-block-start: 18px; margin-block-start: 18px; }
 .note { margin: 0; color: var(--muted); font-size: 13px; }
 
 @media (max-width: 699px) {

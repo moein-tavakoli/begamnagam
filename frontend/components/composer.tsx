@@ -54,8 +54,12 @@ const categoryIcons: Record<string, IconName> = {
 };
 const stepLabels = ["حرفت رو بنویس", "متن نهایی و ارسال"];
 
-export function Composer({ active = true, focusOnActivate = false, onExit, replyToken, onReplyUnavailable, sharedRecipient, resumedPreview }: {
-  resumedPreview?: Preview;
+type InitialReview =
+  | { source: "purchase"; preview: Preview }
+  | { source: "text-trial"; preview: Preview; recipientPhone: string };
+
+export function Composer({ active = true, focusOnActivate = false, onExit, replyToken, onReplyUnavailable, sharedRecipient, initialReview }: {
+  initialReview?: InitialReview;
   active?: boolean;
   focusOnActivate?: boolean;
   onExit?: () => void;
@@ -64,10 +68,12 @@ export function Composer({ active = true, focusOnActivate = false, onExit, reply
   sharedRecipient?: { token: string; maskedPhone: string };
 }) {
   const { data, reload } = useApp();
-  const isReply = !!replyToken || !!resumedPreview?.is_reply;
-  const isShared = !!sharedRecipient || !!resumedPreview?.is_shared_destination;
-  const needsPhone = !isReply && !isShared && !resumedPreview;
-  const [draftStep, setDraftStep] = useState(resumedPreview ? 1 : 0);
+  const initialPreview = initialReview?.preview;
+  const trialRecipient = initialReview?.source === "text-trial" ? initialReview.recipientPhone : undefined;
+  const isReply = !!replyToken || !!initialPreview?.is_reply;
+  const isShared = !!sharedRecipient || !!initialPreview?.is_shared_destination;
+  const needsPhone = !isReply && !isShared && (!initialPreview || !!trialRecipient);
+  const [draftStep, setDraftStep] = useState(initialPreview ? 1 : 0);
   const [category, setCategory] = useState("");
   const [exampleGroup, setExampleGroup] = useState<number | null>(null);
   const [text, setText] = useState("");
@@ -76,10 +82,10 @@ export function Composer({ active = true, focusOnActivate = false, onExit, reply
     ?? toneOptions[0]?.id ?? data?.default_message_tone ?? 'firm';
   const [chosenTone, setMessageTone] = useState<MessageTone>(defaultTone);
   const messageTone = isReply && toneOptions.some(item => item.id === chosenTone) ? chosenTone : defaultTone;
-  const [preview, setPreview] = useState<Preview | null>(resumedPreview ?? null);
+  const [preview, setPreview] = useState<Preview | null>(initialPreview ?? null);
   const step = isReply ? (preview ? 1 : 0) : draftStep;
   const activeStep = Math.min(step, stepLabels.length - 1);
-  const [recipient, setRecipient] = useState("");
+  const [recipient, setRecipient] = useState(trialRecipient ?? "");
   const [consent, setConsent] = useState(false);
   const [order, setOrder] = useState<Order | null>(null);
   const [busy, setBusy] = useState(false);
@@ -119,9 +125,9 @@ export function Composer({ active = true, focusOnActivate = false, onExit, reply
   }, [text, recipient, messageTone, step, data?.session_identity]);
 
   useEffect(() => {
-    if (resumedPreview || !data || order || chosenTone === messageTone) return;
+    if (initialPreview || !data || order || chosenTone === messageTone) return;
     setMessageTone(messageTone); setPreview(null); setConsent(false); idempotencyKey.current = '';
-  }, [data, chosenTone, messageTone, order?.id, resumedPreview]);
+  }, [data, chosenTone, messageTone, order?.id, initialPreview]);
 
   useEffect(() => {
     const stage = `${step}:${awaitingPayment}:${finished}`;
@@ -165,8 +171,8 @@ export function Composer({ active = true, focusOnActivate = false, onExit, reply
     setError(errorMessage(error));
     setAlternatives(messageAlternatives(error instanceof ApiError ? error.details : undefined));
     setSelectedAlternative(null);
-    if (resumedPreview) {
-      if (error instanceof ApiError && error.code === 'authentication_required') void reload();
+    if (initialPreview) {
+      if (error instanceof ApiError && ['authentication_required', 'credit_required', 'free_quota_changed'].includes(error.code)) void reload();
       return;
     }
     if (error instanceof ApiError && error.code === 'tone_unavailable') {
@@ -349,7 +355,7 @@ export function Composer({ active = true, focusOnActivate = false, onExit, reply
 
 
   function goBack() {
-    if (resumedPreview) { onExit?.(); return; }
+    if (initialPreview) { onExit?.(); return; }
     setDraftStep(0);
     if (isReply) {
       setPreview(null);
@@ -505,10 +511,10 @@ export function Composer({ active = true, focusOnActivate = false, onExit, reply
           {step > 0 && !finished && !data?.authenticated && <AuthGate renderActions={renderActions} />}
           {step > 0 && !finished && data?.authenticated && (
             <form className="review-form" aria-labelledby="compose-title" onSubmit={preview ? createOrder : makePreview} noValidate>
-              {resumedPreview ? <p className="shared-destination" role="note">
+              {initialPreview ? <p className="shared-destination" role="note">
                 {isReply ? "مقصد همان گیرندهٔ پاسخ است." : isShared ? "مقصد همان صاحب لینک شخصی است." :
-                  <>گیرندهٔ همین پیام <bdi dir="ltr">{resumedPreview.recipient_masked}</bdi></>}
-                {" "}بسته فعال شده. برای ارسال، متن را بخوان و تأیید کن.
+                  <>گیرندهٔ همین پیام <bdi dir="ltr">{trialRecipient ?? initialPreview.recipient_masked}</bdi></>}
+                {" "}پیش از ارسال، متن و گیرنده را بررسی کن.
               </p> : sharedRecipient ? <div className="shared-destination">
                 <label htmlFor="quote-recipient">شمارهٔ مقصد</label>
                 <input id="quote-recipient" className="phone-number-input" dir="ltr" type="text" readOnly
@@ -554,7 +560,7 @@ export function Composer({ active = true, focusOnActivate = false, onExit, reply
                 </span>
               </label>}
               {fields.consent && <p className="field-error" id="consent-error">{fields.consent}</p>}
-              {needsPackage && <CreditPackages inline previewId={preview.preview_id} />}
+              {needsPackage && <CreditPackages inline previewId={preview.preview_id} preservePreview={!!trialRecipient} />}
               {awaitingPayment && (
                 <p className="small muted" role="status">سفارش ثبت شده؛ تلاش دوباره همین سفارش رو ادامه می‌ده.</p>
               )}

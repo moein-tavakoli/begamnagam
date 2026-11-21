@@ -18,17 +18,17 @@ import styles from './credit-shop.module.css';
 const fa = new Intl.NumberFormat('fa-IR');
 const statuses: Record<string,string> = { credited:'بسته‌ات فعال شد', wallet_returned:'مبلغ به کیف پول برگشت؛ بسته فعال نشد', awaiting_transfer:'درخواست آماده است؛ پرداخت و ارسال رسید', awaiting_review:'رسیدت در انتظار بررسی ادمین است', rejected:'این رسید تأیید نشد', cancelled:'درخواست لغو شد', unknown:'نتیجه هنوز مشخص نیست؛ دوباره پرداخت نکن', pending:'در انتظار تأیید پرداخت', created:'درخواست خرید ثبت شد', verified:'در حال تکمیل اعتبار', failed:'پرداخت تأیید نشد؛ اعتباری اضافه نشده' };
 
-export function CreditPackages({ inline = false, previewId }: { inline?: boolean; previewId?: string }) {
-  return inline && previewId ? <PreviewOffer previewId={previewId}/> : <CreditCheckout/>;
+export function CreditPackages({ inline = false, previewId, preservePreview = false }: { inline?: boolean; previewId?: string; preservePreview?: boolean }) {
+  return inline && previewId ? <PreviewOffer previewId={previewId} preservePreview={preservePreview}/> : <CreditCheckout/>;
 }
 
-function PreviewOffer({ previewId }: { previewId: string }) {
+function PreviewOffer({ previewId, preservePreview }: { previewId: string; preservePreview: boolean }) {
   const { data } = useApp();
   const improved = data?.conversion_experiment?.inline_checkout ?? true;
   const starters = data?.message_packages?.filter(item => item.active && item.message_count === 3 && !item.experiment_only) ?? [];
   const starter = starters.find(item => item.price_toman === 10000) ?? starters[0];
   const open = creditPaymentMethods(data).status === 'available';
-  const allPackages = improved ? creditCheckoutHref(previewId) : '/credits';
+  const allPackages = improved || preservePreview ? creditCheckoutHref(previewId) : '/credits';
   return <section className={styles.inline}>
     <ConversionExposure surface="preview" previewId={previewId}/>
     <h3>برای ادامه، اعتبار پیام بگیر</h3>

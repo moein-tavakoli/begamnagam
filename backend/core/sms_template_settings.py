@@ -104,9 +104,13 @@ def current_sms_layout():
         raise APIError('sms_template_unavailable', 'قالب پیامک در دسترس نیست.', 503) from None
 
 
+def sample_recipient_code(layout):
+    return SAMPLE_ACTION_CODE if REPLY_SLOT in layout else SAMPLE_STOP_CODE
+
+
 def sample_preview(layout, variables):
     origin = sms_origin()
-    sample_token = SAMPLE_ACTION_CODE if REPLY_SLOT in layout else SAMPLE_STOP_CODE
+    sample_token = sample_recipient_code(layout)
     full_sms = render_recipient_sms(SAMPLE_MESSAGE, origin, sample_token, layout=layout, variables=variables)
     names = SMS_PLACEHOLDER.findall(layout)
     occurrences = names.count('message')

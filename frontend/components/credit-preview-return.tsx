@@ -31,7 +31,7 @@ function RestorePreview({ id }: { id: string | null }) {
       .catch(reason => { if (!controller.signal.aborted) setError(errorMessage(reason)); });
     return () => controller.abort();
   }, [id, attempt]);
-  if (preview) return <Composer resumedPreview={preview} onExit={() => router.replace('/#compose')}/>;
+  if (preview) return <Composer initialReview={{ source: 'purchase', preview }} onExit={() => router.replace('/#compose')}/>;
   return <section className="account-page wrap">
     <h1>بازبینی پیام پس از خرید</h1>
     {!id || error ? <>

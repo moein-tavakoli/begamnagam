@@ -54,6 +54,18 @@ test('rewrite outages have a specific safe message and never expose upstream det
       error.message.includes('آماده‌سازی متن') && !error.message.includes('private') && error.details === undefined);
 });
 
+test('recipient-free text trials can finish within the full rewrite timeout', async context => {
+  otpSessionBrowser(context);
+  context.mock.timers.enable({ apis: ['setTimeout'] });
+  globalThis.fetch = (_url, options) => new Promise((resolve, reject) => {
+    options?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+    setTimeout(() => resolve(Response.json({ full_sms: 'متن کامل' })), 20000);
+  });
+  const result = api<{ full_sms: string }>('/messages/text-trials', { method: 'POST', body: { text: 'متن من' } });
+  context.mock.timers.tick(20000);
+  assert.equal((await result).full_sms, 'متن کامل');
+});
+
 test("OTP notifies other tabs immediately while local feedback finishes", async context => {
   const events = otpSessionBrowser(context);
   let complete!: () => void;

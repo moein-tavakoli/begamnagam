@@ -94,12 +94,17 @@ def signature(preview):
         value += ['reply-v1', str(preview.reply_to_id)]
     if preview.is_shared_destination:
         value += ['personal-share-v1', str(preview.personal_share_token)]
+    if preview.from_text_trial:
+        # Retention clears session keys even on a pending order. Once bound,
+        # the recipient hash remains part of the approved dispatch snapshot.
+        value += ['text-trial-v1', '' if preview.recipient_hash else preview.session_key]
     return digest('approved-gapgpt-v1:'+json.dumps(value, ensure_ascii=False, separators=(',', ':')))
 
 
-def validate_preview(preview, *, recipient_hash=None):
+def validate_preview(preview, *, recipient_hash=None, allow_unbound_trial=False):
     from .draft_guard import validate_polite_body
     if (preview.moderation_mode not in {'gapgpt', 'ollama'} or preview.category != 'custom' or preview.text != ''
+            or (preview.from_text_trial and not preview.recipient_hash and not allow_unbound_trial)
             or not preview.generated_body or not preview.review_signature
             or not hmac.compare_digest(preview.review_signature, signature(preview))
             or (recipient_hash is not None and recipient_hash != preview.recipient_hash)):
@@ -111,7 +116,7 @@ def validate_order(order):
     preview = order.preview
     if order.reply_to_id != preview.reply_to_id or bool(order.reply_to_id) != bool(order.reply_depth):
         raise ModerationRejected('unreviewed_snapshot')
-    if preview.is_shared_destination:
+    if preview.is_shared_destination or preview.from_text_trial:
         from cryptography.fernet import InvalidToken
         try:
             actual_hash = digest(decrypt(order.recipient_cipher))
@@ -131,7 +136,7 @@ def validate_order(order):
             raise ModerationRejected('unreviewed_snapshot') from None
         if preview.moderation_mode not in {'gapgpt', 'ollama'}:
             raise ModerationRejected('unreviewed_snapshot')
-    if preview.moderation_mode in {'gapgpt', 'ollama'}:
+    if preview.from_text_trial or preview.moderation_mode in {'gapgpt', 'ollama'}:
         validate_preview(preview, recipient_hash=order.recipient_hash)
         if order.owner_id != preview.owner_id or order.text != '' or order.category != 'custom' or order.full_sms != preview.full_sms:
             raise ModerationRejected('unreviewed_snapshot')

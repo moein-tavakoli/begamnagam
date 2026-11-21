@@ -212,7 +212,7 @@ def previews(request):
 def preview(request, preview_id):
     from core.purchase_resume import linked_purchase, resolve
     item = Preview.objects.filter(owner=request.user, pk=preview_id, order__owner_hidden_at__isnull=True).first()
-    if not item:
+    if not item or (item.from_text_trial and (not item.recipient_hash or item.session_key != request.session.session_key)):
         raise APIError('not_found', 'پیش‌نمایش پیدا نشد.', 404)
     if item.expires_at <= timezone.now():
         raise APIError('preview_expired', 'پیش‌نمایش منقضی شده است؛ دوباره متن را آماده کن.', 409)

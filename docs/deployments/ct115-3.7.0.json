@@ -1,0 +1,125 @@
+{
+  "version": "3.7.0",
+  "source_commit": "f24fb3a48f71dea8f9f3b123b2dda25b7956551d",
+  "deployed": true,
+  "verified_at_utc": "2026-11-21T15:54:35.743285+00:00",
+  "backend_image": "sha256:d1fc71fdf557855febf0701cc0d3da7f8427ceceaec8aa1be85efea8839bb496",
+  "frontend_image": "sha256:02515b22f0208c00deb7160c779a0a031b58985a16a9b46c60d23920004ad0df",
+  "asset_bridge_image": "sha256:61b192ca933d66b25ea371c7af44c0568c3c7ea5f9ece86f0dd8837e542a0f8d",
+  "services": {
+    "postgres": "healthy",
+    "redis": "healthy",
+    "rabbitmq": "healthy",
+    "proxy": "healthy",
+    "backend": "healthy",
+    "worker": "running",
+    "beat": "running",
+    "frontend": "healthy",
+    "frontend2": "healthy",
+    "frontend3": "healthy",
+    "frontend4": "healthy",
+    "frontend5": "healthy",
+    "frontend6": "healthy"
+  },
+  "frontends": {
+    "frontend": {
+      "version": "3.7.0",
+      "assets_verified": 28,
+      "recipient_routes": "PASS"
+    },
+    "frontend2": {
+      "version": "3.7.0",
+      "assets_verified": 28,
+      "recipient_routes": "PASS"
+    },
+    "frontend3": {
+      "version": "3.7.0",
+      "assets_verified": 28,
+      "recipient_routes": "PASS"
+    },
+    "frontend4": {
+      "version": "3.7.0",
+      "assets_verified": 28,
+      "recipient_routes": "PASS"
+    },
+    "frontend5": {
+      "version": "3.7.0",
+      "assets_verified": 28,
+      "recipient_routes": "PASS"
+    },
+    "frontend6": {
+      "version": "3.7.0",
+      "assets_verified": 28,
+      "recipient_routes": "PASS"
+    }
+  },
+  "postgresql_tests": 876,
+  "frontend_tests": 138,
+  "migrations_applied": [
+    "0056_creditpurchase_resume_preview",
+    "0057_conversion_experiments",
+    "0058_preview_from_text_trial",
+    "0059_measured_trial_purchases"
+  ],
+  "identity_requests_enabled": false,
+  "identity_setting_rows_preserved": true,
+  "encrypted_backup_restore_verified": true,
+  "data_and_proxy_containers_preserved": true,
+  "live_provider_settings_preserved": true,
+  "https": {
+    "version": "3.7.0",
+    "transport": "domain_https_via_internal_nginx",
+    "tls_certificate_verified": true,
+    "feature_bundles": "PASS",
+    "manifest": "PASS",
+    "service_worker": "PASS",
+    "otp_is_real": true,
+    "package_checkout_enabled": false,
+    "anonymous_private_documentation": "denied",
+    "management_headers": "PASS",
+    "sms_edge": {
+      "https_direct_code_ready": true,
+      "http_direct_code_ready": true,
+      "prefixed_links": "PASS",
+      "unchanged_older_root_codes": "PASS",
+      "tls_verified": true
+    }
+  },
+  "management_settings_requires_authentication": true,
+  "verification_sms_sent": 0,
+  "verification_otp_sent": 0,
+  "verification_payments": 0,
+  "promotion": {
+    "pr": "https://github.com/moein-tavakoli/begamnagam/pull/13",
+    "merge_commit": "61770ba11f622297cdff5cc887ed810117e512c7",
+    "ci": {
+      "backend": "PASS",
+      "frontend": "PASS",
+      "compose": "PASS"
+    }
+  },
+  "public_https": {
+    "public_hostname": "begamnagam.ir",
+    "public_version": "3.7.0",
+    "public_health": "ok",
+    "anonymous_trial_guard_status": 405,
+    "private_trial_page_headers": "PASS",
+    "public_provider_profile_matches_baseline": true,
+    "paid_checkout_enabled": false,
+    "live_otp_configured": true
+  },
+  "public_browser": [
+    {
+      "width": 375,
+      "version": "3.7.0",
+      "pricing_club_example": true,
+      "trial_opens_verified_login": true
+    },
+    {
+      "width": 1440,
+      "version": "3.7.0",
+      "pricing_club_example": true,
+      "trial_opens_verified_login": true
+    }
+  ]
+}

@@ -19,6 +19,10 @@ Historical release reports below contain deployment evidence and limitations.
 - Validate the local UI on desktop and mobile. Six synthetic drafts used twelve
   authorized model calls including one retry. Two drafts produced a preview;
   upstream timeouts prevented four from producing a result.
+- Deployed on 2026-11-21 from `f24fb3a` after all three promotion checks passed.
+  Verified version 3.7.0 on all six frontends, applied migrations 0056–0059
+  and opened the public pre-purchase trial from pricing on desktop and mobile.
+  [Deployment evidence](docs/deployments/ct115-3.7.0.json)
 
 ## 3.6.0 — 2026-11-21 — Try a personal draft before buying
 

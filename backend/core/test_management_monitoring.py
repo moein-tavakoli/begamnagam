@@ -218,7 +218,10 @@ class ManagementMonitoringTests(TestCase):
                 consent_version='v1', consent_at=NOW, full_sms='private-invitation-sms', provider='demo', status=status, available_at=NOW)
             for obj in (outbox, send):
                 type(obj).objects.filter(pk=obj.pk).update(created_at=NOW - timedelta(hours=30))
-        data = self.get_data()
+        with CaptureQueriesContext(connection) as queries:
+            data = self.get_data()
+        for table in ('core_outbox', 'core_invitationsend'):
+            self.assertEqual(sum(f'FROM "{table}"' in query['sql'] for query in queries), 1, table)
         self.assertEqual(data['queue'], [
             {'kind': 'messages', 'status': 'pending', 'count': 1},
             {'kind': 'messages', 'status': 'submitting', 'count': 1},
@@ -228,6 +231,7 @@ class ManagementMonitoringTests(TestCase):
             {'kind': 'invitations', 'status': 'unknown', 'count': 1}])
         self.assertEqual(data['operations']['oldest_queue_seconds'], 108000)
         self.assertEqual(data['operations']['outbox_pending'], 2)
+        self.assertEqual(data['operations']['delivery_unknown'], 2)
 
     def test_support_counts_unanswered_conversations_and_alerts_are_active_bounded_ordered(self):
         for answered, last in ((0, 2), (2, 2), (0, 0)):

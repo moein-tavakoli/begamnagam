@@ -2,13 +2,17 @@
 import os
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
+from queue import Queue
+from time import monotonic, sleep
 
 from django.contrib.auth import get_user_model
-from django.test import SimpleTestCase, TestCase, override_settings
+from django.db import connection, connections, transaction
+from django.test import SimpleTestCase, TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 
 from .budget import observe_cost, reserve_cost
-from .models import OperationalAlert, SafetyControl, SpendBudget, SpendReservation
+from .models import OperationalAlert, OperatorAudit, SafetyControl, SpendBudget, SpendReservation
 from .providers import ProviderDisabled
 from .safety import operator_action, refresh_alerts, snapshot
 from .services import APIError
@@ -133,3 +137,71 @@ class ProviderDailyBudgetStartupTests(SimpleTestCase):
         env['PROVIDER_DAILY_BUDGET_RIAL'] = '100000'
         result = self.run_startup(env)
         self.assertEqual(result.returncode, 0, result.stderr.decode())
+
+
+class ProviderBudgetConcurrencyTests(TransactionTestCase):
+    def setUp(self):
+        if connection.vendor != 'postgresql':
+            self.skipTest('PostgreSQL row-lock integration test')
+        self.budget = SpendBudget.objects.create(day=timezone.localdate(), limit_rial=1000, reserved_rial=200)
+        self.sms = SpendReservation.objects.create(budget=self.budget, operation_key='synthetic:sms', amount_rial=100, kind='sms')
+        self.otp = SpendReservation.objects.create(budget=self.budget, operation_key='synthetic:otp', amount_rial=100, kind='otp')
+        SafetyControl.objects.update_or_create(pk=1, defaults={'halted': False})
+
+    @staticmethod
+    def observe_in_worker(operation_key, cost, worker_pid):
+        try:
+            with transaction.atomic(), connection.cursor() as cursor:
+                cursor.execute('SET LOCAL statement_timeout = 10000')
+                cursor.execute('SELECT pg_backend_pid()')
+                worker_pid.put(cursor.fetchone()[0])
+                observe_cost(operation_key, cost)
+        finally:
+            connections.close_all()
+
+    def assert_worker_is_waiting_for_current_transaction(self, worker_pid):
+        deadline = monotonic() + 5
+        with connection.cursor() as cursor:
+            cursor.execute('SET LOCAL statement_timeout = 10000')
+            while monotonic() < deadline:
+                cursor.execute('SELECT pg_backend_pid() = ANY(pg_blocking_pids(%s))', [worker_pid])
+                if cursor.fetchone()[0]:
+                    return
+                sleep(0.01)
+        self.fail('Worker did not reach the expected lock')
+
+    def test_concurrent_overruns_respect_safety_then_budget_lock_order(self):
+        worker_pid = Queue()
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            with transaction.atomic():
+                SafetyControl.objects.select_for_update().get(pk=1)
+                worker = executor.submit(self.observe_in_worker, self.otp.operation_key, 120, worker_pid)
+                self.assert_worker_is_waiting_for_current_transaction(worker_pid.get(timeout=5))
+                observe_cost(self.sms.operation_key, 130)
+            worker.result(timeout=10)
+
+        self.budget.refresh_from_db()
+        self.sms.refresh_from_db()
+        self.otp.refresh_from_db()
+        self.assertEqual(self.budget.reserved_rial, 250)
+        self.assertEqual((self.sms.actual_rial, self.otp.actual_rial), (130, 120))
+        self.assertTrue(SafetyControl.objects.get(pk=1).halted)
+        self.assertTrue(OperationalAlert.objects.get(code='provider_cost_exceeded').active)
+        self.assertEqual(OperatorAudit.objects.filter(action='automatic_cost_halt').count(), 2)
+
+    def test_in_budget_observation_committed_first_wins_over_later_overrun(self):
+        worker_pid = Queue()
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            with transaction.atomic():
+                SpendReservation.objects.select_for_update().get(pk=self.sms.pk)
+                worker = executor.submit(self.observe_in_worker, self.sms.operation_key, 130, worker_pid)
+                self.assert_worker_is_waiting_for_current_transaction(worker_pid.get(timeout=5))
+                observe_cost(self.sms.operation_key, 90)
+            worker.result(timeout=10)
+
+        self.budget.refresh_from_db()
+        self.sms.refresh_from_db()
+        self.assertEqual(self.budget.reserved_rial, 200)
+        self.assertEqual((self.sms.actual_rial, self.sms.state), (90, 'charged'))
+        self.assertFalse(SafetyControl.objects.get(pk=1).halted)
+        self.assertFalse(OperationalAlert.objects.filter(code='provider_cost_exceeded').exists())

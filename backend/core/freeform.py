@@ -55,31 +55,46 @@ def reserve(owner, config=None):
         return RewriteUsage.objects.create(owner=owner, budget=budget)
 
 
-def prepare(owner, text, *, max_units, direct=False, message_tone=None, config=None):
-    from .draft_guard import sanitize_draft, validate_polite_body
+def prepare(owner, text, *, max_units, direct=False, message_tone=None, config=None, exact_wording=False, preserve_phrase=''):
+    from .draft_guard import contains_whole_phrase, sanitize_draft, validate_polite_body, validate_trial_phrase, wording_matches
     from .gapgpt import rewrite_message, GapGPTUnavailable, GapGPTRejected
     from .ai_config import current
     config = config or current()
     cleaned = sanitize_draft(text)
-    tone_options = {'message_tone': message_tone} if message_tone is not None else {}
+    rewrite_options = {'message_tone': message_tone} if message_tone is not None else {}
+    if exact_wording:
+        # A verbatim source must already meet all local output requirements.
+        # Its original typography then reaches both independent model stages.
+        try:
+            cleaned = validate_polite_body(text, max_units=max_units)
+        except ModerationRejected:
+            raise ModerationRejected('trial_wording_unavailable') from None
+        rewrite_options['wording'] = {'exact_wording': True}
+    elif preserve_phrase:
+        validate_trial_phrase(preserve_phrase, text, cleaned, max_units=max_units)
+        rewrite_options['wording'] = {'preserve_phrase': preserve_phrase,
+                                      'whole_words': contains_whole_phrase(text, preserve_phrase)}
     try:
         if config.provider == 'ollama':
             from .ollama_rewrite import slot, rewrite_message as local_rewrite
             with slot(config.parallel_requests):
                 reserve(owner, config)
-                output = local_rewrite(cleaned, max_units=max_units, direct=direct, config=config, **tone_options)
+                output = local_rewrite(cleaned, max_units=max_units, direct=direct, config=config, **rewrite_options)
         else:
             reserve(owner, config)
             # Preserve the legacy call contract when no DB override exists.
             options = {'config': config} if not config._state.adding else {}
-            output = rewrite_message(cleaned, max_units=max_units, direct=direct, **options, **tone_options)
+            output = rewrite_message(cleaned, max_units=max_units, direct=direct, **options, **rewrite_options)
     except GapGPTRejected as exc:
         raise ModerationRejected(exc.reason) from None
     except GapGPTUnavailable:
         raise RewriteUnavailable() from None
     # Only this approved body enters the sealed SMS snapshot. The view stores
     # the original separately in an encrypted, administrator-only field.
-    return validate_polite_body(output, max_units=max_units)
+    approved = validate_polite_body(output, max_units=max_units)
+    if 'wording' in rewrite_options and not wording_matches(approved, text, **rewrite_options['wording']):
+        raise ModerationRejected('trial_wording_unavailable')
+    return approved
 
 
 def signature(preview):
@@ -94,12 +109,17 @@ def signature(preview):
         value += ['reply-v1', str(preview.reply_to_id)]
     if preview.is_shared_destination:
         value += ['personal-share-v1', str(preview.personal_share_token)]
+    if preview.from_text_trial:
+        # Retention clears session keys even on a pending order. Once bound,
+        # the recipient hash remains part of the approved dispatch snapshot.
+        value += ['text-trial-v1', '' if preview.recipient_hash else preview.session_key]
     return digest('approved-gapgpt-v1:'+json.dumps(value, ensure_ascii=False, separators=(',', ':')))
 
 
-def validate_preview(preview, *, recipient_hash=None):
+def validate_preview(preview, *, recipient_hash=None, allow_unbound_trial=False):
     from .draft_guard import validate_polite_body
     if (preview.moderation_mode not in {'gapgpt', 'ollama'} or preview.category != 'custom' or preview.text != ''
+            or (preview.from_text_trial and not preview.recipient_hash and not allow_unbound_trial)
             or not preview.generated_body or not preview.review_signature
             or not hmac.compare_digest(preview.review_signature, signature(preview))
             or (recipient_hash is not None and recipient_hash != preview.recipient_hash)):
@@ -111,7 +131,7 @@ def validate_order(order):
     preview = order.preview
     if order.reply_to_id != preview.reply_to_id or bool(order.reply_to_id) != bool(order.reply_depth):
         raise ModerationRejected('unreviewed_snapshot')
-    if preview.is_shared_destination:
+    if preview.is_shared_destination or preview.from_text_trial:
         from cryptography.fernet import InvalidToken
         try:
             actual_hash = digest(decrypt(order.recipient_cipher))
@@ -131,7 +151,7 @@ def validate_order(order):
             raise ModerationRejected('unreviewed_snapshot') from None
         if preview.moderation_mode not in {'gapgpt', 'ollama'}:
             raise ModerationRejected('unreviewed_snapshot')
-    if preview.moderation_mode in {'gapgpt', 'ollama'}:
+    if preview.from_text_trial or preview.moderation_mode in {'gapgpt', 'ollama'}:
         validate_preview(preview, recipient_hash=order.recipient_hash)
         if order.owner_id != preview.owner_id or order.text != '' or order.category != 'custom' or order.full_sms != preview.full_sms:
             raise ModerationRejected('unreviewed_snapshot')

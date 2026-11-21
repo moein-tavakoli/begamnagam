@@ -12,6 +12,7 @@ from django.utils import timezone
 from .limit_services import validate_reason
 from .models import Account, CreditEntry, CreditPurchase, MessagePackage, OperatorAudit, PaymentAttempt, FinancialEvent
 from .providers import Zarinpal, ProviderDisabled, ProviderRejected, ProviderUnknown
+from . import purchase_resume
 from .services import APIError, limited
 
 PACKAGE_FIELDS = ('name', 'message_count', 'price_toman', 'active', 'sort_order')
@@ -29,9 +30,10 @@ def credit_environment():
     return 'demo' if settings.DEMO_MODE else 'live'
 
 
-def checkout_enabled():
+def checkout_enabled(available=None):
     from .payment_options import options
-    available = options()
+    if available is None:
+        available = options()
     return (settings.DEMO_MODE and settings.PAYMENT_BACKEND == 'demo') or available['wallet_enabled'] or available['gateway_enabled'] or available.get('card_enabled', False)
 
 
@@ -52,7 +54,7 @@ def save_package(actor, data, package_id=None):
     if package_id is None:
         package, before = MessagePackage(), {}
     else:
-        package = MessagePackage.objects.select_for_update().filter(pk=package_id).first()
+        package = MessagePackage.objects.select_for_update().filter(pk=package_id, price_experiment_only=False).first()
         if not package:
             raise APIError('not_found', 'بسته پیدا نشد.', 404)
         before = package_data(package)
@@ -71,7 +73,7 @@ def save_package(actor, data, package_id=None):
     return package
 
 
-def purchase_data(purchase):
+def purchase_data(purchase, *, session_key=None):
     attempt = PaymentAttempt.objects.filter(purchase=purchase).first()
     returned = attempt and attempt.return_to_wallet and attempt.refunds.filter(status='refunded').exists()
     result = {'id': str(purchase.pk), 'package_id': purchase.package_id, 'name': purchase.package_name,
@@ -94,11 +96,16 @@ def purchase_data(purchase):
             if manual.status == 'rejected':result['review_note'] = manual.review_note
         else:
             result['status'] = 'unknown'
+    if session_key:
+        result.update(purchase_resume.purchase_fields(purchase, session_key))
     return result
 
 
-def begin_purchase(user, data, key):
-    if not isinstance(data, dict) or set(data) - {'package_id', 'package_revision', 'payment_method', 'wallet_consent', 'wallet_terms_version'} or type(data.get('package_id')) is not int or type(data.get('package_revision')) is not int:
+def begin_purchase(user, data, key, *, session_key=None):
+    allowed = {'package_id', 'package_revision', 'payment_method', 'wallet_consent', 'wallet_terms_version'}
+    if session_key:
+        allowed.add('resume_preview_id')
+    if not isinstance(data, dict) or set(data) - allowed or type(data.get('package_id')) is not int or type(data.get('package_revision')) is not int:
         raise APIError('invalid_input', 'شناسه و نسخهٔ بسته را انتخاب کن؛ مبلغ و تعداد از سرور خوانده می‌شود.', 422)
     method = data.get('payment_method', 'gateway')
     if not isinstance(method, str) or method not in {'wallet', 'gateway'}:
@@ -107,6 +114,7 @@ def begin_purchase(user, data, key):
         key = uuid.UUID(str(key))
     except (TypeError, ValueError, AttributeError):
         raise APIError('invalid_input', 'کلید یکتای خرید معتبر نیست.', 422) from None
+    preview_id, reference_digest = purchase_resume.resume_reference(data, key)
     from .safety import ensure_open
     ensure_open()
     with transaction.atomic():
@@ -117,9 +125,14 @@ def begin_purchase(user, data, key):
         previous = CreditPurchase.objects.filter(owner=user, idempotency_key=key).first()
         if previous:
             if (previous.package_id != data['package_id'] or previous.payment_method != method
+                    or previous.resume_reference_digest != reference_digest
                     or (previous.environment == 'live') != (not settings.DEMO_MODE)):
                 raise APIError('idempotency_conflict', 'کلید خرید برای بستهٔ دیگری ثبت شده.', 409)
-            return purchase_data(previous)
+            return purchase_data(previous, session_key=session_key)
+        if preview_id:
+            existing = purchase_resume.checkout_for_preview(user, session_key, preview_id, data['package_id'], method)
+            if existing:
+                return purchase_data(existing, session_key=session_key)
         if not checkout_enabled():
             raise APIError('payment_disabled', 'خرید بسته فعلاً فعال نیست.', 409)
         from .payment_options import options, WALLET_TERMS_VERSION
@@ -135,7 +148,8 @@ def begin_purchase(user, data, key):
         from .wallet import has_open_checkout
         if has_open_checkout(user):
             raise APIError('payment_reconciliation', 'یک پرداخت باز داری؛ وضعیتش را در صفحهٔ خرید بسته بررسی کن.', 409)
-        package = MessagePackage.objects.select_for_update().filter(pk=data['package_id'], active=True).first()
+        from .conversion_experiments import checkout_package
+        package = checkout_package(data['package_id'], account)
         if not package or package.revision != data['package_revision']:
             raise APIError('package_changed', 'این بسته تغییر کرده یا غیرفعال شده؛ بسته‌ها را تازه‌سازی کن.', 409)
         environment = credit_environment() if method == 'wallet' else 'demo' if demo else settings.PROVIDER_ENVIRONMENT
@@ -143,6 +157,8 @@ def begin_purchase(user, data, key):
         if not settings.DEMO_MODE and environment != 'live':
             raise APIError('payment_disabled', 'درگاه محیط واقعی آماده نیست.', 409)
         purchase = CreditPurchase.objects.create(owner=user, package=package, idempotency_key=key,
+            resume_preview_id=preview_id, resume_reference_digest=reference_digest,
+            from_measured_text_trial=purchase_resume.is_measured_trial(user, preview_id, environment),
             payment_method=method, wallet_refund_consent=accepted, wallet_terms_version=WALLET_TERMS_VERSION if accepted else '',
             package_name=package.name, message_count=package.message_count, amount_toman=package.price_toman, environment=environment)
         if method == 'wallet':
@@ -156,27 +172,27 @@ def begin_purchase(user, data, key):
             Account.objects.filter(pk=account.pk).update(**{field: F(field)+purchase.message_count})
             purchase.credited_at = timezone.now()
             purchase.save(update_fields=['credited_at'])
-            return purchase_data(purchase)
+            return purchase_data(purchase, session_key=session_key)
         attempt = PaymentAttempt.objects.create(purchase=purchase, amount_toman=purchase.amount_toman,
             return_to_wallet=accepted,
             provider='demo' if demo else 'zarinpal', environment=environment, status='created' if demo else 'unknown')
         if demo:
             _apply_verified(purchase, attempt, 'demo-package-' + str(purchase.pk))
-            return purchase_data(purchase)
+            return purchase_data(purchase, session_key=session_key)
     try:
         result = Zarinpal().request(amount_toman=attempt.amount_toman,
             callback_url=settings.APP_BASE_URL + '/api/v1/payments/return/zarinpal')
     except ProviderRejected:
         PaymentAttempt.objects.filter(pk=attempt.pk).update(status='failed', checked_at=timezone.now())
-        return purchase_data(purchase)
+        return purchase_data(purchase, session_key=session_key)
     except (ProviderUnknown, ProviderDisabled):
         # Retain the uncertain attempt; do not retry the request or grant credits.
-        return purchase_data(purchase)
+        return purchase_data(purchase, session_key=session_key)
     with transaction.atomic():
         attempt = PaymentAttempt.objects.select_for_update().get(pk=attempt.pk)
         attempt.authority, attempt.redirect_url, attempt.status = result.authority, result.redirect_url, 'pending'
         attempt.save(update_fields=['authority', 'redirect_url', 'status', 'updated_at'])
-    return purchase_data(purchase)
+    return purchase_data(purchase, session_key=session_key)
 
 
 def _apply_verified(purchase, attempt, reference, *, require_credit=False):

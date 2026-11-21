@@ -57,7 +57,9 @@ export const publicPages = {
 
 export type PublicPath = keyof typeof publicPages;
 export const privatePages = {
+  "/try-message": { title: "امتحان متن خودم", description: "بازبینی خصوصی متن و پیش‌نمایش پیامک پیش از خرید بسته." },
   "/wallet": { title: "کیف پول من", description: "موجودی و گردش اعتبار غیرقابل برداشت حساب بگم نگم؛ نیازمند ورود با شمارهٔ تأییدشده." },
+  "/credits/review": { title: "بازبینی پیام پس از خرید", description: "بازگشت خصوصی به متن همان پیام برای تأیید ارسال." },
   "/credits": { title: "خرید بستهٔ پیام", description: "بسته‌های فعال پیام و اعتبار حساب خودت؛ نیازمند ورود با شمارهٔ تأییدشده." },
   "/manage": {
     title: "مدیریت بگم نگم",
@@ -221,7 +223,7 @@ export const aiSearchAgents = ["OAI-SearchBot", "ChatGPT-User", "Claude-SearchBo
 export const aiTrainingAgents = ["GPTBot", "ClaudeBot", "Google-Extended", "Applebot-Extended", "CCBot"] as const;
 export const aiPrivatePaths = [
   "/api/", "/admin/", "/static/admin/", "/manage", "/profile", "/history", "/preferences",
-  "/invitations", "/credits", "/wallet", "/send", "/r$", "/r?", "/r/", "/offline.html",
+  "/invitations", "/credits", "/wallet", "/send", "/try-message", "/r$", "/r?", "/r/", "/offline.html",
 ] as const;
 
 // Supplementary discovery index, not a ranking signal or an access-control system.

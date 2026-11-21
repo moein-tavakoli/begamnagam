@@ -210,6 +210,7 @@ function Dashboard({ canOperate, onAction, onFailure }: { canOperate: boolean; o
   if (!data) return error ? <Failure message={error} retry={() => void load()} /> : <Loading />;
   const totals: [string, string][] = [["accounts", "حساب کاربری"], ["orders", "درخواست پیام"], ["delivered", "پیامک رسیده"], ["invitations", "دعوت ثبت‌شده"], ["registered_invitations", "عضویت با دعوت"], ["active_alerts", "هشدار فعال"]];
   const metrics: [string, string][] = [["outbox_pending", "در انتظار ارسال"], ["delivery_unknown", "تحویل نیازمند تطبیق"], ["payment_unknown", "پرداخت نیازمند تطبیق"], ["refund_open", "بازپرداخت باز"], ["reports_open", "گزارش باز"], ["oldest_queue_seconds", "عمر قدیمی‌ترین صف (ثانیه)"]];
+  const trial = data.live_trial_conversion;
   return <Stack spacing={3}>
     <SectionTitle title="آنچه در سایت می‌گذرد" icon="dashboard" action={<ManagementButton type="button" variant="outlined" startIcon={<RefreshRounded/>} onClick={()=>void load()}>تازه‌سازی</ManagementButton>}/>
     {error&&<Failure message={error}/>}
@@ -220,6 +221,14 @@ function Dashboard({ canOperate, onAction, onFailure }: { canOperate: boolean; o
     </ContentCard>
     <Grid container spacing={2}><Grid size={{xs:12,md:6}}><ContentCard><SectionTitle title="اتصال سرویس‌ها" icon="ai"/>{[['محیط',data.environment.demo?'آزمایشی':'واقعی'],['پیامک',String(managementDisplayValue('provider',data.environment.sms))],['کد ورود',String(managementDisplayValue('provider',data.environment.otp))],['پرداخت پولی',data.environment.paid_enabled?'فعال':'بسته']].map(([label,value])=><Stack key={label} direction="row" sx={{justifyContent:'space-between',gap:2}}><Typography color="text.secondary">{label}</Typography><Typography>{value}</Typography></Stack>)}</ContentCard></Grid>
     <Grid size={{xs:12,md:6}}><ContentCard><SectionTitle title="دفتر هزینهٔ پیامک" icon="budgets"/><Typography color="text.secondary">رزرو ثبت‌شدهٔ امروز</Typography><Typography variant="h5">{managementNumber(data.operations.provider_budget_reserved_rial)} ریال</Typography><Typography>سقف روزانه: {data.operations.provider_budget_unlimited?'بدون سقف':`${managementNumber(data.operations.provider_budget_limit_rial)} ریال`}</Typography><Typography variant="caption" color="text.secondary">رزرو هزینه با صورتحساب قطعی سرویس پیامک یکسان نیست.</Typography></ContentCard></Grid></Grid>
+    {trial && <ContentCard>
+      <SectionTitle title="خرید پس از امتحان متن شخصی" icon="payments"/>
+      <Typography>از {managementNumber(trial.trial_senders)} حسابی که پیش‌نمایش گرفتند، فرصت هفت‌روزهٔ {managementNumber(trial.eligible_senders_with_full_window)} حساب کامل شده است.</Typography>
+      {trial.linked_purchase_rate === null
+        ? <Typography>هنوز حسابی با فرصت کامل برای محاسبهٔ نرخ خرید نداریم.</Typography>
+        : <Typography>از این گروه، {managementNumber(trial.confirmed_linked_buyers)} نفر از مسیر همان آزمون بسته خریدند ({managementNumber(trial.linked_purchase_rate * 100)}٪).</Typography>}
+      <Typography variant="caption" color="text.secondary">فقط آزمون‌های ثبت‌شده در محیط واقعی و خریدهای پرداخت و فعال‌شده در هفت روز اول شمرده می‌شوند.</Typography>
+    </ContentCard>}
     <Typography variant="caption" color="text.secondary">آخرین دریافت: {managementDate(data.updated_at)}</Typography>
   </Stack>;
 }

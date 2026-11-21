@@ -54,16 +54,26 @@ const categoryIcons: Record<string, IconName> = {
 };
 const stepLabels = ["حرفت رو بنویس", "متن نهایی و ارسال"];
 
-export function Composer({ active = true, onExit, replyToken, onReplyUnavailable, sharedRecipient }: {
+type InitialReview =
+  | { source: "purchase"; preview: Preview }
+  | { source: "text-trial"; preview: Preview; recipientPhone: string };
+
+export function Composer({ active = true, focusOnActivate = false, onExit, replyToken, onReplyUnavailable, sharedRecipient, initialReview }: {
+  initialReview?: InitialReview;
   active?: boolean;
+  focusOnActivate?: boolean;
   onExit?: () => void;
   replyToken?: string;
   onReplyUnavailable?: (message: string) => void;
   sharedRecipient?: { token: string; maskedPhone: string };
 }) {
   const { data, reload } = useApp();
-  const isReply = !!replyToken;
-  const [draftStep, setDraftStep] = useState(0);
+  const initialPreview = initialReview?.preview;
+  const trialRecipient = initialReview?.source === "text-trial" ? initialReview.recipientPhone : undefined;
+  const isReply = !!replyToken || !!initialPreview?.is_reply;
+  const isShared = !!sharedRecipient || !!initialPreview?.is_shared_destination;
+  const needsPhone = !isReply && !isShared && (!initialPreview || !!trialRecipient);
+  const [draftStep, setDraftStep] = useState(initialPreview ? 1 : 0);
   const [category, setCategory] = useState("");
   const [exampleGroup, setExampleGroup] = useState<number | null>(null);
   const [text, setText] = useState("");
@@ -72,10 +82,10 @@ export function Composer({ active = true, onExit, replyToken, onReplyUnavailable
     ?? toneOptions[0]?.id ?? data?.default_message_tone ?? 'firm';
   const [chosenTone, setMessageTone] = useState<MessageTone>(defaultTone);
   const messageTone = isReply && toneOptions.some(item => item.id === chosenTone) ? chosenTone : defaultTone;
-  const [preview, setPreview] = useState<Preview | null>(null);
+  const [preview, setPreview] = useState<Preview | null>(initialPreview ?? null);
   const step = isReply ? (preview ? 1 : 0) : draftStep;
   const activeStep = Math.min(step, stepLabels.length - 1);
-  const [recipient, setRecipient] = useState("");
+  const [recipient, setRecipient] = useState(trialRecipient ?? "");
   const [consent, setConsent] = useState(false);
   const [order, setOrder] = useState<Order | null>(null);
   const [busy, setBusy] = useState(false);
@@ -99,19 +109,25 @@ export function Composer({ active = true, onExit, replyToken, onReplyUnavailable
     ["awaiting_payment", "pending_payment", "created"].includes(order.status);
   const finished = !!order && !awaitingPayment && !sendAnimating;
   const isFree = order?.is_free ?? preview?.is_free ?? false;
+  const needsPackage = !!preview && !isFree && !order && (data?.purchased_sends_remaining ?? 0) === 0;
+  const offerBeforeConsent = needsPackage && (data?.conversion_experiment?.inline_checkout ?? true);
   const unsuccessful =
     !!order && sendFeedback(order.status) === "rejected";
   const idempotencyKey = useRef("");
   const heading = useRef<HTMLHeadingElement>(null);
   const previousStage = useRef(`${step}:${awaitingPayment}:${finished}`);
   useEffect(() => {
+    if (active && focusOnActivate) heading.current?.focus({ preventScroll: true });
+  }, [active, focusOnActivate]);
+
+  useEffect(() => {
     setAlternatives([]); setSelectedAlternative(null);
   }, [text, recipient, messageTone, step, data?.session_identity]);
 
   useEffect(() => {
-    if (!data || order || chosenTone === messageTone) return;
+    if (initialPreview || !data || order || chosenTone === messageTone) return;
     setMessageTone(messageTone); setPreview(null); setConsent(false); idempotencyKey.current = '';
-  }, [data, chosenTone, messageTone, order?.id]);
+  }, [data, chosenTone, messageTone, order?.id, initialPreview]);
 
   useEffect(() => {
     const stage = `${step}:${awaitingPayment}:${finished}`;
@@ -155,6 +171,10 @@ export function Composer({ active = true, onExit, replyToken, onReplyUnavailable
     setError(errorMessage(error));
     setAlternatives(messageAlternatives(error instanceof ApiError ? error.details : undefined));
     setSelectedAlternative(null);
+    if (initialPreview) {
+      if (error instanceof ApiError && ['authentication_required', 'credit_required', 'free_quota_changed'].includes(error.code)) void reload();
+      return;
+    }
     if (error instanceof ApiError && error.code === 'tone_unavailable') {
       setDraftStep(0); setPreview(null); setConsent(false); idempotencyKey.current = ''; void reload();
     }
@@ -228,7 +248,7 @@ export function Composer({ active = true, onExit, replyToken, onReplyUnavailable
     setError("");
     setFields({});
     if (!data?.authenticated) { setError("اول شماره خودت رو تأیید کن."); return; }
-    if (!isReply && !sharedRecipient && !validPhone(recipient)) {
+    if (needsPhone && !validPhone(recipient)) {
       setFields({ recipient_phone: "شماره موبایل گیرنده را با ۰۹ و ۱۱ رقم وارد کن." });
       document.getElementById("quote-recipient")?.focus();
       return;
@@ -270,7 +290,7 @@ export function Composer({ active = true, onExit, replyToken, onReplyUnavailable
     if (busy || orderInFlight.current) return;
     setError("");
     setFields({});
-    if (!isReply && !sharedRecipient && !validPhone(recipient)) {
+    if (needsPhone && !validPhone(recipient)) {
       setFields({
         recipient_phone: "شماره موبایل گیرنده را با ۰۹ و ۱۱ رقم وارد کن.",
       });
@@ -302,7 +322,7 @@ export function Composer({ active = true, onExit, replyToken, onReplyUnavailable
           method: "POST",
           body: {
             preview_id: preview.preview_id,
-            ...(!isReply && !sharedRecipient && { recipient_phone: normalizePhone(recipient) }),
+            ...(needsPhone && { recipient_phone: normalizePhone(recipient) }),
             consent, terms_version: preview.terms_version,
           },
           idempotencyKey: idempotencyKey.current,
@@ -335,6 +355,7 @@ export function Composer({ active = true, onExit, replyToken, onReplyUnavailable
 
 
   function goBack() {
+    if (initialPreview) { onExit?.(); return; }
     setDraftStep(0);
     if (isReply) {
       setPreview(null);
@@ -380,7 +401,7 @@ export function Composer({ active = true, onExit, replyToken, onReplyUnavailable
       <div className="compose-layout">
         <div className="compose-panel">
           <div className="panel-top">
-            <span>{isReply ? "پاسخ ناشناس" : sharedRecipient ? "پیام به صاحب لینک شخصی" : "یک پیام، یک فرصت برای حال بهتر"}</span>
+            <span>{isReply ? "پاسخ ناشناس" : isShared ? "پیام به صاحب لینک شخصی" : "یک پیام، یک فرصت برای حال بهتر"}</span>
             <span className="step-count">
               {new Intl.NumberFormat("fa-IR").format(activeStep + 1)} از ۲
             </span>
@@ -490,7 +511,11 @@ export function Composer({ active = true, onExit, replyToken, onReplyUnavailable
           {step > 0 && !finished && !data?.authenticated && <AuthGate renderActions={renderActions} />}
           {step > 0 && !finished && data?.authenticated && (
             <form className="review-form" aria-labelledby="compose-title" onSubmit={preview ? createOrder : makePreview} noValidate>
-              {sharedRecipient ? <div className="shared-destination">
+              {initialPreview ? <p className="shared-destination" role="note">
+                {isReply ? "مقصد همان گیرندهٔ پاسخ است." : isShared ? "مقصد همان صاحب لینک شخصی است." :
+                  <>گیرندهٔ همین پیام <bdi dir="ltr">{trialRecipient ?? initialPreview.recipient_masked}</bdi></>}
+                {" "}پیش از ارسال، متن و گیرنده را بررسی کن.
+              </p> : sharedRecipient ? <div className="shared-destination">
                 <label htmlFor="quote-recipient">شمارهٔ مقصد</label>
                 <input id="quote-recipient" className="phone-number-input" dir="ltr" type="text" readOnly
                   autoComplete="off" value={sharedRecipient.maskedPhone} aria-describedby="shared-destination-help" />
@@ -503,11 +528,11 @@ export function Composer({ active = true, onExit, replyToken, onReplyUnavailable
               <div className="final-message">
                 <div className="final-message-header">
                   <Icon name="leaf" size={19} />
-                  <span>{isReply ? "متن پاسخ پیش از ارسال" : sharedRecipient ? "متن پیامک پیش از ارسال" : "متن کامل پیامک؛ همین متن ارسال می‌شه"}</span>
+                  <span>{isReply ? "متن پاسخ پیش از ارسال" : isShared ? "متن پیامک پیش از ارسال" : "متن کامل پیامک؛ همین متن ارسال می‌شه"}</span>
                 </div>
                 <p>{preview.full_sms || preview.rewritten_text}</p>
                 <div className="final-message-footer">
-                  <Icon name="shield" size={15} /> {isReply || sharedRecipient ? "نشانی لینک‌های گیرنده فقط در پیامک دیده می‌شه." : "بگم نگم اطلاعات حسابت رو به پیامک اضافه نمی‌کنه."}
+                  <Icon name="shield" size={15} /> {isReply || isShared ? "نشانی لینک‌های گیرنده فقط در پیامک دیده می‌شه." : "بگم نگم اطلاعات حسابت رو به پیامک اضافه نمی‌کنه."}
                 </div>
               </div>
               <div className="preview-info">
@@ -520,7 +545,7 @@ export function Composer({ active = true, onExit, replyToken, onReplyUnavailable
                 </span>
               </div>
               {(preview.sms_segments ?? 0) > 3 && <p className="small muted" role="note">این متن بیش از ۳ بخش پیامک می‌شود. می‌تونی همین متن رو تأیید کنی یا قبل از ارسال کوتاهش کنی.</p>}
-              <label className="checkbox-label" htmlFor="respect-consent">
+              {!offerBeforeConsent && <label className="checkbox-label" htmlFor="respect-consent">
                 <input id="respect-consent" type="checkbox" checked={consent}
                   disabled={busy || !!order}
                   onChange={event => setConsent(event.target.checked)}
@@ -529,18 +554,18 @@ export function Composer({ active = true, onExit, replyToken, onReplyUnavailable
                 <span>
                   {isReply
                     ? "متن نهایی رو خوندم و منظورم رو می‌رسونه. پاسخ رو با احترام و بدون تحقیر، تهدید یا مزاحمت می‌فرستم."
-                    : sharedRecipient ? "متن نهایی رو خوندم. این پیام رو برای صاحب لینک و بدون تحقیر، تهدید یا مزاحمت می‌فرستم."
+                    : isShared ? "متن نهایی رو خوندم. این پیام رو برای صاحب لینک و بدون تحقیر، تهدید یا مزاحمت می‌فرستم."
                       : "متن نهایی رو خوندم و منظورم رو می‌رسونه. این فرد رو می‌شناسم؛ هدفم کمک و یادآوریه، نه تحقیر، تهدید یا مزاحمت."}
                   {" "}<TermsDialog /> رو می‌پذیرم.
                 </span>
-              </label>
+              </label>}
               {fields.consent && <p className="field-error" id="consent-error">{fields.consent}</p>}
-              {!isFree && data?.authenticated && !order && (data.purchased_sends_remaining ?? 0) === 0 && <CreditPackages inline />}
+              {needsPackage && <CreditPackages inline previewId={preview.preview_id} preservePreview={!!trialRecipient} />}
               {awaitingPayment && (
                 <p className="small muted" role="status">سفارش ثبت شده؛ تلاش دوباره همین سفارش رو ادامه می‌ده.</p>
               )}
               {data?.authenticated && renderActions(
-                <PaperDartButton ref={sendButton} type="submit" className="button primary composer-next"
+                !offerBeforeConsent && <PaperDartButton ref={sendButton} type="submit" className="button primary composer-next"
                   disabled={busy || !data?.authenticated || (!isFree && !order && (data.purchased_sends_remaining ?? 0) === 0)}>
                   {isFree ? (awaitingPayment ? "تلاش دوباره برای ارسال رایگان" : data?.demo_mode ? "ارسال رایگان آزمایشی" : "تأیید و ارسال رایگان") : !order && (data?.purchased_sends_remaining ?? 0) === 0 ? "ابتدا بستهٔ پیام بخر" : awaitingPayment ? "تلاش دوباره برای ارسال" : "تأیید و ارسال با یک اعتبار"}
                   <Icon name="arrow" size={18} />
@@ -549,7 +574,7 @@ export function Composer({ active = true, onExit, replyToken, onReplyUnavailable
               </> : <>
                 <div className="review-placeholder" role="note">
                   <Icon name="chat" size={24} />
-                  <p>{alternatives.length > 0 ? "یکی از پیشنهادهای بالا را انتخاب کن تا پیش‌نمایش آن را ببینی." : sharedRecipient ? "متن نهایی رو آماده کن و پیش از ارسال مرورش کن." : freeformRewrite ? "شماره رو وارد کن تا متن نهایی آماده بشه. قبل از ارسال، متن کامل پیامک رو می‌بینی." : "شماره رو وارد کن تا متن نهایی آماده بشه. هر ارسال یک اعتبار مصرف می‌کنه."}</p>
+                  <p>{alternatives.length > 0 ? "یکی از پیشنهادهای بالا را انتخاب کن تا پیش‌نمایش آن را ببینی." : isShared ? "متن نهایی رو آماده کن و پیش از ارسال مرورش کن." : freeformRewrite ? "شماره رو وارد کن تا متن نهایی آماده بشه. قبل از ارسال، متن کامل پیامک رو می‌بینی." : "شماره رو وارد کن تا متن نهایی آماده بشه. هر ارسال یک اعتبار مصرف می‌کنه."}</p>
                 </div>
                 {data?.authenticated && renderActions(
                   <BusyButton type="submit" className="button primary composer-next" busy={busy} disabled={!data?.authenticated || (alternatives.length > 0 && !selectedAlternative)}>

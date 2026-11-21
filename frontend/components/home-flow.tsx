@@ -1,8 +1,8 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useEffect, useRef } from "react";
-import { Composer } from "./composer";
+import { useEffect, useRef, useState } from "react";
 import { Icon } from "./icons";
 import { LetterFlight } from "./letter-flight";
 import { HomeTrustMarks } from "./home-trust-marks";
@@ -10,9 +10,32 @@ import { ThemeToggle } from "./theme-toggle";
 import { changeHomeView, useComposeView } from "@/lib/use-compose-view";
 import { HomeLogout } from "./home-logout";
 import { AppVersion } from "./app-version";
+import styles from "./home-intro.module.css";
+
+type HomeComposerProps = { active: boolean; focusOnActivate: boolean; onExit: () => void };
+
+function ComposerUnavailable({ active, onExit }: HomeComposerProps) {
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (active) heading.current?.focus({ preventScroll: true });
+  }, [active]);
+  return <div className="account-card">
+    <h2 ref={heading} tabIndex={-1}>فرم پیام بارگیری نشد.</h2>
+    <button type="button" className="button primary" onClick={() => window.location.reload()}>تلاش دوباره</button>
+    <button type="button" className="button secondary" onClick={onExit}>بازگشت</button>
+  </div>;
+}
+
+const Composer = dynamic<HomeComposerProps>(() => import("./composer").then(
+  module => module.Composer,
+  () => ComposerUnavailable,
+), {
+  loading: () => <p role="status">در حال آماده کردن فرم پیام…</p>,
+});
 
 export function HomeFlow() {
   const composing = useComposeView();
+  const [composerOpened, setComposerOpened] = useState(false);
   const touch = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
@@ -37,7 +60,8 @@ export function HomeFlow() {
   }, []);
 
   useEffect(() => {
-    document.getElementById(composing ? "compose-title" : "welcome-title")?.focus({ preventScroll: true });
+    if (composing) setComposerOpened(true);
+    else document.getElementById("welcome-title")?.focus({ preventScroll: true });
   }, [composing]);
 
   function showComposer(value: boolean) {
@@ -80,21 +104,32 @@ export function HomeFlow() {
             <span className="hero-text-line" data-home-enter="title-last">یه <span className="highlight-text">حال خوب‌تر.</span></span>
           </h1>
           <p className="hero-description">
-            <span className="hero-text-line" data-home-enter="description-first">تشکر، دلگرمی یا یه یادآوری دوستانه؛</span>
-            <span className="hero-text-line" data-home-enter="description-last">شماره‌ات پنهونه؛ مگر با درخواست گیرنده و تأیید تو در پروفایل.</span>
+            <span className="hero-text-line" data-home-enter="description-first">پیامک بفرست یا لینک شخصی‌ات رو بده تا برات بنویسن.</span>
+            <span className="hero-text-line" data-home-enter="description-last">شمارهٔ حساب فرستنده توی پیامک نمیاد.</span>
           </p>
-          <button type="button" className="button primary hero-cta" data-home-enter="primary" onClick={() => showComposer(true)}>
-            بعدی؛ حرفم رو بگم <Icon name="arrow" size={20} />
-          </button>
-          <Link href="/help" className="hero-help" data-home-enter="help">اول ببینم چطوری کار می‌کنه</Link>
-          <Link href="/invitations" prefetch={false} className="hero-help" data-home-enter="invite">دعوت دوستان <Icon name="heart" size={16} /></Link>
+          <div className={styles.paths} data-home-enter="primary">
+            <button type="button" className="button primary" onClick={() => showComposer(true)}>
+              <Icon name="send" size={18} /> پیامک بفرستم
+            </button>
+            <Link href="/profile/share" prefetch={false} className="button secondary">
+              <Icon name="chat" size={18} /> لینک دریافت پیام بگیرم
+            </Link>
+          </div>
+          <nav className={styles.audiences} aria-label="معرفی برای گروه‌ها" data-home-enter="help">
+            <Link href="/about#family-friends">برای خانواده و دوستان</Link>
+            <Link href="/about#neighbors">برای همسایه‌ها</Link>
+          </nav>
+          <div className={styles.more} data-home-enter="invite">
+            <Link href="/help">راهنمای استفاده</Link>
+            <Link href="/invitations" prefetch={false}>دعوت دوستان</Link>
+          </div>
         </div>
         <div className="hero-art"><LetterFlight active={!composing} /><HomeTrustMarks /></div>
         <HomeLogout />
         <AppVersion />
       </section>
       <div className="home-slide compose-slide" hidden={!composing} aria-roledescription="اسلاید" aria-label="نوشتن پیام؛ صفحه دوم">
-        <Composer active={composing} onExit={() => showComposer(false)} />
+        {(composing || composerOpened) && <Composer active={composing} focusOnActivate onExit={() => showComposer(false)} />}
       </div>
     </div>
   );

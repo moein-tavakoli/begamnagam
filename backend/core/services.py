@@ -192,7 +192,8 @@ def serialize_orders(orders):
     return [serialize_order(order, related=related) for order in orders]
 
 
-def create_order(user, session_key, data, idempotency_key):
+def create_order(user, session_key, data, idempotency_key, *, allow_purchase_resume=False):
+    from .purchase_resume import direct_recipient, linked_purchase
     # The browser supplies references and consent, never an outgoing body,
     # moderation verdict, price, signature or identity override.
     if not isinstance(data, dict) or set(data) - {'preview_id', 'recipient_phone', 'consent', 'terms_version', 'wallet_consent'}:
@@ -215,7 +216,14 @@ def create_order(user, session_key, data, idempotency_key):
         if previous:
             if previous.owner_hidden_at is not None:
                 raise APIError('not_found', 'درخواست پیدا نشد.', 404)
+            if previous.preview.from_text_trial and previous.preview.session_key != session_key:
+                raise APIError('not_found', 'پیش‌نمایش پیدا نشد.', 404)
             expected_hash = '' if previous.reply_depth or previous.preview.is_shared_destination else previous.recipient_hash
+            if previous.preview_id == preview_id:
+                purchase = linked_purchase(user, session_key, previous.preview)
+                if allow_purchase_resume and not phone and purchase and purchase.credited_at:
+                    # The original immutable order supplies its own destination on a lost-response retry.
+                    expected_hash = ''
             if previous.preview_id != preview_id or expected_hash != phone_hash:
                 raise APIError("idempotency_conflict", "این کلید برای درخواست دیگری استفاده شده است.", 409)
             return previous
@@ -233,6 +241,9 @@ def create_order(user, session_key, data, idempotency_key):
             raise APIError("preview_expired", "پیش‌نمایش معتبر نیست؛ دوباره متن را آماده کنید.", 409)
         if preview.owner_id != user.pk and not (preview.owner_id is None and preview.session_key == session_key):
             raise APIError("not_found", "پیش‌نمایش پیدا نشد.", 404)
+        if preview.from_text_trial and (not preview.recipient_hash or preview.session_key != session_key):
+            raise APIError("not_found", "پیش‌نمایش پیدا نشد.", 404)
+        purchase = linked_purchase(user, session_key, preview)
         reply_depth = 0
         if preview.reply_to_id:
             if phone:
@@ -249,12 +260,15 @@ def create_order(user, session_key, data, idempotency_key):
             phone = target_phone(user, preview.personal_share_token, lock=True)
             phone_hash = digest(phone)
         elif not phone:
-            raise APIError('invalid_input', 'شماره موبایل معتبر ایران را وارد کنید.')
+            if not allow_purchase_resume or not purchase or not purchase.credited_at:
+                raise APIError('invalid_input', 'شماره موبایل معتبر ایران را وارد کنید.')
+            phone = direct_recipient(preview)
+            phone_hash = digest(phone)
         if user.account.phone_hash == phone_hash:
             raise APIError("self_recipient", "شمارهٔ گیرنده باید با شمارهٔ خودت متفاوت باشد.", 409)
         if preview.recipient_hash and preview.recipient_hash != phone_hash:
             raise APIError("quote_recipient_changed", "شماره عوض شده؛ پیش‌نمایش تازه بساز.", 409)
-        if preview.moderation_mode in {'gapgpt', 'ollama'}:
+        if preview.from_text_trial or preview.moderation_mode in {'gapgpt', 'ollama'}:
             from .freeform import validate_preview
             from .moderation import ModerationRejected
             try:
@@ -262,9 +276,9 @@ def create_order(user, session_key, data, idempotency_key):
             except ModerationRejected:
                 raise APIError('preview_expired', 'متن نهایی معتبر نیست؛ دوباره آماده‌اش کن.', 409) from None
         consent = data.get("consent") is True and data.get("terms_version") == preview.terms_version
-        if settings.PROVIDER_NETWORK_MODE == "external" and preview.terms_version != settings.TERMS_VERSION:
+        if (settings.PROVIDER_NETWORK_MODE == "external" or purchase or preview.from_text_trial) and preview.terms_version != settings.TERMS_VERSION:
             raise APIError("preview_expired", "شرایط ارسال تغییر کرده؛ متن نهایی را دوباره آماده کن.", 409)
-        if (settings.PROVIDER_NETWORK_MODE == "external" or preview.reply_to_id or preview.is_shared_destination) and not consent:
+        if (settings.PROVIDER_NETWORK_MODE == "external" or purchase or preview.reply_to_id or preview.is_shared_destination or preview.from_text_trial) and not consent:
             raise APIError("consent_required", "نسخه شرایط و رضایت ارسال را پیش از خرید تأیید کن.", 422)
         if preview.expires_at <= now or Order.objects.filter(preview=preview).exists():
             raise APIError("preview_expired", "پیش‌نمایش منقضی یا استفاده شده است؛ دوباره متن را آماده کنید.", 409)

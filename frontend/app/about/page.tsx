@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { StructuredData } from "@/components/structured-data";
+import { AudienceIntros } from "@/components/audience-intros";
 import { pageJsonLd, publicMetadata, serviceFacts } from "@/lib/seo";
 
 export const metadata = publicMetadata("/about");
@@ -12,6 +13,7 @@ export default function AboutPage() {
         <h1>{serviceFacts[0].title}</h1>
         <p>{serviceFacts[0].text}</p>
       </header>
+      <AudienceIntros />
       <div className="prose-card">
         {serviceFacts.slice(1).map(fact => (
           <section key={fact.id} id={fact.id} aria-labelledby={`${fact.id}-title`}>
@@ -28,9 +30,6 @@ export default function AboutPage() {
             پیوندهای سرویس در <Link href="/links">صفحهٔ شبکه‌های اجتماعی</Link> قرار دارند.
           </p>
         </section>
-      </div>
-      <div className="document-cta">
-        <Link href="/#compose" className="button primary">نوشتن پیام</Link>
       </div>
     </article>
   );

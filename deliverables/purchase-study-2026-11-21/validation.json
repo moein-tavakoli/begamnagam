@@ -1,0 +1,143 @@
+{
+  "date": "2026-11-21",
+  "production_observed_version": "3.4.0",
+  "local_baseline_version": "3.4.1",
+  "tested_local_version": "3.4.2",
+  "public_steps": [
+    "GET home",
+    "follow pricing link",
+    "select 9-message package and read review before OTP"
+  ],
+  "public_registration_sms_or_payment": false,
+  "local_ui_before": [
+    {
+      "width": 1440,
+      "case": "خانه ← تعرفه ← بررسی بستهٔ ۹ پیامی",
+      "price_toman": 30000,
+      "baseline": true,
+      "api_mutations": 0,
+      "horizontal_overflow": false,
+      "prior_purchase_login": true
+    },
+    {
+      "width": 375,
+      "case": "خانه ← تعرفه ← بررسی بستهٔ ۹ پیامی",
+      "price_toman": 30000,
+      "baseline": true,
+      "api_mutations": 0,
+      "horizontal_overflow": false,
+      "prior_purchase_login": true
+    }
+  ],
+  "local_ui_after": [
+    {
+      "width": 1440,
+      "case": "خانه ← تعرفه ← بررسی بستهٔ ۹ پیامی",
+      "price_toman": 30000,
+      "baseline": false,
+      "api_mutations": 0,
+      "horizontal_overflow": false,
+      "prior_purchase_login": true
+    },
+    {
+      "width": 375,
+      "case": "خانه ← تعرفه ← بررسی بستهٔ ۹ پیامی",
+      "price_toman": 30000,
+      "baseline": false,
+      "api_mutations": 0,
+      "horizontal_overflow": false,
+      "prior_purchase_login": true
+    },
+    {
+      "case": "gateway",
+      "backend_options": "پاسخ آزمونی کنترل‌شده",
+      "api_mutations": 0
+    },
+    {
+      "case": "card",
+      "backend_options": "پاسخ آزمونی کنترل‌شده",
+      "api_mutations": 0
+    },
+    {
+      "case": "demo",
+      "backend_options": "پاسخ آزمونی کنترل‌شده",
+      "api_mutations": 0
+    },
+    {
+      "case": "wallet-only",
+      "backend_options": "پاسخ آزمونی کنترل‌شده",
+      "api_mutations": 0
+    },
+    {
+      "case": "unknown",
+      "backend_options": "پاسخ آزمونی کنترل‌شده",
+      "api_mutations": 0
+    }
+  ],
+  "local_fixture_flow": [
+    {
+      "width": 1440,
+      "environment": "isolated_demo",
+      "normal_otp_and_consent": true,
+      "actual_money_toman": 0,
+      "demo_package_toman": 30000,
+      "demo_purchased_sends": 9,
+      "free_sends_remaining": 3,
+      "history_after_refresh": true,
+      "real_sms": 0
+    },
+    {
+      "width": 375,
+      "environment": "isolated_demo",
+      "normal_otp_and_consent": true,
+      "actual_money_toman": 0,
+      "demo_package_toman": 30000,
+      "demo_purchased_sends": 9,
+      "free_sends_remaining": 3,
+      "history_after_refresh": true,
+      "real_sms": 0
+    }
+  ],
+  "local_fixture_isolation": "Private loopback Next dev server plus separate Django SQLite test database, simulated OTP and package credit. No real provider calls or money transfer. Public settings unchanged.",
+  "unit_tests": {
+    "frontend_passed": 131,
+    "typescript": "pass",
+    "backend_postgres_redis": {
+      "modules": [
+        "core.test_packages",
+        "core.test_manual_payments"
+      ],
+      "passed": 40
+    },
+    "sqlite_exploratory": {
+      "passed": 34,
+      "error": 1,
+      "case": "test_bank_data_encrypted_at_rest_and_not_in_records_or_audit",
+      "detail": "The existing raw SQL test binds a UUID directly. SQLite rejected that parameter. The PostgreSQL run passed."
+    },
+    "compose_config": "pass"
+  },
+  "real_conversion": {
+    "export_provided": false,
+    "public_monitoring_endpoint_http": 401,
+    "verified_unique_buyers_in_visitor_cohort": null,
+    "eligible_unique_visitors": null,
+    "ratio": null
+  },
+  "agent_runner": {
+    "cli_version": "0.171.0-alpha.13",
+    "fresh_session_each_time": true,
+    "same_settings_both_rounds": true,
+    "reasoning_effort": "low",
+    "previous_decision_in_input": false,
+    "cwd": "empty temporary directory per invocation",
+    "accepted_events": "completed agent response; no tool-call events accepted",
+    "decision_categories": [
+      "immediate",
+      "committee",
+      "recommend",
+      "conditional",
+      "decline"
+    ]
+  }
+}

@@ -9,6 +9,12 @@ export type Category = {
   example: string;
 };
 export type Bootstrap = {
+  conversion_experiment?: {
+    key: 'off' | 'preview' | 'examples' | 'price';
+    variant: 'control' | 'treatment' | null;
+    inline_checkout: boolean;
+    show_examples: boolean;
+  };
   identity_requests_enabled?: boolean;
   message_tones?: MessageToneOption[];
   default_message_tone?: MessageTone;
@@ -37,6 +43,9 @@ export type Bootstrap = {
   message_visibility_revision?: string;
 };
 export type Preview = {
+  is_reply?: boolean;
+  is_shared_destination?: boolean;
+  recipient_masked?: string;
   message_tone?: MessageTone;
   payment_method?: 'credit' | 'wallet' | 'gateway';
   wallet_terms_version?: string;
@@ -64,9 +73,11 @@ export type Order = {
   delivery_status?: string;
   status_reason?: { code: string; message: string } | null;
 };
-export type MessagePackage = { id: number; name: string; message_count: number; price_toman: number; active: boolean; sort_order: number; revision: number };
+export type MessagePackage = { experiment_only?: boolean; id: number; name: string; message_count: number; price_toman: number; active: boolean; sort_order: number; revision: number };
 export type ReceiptChannel = { name: string; label: string; url: string };
 export type CreditPurchase = { id: string; package_id: number; name: string; message_count: number; amount_toman: number; environment: string; status: string; payment_method?: string; redirect_url?: string | null; created_at: string;
+  resume_status?: 'ready' | 'unavailable' | null;
+  resume_preview_id?: string | null;
   manual_payment_id?: string; card?: { number: string; holder: string; bank_name?: string }; receipt_channels?: ReceiptChannel[]; receipt_submitted_at?: string | null; review_note?: string };
 export type Message = Order & {
   recipient_phone: string;
@@ -145,7 +156,7 @@ export async function api<T>(
   const timer = setTimeout(() => {
     timedOut = true;
     controller.abort();
-  }, path === '/messages/preview' || path === '/manage/ai/test' ? 25000 : 15000);
+  }, ['/messages/preview', '/messages/text-trials', '/manage/ai/test'].includes(path) ? 25000 : 15000);
   const cancel = () => controller.abort();
   if (options.signal?.aborted) cancel();
   options.signal?.addEventListener("abort", cancel, { once: true });

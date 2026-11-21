@@ -37,9 +37,11 @@ const config: NextConfig = {
       { source: "/invitations", headers: [{ key: "Cache-Control", value: "no-store" }] },
       { source: "/wallet", headers: [{ key: "Cache-Control", value: "no-store" }] },
       { source: "/credits", headers: [{ key: "Cache-Control", value: "no-store" }] },
+      { source: "/credits/review", headers: [{ key: "Cache-Control", value: "no-store" }] },
+      { source: "/try-message", headers: [{ key: "Cache-Control", value: "private, no-store" }] },
       { source: "/profile", headers: [{ key: "Cache-Control", value: "no-store" }] },
       { source: "/manage/:path*", headers: [{ key: "Cache-Control", value: "no-store" }] },
-      ...["/r", "/r/:path*", "/wallet", "/credits", "/profile", "/profile/share", "/send", "/history", "/invitations", "/preferences", "/manage/:path*", "/api/:path*", "/admin/:path*", "/offline.html"].map(source => ({
+      ...["/r", "/r/:path*", "/wallet", "/credits", "/credits/review", "/try-message", "/profile", "/profile/share", "/send", "/history", "/invitations", "/preferences", "/manage/:path*", "/api/:path*", "/admin/:path*", "/offline.html"].map(source => ({
         source,
         headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow, noarchive, nosnippet" }],
       })),

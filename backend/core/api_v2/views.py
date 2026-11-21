@@ -210,11 +210,14 @@ def previews(request):
                  description='Reads the stored snapshot without another AI call. Expired previews require a new review and consent. '
                              'A preview linked to a message removed by its owner returns 404.'))
 def preview(request, preview_id):
+    from core.purchase_resume import linked_purchase, resolve
     item = Preview.objects.filter(owner=request.user, pk=preview_id, order__owner_hidden_at__isnull=True).first()
-    if not item:
+    if not item or (item.from_text_trial and (not item.recipient_hash or item.session_key != request.session.session_key)):
         raise APIError('not_found', 'پیش‌نمایش پیدا نشد.', 404)
     if item.expires_at <= timezone.now():
         raise APIError('preview_expired', 'پیش‌نمایش منقضی شده است؛ دوباره متن را آماده کن.', 409)
+    if linked_purchase(request.user, request.session.session_key, item):
+        item, _ = resolve(request.user, request.session.session_key, preview_id)
     return legacy.preview_data(item)
 
 

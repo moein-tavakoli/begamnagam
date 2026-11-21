@@ -1,10 +1,13 @@
 "use client";
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { ConversionExposure } from './conversion-exposure';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
-import { api, approvedPaymentRedirect, createIdempotencyKey, errorMessage, type CreditPurchase } from '@/lib/api';
+import { api, ApiError, approvedPaymentRedirect, createIdempotencyKey, errorMessage, type CreditPurchase } from '@/lib/api';
 import { toman } from '@/lib/format';
-import { purchaseIntentAfterResponse, type PurchaseIntent } from '@/lib/credit-purchases';
+import { useCheckoutPreviewId } from '@/lib/use-checkout-preview-id';
+import { checkoutPreviewId, creditCheckoutHref, creditPaymentMethods, creditReviewHref, purchaseIntentAfterResponse, type PurchaseIntent } from '@/lib/credit-purchases';
 import { openPurchase, receiptText, safeReceiptChannels } from '@/lib/manual-payments';
 import { useApp } from './app-provider';
 import { AuthGate } from './auth-gate';
@@ -15,13 +18,44 @@ import styles from './credit-shop.module.css';
 const fa = new Intl.NumberFormat('fa-IR');
 const statuses: Record<string,string> = { credited:'بسته‌ات فعال شد', wallet_returned:'مبلغ به کیف پول برگشت؛ بسته فعال نشد', awaiting_transfer:'درخواست آماده است؛ پرداخت و ارسال رسید', awaiting_review:'رسیدت در انتظار بررسی ادمین است', rejected:'این رسید تأیید نشد', cancelled:'درخواست لغو شد', unknown:'نتیجه هنوز مشخص نیست؛ دوباره پرداخت نکن', pending:'در انتظار تأیید پرداخت', created:'درخواست خرید ثبت شد', verified:'در حال تکمیل اعتبار', failed:'پرداخت تأیید نشد؛ اعتباری اضافه نشده' };
 
-export function CreditPackages({ inline = false }: { inline?: boolean }) {
-  if (inline) return <section className={styles.inline}><h3>برای ادامه، اعتبار پیام بگیر</h3><p>بسته‌های فعال را ببین و پس از خرید، برای ارسال همین پیام برگرد.</p><Link className="button primary" href="/credits" prefetch={false}>انتخاب بستهٔ پیام <Icon name="arrow" size={18}/></Link></section>;
-  return <CreditCheckout/>;
+export function CreditPackages({ inline = false, previewId, preservePreview = false }: { inline?: boolean; previewId?: string; preservePreview?: boolean }) {
+  return inline && previewId ? <PreviewOffer previewId={previewId} preservePreview={preservePreview}/> : <CreditCheckout/>;
+}
+
+function PreviewOffer({ previewId, preservePreview }: { previewId: string; preservePreview: boolean }) {
+  const { data } = useApp();
+  const improved = data?.conversion_experiment?.inline_checkout ?? true;
+  const starters = data?.message_packages?.filter(item => item.active && item.message_count === 3 && !item.experiment_only) ?? [];
+  const starter = starters.find(item => item.price_toman === 10000) ?? starters[0];
+  const open = creditPaymentMethods(data).status === 'available';
+  const allPackages = improved || preservePreview ? creditCheckoutHref(previewId) : '/credits';
+  return <section className={styles.inline}>
+    <ConversionExposure surface="preview" previewId={previewId}/>
+    <h3>برای ادامه، اعتبار پیام بگیر</h3>
+    {!open ? <p>خرید بسته فعلاً در دسترس نیست.</p> :
+      improved ? <p>بعد از فعال‌شدن بسته، تا وقتی پیش‌نمایش معتبر است به همین متن برمی‌گردی. ارسال با تأیید خودت انجام می‌شود.</p> :
+        <p>بسته‌های فعال را ببین و پس از خرید برای ارسال پیام برگرد.</p>}
+    {improved && open && starter && <Link className="button primary" prefetch={false} href={creditCheckoutHref(previewId, starter.id)}>
+      خرید بستهٔ {fa.format(starter.message_count)} پیام · {toman(starter.price_toman)} <Icon name="arrow" size={18}/>
+    </Link>}
+    <Link className={improved && open && starter ? "button ghost" : "button primary"} href={allPackages} prefetch={false}>
+      {improved && open && starter ? 'بسته‌های دیگر' : improved ? 'مشاهدهٔ بسته‌های پیام' : 'انتخاب بستهٔ پیام'} <Icon name="arrow" size={18}/>
+    </Link>
+  </section>;
 }
 
 function CreditCheckout() {
   const {data,reload} = useApp();
+  const router = useRouter();
+  const boundPreview = useCheckoutPreviewId();
+  const showExamples = data && (data.conversion_experiment?.show_examples ?? true);
+  const [expiredPreview, setExpiredPreview] = useState(false);
+  const returnToReview = useCallback(async (item: CreditPurchase) => {
+    const href = creditReviewHref(item);
+    if (item.status !== 'credited') return;
+    await reload();
+    if (href) router.replace(href);
+  }, [reload, router]);
   const [selected,setSelected]=useState<number|null>(null),[method,setMethod]=useState<'card'|'gateway'>('gateway');
   const [consent,setConsent]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const [purchases,setPurchases]=useState<CreditPurchase[]>([]),[purchase,setPurchase]=useState<CreditPurchase|null>(null);
@@ -31,8 +65,9 @@ function CreditCheckout() {
   const packages=(data?.message_packages??[]).filter(item=>item.active);
   const selectedPackage=packages.find(item=>item.id===selected);
   const pending=purchases.filter(item=>openPurchase(item.status));
-  const gateway=!!options?.gateway_enabled || !!(data?.demo_mode && data.payment_backend==='demo');
-  const enabled=method==='card' ? !!options?.card_enabled : gateway;
+  const { gateway, card, status: paymentStatus } = creditPaymentMethods(data);
+  const unavailableLabel = paymentStatus === 'unknown' ? 'وضعیت نامشخص' : 'فعلاً غیرفعال';
+  const enabled=method==='card' ? card : gateway;
   const load=useCallback(async()=>{
     const current=++generation.current;
     try {
@@ -40,33 +75,51 @@ function CreditCheckout() {
       if(current!==generation.current)return;
       setPurchases(result.purchases);setListReady(true);setError('');
       const id=new URLSearchParams(window.location.search).get('purchase');
-      setPurchase(previous=>result.purchases.find(p=>p.id===previous?.id || p.id===id) || result.purchases.find(p=>openPurchase(p.status)) || null);
+      const callbackPurchase = result.purchases.find(item => item.id === id);
+      setPurchase(previous => callbackPurchase || result.purchases.find(item => item.id === previous?.id)
+        || result.purchases.find(item => openPurchase(item.status)) || null);
+      if (callbackPurchase && creditReviewHref(callbackPurchase)) await returnToReview(callbackPurchase);
     } catch(e){if(current===generation.current){setError(errorMessage(e));setListReady(false);}}
-  },[]);
+  },[returnToReview]);
   useEffect(()=>{
     if(data?.authenticated) void load();
     return()=>{generation.current+=1;};
   },[data?.authenticated,data?.session_identity,load]);
   useEffect(()=>{
-    if(!selected && packages.length){const id=Number(new URLSearchParams(window.location.search).get('package'));setSelected(packages.some(p=>p.id===id)?id:packages[0].id);}
-  },[selected,packages]);
-  useEffect(()=>{if(!gateway && options?.card_enabled)setMethod('card');},[gateway,options?.card_enabled]);
+    if(!selectedPackage && packages.length){const id=Number(new URLSearchParams(window.location.search).get('package'));setSelected(packages.some(p=>p.id===id)?id:packages[0].id);}
+  },[selectedPackage,packages]);
+  useEffect(()=>{if(!gateway && card)setMethod('card');},[gateway,card]);
   function accept(result:CreditPurchase){
     setPurchase(result);setPurchases(items=>[result,...items.filter(p=>p.id!==result.id)]);
     if(intent.current) intent.current=purchaseIntentAfterResponse(intent.current,result);
     setUncertain(false);
   }
   async function buy(){
-    if(!selectedPackage)return;
+    if(!selectedPackage || !consent || !enabled || busy || !listReady)return;
+    const previewId = checkoutPreviewId(window.location.hash);
     setBusy(true);setError('');const current=++generation.current;
     intent.current ??= {packageId:selectedPackage.id,value:createIdempotencyKey()};
     try{
-      const result=await api<CreditPurchase>('/credit-purchases',{method:'POST',idempotencyKey:intent.current.value,body:{package_id:selectedPackage.id,package_revision:selectedPackage.revision,payment_method:method,wallet_consent:consent,wallet_terms_version:options?.wallet_terms_version}});
+      const result=await api<CreditPurchase>('/credit-purchases',{method:'POST',idempotencyKey:intent.current.value,body:{...(previewId && {resume_preview_id:previewId}),package_id:selectedPackage.id,package_revision:selectedPackage.revision,payment_method:method,wallet_consent:consent,wallet_terms_version:options?.wallet_terms_version}});
       if(current!==generation.current)return;
       accept(result);
+      if (previewId && openPurchase(result.status)) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('purchase', result.id);
+        window.history.replaceState(window.history.state, '', url);
+      }
       if(result.redirect_url)window.location.assign(approvedPaymentRedirect(result.redirect_url,!!data?.demo_mode));
-      else if(result.status==='credited')await reload();
-    }catch(e){if(current===generation.current){setError(errorMessage(e));setUncertain(true);}}
+      else await returnToReview(result);
+    } catch (e) {
+      if (current === generation.current) {
+        setError(errorMessage(e));
+        const invalidReview = !!previewId && e instanceof ApiError &&
+          ['not_found', 'preview_expired', 'reply_unavailable', 'share_link_unavailable'].includes(e.code);
+        setExpiredPreview(invalidReview);
+        setUncertain(!invalidReview);
+        if (invalidReview) intent.current = null;
+      }
+    }
     finally{if(current===generation.current)setBusy(false);}
   }
   async function update(item:CreditPurchase,path='',body?:unknown){
@@ -74,7 +127,7 @@ function CreditCheckout() {
     try{
       const result=await api<CreditPurchase>(`/credit-purchases/${item.id}${path}`,path?{method:'POST',body}:{ });
       if(current!==generation.current)return;
-      accept(result);if(result.status==='credited')await reload();
+      accept(result);await returnToReview(result);
     }catch(e){if(current===generation.current)setError(errorMessage(e));}
     finally{if(current===generation.current)setBusy(false);}
   }
@@ -82,29 +135,45 @@ function CreditCheckout() {
     <div className={styles.stack}>
       <ServiceState/>
       <ErrorBox message={error}/>
+      {expiredPreview && boundPreview && <div className={styles.notice}>
+        <p>می‌توانی پیام را از نو آماده کنی یا بسته را برای استفادهٔ بعدی بخری.</p>
+        <Link href="/#compose" className="button primary">آماده‌کردن پیام تازه</Link>
+        <button type="button" className="button ghost" onClick={() => {
+          const path = selectedPackage ? `/credits?package=${selectedPackage.id}` : '/credits';
+          setExpiredPreview(false); setConsent(false); setError('');
+          window.history.replaceState(window.history.state, '', path);
+          window.dispatchEvent(new Event('hashchange'));
+        }}>ادامهٔ خرید بدون این پیام</button>
+      </div>}
       {uncertain && <div className={styles.notice}>نتیجهٔ درخواست قبلی مشخص نیست. ابتدا وضعیت را بررسی کن؛ برای تکرار همان درخواست، بسته و روش را تغییر نده.<button className="text-button" type="button" disabled={busy} onClick={()=>void load()}>بررسی خریدهای من</button></div>}
       {pending.filter(item=>item.id!==purchase?.id).map(item=><div className={styles.notice} key={item.id}><p>{item.name} · {statuses[item.status]}</p><button className="button ghost" disabled={busy} type="button" onClick={()=>setPurchase(item)}>مشاهده و پیگیری</button></div>)}
       {purchase && <PurchaseResult key={purchase.id} purchase={purchase} demo={!!data?.demo_mode} busy={busy} onUpdate={update}/>}
       {!pending.length && <><section className={styles.panel}>
         <h2 className={styles.step}><span>۱</span> بسته‌ات را انتخاب کن</h2>
+        {packages.length > 0 && <ConversionExposure surface="credits"/>}
         <fieldset className={styles.choices} disabled={busy || !!pending.length || uncertain} aria-label="انتخاب بسته">
           {packages.map(item=><label className={`${styles.choice} ${styles.packageChoice}`} key={item.id}><input type="radio" name="credit-package" value={item.id} checked={selected===item.id} onChange={()=>{setSelected(item.id);intent.current=null;}}/><span><strong>{fa.format(item.message_count)} پیام</strong><small>{item.name}</small><small>{toman(item.price_toman)}</small></span></label>)}
         </fieldset>
         {!packages.length && data && <p className={styles.muted}>فعلاً بستهٔ فعالی موجود نیست.</p>}
-        <Link href="/pricing" className="text-button">مقایسهٔ تعرفه‌ها و شرایط</Link>
+        <Link href={boundPreview ? `/pricing#preview=${boundPreview}` : showExamples ? '/pricing#message-examples' : '/pricing'} prefetch={false} className="text-button">
+          {showExamples && !boundPreview ? 'دیدن نمونهٔ پیامک و مقایسهٔ تعرفه‌ها' : 'مقایسهٔ تعرفه‌ها و شرایط'}
+        </Link>
       </section>
       <section className={styles.panel}>
         <h2 className={styles.step}><span>۲</span> روش پرداخت</h2>
         <fieldset className={styles.choices} disabled={busy || !!pending.length || uncertain} aria-label="انتخاب روش پرداخت">
-          <label className={styles.choice}><input type="radio" name="payment-method" value="gateway" checked={method==='gateway'} disabled={!gateway} onChange={()=>{setMethod('gateway');intent.current=null;setConsent(false);}}/><span><strong>درگاه بانکی</strong><small>{gateway?'فعال‌سازی خودکار بسته':'فعلاً غیرفعال'}</small></span></label>
-          <label className={styles.choice}><input type="radio" name="payment-method" value="card" checked={method==='card'} disabled={!options?.card_enabled} onChange={()=>{setMethod('card');intent.current=null;setConsent(false);}}/><span><strong>کارت‌به‌کارت</strong><small>{options?.card_enabled?'پس از تأیید ادمین':'فعلاً غیرفعال'}</small></span></label>
+          <label className={styles.choice}><input type="radio" name="payment-method" value="gateway" checked={method==='gateway'} disabled={!gateway} onChange={()=>{setMethod('gateway');intent.current=null;setConsent(false);}}/><span><strong>درگاه بانکی</strong><small>{gateway?'فعال‌سازی خودکار بسته':unavailableLabel}</small></span></label>
+          <label className={styles.choice}><input type="radio" name="payment-method" value="card" checked={method==='card'} disabled={!card} onChange={()=>{setMethod('card');intent.current=null;setConsent(false);}}/><span><strong>کارت‌به‌کارت</strong><small>{card?'پس از تأیید ادمین':unavailableLabel}</small></span></label>
         </fieldset>
-        {!gateway && !options?.card_enabled && <p className={styles.notice}>خرید فعلاً باز نیست. می‌توانی بسته‌ها را ببینی و از هدیه‌های باقی‌مانده استفاده کنی.</p>}
+        {paymentStatus === 'closed' && <p className={styles.notice}>خرید فعلاً باز نیست. می‌توانی بسته‌ها را ببینی و از هدیه‌های باقی‌مانده استفاده کنی.</p>}
         {data?.authenticated ? <><label className={styles.consent}><input type="checkbox" checked={consent} disabled={busy || !!pending.length} onChange={e=>setConsent(e.target.checked)}/><span>اعتبار خرید برای خدمات سایت است و برداشت بانکی ندارد. برگشت هزینهٔ پرداخت پولی به کیف پول انجام می‌شود؛ اعتبار ارسال ناموفق قطعی به بسته برمی‌گردد. <Link href="/privacy">قوانین استفاده</Link> را می‌پذیرم.</span></label>
           <div className={styles.total}><span>مبلغ نهایی بسته</span><strong>{selectedPackage?toman(selectedPackage.price_toman):'—'}</strong></div>
-          <button className={`button primary ${styles.pay}`} type="button" disabled={busy || !!pending.length || !listReady || !selectedPackage || !consent || !enabled} onClick={()=>void buy()}>{busy?<><span className="spinner"/> در حال ثبت…</>:uncertain?'تکرار همان درخواست':method==='card'?'دریافت شمارهٔ کارت و ثبت خرید':data?.demo_mode?'خرید آزمایشی بسته':'پرداخت با درگاه بانکی'}<Icon name="arrow" size={18}/></button>
+          <button className={`button primary ${styles.pay}`} type="button" disabled={busy || !!pending.length || !listReady || !selectedPackage || !consent || !enabled || (expiredPreview && !!boundPreview)} onClick={()=>void buy()}>{busy?<><span className="spinner"/> در حال ثبت…</>:uncertain?'تکرار همان درخواست':method==='card'?'دریافت شمارهٔ کارت و ثبت خرید':data?.demo_mode?'خرید آزمایشی بسته':'پرداخت با درگاه بانکی'}<Icon name="arrow" size={18}/></button>
           {!listReady && <button className="text-button" type="button" disabled={busy} onClick={()=>void load()}>دریافت وضعیت خریدهای قبلی</button>}
-          <p className={styles.muted}>{method==='card'?'رسید را در بله یا تلگرام برای پشتیبانی می‌فرستی؛ پس از تأیید، اعتبار اضافه می‌شود.':'بعد از تأیید خودِ درگاه، بسته خودکار فعال می‌شود؛ ارسال رسید مانع فعال‌شدن آن نیست.'}</p></> : <AuthGate purpose="برای خرید بسته، شمارهٔ خودت را تأیید کن."/>}
+          <p className={styles.muted}>{method==='card'?'رسید را در بله یا تلگرام برای پشتیبانی می‌فرستی؛ پس از تأیید، اعتبار اضافه می‌شود.':'بعد از تأیید خودِ درگاه، بسته خودکار فعال می‌شود؛ ارسال رسید مانع فعال‌شدن آن نیست.'}</p></> : paymentStatus === 'available' ? <AuthGate purpose="برای خرید بسته، شمارهٔ خودت را تأیید کن."/> : data && <details className={styles.priorLogin}>
+          <summary>پیگیری خرید قبلی</summary>
+          <AuthGate purpose="برای دیدن خریدهای قبلی، شمارهٔ خودت را تأیید کن."/>
+        </details>}
       </section>
       </>}
     </div>
@@ -121,6 +190,7 @@ function PurchaseResult({purchase,demo,busy,onUpdate}:{purchase:CreditPurchase;d
   const resultRef=useRef<HTMLElement>(null);
   useEffect(()=>{resultRef.current?.focus({preventScroll:true});resultRef.current?.scrollIntoView({block:'start',behavior:'instant'});},[]);
   const active=purchase.status==='awaiting_transfer',review=purchase.status==='awaiting_review';
+  const reviewHref = creditReviewHref(purchase);
   const channels=safeReceiptChannels(purchase.receipt_channels);
   async function copy(value:string,label:string){try{await navigator.clipboard.writeText(value);setCopied(label+' کپی شد.');}catch{setCopied('کپی خودکار انجام نشد؛ متن نمایش‌داده‌شده را انتخاب و کپی کن.');}}
   async function submit(event:FormEvent<HTMLFormElement>){event.preventDefault();const form=new FormData(event.currentTarget);await onUpdate(purchase,'/receipt',{receipt_sent:form.get('receipt_sent')==='on',reference:String(form.get('reference')||'')});}
@@ -148,7 +218,8 @@ function PurchaseResult({purchase,demo,busy,onUpdate}:{purchase:CreditPurchase;d
     <div className={styles.statusActions}>{purchase.redirect_url && purchase.status==='pending' && <a className="button primary" href={approvedPaymentRedirect(purchase.redirect_url,demo)}>ادامهٔ همان پرداخت</a>}
       <button type="button" className="button ghost" disabled={busy} onClick={()=>void onUpdate(purchase)}>بررسی وضعیت</button>
       {active && <button type="button" className="button ghost" disabled={busy} onClick={()=>{if(window.confirm('فقط اگر وجهی واریز نکرده‌ای، درخواست را لغو کن. لغو شود؟'))void onUpdate(purchase,'/cancel-card',{});}}>واریز نکردم؛ لغو درخواست</button>}
-      {purchase.status==='credited' && <Link href="/#compose" className="button primary">حالا پیام بنویس <Icon name="arrow" size={17}/></Link>}
+      {purchase.status==='credited' && purchase.resume_status==='unavailable' && <p>اعتبار بسته در حسابت ثبت شده. برای ارسال، پیش‌نمایش تازه بساز.</p>}
+      {purchase.status==='credited' && <Link prefetch={false} href={reviewHref ?? "/#compose"} className="button primary">{reviewHref ? 'بازبینی و تأیید همین پیام' : 'حالا پیام بنویس'} <Icon name="arrow" size={17}/></Link>}
     </div>
   </section>;
 }

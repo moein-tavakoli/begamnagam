@@ -125,6 +125,8 @@ class RewriteUnavailable(Exception):
 
 def rejection_feedback(reason):
     """Fixed user guidance; no model explanation or private content is echoed."""
+    if reason == 'trial_wording_unavailable':
+        return ('trial_wording_unavailable', 'حفظ عین عبارت یا متن انتخابی ممکن نشد. متن را کوتاه‌تر یا ویرایش کن، یا بازنویسی عادی را انتخاب کن.')
     if reason in {'review_intent', 'review_added_claims'}:
         return ('rewrite_intent_changed', 'بازنویسی نتوانست منظورت را دقیق حفظ کند؛ پیام ارسال نشد. لطفاً جمله را روشن‌تر بنویس.')
     if reason == 'generation_unclear':

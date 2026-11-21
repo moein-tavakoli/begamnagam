@@ -191,17 +191,55 @@ def sanitize_draft(text):
     return value if emoji_by_marker else checked
 
 
+def _fits_sms_text(text, max_units):
+    plain = without_emoji(text)
+    return not (any(unicodedata.category(char) in {'Cc', 'Cs', 'Co', 'So'} for char in plain)
+            or any(unicodedata.category(char) == 'Cf' and char != '\u200c' for char in plain)
+            or len(text.encode('utf-16-le')) // 2 > max_units
+            or not re.fullmatch(r'[\u0600-\u06ff\s\d.,!?;:()،؛؟٪%\u200c\u2013\u2014-]*', plain))
+
+
+def _word_character(char):
+    return char.isalnum() or char in {'_', '\u200c', '\u200d'} or unicodedata.category(char).startswith('M')
+
+
+def contains_whole_phrase(text, phrase):
+    # Python's regex word boundary splits Persian affixes at ZWNJ and vowel marks.
+    # A phrase starting or ending in punctuation already has a boundary there.
+    for occurrence in re.finditer(f'(?={re.escape(phrase)})', text):
+        start = occurrence.start()
+        end = start + len(phrase)
+        if start and _word_character(phrase[0]) and _word_character(text[start - 1]):
+            continue
+        if end < len(text) and _word_character(phrase[-1]) and _word_character(text[end]):
+            continue
+        return True
+    return False
+
+
+def wording_matches(candidate, source, *, exact_wording=False, preserve_phrase='', whole_words=False):
+    if exact_wording:
+        return candidate == source
+    if whole_words:
+        return contains_whole_phrase(candidate, preserve_phrase)
+    return preserve_phrase in candidate
+
+
+def validate_trial_phrase(phrase, original, cleaned, *, max_units):
+    # The provider normally sees only the sanitized draft. Restore typography
+    # in its selected phrase only when that will not restore any filtered words.
+    if (phrase not in original or not _fits_sms_text(phrase, max_units)
+            or (phrase not in cleaned and _normal(original) != _normal(cleaned))):
+        raise ModerationRejected('trial_wording_unavailable')
+
+
 def validate_polite_body(text, *, max_units):
     """Validate one plain, short Persian message body; never repair a model body."""
     if (not isinstance(text, str) or not text or text != text.strip()
             or type(max_units) is not int or not 1 <= max_units <= 201 or len(text) > 201):
         raise ModerationRejected('invalid_polite_body')
     plain = without_emoji(text)
-    if (any(unicodedata.category(char) in {'Cc', 'Cs', 'Co', 'So'} for char in plain)
-            or any(unicodedata.category(char) == 'Cf' and char != '\u200c' for char in plain)
-            or len(text.encode('utf-16-le')) // 2 > max_units
-            or not _PERSIAN.search(plain)
-            or not re.fullmatch(r'[\u0600-\u06ff\s\d.,!?;:()،؛؟٪%\u200c\u2013\u2014-]+', plain)):
+    if not _PERSIAN.search(plain) or not _fits_sms_text(text, max_units):
         raise ModerationRejected('invalid_polite_body')
     value = _normal(text)
     _check_intent(value)

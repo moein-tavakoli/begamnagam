@@ -2,6 +2,7 @@
 import logging
 from functools import wraps
 
+from django.conf import settings
 from django.db import transaction
 
 from .models import MessageAttempt
@@ -31,11 +32,15 @@ def record_attempt(request, *, preview=None, error=None):
         phone = normalize_phone(getattr(request, '_message_attempt_recipient_phone', data.get('recipient_phone', '')))
     except ValueError:
         phone = ''
+    trial_environment = ''
+    if preview and preview.from_text_trial:
+        trial_environment = 'demo' if settings.DEMO_MODE else settings.PROVIDER_ENVIRONMENT
     status = 'accepted' if preview else ('failed' if error.status >= 500 else 'rejected')
     try:
         # A savepoint also protects an existing request transaction on write failure.
         with transaction.atomic():
             MessageAttempt.objects.create(owner=request.user, preview=preview,
+                trial_environment=trial_environment,
                 original_text=text, recipient_phone=phone,
                 message_tone=preview.message_tone if preview else getattr(request, '_message_attempt_tone', ''),
                 status=status, reason_code='preview_accepted' if preview else error.code,

@@ -20,7 +20,7 @@ from .moderation import ModerationRejected, RewriteUnavailable, rewrite
 from .message_examples import public_catalog, is_current_suggestion
 from .privacy import DIGITS, decrypt, digest, encrypt, mask, normalize_phone
 from .services import APIError, api, is_product_authenticated, limited
-from .sms import (MAX_REWRITE_BODY_UNITS, REPLY_SLOT, compose_freeform_sms, compose_recipient_sms,
+from .sms import (MAX_REWRITE_BODY_UNITS, MESSAGE_SLOT, REPLY_SLOT, compose_freeform_sms, compose_recipient_sms,
                   sender_sms, sms_origin, sms_segments)
 from .otp import OTP_LENGTH, valid_otp
 from .input_digits import canonical_input
@@ -81,7 +81,6 @@ def health(request):
 @ensure_csrf_cookie
 @api(["GET"])
 def bootstrap(request):
-    session_key(request)
     from .payment_options import options as payment_options
     authenticated = is_product_authenticated(request.user)
     from .freeform import available as freeform_available
@@ -90,15 +89,16 @@ def bootstrap(request):
     from .limits import policy
     ai = ai_configuration()
     from .message_tones import choices as tone_choices, resolve as resolve_tone
-    from .packages import balance_field, package_data, checkout_enabled
-    from .models import MessagePackage
+    from .packages import balance_field, checkout_enabled
+    from .conversion_experiments import assignment, catalog
     data = {"demo_mode": settings.DEMO_MODE, "authenticated": authenticated,
         "identity_requests_enabled": identity_requests_enabled(),
         "price_toman": 0, **public_catalog(freeform=freeform_available(ai)), "rewrite_mode": ai.provider if freeform_available(ai) else 'template', "payment_backend": settings.PAYMENT_BACKEND, "support_contact": settings.SUPPORT_CONTACT,
         "otp_is_real": otp_is_real()}
-    data['message_packages'] = [package_data(p) for p in MessagePackage.objects.filter(active=True)]
-    data['package_checkout_enabled'] = checkout_enabled()
     data['payment_options'] = payment_options()
+    data['package_checkout_enabled'] = checkout_enabled(data['payment_options'])
+    data['conversion_experiment'] = assignment(request.user.account if authenticated else None, data['payment_options'])
+    data['message_packages'] = catalog(data['conversion_experiment'])
     data['message_tones'] = tone_choices(ai)
     data['default_message_tone'] = resolve_tone(None, ai)
     if authenticated:
@@ -147,12 +147,15 @@ def request_otp(request):
     if demo_otp:
         return {"challenge_id": str(challenge_id), "debug_code": code, "demo_mode": True, "expires_in": limits.otp_validity_seconds}
     from .providers import Kavenegar, ProviderDisabled, ProviderUnknown, ProviderRejected
-    from .budget import reserve_cost
+    from .budget import lock_dispatch_control, observe_cost, reserve_cost
     delivery_status = 'accepted'
     try:
+        if hasattr(request, 'bot_conversation'):
+            # The bot session transaction holds the day lock until this
+            # response commits. Follow the overrun lock order before reserving.
+            lock_dispatch_control()
         reserve_cost('otp:' + str(challenge_id), 'otp', limits.otp_max_cost_rial)
         result = Kavenegar().otp(phone=phone, code=code)
-        from .budget import observe_cost
         observe_cost("otp:" + str(challenge_id), result.cost_rial)
         if result.status == 'failed':
             raise ProviderRejected('sms_delivery_failed')
@@ -242,9 +245,33 @@ def logout_view(request):
 
 
 @api(["POST"])
-@capture_preview_attempt
 def preview(request):
+    return prepare_preview(request, body(request))
+
+
+@api(["POST"], authenticated=True)
+def text_trial(request):
     data = body(request)
+    if set(data) - {'text', 'preserve_phrase', 'exact_wording'} or not isinstance(data.get('text'), str):
+        raise APIError('invalid_input', 'متن و شیوهٔ بازبینی را بررسی کن.', 422)
+    exact = data.get('exact_wording', False)
+    phrase = data.get('preserve_phrase', '')
+    if type(exact) is not bool or not isinstance(phrase, str):
+        raise APIError('invalid_input', 'شیوهٔ حفظ متن معتبر نیست.', 422)
+    if 'preserve_phrase' in data and (not phrase.strip() or phrase not in data['text']):
+        raise APIError('trial_phrase_not_found', 'عبارت را دقیقاً از متن خودت انتخاب کن.', 422)
+    return prepare_preview(request, {'text': data['text'], 'source_mode': 'freeform'},
+                           text_trial=True, exact_wording=exact, preserve_phrase=phrase)
+
+
+def limit_preview_origin(request, unlimited):
+    if not unlimited:
+        limited("preview-session", session_key(request), 20, 600)
+    limited("preview-ip-flood", request.META.get("REMOTE_ADDR", "unknown"), 10000, 600)
+
+
+@capture_preview_attempt
+def prepare_preview(request, data, *, text_trial=False, exact_wording=False, preserve_phrase=''):
     request._message_attempt_data = data
     if set(data) - {'text', 'category', 'recipient_phone', 'reply_token', 'source_mode', 'payment_method', 'message_tone', 'alternative_token', 'share_token'}:
         raise APIError('invalid_input', 'فقط متن اولیه و شمارهٔ گیرنده را بفرست؛ نتیجهٔ بررسی در سرور تعیین می‌شود.', 422)
@@ -257,9 +284,7 @@ def preview(request):
             raise APIError('invalid_input', 'مقصد این پیام از لینک شخصی انتخاب می‌شود.', 422)
     from .demo_limits import unlimited_demo_sends
     unlimited = unlimited_demo_sends(owner)
-    if not unlimited:
-        limited("preview-session", session_key(request), 20, 600)
-    limited("preview-ip-flood", request.META.get("REMOTE_ADDR", "unknown"), 10000, 600)
+    limit_preview_origin(request, unlimited)
     category = data.get("category", 'custom')
     text = data.get("text", "")
     payment_method = data.get('payment_method', 'credit')
@@ -327,11 +352,13 @@ def preview(request):
         recipient_hash = digest(normalize_phone(data['recipient_phone']))
         if recipient_hash == owner.account.phone_hash:
             raise APIError('self_recipient', 'شمارهٔ گیرنده باید با شمارهٔ خودت متفاوت باشد.', 422)
-    if (use_freeform or choosing_alternative) and (not owner or not recipient_hash):
+    if (use_freeform or choosing_alternative) and not text_trial and (not owner or not recipient_hash):
         raise APIError('authentication_required' if not owner else 'recipient_required',
             'برای آماده‌سازی متن، ابتدا وارد شو و شمارهٔ گیرنده را وارد کن.', 401 if not owner else 422)
-    from .sms_template_settings import current_sms_layout
+    from .sms_template_settings import current_sms_layout, sample_recipient_code
     layout, variables = current_sms_layout()
+    if text_trial and MESSAGE_SLOT not in layout:
+        raise APIError('sms_template_unavailable', 'قالب فعلی پیامک متن شخصی را نمایش نمی‌دهد.', 503)
     origin = sms_origin()
     request._message_attempt_admitted = True
     alternative_body = None
@@ -347,7 +374,9 @@ def preview(request):
             moderate(alternative_body)
             rewritten, mode = alternative_body, 'template'
         elif use_freeform:
-            rewritten, mode = prepare(owner, text, max_units=MAX_REWRITE_BODY_UNITS, message_tone=tone, config=ai), ai.provider
+            rewritten = prepare(owner, text, max_units=MAX_REWRITE_BODY_UNITS, message_tone=tone, config=ai,
+                                exact_wording=exact_wording, preserve_phrase=preserve_phrase)
+            mode = ai.provider
             category = 'custom'
         else:
             rewritten, mode = rewrite(category, text, message_tone=tone, provider_mode='template')
@@ -356,6 +385,7 @@ def preview(request):
         is_free = bool(owner and (owner.account.unlimited_free_sends or owner.account.free_sends_remaining > 0))
         with transaction.atomic():
             item = Preview.objects.create(owner=owner, session_key=session_key(request), category=category,
+                from_text_trial=text_trial,
                 message_tone=tone, payment_method='credit', wallet_policy_version='', original_text=text,
                 text='' if use_freeform else rewritten, generated_body=rewritten if use_freeform else '',
                 recipient_hash=recipient_hash, reply_to=parent, is_shared_destination=has_share,
@@ -363,7 +393,8 @@ def preview(request):
                 terms_version=settings.TERMS_VERSION, moderation_mode=mode,
                 expires_at=expires_at, is_free=is_free, price_toman=0)
             from .recipient import issue_grant
-            token = issue_grant(item, recipient_hash, with_reply=with_reply and REPLY_SLOT in layout)
+            token = (sample_recipient_code(layout) if text_trial else
+                     issue_grant(item, recipient_hash, with_reply=with_reply and REPLY_SLOT in layout))
             if use_freeform:
                 full_sms = compose_freeform_sms(rewritten, origin, token, layout=layout, variables=variables)
             else:
@@ -389,6 +420,9 @@ def preview(request):
         raise APIError(code, message, 422, details={'alternatives': alternatives})
     except RewriteUnavailable:
         raise APIError("rewrite_unavailable", "آماده‌سازی متن موقتاً در دسترس نیست؛ کمی بعد تلاش کنید.", 503)
+    if text_trial:
+        return {'trial_id': str(item.pk), 'reviewed_body': item.generated_body,
+                'full_sms': item.full_sms, 'expires_at': item.expires_at.isoformat()}
     return preview_data(item)
 
 
@@ -402,9 +436,18 @@ def preview_data(item):
         "sms_segments": sms_segments(item.full_sms)}
 
 
+@api(['GET'], authenticated=True)
+def resume_preview(request, preview_id):
+    from .purchase_resume import resolve
+    preview, direct_phone = resolve(request.user, request.session.session_key, preview_id)
+    return {**preview_data(preview), 'recipient_masked': mask(direct_phone) if direct_phone else '',
+            'is_shared_destination': preview.is_shared_destination}
+
+
 @api(["POST"], authenticated=True)
 def create_order(request):
-    order = services.create_order(request.user, request.session.session_key, body(request), request.headers.get("Idempotency-Key", ""))
+    order = services.create_order(request.user, request.session.session_key, body(request), request.headers.get("Idempotency-Key", ""),
+                                  allow_purchase_resume=request.path == '/api/v1/orders')
     return services.serialize_order(order)
 
 

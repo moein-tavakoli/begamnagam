@@ -1,8 +1,14 @@
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
-from .models import SpendBudget, SpendReservation
+from .models import SafetyControl, SpendBudget, SpendReservation
 from .providers import ProviderDisabled
+
+
+def lock_dispatch_control():
+    control, _ = SafetyControl.objects.select_for_update().get_or_create(
+        pk=1, defaults={'halted': not settings.DEMO_MODE})
+    return control
 
 
 def reserve_cost(operation_key, kind, amount_rial):
@@ -36,13 +42,21 @@ def reserve_cost(operation_key, kind, amount_rial):
 
 
 def observe_cost(operation_key, cost_rial):
-    from .models import SafetyControl, OperatorAudit, OperationalAlert
+    from .models import OperatorAudit, OperationalAlert
     if type(cost_rial) is not int or cost_rial <= 0:
         return
-    meta = SpendReservation.objects.filter(operation_key=operation_key).values('budget_id').first()
+    pending = SpendReservation.objects.filter(operation_key=operation_key, actual_rial__isnull=True)
+    # The ledger already includes the reserve. Record ordinary charges once
+    # without taking the day or dispatch locks.
+    if pending.filter(amount_rial__gte=cost_rial).update(actual_rial=cost_rial, state='charged'):
+        return
+    meta = pending.values('budget_id').first()
     if not meta:
         return
     with transaction.atomic():
+        # Live SMS submission may already hold this lock. Every overrun must
+        # acquire it before locking the day budget.
+        control = lock_dispatch_control()
         budget = SpendBudget.objects.select_for_update().get(pk=meta['budget_id'])
         reservation = SpendReservation.objects.select_for_update().get(operation_key=operation_key)
         if reservation.actual_rial is not None:
@@ -53,7 +67,8 @@ def observe_cost(operation_key, cost_rial):
             budget.reserved_rial += cost_rial - reservation.amount_rial
             budget.save(update_fields=['reserved_rial'])
             reservation.amount_rial = cost_rial
-            SafetyControl.objects.update_or_create(pk=1, defaults={'halted':True})
+            control.halted = True
+            control.save(update_fields=['halted', 'updated_at'])
             OperationalAlert.objects.update_or_create(code='provider_cost_exceeded', defaults={'severity':'critical','active':True,'count':1})
             OperatorAudit.objects.create(action='automatic_cost_halt',object_id='global',reason='provider_cost_above_reserved_ceiling',after={'halted':True})
         reservation.save(update_fields=['actual_rial','state','amount_rial'])

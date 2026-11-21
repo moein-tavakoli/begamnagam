@@ -1,6 +1,6 @@
 from .management_api import staff_api
 from .manual_payments import save_settings, settings_data, submit_receipt, cancel_purchase, approve, reject, grant_package
-from .package_views import own_purchases
+from .package_views import own_purchases, website_session
 from .packages import purchase_data
 from .services import APIError, api
 from .views import body
@@ -15,7 +15,7 @@ def configuration(request):
 def receipt(request,purchase_id):
     purchase=own_purchases(request.user).filter(pk=purchase_id,payment_method='card').first()
     if not purchase:raise APIError('not_found','خرید پیدا نشد.',404)
-    return purchase_data(submit_receipt(request.user,purchase,body(request)))
+    return purchase_data(submit_receipt(request.user,purchase,body(request)), session_key=website_session(request))
 
 
 @api(['POST'],authenticated=True)
@@ -23,7 +23,7 @@ def cancel(request,purchase_id):
     if body(request):raise APIError('invalid_input','بدنهٔ این درخواست باید خالی باشد.',422)
     purchase=own_purchases(request.user).filter(pk=purchase_id,payment_method='card').first()
     if not purchase:raise APIError('not_found','خرید پیدا نشد.',404)
-    return purchase_data(cancel_purchase(request.user,purchase))
+    return purchase_data(cancel_purchase(request.user,purchase), session_key=website_session(request))
 
 
 @staff_api(['POST'],'core.approve_manual_payments',automatic_reason=True)

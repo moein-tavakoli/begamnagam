@@ -6,14 +6,16 @@ import sys
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
+from queue import Queue
 from threading import Barrier
+from time import monotonic, sleep
 from pathlib import Path
 from unittest.mock import patch
 
 from django.contrib.sessions.models import Session
 from django.core.cache import cache
 from django.core.management import call_command, CommandError
-from django.db import close_old_connections, connection, connections
+from django.db import close_old_connections, connection, connections, transaction
 from django.test import Client, LiveServerTestCase, SimpleTestCase, TestCase, TransactionTestCase, override_settings, skipUnlessDBFeature
 from django.utils import timezone
 
@@ -459,6 +461,56 @@ class BotConversationTests(BotHelpers, TestCase):
 
 @override_settings(**SETTINGS)
 class BotConcurrencyTests(BotHelpers, TransactionTestCase):
+    @skipUnlessDBFeature('has_select_for_update')
+    @override_settings(OTP_BACKEND='kavenegar', OTP_MAX_COST_RIAL=100, PROVIDER_DAILY_BUDGET_RIAL=1000)
+    def test_bot_otp_does_not_hold_daily_budget_while_waiting_for_dispatch_lock(self):
+        from core.models import SafetyControl, SpendBudget, SpendReservation
+        from core.providers.kavenegar import SMSResult
+
+        self.resume()
+        budget = SpendBudget.objects.create(day=timezone.localdate(), limit_rial=1000)
+        SafetyControl.objects.update_or_create(pk=1, defaults={'halted': False})
+        worker_pid = Queue()
+
+        def send_bot_otp():
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute('SET statement_timeout = 10000')
+                    cursor.execute('SELECT pg_backend_pid()')
+                    worker_pid.put(cursor.fetchone()[0])
+                return self.mutate('/auth/otp-challenges', {'phone': '09123456789'})
+            finally:
+                connections.close_all()
+
+        with (
+            patch('core.providers.Kavenegar.otp', return_value=SMSResult('accepted', 'fixture', 130)) as provider,
+            ThreadPoolExecutor(max_workers=1) as executor,
+        ):
+            with transaction.atomic(), connection.cursor() as cursor:
+                cursor.execute('SET LOCAL statement_timeout = 10000')
+                SafetyControl.objects.select_for_update().get(pk=1)
+                worker = executor.submit(send_bot_otp)
+                pid = worker_pid.get(timeout=5)
+                deadline = monotonic() + 5
+                while monotonic() < deadline:
+                    cursor.execute('SELECT pg_backend_pid() = ANY(pg_blocking_pids(%s))', [pid])
+                    if cursor.fetchone()[0]:
+                        break
+                    sleep(0.01)
+                else:
+                    self.fail('Bot OTP did not reach the expected dispatch lock')
+                # A live submission holding the SafetyControl lock must still
+                # be able to acquire the day lock to record an overrun.
+                SpendBudget.objects.select_for_update().get(pk=budget.pk)
+            response = worker.result(timeout=10)
+
+        self.assertEqual(response.status_code, 201, response.content)
+        provider.assert_called_once()
+        budget.refresh_from_db()
+        self.assertEqual(budget.reserved_rial, 130)
+        self.assertEqual(SpendReservation.objects.get(kind='otp').actual_rial, 130)
+        self.assertTrue(SafetyControl.objects.get(pk=1).halted)
+
     @skipUnlessDBFeature('has_select_for_update')
     def test_simultaneous_checkpoints_have_one_winner_and_one_revision_conflict(self):
         conversation = self.resume()['conversation']

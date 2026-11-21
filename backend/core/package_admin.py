@@ -27,6 +27,9 @@ class PackageAdmin(admin.ModelAdmin):
     list_filter = ('active',)
     fields = (*PACKAGE_FIELDS, 'reason', 'source_revision')
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(price_experiment_only=False)
+
     def has_change_permission(self, request, obj=None):
         return request.user.is_active and request.user.is_staff and request.user.has_perm('core.manage_message_packages')
 

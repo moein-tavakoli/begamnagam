@@ -9,6 +9,74 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 3.7.0 — 2026-11-21 — Keep chosen words during pre-purchase review
+
+- Preserve the sender’s chosen phrase or entire SMS body through a private text
+  trial. Show word changes and require another review for direct edits. Add the
+  film-club example and allowlisted example drafts from pricing.
+- Measure confirmed, linked live package purchases among verified senders who
+  received a successful trial. Exclude test activity and incomplete windows.
+- Validate the local UI on desktop and mobile. Six synthetic drafts used twelve
+  authorized model calls including one retry. Two drafts produced a preview;
+  upstream timeouts prevented four from producing a result.
+
+## 3.6.0 — 2026-11-21 — Try a personal draft before buying
+
+- Add a private trial from pricing and credits. A verified sender can compare their
+  original draft with the complete reviewed SMS before choosing a recipient or paying.
+  Editing a draft starts a fresh review. Unavailable or rejected rewrites display a reason.
+- Bind the same approved body to one recipient in its original session. Substitute the
+  recipient link and carry the sealed preview into the existing consent and checkout flow.
+  Unbound trials cannot start orders, payments or sends. Model quotas still apply.
+- Validate locally with nine synthetic drafts and eighteen authorized production-model
+  calls. Eight drafts produced a preview and one was rejected at independent intent
+  review. Check desktop editing, mobile binding, concurrency and private data retention.
+
+## 3.5.0 — 2026-11-21 — Return to the reviewed message after package checkout
+
+- Offer the current three-message package on an exhausted preview. Carry the sealed
+  preview through the website checkout and verified receipt, including bank transfer,
+  and require explicit consent before sending to the original destination.
+- Present three selectable SMS examples at current prices. Give senders and personal
+  link recipients separate actions and entry points for family, friends and neighbors.
+- Add mutually exclusive, opt-in comparisons for the checkout, examples and an
+  eight-message offer at 25,000 toman alongside the nine-message offer at 30,000.
+  Report first verified purchases, confirmation of the same preview and contribution
+  per exposed eligible account. See the [experiment guide](docs/conversion-experiments.fa.md).
+- Local validation covers isolated checkout, browser return and explicit sending at
+  desktop and mobile widths. Public payment and deployment require separate authorization.
+
+## 3.4.2 — 2026-11-21 — Clarify package prices and closed checkout before sign-in
+
+- Show the available website payment state before guests select a package. Keep
+  closed packages inspectable and put previous-purchase sign-in behind a separate
+  action. Display the per-message price alongside the total and explain sender
+  recognizability and who pays when using a personal feedback link.
+- Record the public catalog, purchase review and isolated paired study in the
+  [Persian purchasing assessment](deliverables/purchase-study-2026-11-21/report.fa.html).
+  The study measures hypothetical decisions under the observed prices and closed
+  checkout. The public site reported 3.4.0 during the study.
+- Validate the home-to-review journey on desktop and 375px mobile, isolated OTP
+  and simulated purchase history, 131 frontend tests, TypeScript and 40 package
+  and manual-payment tests on PostgreSQL/Redis. Local release.
+
+## 3.4.1 — 2026-11-21 — Reduce read load and fix queue races
+
+- Create anonymous website sessions only when an action needs one. Keep CSRF
+  initialization and OTP session binding. Group monitoring queue counts and
+  account aggregates to reduce SQL statements and repeated database work.
+- Load the home composer on first use and keep the welcome page available if
+  loading fails. In a visible, online wallet tab, reconcile pending or
+  ambiguous top-ups with reads and preserve the original payment intent.
+- Select eligible provider checks and unsent expirations before applying batch
+  limits. Guard refund results against stale claims and acquire provider
+  overrun locks in a consistent order, including the bot OTP transaction.
+- Validate duplicate-confirmation gift flows and report offered, completed and
+  dropped requests with per-route latency in the isolated local benchmark.
+- Validate on PostgreSQL and Redis, with browser regressions on the production
+  build. See the [Persian performance audit](docs/performance-audit-2026-11-21.fa.md).
+  Local release.
+
 ## 3.4.0 — 2026-11-17 — Admin switch for identity requests
 
 - Add a default-off «میخوام بدونم» switch to Site Settings for authorized staff.

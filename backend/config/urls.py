@@ -15,11 +15,13 @@ from core import kavenegar_settings, sms_template_settings
 from core import manual_payment_views, support_views, provider_balances
 from core import personal_share
 from core import identity_consent, identity_settings
+from core import conversion_experiments, text_trials
 
 handler404 = "core.views.not_found"
 handler500 = "core.views.server_error"
 
 urlpatterns = [
+    path('api/v1/conversion-exposures', conversion_experiments.exposure),
     path('api/v1/manage/staff/catalog', staff_management.catalog),
     path('api/v1/manage/staff/roles', staff_management.role_list),
     path('api/v1/manage/staff/roles/<int:role_id>', staff_management.role_detail),
@@ -89,6 +91,9 @@ urlpatterns = [
     path("api/v1/identity-requests/<uuid:consent_id>", identity_consent.decision),
     path("api/v1/identity-requests/<uuid:consent_id>/phone", identity_consent.phone),
     path("api/v1/messages/preview", views.preview),
+    path("api/v1/messages/text-trials", views.text_trial),
+    path("api/v1/messages/text-trials/<uuid:trial_id>/bind", text_trials.bind),
+    path("api/v1/messages/preview/<uuid:preview_id>", views.resume_preview),
     path("api/v1/messages", views.messages),
     path("api/v1/messages/<uuid:order_id>", views.hide_message),
     path("api/v1/orders", views.create_order),

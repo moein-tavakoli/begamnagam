@@ -6,6 +6,7 @@ from django.db import transaction
 from django.utils import timezone
 from .models import Order, PaymentAttempt, FinancialEvent, MessageDelivery, Outbox, RecipientState, Refund
 from .providers import Zarinpal, ProviderDisabled, ProviderRejected, ProviderUnknown
+from .reconciliation import due_reconciliation_ids
 from .services import APIError, PAYMENT_WINDOW, dispatch
 
 
@@ -105,10 +106,10 @@ def verify_payment(attempt_id):
 
 
 def reconcile_payments():
-    due = timezone.now() - timedelta(seconds=30)
-    for attempt in PaymentAttempt.objects.filter(provider='zarinpal', environment=settings.PROVIDER_ENVIRONMENT, authority__gt='', status__in=['pending', 'unknown']).order_by('created_at')[:100]:
-        if not attempt.checked_at or attempt.checked_at < due:
-            verify_payment(attempt.id)
+    attempts = PaymentAttempt.objects.filter(provider='zarinpal', environment=settings.PROVIDER_ENVIRONMENT,
+        authority__gt='', status__in=['pending', 'unknown'])
+    for attempt_id in due_reconciliation_ids(attempts, now=timezone.now(), cooldown=timedelta(seconds=30)):
+        verify_payment(attempt_id)
 
 
 def process_refund(refund_id):
@@ -139,6 +140,7 @@ def process_refund(refund_id):
         reconcile_only = refund.status in {'processing', 'unknown'}
         refund.status = 'processing'
         refund.save(update_fields=['status', 'updated_at'])
+        claimed_at = refund.updated_at
         authority = refund.payment.authority
         # Reversal is not a general post-settlement refund. Those cases stay as
         # manual obligations with alerts; never mark a submitted request refunded.
@@ -150,10 +152,13 @@ def process_refund(refund_id):
         else:
             Zarinpal().reverse(authority=authority)
     except (ProviderUnknown, ProviderRejected, ProviderDisabled):
-        Refund.objects.filter(pk=refund_id).update(status='unknown', updated_at=timezone.now())
+        Refund.objects.filter(pk=refund_id, status='processing', updated_at=claimed_at).update(
+            status='unknown', updated_at=timezone.now())
         return
     with transaction.atomic():
         refund = Refund.objects.select_for_update().get(pk=refund_id)
+        if refund.status == 'refunded':
+            return
         refund.status = 'refunded'
         refund.provider_reference = 'reverse-' + authority
         refund.save(update_fields=['status', 'provider_reference', 'updated_at'])

@@ -405,6 +405,7 @@ class ModerationAudit(models.Model):
 
 
 class MessagePackage(models.Model):
+    price_experiment_only = models.BooleanField(default=False, db_default=False, editable=False)
     name = models.CharField('نام بسته', max_length=80)
     message_count = models.PositiveIntegerField('تعداد پیام', validators=[MinValueValidator(1), MaxValueValidator(1000000)])
     price_toman = models.PositiveIntegerField('قیمت بسته (تومان)', validators=[MinValueValidator(1), MaxValueValidator(2147483647)])
@@ -418,13 +419,37 @@ class MessagePackage(models.Model):
         verbose_name = 'بستهٔ پیام'
         verbose_name_plural = 'بسته‌های پیام'
         permissions = [('manage_message_packages', 'Manage message credit packages')]
-        constraints = [models.CheckConstraint(condition=models.Q(message_count__gte=1, message_count__lte=1000000, price_toman__gte=1), name='positive_message_package')]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(message_count__gte=1, message_count__lte=1000000, price_toman__gte=1), name='positive_message_package'),
+            models.CheckConstraint(condition=models.Q(price_experiment_only=False) | models.Q(active=False, message_count=8, price_toman=25000), name='private_price_trial_offer'),
+        ]
 
     def __str__(self):
         return self.name
 
 
+class ConversionExposure(models.Model):
+    account = models.ForeignKey(Account, on_delete=models.CASCADE)
+    experiment = models.CharField(max_length=12)
+    variant = models.CharField(max_length=10)
+    environment = models.CharField(max_length=8)
+    surface = models.CharField(max_length=12)
+    # An opaque reference survives the normal deletion of unpurchased previews.
+    preview_id = models.UUIDField(null=True, editable=False)
+    exposed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        default_permissions = ()
+        constraints = [
+            models.UniqueConstraint(fields=['account', 'environment'], name='one_conversion_trial_per_account'),
+        ]
+        indexes = [models.Index(fields=['experiment', 'environment', 'exposed_at'], name='conversion_exposure_cohort')]
+
+
 class CreditPurchase(models.Model):
+    resume_preview = models.ForeignKey(Preview, on_delete=models.SET_NULL, null=True, blank=True,
+                                       editable=False, related_name='+')
+    resume_reference_digest = models.CharField(max_length=64, default='', db_default='', blank=True, editable=False)
     payment_method = models.CharField(max_length=12, default='gateway', db_default='gateway', editable=False)
     wallet_refund_consent = models.BooleanField(default=False, db_default=False, editable=False)
     wallet_terms_version = models.CharField(max_length=24, default='', db_default='', editable=False)

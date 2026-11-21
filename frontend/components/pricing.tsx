@@ -12,7 +12,7 @@ export function Pricing() {
     <h2>بسته‌های ارسال پیام</h2>
     <p>۳ ارسال اول هدیهٔ ماست؛ یک‌بار برای هر شمارهٔ تأییدشده. بعد از هدیه، هر ارسال یک اعتبار از بسته مصرف می‌کند؛ حتی اگر پیامک چندبخشی باشد.</p>
     <FreeSendsBalance />
-    {!data ? <ServiceState /> : <div className="pricing-package-list">{(data.message_packages ?? []).filter(item => item.active).map(item => <article key={item.id}>
+    {!data ? <ServiceState /> : <div className="pricing-package-list">{(data.message_packages ?? []).filter(item => item.active && !item.experiment_only).map(item => <article key={item.id}>
       <h3>{item.name}</h3><p>{new Intl.NumberFormat("fa-IR").format(item.message_count)} پیام</p><strong>{toman(item.price_toman)}</strong><small>قیمت کل بسته</small>
     </article>)}</div>}
     {data && !data.message_packages?.length && <p>فعلاً بستهٔ فعالی تعریف نشده است.</p>}

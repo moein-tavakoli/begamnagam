@@ -525,3 +525,10 @@ html:has([data-credit-shop]) { scroll-behavior:auto; }
 .app-version { display: block; font-size: 9px; line-height: 12px; color: var(--muted); }
 .home-flow .hero > .app-version { position: absolute; inset-inline: 0; inset-block-end: 12px; text-align: center; color: var(--hero-details); pointer-events: none; }
 @media(max-width:699px) { .home-flow[data-view="welcome"] { padding-bottom: var(--app-bottom-space); } }
+
+.conversion-exposure-marker {
+  display: block;
+  height: 1px;
+  margin-bottom: -1px;
+  pointer-events: none;
+}

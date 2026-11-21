@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { creditPaymentMethods, purchaseIntentAfterResponse } from '../lib/credit-purchases.ts';
+import { checkoutPreviewId, creditCheckoutHref, creditReviewHref, creditPaymentMethods, purchaseIntentAfterResponse } from '../lib/credit-purchases.ts';
 
 test('terminal wallet return releases the previous checkout key for a new purchase', () => {
   const intent = { packageId: 1, value: 'same-request-key' };
@@ -30,4 +30,18 @@ test('the price list and review use only payment methods available on the websit
     { gateway: true, card: false, status: 'available' });
   assert.equal(creditPaymentMethods({ demo_mode: true, payment_backend: 'demo' }).gateway, true);
   assert.equal(creditPaymentMethods({ demo_mode: false, payment_backend: 'demo' }).gateway, false);
+});
+
+
+test('only a valid opaque preview ID survives review, selection and a confirmed purchase', () => {
+  const id = '4bcc5714-3791-46c4-8595-d574fe953e88';
+  assert.equal(creditCheckoutHref(id, 2), `/credits?package=2#preview=${id}`);
+  assert.equal(creditCheckoutHref(id), `/credits#preview=${id}`);
+  assert.equal(checkoutPreviewId(`#preview=${id}`), id);
+  assert.equal(checkoutPreviewId('#preview=https://elsewhere.test'), null);
+  assert.equal(creditCheckoutHref('invalid', 2), '/credits?package=2');
+  const ready = { status: 'credited', resume_status: 'ready', resume_preview_id: id };
+  assert.equal(creditReviewHref(ready), `/credits/review#preview=${id}`);
+  for (const update of [{status:'pending'}, {resume_status:'unavailable'}, {resume_preview_id:'//elsewhere.test'}])
+    assert.equal(creditReviewHref({...ready,...update}), null);
 });

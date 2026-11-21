@@ -25,7 +25,7 @@ export function ManualPaymentDialog({action,onClose,onComplete,onFailure}:{actio
   const [packages,setPackages]=useState<MessagePackage[]>([]),[selected,setSelected]=useState<number|null>(null);
   const grant=action.name==='grant_package',reject=action.name==='reject_card';
   const chosen=packages.find(p=>p.id===selected);
-  useEffect(()=>{if(!grant)return;const controller=new AbortController();void api<Bootstrap>('/bootstrap',{signal:controller.signal}).then(data=>{setPackages(data.message_packages??[]);setSelected(data.message_packages?.[0]?.id??null);}).catch(e=>{if(!controller.signal.aborted){setError(errorMessage(e));onFailure(e);}});return()=>controller.abort();},[grant,onFailure]);
+  useEffect(()=>{if(!grant)return;const controller=new AbortController();void api<Bootstrap>('/bootstrap',{signal:controller.signal}).then(data=>{const regular=(data.message_packages??[]).filter(item=>!item.experiment_only);setPackages(regular);setSelected(regular[0]?.id??null);}).catch(e=>{if(!controller.signal.aborted){setError(errorMessage(e));onFailure(e);}});return()=>controller.abort();},[grant,onFailure]);
   async function submit(event:FormEvent<HTMLFormElement>){
     event.preventDefault();const form=new FormData(event.currentTarget);setBusy(true);setError('');setSubmitted(true);
     try{

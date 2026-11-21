@@ -19,6 +19,9 @@ def flag(name, default=False):
 TESTING = flag("DJANGO_TESTING")
 DEBUG = flag("DEBUG")
 DEMO_MODE = flag("DEMO_MODE", True)
+CONVERSION_EXPERIMENT = os.getenv("CONVERSION_EXPERIMENT", "off")
+if CONVERSION_EXPERIMENT not in {"off", "preview", "examples", "price"}:
+    raise ImproperlyConfigured("Unknown CONVERSION_EXPERIMENT")
 API_DOCUMENTATION_ENABLED = flag("API_DOCUMENTATION_ENABLED")
 
 

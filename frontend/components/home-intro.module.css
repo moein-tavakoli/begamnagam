@@ -1,0 +1,85 @@
+.paths,
+.audiences,
+.more,
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.paths > * {
+  padding-inline: 16px;
+}
+
+.audiences {
+  margin-block-start: 14px;
+}
+
+.audiences a,
+.more a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding-inline: 8px;
+  color: var(--hero-details);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.audiences a {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.more a {
+  font-size: 12px;
+}
+
+.audienceGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 16px;
+  margin-block: 24px;
+}
+
+.audienceCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: clamp(18px, 4vw, 30px);
+  border-radius: var(--radius);
+  border: 1px solid var(--accent-line);
+  background: var(--surface);
+  scroll-margin-block: 16px;
+}
+
+.audienceCard h2 { margin: 12px 0 6px; font-size: 22px; }
+.audienceCard p { color: var(--muted); font-size: 14px; }
+.audienceCard :global(.button) { font-size: 13px; }
+.audienceCard > svg { color: var(--focus); }
+.audienceCard .actions { margin-block-start: auto; }
+
+.shareCopy {
+  width: 100%;
+  margin-block-start: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.shareCopy button { text-align: start; }
+.shareCopy textarea { width: 100%; font: inherit; border: 1px solid var(--control-line); padding: 10px; }
+.shareCopy p { margin: 4px 0; font-size: 13px; }
+.shareCopy p:empty { display: none; }
+
+@media (max-width: 699px) {
+  .paths {
+    display: grid;
+    grid-template-columns: auto auto;
+    justify-content: center;
+  }
+  .paths > :global(.button) { min-width: 0; gap: 5px; padding-inline: 9px; font-size: 13px; }
+  .audiences,
+  .more { justify-content: center; }
+  .audiences { margin-block-start: 4px; }
+  .audiences a { font-size: 13px; }
+}

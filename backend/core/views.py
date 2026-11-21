@@ -89,15 +89,16 @@ def bootstrap(request):
     from .limits import policy
     ai = ai_configuration()
     from .message_tones import choices as tone_choices, resolve as resolve_tone
-    from .packages import balance_field, package_data, checkout_enabled
-    from .models import MessagePackage
+    from .packages import balance_field, checkout_enabled
+    from .conversion_experiments import assignment, catalog
     data = {"demo_mode": settings.DEMO_MODE, "authenticated": authenticated,
         "identity_requests_enabled": identity_requests_enabled(),
         "price_toman": 0, **public_catalog(freeform=freeform_available(ai)), "rewrite_mode": ai.provider if freeform_available(ai) else 'template', "payment_backend": settings.PAYMENT_BACKEND, "support_contact": settings.SUPPORT_CONTACT,
         "otp_is_real": otp_is_real()}
-    data['message_packages'] = [package_data(p) for p in MessagePackage.objects.filter(active=True)]
-    data['package_checkout_enabled'] = checkout_enabled()
     data['payment_options'] = payment_options()
+    data['package_checkout_enabled'] = checkout_enabled(data['payment_options'])
+    data['conversion_experiment'] = assignment(request.user.account if authenticated else None, data['payment_options'])
+    data['message_packages'] = catalog(data['conversion_experiment'])
     data['message_tones'] = tone_choices(ai)
     data['default_message_tone'] = resolve_tone(None, ai)
     if authenticated:
@@ -404,9 +405,18 @@ def preview_data(item):
         "sms_segments": sms_segments(item.full_sms)}
 
 
+@api(['GET'], authenticated=True)
+def resume_preview(request, preview_id):
+    from .purchase_resume import resolve
+    preview, direct_phone = resolve(request.user, request.session.session_key, preview_id)
+    return {**preview_data(preview), 'recipient_masked': mask(direct_phone) if direct_phone else '',
+            'is_shared_destination': preview.is_shared_destination}
+
+
 @api(["POST"], authenticated=True)
 def create_order(request):
-    order = services.create_order(request.user, request.session.session_key, body(request), request.headers.get("Idempotency-Key", ""))
+    order = services.create_order(request.user, request.session.session_key, body(request), request.headers.get("Idempotency-Key", ""),
+                                  allow_purchase_resume=request.path == '/api/v1/orders')
     return services.serialize_order(order)
 
 

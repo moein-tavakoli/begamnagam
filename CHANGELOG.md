@@ -9,6 +9,20 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 3.5.0 — 2026-11-21 — Return to the reviewed message after package checkout
+
+- Offer the current three-message package on an exhausted preview. Carry the sealed
+  preview through the website checkout and verified receipt, including bank transfer,
+  and require explicit consent before sending to the original destination.
+- Present three selectable SMS examples at current prices. Give senders and personal
+  link recipients separate actions and entry points for family, friends and neighbors.
+- Add mutually exclusive, opt-in comparisons for the checkout, examples and an
+  eight-message offer at 25,000 toman alongside the nine-message offer at 30,000.
+  Report first verified purchases, confirmation of the same preview and contribution
+  per exposed eligible account. See the [experiment guide](docs/conversion-experiments.fa.md).
+- Local validation covers isolated checkout, browser return and explicit sending at
+  desktop and mobile widths. Public payment and deployment require separate authorization.
+
 ## 3.4.2 — 2026-11-21 — Clarify package prices and closed checkout before sign-in
 
 - Show the available website payment state before guests select a package. Keep

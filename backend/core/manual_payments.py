@@ -8,6 +8,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 from .models import Account, CreditPurchase, ManualPayment, ManualPaymentSettings, MessagePackage, OperatorAudit, PaymentAttempt
 from .packages import _apply_verified, credit_environment
+from . import purchase_resume
 from .privacy import DIGITS, digest
 from .services import APIError, limited
 from .limit_services import validate_reason
@@ -108,9 +109,10 @@ def _reference(value):
     return value
 
 
-def _new_purchase(user, package, key, config, consent):
+def _new_purchase(user, package, key, config, consent, *, preview_id=None, reference_digest=''):
     environment = credit_environment()
     purchase = CreditPurchase.objects.create(owner=user, package=package, idempotency_key=key,
+        resume_preview_id=preview_id, resume_reference_digest=reference_digest,
         package_name=package.name, message_count=package.message_count, amount_toman=package.price_toman,
         environment=environment, payment_method='card', wallet_refund_consent=consent,
         wallet_terms_version=WALLET_TERMS_VERSION if consent else '')
@@ -121,13 +123,16 @@ def _new_purchase(user, package, key, config, consent):
     return purchase
 
 
-def begin_purchase(user, data, key):
+def begin_purchase(user, data, key, *, session_key=None):
     allowed = {'package_id','package_revision','payment_method','wallet_consent','wallet_terms_version'}
+    if session_key:
+        allowed.add('resume_preview_id')
     if not isinstance(data,dict) or set(data)-allowed or data.get('payment_method')!='card' or type(data.get('package_id')) is not int or type(data.get('package_revision')) is not int:
         raise APIError('invalid_input','بسته و روش پرداخت را انتخاب کن؛ مبلغ از سرور خوانده می‌شود.',422)
     if data.get('wallet_consent') is not True or data.get('wallet_terms_version')!=WALLET_TERMS_VERSION:
         raise APIError('wallet_consent_required','شرایط اعتبار را تأیید کن.',422)
     key = _key(key)
+    preview_id, reference_digest = purchase_resume.resume_reference(data, key)
     from .safety import ensure_open
     ensure_open()
     with transaction.atomic():
@@ -137,18 +142,24 @@ def begin_purchase(user, data, key):
             raise APIError('account_unavailable','خرید با این حساب فعلاً مجاز نیست.',403)
         previous = CreditPurchase.objects.filter(owner=user,idempotency_key=key).first()
         if previous:
-            if previous.payment_method!='card' or previous.package_id!=data['package_id'] or previous.environment!=credit_environment():
+            if (previous.payment_method != 'card' or previous.package_id != data['package_id']
+                    or previous.environment != credit_environment() or previous.resume_reference_digest != reference_digest):
                 raise APIError('idempotency_conflict','کلید خرید برای درخواست دیگری ثبت شده.',409)
             return previous
+        if preview_id:
+            existing = purchase_resume.checkout_for_preview(user, session_key, preview_id, data['package_id'], 'card')
+            if existing:
+                return existing
         config = ManualPaymentSettings.objects.select_for_update().filter(pk=1).first()
         if config is None or not available(config):raise APIError('payment_disabled','کارت‌به‌کارت فعلاً آمادهٔ پرداخت نیست.',409)
         limited('credit-purchases',str(user.pk),5,60)
         from .wallet import has_open_checkout
         if has_open_checkout(user):raise APIError('payment_reconciliation','یک پرداخت باز داری؛ ابتدا همان درخواست را بررسی کن.',409)
-        package = MessagePackage.objects.select_for_update().filter(pk=data['package_id'],active=True).first()
+        from .conversion_experiments import checkout_package
+        package = checkout_package(data['package_id'], account)
         if not package or package.revision!=data['package_revision']:
             raise APIError('package_changed','بسته تغییر کرده؛ فهرست را تازه‌سازی کن.',409)
-        return _new_purchase(user,package,key,config,True)
+        return _new_purchase(user, package, key, config, True, preview_id=preview_id, reference_digest=reference_digest)
 
 
 @transaction.atomic

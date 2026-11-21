@@ -58,6 +58,7 @@ export const publicPages = {
 export type PublicPath = keyof typeof publicPages;
 export const privatePages = {
   "/wallet": { title: "کیف پول من", description: "موجودی و گردش اعتبار غیرقابل برداشت حساب بگم نگم؛ نیازمند ورود با شمارهٔ تأییدشده." },
+  "/credits/review": { title: "بازبینی پیام پس از خرید", description: "بازگشت خصوصی به متن همان پیام برای تأیید ارسال." },
   "/credits": { title: "خرید بستهٔ پیام", description: "بسته‌های فعال پیام و اعتبار حساب خودت؛ نیازمند ورود با شمارهٔ تأییدشده." },
   "/manage": {
     title: "مدیریت بگم نگم",

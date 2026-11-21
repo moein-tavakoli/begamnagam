@@ -54,8 +54,12 @@ def private_update_identity(platform, update):
     return {key: str(value) for key, value in values.items()}
 
 
+# An explicit timeout (including None) applies to every endpoint.
+_USE_DEFAULT_TIMEOUTS = object()
+
+
 class BotAPI:
-    def __init__(self, base_url, *, cookie_jar=None, bot_key=None, require_real_otp=True, require_real_delivery=True, timeout=35):
+    def __init__(self, base_url, *, cookie_jar=None, bot_key=None, require_real_otp=True, require_real_delivery=True, timeout=_USE_DEFAULT_TIMEOUTS):
         parsed = urlsplit(base_url)
         if (parsed.scheme not in {'https', 'http'} or not parsed.hostname or parsed.username or parsed.password
                 or parsed.query or parsed.fragment or parsed.path.rstrip('/') != '/api/v2'
@@ -70,7 +74,8 @@ class BotAPI:
         self.conversation_id = None
         self.require_real_otp = require_real_otp
         self.require_real_delivery = require_real_delivery
-        self.timeout = timeout
+        self.timeout = 35 if timeout is _USE_DEFAULT_TIMEOUTS else timeout
+        self.preview_timeout = 45 if timeout is _USE_DEFAULT_TIMEOUTS else timeout
 
     def call(self, method, path, data=None, *, key=None, query=None):
         if not path.startswith('/') or path.startswith('//') or '?' in path or '#' in path or '..' in path:
@@ -93,7 +98,8 @@ class BotAPI:
         url = self.base_url + path + ('?' + urlencode(query) if query else '')
         request = Request(url, data=encoded, headers=headers, method=method.upper())
         try:
-            with self.opener.open(request, timeout=self.timeout) as response:
+            timeout = self.preview_timeout if request.method == 'POST' and path == '/message-previews' else self.timeout
+            with self.opener.open(request, timeout=timeout) as response:
                 result = json.load(response)
                 if not isinstance(result, dict):
                     raise ValueError('Expected a JSON object.')

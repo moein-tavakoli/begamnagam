@@ -9,6 +9,19 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 3.7.1 — 2026-11-21 — Shorter waits and reliable review time for SMS previews
+
+- Reduce exact-wording GapGPT preview latency by generating and independently
+  reviewing the only admissible body concurrently. Regular and phrase-preserving
+  previews still review the generated candidate. Bound slow stages and leave
+  time for review. Reject a failed check promptly and retain the two-call limit.
+- Align browser, proxy, WSGI and sample client preview timeouts. Show waiting
+  feedback while keeping the draft and preventing duplicate submissions.
+- Verified locally with fixed delays on both versions, a 36-second response
+  through the Next.js proxy, and six synthetic drafts with the real GapGPT
+  provider (twelve calls, six approved first attempts).
+  [Measured timings and regression scenarios](docs/deployments/local-preview-latency-3.7.1.json)
+
 ## 3.7.0 — 2026-11-21 — Keep chosen words during pre-purchase review
 
 - Preserve the sender’s chosen phrase or entire SMS body through a private text
@@ -19,6 +32,10 @@ Historical release reports below contain deployment evidence and limitations.
 - Validate the local UI on desktop and mobile. Six synthetic drafts used twelve
   authorized model calls including one retry. Two drafts produced a preview;
   upstream timeouts prevented four from producing a result.
+- Deployed on 2026-11-21 from `f24fb3a` after all three promotion checks passed.
+  Verified version 3.7.0 on all six frontends, applied migrations 0056–0059
+  and opened the public pre-purchase trial from pricing on desktop and mobile.
+  [Deployment evidence](docs/deployments/ct115-3.7.0.json)
 
 ## 3.6.0 — 2026-11-21 — Try a personal draft before buying
 

@@ -85,11 +85,22 @@ class TextTrialTests(ManualFixture, TestCase):
 
     def reviewed_request(self, payload, candidate, **verdict):
         opener = Mock()
-        opener.open.side_effect = [_Response(_completion({'allowed': True, 'message': candidate})),
-                                   _Response(_completion({**VERDICT, 'tone_matched': True, **verdict}))]
+        parallel_start = Barrier(2, timeout=2) if payload.get('exact_wording') is True else None
+
+        def respond(request, timeout):
+            data = json.loads(json.loads(request.data)['messages'][1]['content'])
+            if parallel_start:
+                parallel_start.wait()
+            if 'text' in data:
+                return _Response(_completion({'allowed': True, 'message': candidate}))
+            return _Response(_completion({**VERDICT, 'tone_matched': True, **verdict}))
+
+        opener.open.side_effect = respond
         with patch('core.gapgpt.urllib.request.build_opener', return_value=opener):
             response = self.post(self.path, payload)
-        return response, [json.loads(call.args[0].data)['messages'] for call in opener.open.call_args_list]
+        calls = [json.loads(call.args[0].data)['messages'] for call in opener.open.call_args_list]
+        # The exact request has two independent stages with no wire-order guarantee.
+        return response, sorted(calls, key=lambda messages: 'candidate' in json.loads(messages[1]['content']))
 
     def test_exact_edit_preserves_orthography_and_canonical_digits_through_order(self):
         entered = 'جمله‌ات رو در تمرین ۲ دوباره بگو.'
@@ -122,11 +133,13 @@ class TextTrialTests(ManualFixture, TestCase):
                                   ({'exact_wording': True}, kept)]:
             with self.subTest(controls=controls):
                 failed, calls = self.reviewed_request({'text': entered, **controls}, changed)
-                self.assertEqual(len(calls), 1)
+                # Only exact mode can review its locally checked source while generation runs.
+                self.assertEqual(len(calls), 2 if controls.get('exact_wording') else 1)
                 self.assertEqual(failed.status_code, 422)
                 self.assertEqual(failed.json()['error']['code'], 'trial_wording_unavailable')
                 self.assertNotIn('trial_id', failed.json())
         self.assertEqual(Preview.objects.count(), 1)
+        self.assertEqual(RewriteUsage.objects.count(), 3)
 
     def test_preserving_a_whole_word_rejects_new_prefix_suffix_and_combining_mark(self):
         # These candidates would otherwise pass literal substring matching.

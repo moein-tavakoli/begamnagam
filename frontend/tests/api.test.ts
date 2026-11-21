@@ -54,17 +54,42 @@ test('rewrite outages have a specific safe message and never expose upstream det
       error.message.includes('آماده‌سازی متن') && !error.message.includes('private') && error.details === undefined);
 });
 
-test('recipient-free text trials can finish within the full rewrite timeout', async context => {
-  otpSessionBrowser(context);
-  context.mock.timers.enable({ apis: ['setTimeout'] });
-  globalThis.fetch = (_url, options) => new Promise((resolve, reject) => {
-    options?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
-    setTimeout(() => resolve(Response.json({ full_sms: 'متن کامل' })), 20000);
+for (const path of ['/messages/preview', '/messages/text-trials']) {
+  test(`${path} can return a reviewed preview after 38 seconds`, async context => {
+    otpSessionBrowser(context);
+    context.mock.timers.enable({ apis: ['setTimeout'] });
+    globalThis.fetch = (_url, options) => new Promise((resolve, reject) => {
+      options?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+      setTimeout(() => resolve(Response.json({ full_sms: 'متن کامل' })), 38_000);
+    });
+    const result = api<{ full_sms: string }>(path, { method: 'POST', body: { text: 'متن من' } });
+    context.mock.timers.tick(38_000);
+    assert.equal((await result).full_sms, 'متن کامل');
   });
-  const result = api<{ full_sms: string }>('/messages/text-trials', { method: 'POST', body: { text: 'متن من' } });
-  context.mock.timers.tick(20000);
-  assert.equal((await result).full_sms, 'متن کامل');
-});
+}
+
+for (const [path, deadline] of [
+  ['/messages/preview', 45_000],
+  ['/messages/text-trials', 45_000],
+  ['/manage/ai/test', 25_000],
+  ['/messages/text-trials/trial-id/bind', 15_000],
+  ['/orders', 15_000],
+] as const) {
+  test(`a stalled ${path} request aborts after ${deadline} ms`, async context => {
+    otpSessionBrowser(context);
+    context.mock.timers.enable({ apis: ['setTimeout'] });
+    let signal: AbortSignal;
+    globalThis.fetch = (_url, options) => new Promise((_resolve, reject) => {
+      signal = options!.signal!;
+      signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+    });
+    const result = api(path, { method: 'POST' });
+    context.mock.timers.tick(deadline - 1);
+    assert.equal(signal!.aborted, false);
+    context.mock.timers.tick(1);
+    await assert.rejects(result, (error: unknown) => error instanceof ApiError && error.code === 'request_timeout');
+  });
+}
 
 test("OTP notifies other tabs immediately while local feedback finishes", async context => {
   const events = otpSessionBrowser(context);

@@ -42,6 +42,7 @@ class FreeformTests(TestCase):
             result = self.quote(category='parking')
         self.assertEqual(result.status_code, 200, result.content)
         self.assertEqual(model.call_args.args[0], 'پولی که قرض گرفتی را به موقع برگردان')
+        self.assertIs(model.call_args.kwargs['preview'], True)
         quote, preview = result.json(), Preview.objects.get()
         self.assertEqual(quote['moderation_mode'], 'gapgpt')
         self.assertEqual(quote['rewritten_text'], BODY)

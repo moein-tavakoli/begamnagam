@@ -10,6 +10,7 @@ import { AuthGate } from './auth-gate';
 import { Composer } from './composer';
 import { BusyButton, ErrorBox, ServiceState } from './feedback';
 import { RecipientPhoneField } from './recipient-phone-field';
+import { RewriteStatus } from './rewrite-loading';
 import styles from './purchase-examples.module.css';
 
 type Trial = { trial_id: string; full_sms: string; reviewed_body?: string; expires_at: string };
@@ -208,6 +209,7 @@ function TrialForm({ initialDraft }: { initialDraft: string }) {
           {phraseError && <p id="trial-phrase-error" className="field-error" role="alert">{phraseError}</p>}
         </div>}
         {wording !== 'rewrite' && <p className={styles.note}>فقط در صورت تأیید محتوا و حفظ عین {wording === 'phrase' ? 'عبارت' : 'متن'}، پیش‌نمایش آماده می‌شود.</p>}
+        {busy && <RewriteStatus className={styles.note} />}
         <div className="form-actions"><BusyButton type="submit" className="button primary" busy={busy}>
           {busy ? 'در حال آماده‌سازی متن…' : 'دیدن پیش‌نمایش پیامک'}
         </BusyButton></div>

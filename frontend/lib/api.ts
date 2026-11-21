@@ -106,6 +106,11 @@ export class ApiError extends Error {
 
 const requestUnavailable = "درخواست فعلاً انجام نشد؛ کمی بعد دوباره تلاش کن.";
 const rewriteUnavailable = "آماده‌سازی متن موقتاً در دسترس نیست. کمی بعد دوباره تلاش کن.";
+const requestTimeoutsMs = new Map([
+  ['/messages/preview', 45_000],
+  ['/messages/text-trials', 45_000],
+  ['/manage/ai/test', 25_000],
+]);
 
 // randomUUID is unavailable on a phone opening a local HTTP LAN address.
 // getRandomValues remains available there and keeps retry keys unpredictable.
@@ -156,7 +161,7 @@ export async function api<T>(
   const timer = setTimeout(() => {
     timedOut = true;
     controller.abort();
-  }, ['/messages/preview', '/messages/text-trials', '/manage/ai/test'].includes(path) ? 25000 : 15000);
+  }, requestTimeoutsMs.get(path) ?? 15_000);
   const cancel = () => controller.abort();
   if (options.signal?.aborted) cancel();
   options.signal?.addEventListener("abort", cancel, { once: true });

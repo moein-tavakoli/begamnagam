@@ -1,8 +1,21 @@
 "use client";
 
-import { useId, useLayoutEffect, useRef } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { Icon } from "./icons";
 import styles from "./rewrite-loading.module.css";
+
+export function RewriteStatus({ id, className }: { id?: string; className?: string }) {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSlow(true), 8_000);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  return <p id={id} className={className} role="status" aria-atomic="true">
+    {slow ? "هنوز منتظر پیش‌نمایش هستیم. متنت در این صفحه می‌ماند و نیازی به درخواست دوباره نیست."
+      : "پس از بررسی متن، پیش‌نمایش را همین‌جا می‌بینی."}
+  </p>;
+}
 
 export function RewriteLoading() {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -32,8 +45,7 @@ export function RewriteLoading() {
         <Icon name="chat" size={25} />
       </div>
       <h2 id={`${id}-title`} tabIndex={-1} autoFocus>در حال آماده‌سازی متن…</h2>
-      <p id={`${id}-description`}>ممکن است تا <strong>۲۰ ثانیه</strong> طول بکشد.</p>
-      <p className={styles.note}>لطفاً کمی صبر کن.</p>
+      <RewriteStatus id={`${id}-description`} />
     </dialog>
   );
 }

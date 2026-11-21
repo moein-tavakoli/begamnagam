@@ -51,7 +51,7 @@ npm start
 
 `components/app-provider.tsx` loads the authoritative environment, price, available topics, and login state from `/bootstrap`. A service failure shows a retry action and disables composition; it never substitutes a successful local response.
 
-`lib/api.ts` sends the CSRF cookie as `X-CSRFToken` for mutations, preserves same-origin cookies, applies a 15-second request timeout, and converts network/proxy errors into recoverable Persian messages. Orders retain their `Idempotency-Key` across retries for the same preview/recipient. Payment retry uses the existing order ID.
+`lib/api.ts` sends the CSRF cookie as `X-CSRFToken` for mutations, preserves same-origin cookies, uses a 45-second timeout for preview creation, 25 seconds for the management AI test and 15 seconds for other requests, and converts network/proxy errors into recoverable Persian messages. Orders retain their `Idempotency-Key` across retries for the same preview/recipient. Payment retry uses the existing order ID.
 
 The template mode is labelled **متن آمادهٔ بررسی‌شده**. Optional Ollama mode is labelled **انتخاب متن با کمک هوش مصنوعی** because it selects a reviewed template rather than generating arbitrary outgoing copy. The backend performs enforcement; client validation only helps users correct mistakes.
 

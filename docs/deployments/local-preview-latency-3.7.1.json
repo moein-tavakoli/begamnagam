@@ -1,0 +1,556 @@
+{
+  "date": "2026-11-21",
+  "version": "3.7.1",
+  "environment": "isolated local checkout, synthetic verified accounts",
+  "real_gapgpt": {
+    "model": "gpt-4.1-mini",
+    "route": "/api/v1/messages/text-trials",
+    "timing": "Wall time from HTTP POST to receiving a reviewed SMS. Single run per draft. No retries. The final rejection-only change was verified on controlled transports.",
+    "same_synthetic_drafts_as": "3.7.0 purchase study round 6 (A1–A6)",
+    "previous_first_attempt_successes": 1,
+    "current_first_attempt_successes": 6,
+    "calls": {
+      "generation": 6,
+      "review": 6
+    },
+    "median_seconds": 5.138,
+    "observations": [
+      {
+        "case": "A1",
+        "mode": "phrase",
+        "elapsed_seconds": 5.63,
+        "http_status": 200
+      },
+      {
+        "case": "A2",
+        "mode": "exact",
+        "elapsed_seconds": 3.023,
+        "http_status": 200
+      },
+      {
+        "case": "A3",
+        "mode": "phrase",
+        "elapsed_seconds": 5.123,
+        "http_status": 200
+      },
+      {
+        "case": "A4",
+        "mode": "exact",
+        "elapsed_seconds": 3.171,
+        "http_status": 200
+      },
+      {
+        "case": "A5",
+        "mode": "free",
+        "elapsed_seconds": 5.202,
+        "http_status": 200
+      },
+      {
+        "case": "A6",
+        "mode": "exact",
+        "elapsed_seconds": 5.152,
+        "http_status": 200
+      }
+    ],
+    "purchases": 0,
+    "orders": 0,
+    "sms_outbox_entries": 0
+  },
+  "fixed_transport_comparison": {
+    "description": "Offline Django request-to-response measurements, not production telemetry.",
+    "baseline_commit": "ee343896be4e7807098d5448650035a49f387655 (v3.7.0)",
+    "module_sha256": {
+      "before": "90965e4d25468c88b20fb96aedc3580d93878b0d331914e1d920033f1dd53a1b",
+      "after": "13cc44e681444a5f4f537848dd87c646ad5f7aeb63d931396e250ff2395b8b6d"
+    },
+    "method": "Django Client with CSRF, synthetic verified Account, real middleware/views/ORM/moderation/signature/quota, SQLite, no network; urllib opener.open wall-clock delays; GAPGPT_TIMEOUT_SECONDS=10",
+    "scenarios": {
+      "exact-fast": {
+        "route": "/api/v1/messages/text-trials",
+        "fixed_delays_seconds": [
+          0.8,
+          0.6
+        ],
+        "before": {
+          "n": 3,
+          "http": [
+            200,
+            200,
+            200
+          ],
+          "end_to_end_seconds": [
+            1.4496,
+            1.4699,
+            1.4263
+          ],
+          "median_seconds": 1.45,
+          "median_transport_overlap_seconds": 0.0,
+          "stage_calls": [
+            2,
+            2,
+            2
+          ],
+          "created_previews": 3
+        },
+        "after": {
+          "n": 3,
+          "http": [
+            200,
+            200,
+            200
+          ],
+          "end_to_end_seconds": [
+            0.8295,
+            0.8159,
+            0.8153
+          ],
+          "median_seconds": 0.816,
+          "median_transport_overlap_seconds": 0.605,
+          "stage_calls": [
+            2,
+            2,
+            2
+          ],
+          "created_previews": 3
+        }
+      },
+      "free-fast": {
+        "route": "/api/v1/messages/text-trials",
+        "fixed_delays_seconds": [
+          0.8,
+          0.6
+        ],
+        "before": {
+          "n": 3,
+          "http": [
+            200,
+            200,
+            200
+          ],
+          "end_to_end_seconds": [
+            1.4281,
+            1.4355,
+            1.43
+          ],
+          "median_seconds": 1.43,
+          "median_transport_overlap_seconds": 0.0,
+          "stage_calls": [
+            2,
+            2,
+            2
+          ],
+          "created_previews": 3
+        },
+        "after": {
+          "n": 3,
+          "http": [
+            200,
+            200,
+            200
+          ],
+          "end_to_end_seconds": [
+            1.417,
+            1.4218,
+            1.4201
+          ],
+          "median_seconds": 1.42,
+          "median_transport_overlap_seconds": 0.0,
+          "stage_calls": [
+            2,
+            2,
+            2
+          ],
+          "created_previews": 3
+        }
+      },
+      "recipient-fast": {
+        "route": "/api/v1/messages/preview",
+        "fixed_delays_seconds": [
+          0.8,
+          0.6
+        ],
+        "before": {
+          "n": 1,
+          "http": [
+            200
+          ],
+          "end_to_end_seconds": [
+            1.4264
+          ],
+          "median_seconds": 1.426,
+          "median_transport_overlap_seconds": 0.0,
+          "stage_calls": [
+            2
+          ],
+          "created_previews": 1
+        },
+        "after": {
+          "n": 1,
+          "http": [
+            200
+          ],
+          "end_to_end_seconds": [
+            1.42
+          ],
+          "median_seconds": 1.42,
+          "median_transport_overlap_seconds": 0.0,
+          "stage_calls": [
+            2
+          ],
+          "created_previews": 1
+        }
+      },
+      "generation_mismatch": {
+        "route": "/api/v1/messages/text-trials",
+        "fixed_delays_seconds": [
+          0.12,
+          0.08
+        ],
+        "before": {
+          "n": 1,
+          "http": [
+            422
+          ],
+          "end_to_end_seconds": [
+            0.137
+          ],
+          "median_seconds": 0.137,
+          "median_transport_overlap_seconds": 0.0,
+          "stage_calls": [
+            1
+          ],
+          "created_previews": 0
+        },
+        "after": {
+          "n": 1,
+          "http": [
+            422
+          ],
+          "end_to_end_seconds": [
+            0.1349
+          ],
+          "median_seconds": 0.135,
+          "median_transport_overlap_seconds": 0.085,
+          "stage_calls": [
+            2
+          ],
+          "created_previews": 0
+        }
+      },
+      "generation_negative": {
+        "route": "/api/v1/messages/text-trials",
+        "fixed_delays_seconds": [
+          0.12,
+          0.08
+        ],
+        "before": {
+          "n": 1,
+          "http": [
+            422
+          ],
+          "end_to_end_seconds": [
+            0.1335
+          ],
+          "median_seconds": 0.134,
+          "median_transport_overlap_seconds": 0.0,
+          "stage_calls": [
+            1
+          ],
+          "created_previews": 0
+        },
+        "after": {
+          "n": 1,
+          "http": [
+            422
+          ],
+          "end_to_end_seconds": [
+            0.1324
+          ],
+          "median_seconds": 0.132,
+          "median_transport_overlap_seconds": 0.085,
+          "stage_calls": [
+            2
+          ],
+          "created_previews": 0
+        }
+      },
+      "review_negative": {
+        "route": "/api/v1/messages/text-trials",
+        "fixed_delays_seconds": [
+          0.12,
+          0.08
+        ],
+        "before": {
+          "n": 1,
+          "http": [
+            422
+          ],
+          "end_to_end_seconds": [
+            0.2196
+          ],
+          "median_seconds": 0.22,
+          "median_transport_overlap_seconds": 0.0,
+          "stage_calls": [
+            2
+          ],
+          "created_previews": 0
+        },
+        "after": {
+          "n": 1,
+          "http": [
+            422
+          ],
+          "end_to_end_seconds": [
+            0.0938
+          ],
+          "median_seconds": 0.094,
+          "median_transport_overlap_seconds": 0.085,
+          "stage_calls": [
+            2
+          ],
+          "created_previews": 0
+        }
+      },
+      "review_incomplete": {
+        "route": "/api/v1/messages/text-trials",
+        "fixed_delays_seconds": [
+          0.12,
+          0.08
+        ],
+        "before": {
+          "n": 1,
+          "http": [
+            503
+          ],
+          "end_to_end_seconds": [
+            0.2267
+          ],
+          "median_seconds": 0.227,
+          "median_transport_overlap_seconds": 0.0,
+          "stage_calls": [
+            2
+          ],
+          "created_previews": 0
+        },
+        "after": {
+          "n": 1,
+          "http": [
+            503
+          ],
+          "end_to_end_seconds": [
+            0.0932
+          ],
+          "median_seconds": 0.093,
+          "median_transport_overlap_seconds": 0.085,
+          "stage_calls": [
+            2
+          ],
+          "created_previews": 0
+        }
+      },
+      "exact-slow": {
+        "route": "/api/v1/messages/text-trials",
+        "fixed_delays_seconds": [
+          12.0,
+          9.5
+        ],
+        "before": {
+          "n": 1,
+          "http": [
+            503
+          ],
+          "end_to_end_seconds": [
+            20.0147
+          ],
+          "median_seconds": 20.015,
+          "median_transport_overlap_seconds": 0.0,
+          "stage_calls": [
+            2
+          ],
+          "created_previews": 0
+        },
+        "after": {
+          "n": 1,
+          "http": [
+            200
+          ],
+          "end_to_end_seconds": [
+            12.0141
+          ],
+          "median_seconds": 12.014,
+          "median_transport_overlap_seconds": 9.505,
+          "stage_calls": [
+            2
+          ],
+          "created_previews": 1
+        }
+      },
+      "free-slow": {
+        "route": "/api/v1/messages/text-trials",
+        "fixed_delays_seconds": [
+          12.0,
+          9.5
+        ],
+        "before": {
+          "n": 1,
+          "http": [
+            503
+          ],
+          "end_to_end_seconds": [
+            20.0122
+          ],
+          "median_seconds": 20.012,
+          "median_transport_overlap_seconds": 0.0,
+          "stage_calls": [
+            2
+          ],
+          "created_previews": 0
+        },
+        "after": {
+          "n": 1,
+          "http": [
+            200
+          ],
+          "end_to_end_seconds": [
+            21.5171
+          ],
+          "median_seconds": 21.517,
+          "median_transport_overlap_seconds": 0.0,
+          "stage_calls": [
+            2
+          ],
+          "created_previews": 1
+        }
+      },
+      "recipient-slow-generation": {
+        "route": "/api/v1/messages/preview",
+        "fixed_delays_seconds": [
+          22.0,
+          8.0
+        ],
+        "before": {
+          "n": 1,
+          "http": [
+            503
+          ],
+          "end_to_end_seconds": [
+            20.0279
+          ],
+          "median_seconds": 20.028,
+          "median_transport_overlap_seconds": 0.0,
+          "stage_calls": [
+            1
+          ],
+          "created_previews": 0
+        },
+        "after": {
+          "n": 1,
+          "http": [
+            200
+          ],
+          "end_to_end_seconds": [
+            30.0519
+          ],
+          "median_seconds": 30.052,
+          "median_transport_overlap_seconds": 0.0,
+          "stage_calls": [
+            2
+          ],
+          "created_previews": 1
+        }
+      }
+    },
+    "first_exception_controls_final_only": [
+      {
+        "scenario": "generation_negative_early",
+        "path": "/api/v1/messages/text-trials",
+        "gen_s": 0.08,
+        "review_s": 2.0,
+        "elapsed_s": 0.1182,
+        "http": 422,
+        "error_code": "moderation_rejected",
+        "previews_created": 0,
+        "reservations": 1,
+        "calls": 2,
+        "overlap_s": 0.0848,
+        "stages": [
+          {
+            "stage": "generation",
+            "start_s": 0.0248,
+            "timeout_s": 24.9984,
+            "end_s": 0.1099,
+            "outcome": "complete"
+          },
+          {
+            "stage": "review",
+            "start_s": 0.0251,
+            "timeout_s": 24.998,
+            "end_s": 2.0302,
+            "outcome": "complete"
+          }
+        ]
+      },
+      {
+        "scenario": "review_negative_early",
+        "path": "/api/v1/messages/text-trials",
+        "gen_s": 2.0,
+        "review_s": 0.08,
+        "elapsed_s": 0.0939,
+        "http": 422,
+        "error_code": "moderation_rejected",
+        "previews_created": 0,
+        "reservations": 1,
+        "calls": 2,
+        "overlap_s": 0.0814,
+        "stages": [
+          {
+            "stage": "generation",
+            "start_s": 0.008,
+            "timeout_s": 24.9994,
+            "end_s": 2.0131,
+            "outcome": "complete"
+          },
+          {
+            "stage": "review",
+            "start_s": 0.0082,
+            "timeout_s": 24.9992,
+            "end_s": 0.0896,
+            "outcome": "complete"
+          }
+        ]
+      }
+    ],
+    "side_effects": {
+      "before": {
+        "orders": 0,
+        "outbox": 0,
+        "payments": 0,
+        "credit_purchases": 0,
+        "real_network_attempts": 0
+      },
+      "after": {
+        "orders": 0,
+        "outbox": 0,
+        "payments": 0,
+        "credit_purchases": 0,
+        "real_network_attempts": 0
+      }
+    }
+  },
+  "production_build_proxy_local": {
+    "setup": "Built Next.js frontend on loopback with a synthetic HTTP upstream, one POST per route, fixed 32-second response delay. No live site or provider calls.",
+    "configured_upstream_timeout_ms": 43000,
+    "responses": [
+      {
+        "route": "/api/v1/messages/preview",
+        "elapsed_seconds": 32.135,
+        "status": 200
+      },
+      {
+        "route": "/api/v1/messages/text-trials",
+        "elapsed_seconds": 32.136,
+        "status": 200
+      }
+    ]
+  }
+}

@@ -5,6 +5,7 @@ import {
   normalizePhone,
   validPhone,
   isPending,
+  perMessagePrice,
   statusLabel,
 } from "../lib/format.ts";
 
@@ -50,4 +51,10 @@ test("only pending orders trigger polling and unknown status makes no delivery c
   assert.equal(statusLabel("delivered_demo"), "ارسال شبیه‌سازی شد");
   assert.equal(isPending("failed"), false);
   assert.equal(statusLabel("unknown-provider-response"), "در حال بررسی");
+});
+
+test("package unit prices distinguish exact, rounded and sub-toman values", () => {
+  assert.equal(perMessagePrice(30000, 9), "حدود ۳٬۳۳۳ تومان");
+  assert.equal(perMessagePrice(2000000, 1000), "۲٬۰۰۰ تومان");
+  assert.equal(perMessagePrice(1, 5), "کمتر از ۱ تومان");
 });

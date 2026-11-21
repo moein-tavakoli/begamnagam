@@ -9,6 +9,20 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 3.4.2 — 2026-11-21 — Clarify package prices and closed checkout before sign-in
+
+- Show the available website payment state before guests select a package. Keep
+  closed packages inspectable and put previous-purchase sign-in behind a separate
+  action. Display the per-message price alongside the total and explain sender
+  recognizability and who pays when using a personal feedback link.
+- Record the public catalog, purchase review and isolated paired study in the
+  [Persian purchasing assessment](deliverables/purchase-study-2026-11-21/report.fa.html).
+  The study measures hypothetical decisions under the observed prices and closed
+  checkout. The public site reported 3.4.0 during the study.
+- Validate the home-to-review journey on desktop and 375px mobile, isolated OTP
+  and simulated purchase history, 131 frontend tests, TypeScript and 40 package
+  and manual-payment tests on PostgreSQL/Redis. Local release.
+
 ## 3.4.1 — 2026-11-21 — Reduce read load and fix queue races
 
 - Create anonymous website sessions only when an action needs one. Keep CSRF

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { api, approvedPaymentRedirect, createIdempotencyKey, errorMessage, type CreditPurchase } from '@/lib/api';
 import { toman } from '@/lib/format';
-import { purchaseIntentAfterResponse, type PurchaseIntent } from '@/lib/credit-purchases';
+import { creditPaymentMethods, purchaseIntentAfterResponse, type PurchaseIntent } from '@/lib/credit-purchases';
 import { openPurchase, receiptText, safeReceiptChannels } from '@/lib/manual-payments';
 import { useApp } from './app-provider';
 import { AuthGate } from './auth-gate';
@@ -31,8 +31,9 @@ function CreditCheckout() {
   const packages=(data?.message_packages??[]).filter(item=>item.active);
   const selectedPackage=packages.find(item=>item.id===selected);
   const pending=purchases.filter(item=>openPurchase(item.status));
-  const gateway=!!options?.gateway_enabled || !!(data?.demo_mode && data.payment_backend==='demo');
-  const enabled=method==='card' ? !!options?.card_enabled : gateway;
+  const { gateway, card, status: paymentStatus } = creditPaymentMethods(data);
+  const unavailableLabel = paymentStatus === 'unknown' ? 'وضعیت نامشخص' : 'فعلاً غیرفعال';
+  const enabled=method==='card' ? card : gateway;
   const load=useCallback(async()=>{
     const current=++generation.current;
     try {
@@ -50,7 +51,7 @@ function CreditCheckout() {
   useEffect(()=>{
     if(!selected && packages.length){const id=Number(new URLSearchParams(window.location.search).get('package'));setSelected(packages.some(p=>p.id===id)?id:packages[0].id);}
   },[selected,packages]);
-  useEffect(()=>{if(!gateway && options?.card_enabled)setMethod('card');},[gateway,options?.card_enabled]);
+  useEffect(()=>{if(!gateway && card)setMethod('card');},[gateway,card]);
   function accept(result:CreditPurchase){
     setPurchase(result);setPurchases(items=>[result,...items.filter(p=>p.id!==result.id)]);
     if(intent.current) intent.current=purchaseIntentAfterResponse(intent.current,result);
@@ -96,15 +97,18 @@ function CreditCheckout() {
       <section className={styles.panel}>
         <h2 className={styles.step}><span>۲</span> روش پرداخت</h2>
         <fieldset className={styles.choices} disabled={busy || !!pending.length || uncertain} aria-label="انتخاب روش پرداخت">
-          <label className={styles.choice}><input type="radio" name="payment-method" value="gateway" checked={method==='gateway'} disabled={!gateway} onChange={()=>{setMethod('gateway');intent.current=null;setConsent(false);}}/><span><strong>درگاه بانکی</strong><small>{gateway?'فعال‌سازی خودکار بسته':'فعلاً غیرفعال'}</small></span></label>
-          <label className={styles.choice}><input type="radio" name="payment-method" value="card" checked={method==='card'} disabled={!options?.card_enabled} onChange={()=>{setMethod('card');intent.current=null;setConsent(false);}}/><span><strong>کارت‌به‌کارت</strong><small>{options?.card_enabled?'پس از تأیید ادمین':'فعلاً غیرفعال'}</small></span></label>
+          <label className={styles.choice}><input type="radio" name="payment-method" value="gateway" checked={method==='gateway'} disabled={!gateway} onChange={()=>{setMethod('gateway');intent.current=null;setConsent(false);}}/><span><strong>درگاه بانکی</strong><small>{gateway?'فعال‌سازی خودکار بسته':unavailableLabel}</small></span></label>
+          <label className={styles.choice}><input type="radio" name="payment-method" value="card" checked={method==='card'} disabled={!card} onChange={()=>{setMethod('card');intent.current=null;setConsent(false);}}/><span><strong>کارت‌به‌کارت</strong><small>{card?'پس از تأیید ادمین':unavailableLabel}</small></span></label>
         </fieldset>
-        {!gateway && !options?.card_enabled && <p className={styles.notice}>خرید فعلاً باز نیست. می‌توانی بسته‌ها را ببینی و از هدیه‌های باقی‌مانده استفاده کنی.</p>}
+        {paymentStatus === 'closed' && <p className={styles.notice}>خرید فعلاً باز نیست. می‌توانی بسته‌ها را ببینی و از هدیه‌های باقی‌مانده استفاده کنی.</p>}
         {data?.authenticated ? <><label className={styles.consent}><input type="checkbox" checked={consent} disabled={busy || !!pending.length} onChange={e=>setConsent(e.target.checked)}/><span>اعتبار خرید برای خدمات سایت است و برداشت بانکی ندارد. برگشت هزینهٔ پرداخت پولی به کیف پول انجام می‌شود؛ اعتبار ارسال ناموفق قطعی به بسته برمی‌گردد. <Link href="/privacy">قوانین استفاده</Link> را می‌پذیرم.</span></label>
           <div className={styles.total}><span>مبلغ نهایی بسته</span><strong>{selectedPackage?toman(selectedPackage.price_toman):'—'}</strong></div>
           <button className={`button primary ${styles.pay}`} type="button" disabled={busy || !!pending.length || !listReady || !selectedPackage || !consent || !enabled} onClick={()=>void buy()}>{busy?<><span className="spinner"/> در حال ثبت…</>:uncertain?'تکرار همان درخواست':method==='card'?'دریافت شمارهٔ کارت و ثبت خرید':data?.demo_mode?'خرید آزمایشی بسته':'پرداخت با درگاه بانکی'}<Icon name="arrow" size={18}/></button>
           {!listReady && <button className="text-button" type="button" disabled={busy} onClick={()=>void load()}>دریافت وضعیت خریدهای قبلی</button>}
-          <p className={styles.muted}>{method==='card'?'رسید را در بله یا تلگرام برای پشتیبانی می‌فرستی؛ پس از تأیید، اعتبار اضافه می‌شود.':'بعد از تأیید خودِ درگاه، بسته خودکار فعال می‌شود؛ ارسال رسید مانع فعال‌شدن آن نیست.'}</p></> : <AuthGate purpose="برای خرید بسته، شمارهٔ خودت را تأیید کن."/>}
+          <p className={styles.muted}>{method==='card'?'رسید را در بله یا تلگرام برای پشتیبانی می‌فرستی؛ پس از تأیید، اعتبار اضافه می‌شود.':'بعد از تأیید خودِ درگاه، بسته خودکار فعال می‌شود؛ ارسال رسید مانع فعال‌شدن آن نیست.'}</p></> : paymentStatus === 'available' ? <AuthGate purpose="برای خرید بسته، شمارهٔ خودت را تأیید کن."/> : data && <details className={styles.priorLogin}>
+          <summary>پیگیری خرید قبلی</summary>
+          <AuthGate purpose="برای دیدن خریدهای قبلی، شمارهٔ خودت را تأیید کن."/>
+        </details>}
       </section>
       </>}
     </div>

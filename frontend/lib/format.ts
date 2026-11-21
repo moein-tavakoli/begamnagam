@@ -22,6 +22,12 @@ export function toman(amount: number): string {
   return `${new Intl.NumberFormat("fa-IR").format(amount)} تومان`;
 }
 
+export function perMessagePrice(total: number, count: number): string {
+  if (total < count) return "کمتر از ۱ تومان";
+  const average = total / count;
+  return Number.isInteger(average) ? toman(average) : `حدود ${toman(Math.round(average))}`;
+}
+
 export const statusLabels: Record<string, string> = {
   awaiting_payment: "منتظر پرداخت",
   pending_payment: "منتظر پرداخت",

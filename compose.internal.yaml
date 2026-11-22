@@ -175,6 +175,7 @@ services:
       NODE_ENV: production
       NODE_OPTIONS: --max-old-space-size=160
       HOSTNAME: 127.0.0.1
+      MONITORING_TV_ENABLED: ${MONITORING_TV_ENABLED:-0}
     init: true
     read_only: true
     tmpfs: [/tmp, /app/.next/cache]

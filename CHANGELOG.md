@@ -9,6 +9,14 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 3.8.0 — 2026-11-22 — Play the existing monitoring board in TV Studio
+
+- Reuse the existing Persian monitoring components on a dedicated LAN route.
+  Permit only the two TV Studio player origins to embed its document.
+- Add an opt-in Nginx listener for the document, static assets and the
+  monitoring GET API. Reuse the existing exact-IP checks for data access.
+  [LAN setup and verification](docs/monitoring.fa.md)
+
 ## 3.7.1 — 2026-11-21 — Shorter waits and reliable review time for SMS previews
 
 - Reduce exact-wording GapGPT preview latency by generating and independently

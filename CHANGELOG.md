@@ -9,6 +9,15 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 3.8.2 — 2026-11-22 — Keep the TV board at full width
+
+- Let the board use the full frame width. Open the lower panels with native
+  vertical scrolling and wrap the signup cards in narrow frames.
+  The height-based scaling had narrowed the board to
+  365 pixels in a 1024-pixel iframe.
+- Verified full-width rendering and vertical scrolling at 1024×768,
+  768×1024 and 1280×720 with a local browser fixture.
+
 ## 3.8.1 — 2026-11-22 — Play the TV board from the service IP
 
 - Serve the opt-in TV board and its read-only data through the existing

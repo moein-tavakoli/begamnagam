@@ -9,6 +9,13 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 3.8.1 — 2026-11-22 — Play the TV board from the service IP
+
+- Serve the opt-in TV board and its read-only data through the existing
+  BegamNagam Traefik listener at the service's LAN address.
+- Replace the proposed central Nginx listener. The player URL uses the normal
+  HTTP port at `192.168.1.123`. [LAN setup](docs/monitoring.fa.md)
+
 ## 3.8.0 — 2026-11-22 — Play the existing monitoring board in TV Studio
 
 - Reuse the existing Persian monitoring components on a dedicated LAN route.

@@ -66,6 +66,7 @@ services:
       INTERNAL_DEMO_HOST: ${INTERNAL_DEMO_HOST:?Set the private CT address}
       PUBLIC_DEMO_HOST: ${PUBLIC_DEMO_HOST:-}
       CENTRAL_NGINX_IP: ${CENTRAL_NGINX_IP:-127.0.0.1}
+      MONITORING_TV_ENABLED: ${MONITORING_TV_ENABLED:-0}
     network_mode: host
     extra_hosts: *local-hosts
     volumes:

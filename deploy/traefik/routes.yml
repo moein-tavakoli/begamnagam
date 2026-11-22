@@ -2,6 +2,8 @@
 {{ $ct := env "INTERNAL_DEMO_HOST" }}
 {{ $public := env "PUBLIC_DEMO_HOST" }}
 {{ $edge := env "CENTRAL_NGINX_IP" }}
+{{ $tv := eq (env "MONITORING_TV_ENABLED") "1" }}
+{{ $tvHost := printf "Host(`%s`) && !ClientIP(`%s`)" $ct (or $edge "127.0.0.1") }}
 http:
   routers:
     internal-redirect:
@@ -9,6 +11,26 @@ http:
       rule: 'Host(`{{ $ct }}`)'
       middlewares: [internal-https]
       service: noop@internal
+{{ if $tv }}
+    internal-tv-document:
+      entryPoints: [web]
+      rule: '{{ $tvHost }} && Path(`/manage/monitoring/tv`) && (Method(`GET`) || Method(`HEAD`))'
+      priority: 120
+      middlewares: [internal-tv-lan, internal-tv-headers, internal-tv-frame]
+      service: frontend
+    internal-tv-data:
+      entryPoints: [web]
+      rule: '{{ $tvHost }} && Path(`/api/v1/manage/monitoring`) && Method(`GET`)'
+      priority: 120
+      middlewares: [internal-tv-lan, internal-tv-headers]
+      service: backend
+    internal-tv-assets:
+      entryPoints: [web]
+      rule: '{{ $tvHost }} && (PathPrefix(`/_next/static/`) || PathPrefix(`/fonts/vazirmatn-fd/`)) && (Method(`GET`) || Method(`HEAD`))'
+      priority: 120
+      middlewares: [internal-tv-lan, internal-tv-headers]
+      service: frontend
+{{ end }}
     internal-api:
       entryPoints: [websecure]
       rule: 'Host(`{{ $ct }}`) && (PathPrefix(`/api/`) || Path(`/admin`) || PathPrefix(`/admin/`) || PathPrefix(`/static/admin/`) || Path(`/healthz`))'
@@ -50,6 +72,33 @@ http:
           Forwarded: ''
           X-Verified-Client-IP: ''
           X-Real-IP: ''
+          X-Begam-Monitoring-TV: ''
+{{ if $tv }}
+    internal-tv-lan:
+      ipAllowList:
+        # Direct LAN peers only. The router excludes the trusted central edge.
+        sourceRange: ['192.168.1.0/24']
+    internal-tv-headers:
+      headers:
+        customRequestHeaders:
+          Cookie: ''
+          Authorization: ''
+          Forwarded: ''
+          X-Verified-Client-IP: ''
+          X-Real-IP: ''
+          X-Forwarded-Proto: https
+          X-Forwarded-Host: '{{ $ct }}'
+          X-Begam-Monitoring-TV: '1'
+        customResponseHeaders:
+          Set-Cookie: ''
+          Strict-Transport-Security: ''
+    internal-tv-frame:
+      headers:
+        customResponseHeaders:
+          # The TV document carries its own exact frame-ancestors policy.
+          X-Frame-Options: ''
+          Cross-Origin-Opener-Policy: ''
+{{ end }}
 {{ if $public }}
     edge-only:
       ipAllowList:
@@ -64,6 +113,7 @@ http:
           Forwarded: ''
           X-Verified-Client-IP: ''
           X-Real-IP: ''
+          X-Begam-Monitoring-TV: ''
 {{ end }}
   services:
     backend:

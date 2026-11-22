@@ -17,6 +17,10 @@ Historical release reports below contain deployment evidence and limitations.
   365 pixels in a 1024-pixel iframe.
 - Verified full-width rendering and vertical scrolling at 1024×768,
   768×1024 and 1280×720 with a local browser fixture.
+- Deployed on 2026-11-22 after PR #16 passed CI. Confirmed public HTTPS
+  health, the LAN board's approved-IP data access, and scrolling inside
+  the TV Studio player in desktop Chromium with synthetic chart data.
+  [Deployment evidence](docs/deployments/ct115-3.8.2.json)
 
 ## 3.8.1 — 2026-11-22 — Play the TV board from the service IP
 

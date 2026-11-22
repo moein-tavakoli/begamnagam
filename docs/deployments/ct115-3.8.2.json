@@ -1,0 +1,194 @@
+{
+  "version": "3.8.2",
+  "source_commit": "04bdaffe941144e604a26872ebb89456efbeb78f",
+  "deployed": true,
+  "verified_at_utc": "2026-11-22T08:54:40.758052+00:00",
+  "backend_image": "sha256:1cb7bf251d3de155167086a1103ae55f2d0ddd2d67f149afbcc2a66fbc39de9c",
+  "frontend_image": "sha256:86e190302a52fc7287adebc67dd0704e6669ee36e281fc23eaf3cb8f2619b334",
+  "asset_bridge_image": "sha256:188479f35b57c59fc2ad77f9be7f56a38629ea4a9d6a448f696039f5bfc629b8",
+  "services": {
+    "postgres": "healthy",
+    "redis": "healthy",
+    "rabbitmq": "healthy",
+    "proxy": "healthy",
+    "backend": "healthy",
+    "worker": "running",
+    "beat": "running",
+    "frontend": "healthy",
+    "frontend2": "healthy",
+    "frontend3": "healthy",
+    "frontend4": "healthy",
+    "frontend5": "healthy",
+    "frontend6": "healthy"
+  },
+  "frontends": {
+    "frontend": {
+      "version": "3.8.2",
+      "assets_verified": 31,
+      "recipient_routes": "PASS"
+    },
+    "frontend2": {
+      "version": "3.8.2",
+      "assets_verified": 31,
+      "recipient_routes": "PASS"
+    },
+    "frontend3": {
+      "version": "3.8.2",
+      "assets_verified": 31,
+      "recipient_routes": "PASS"
+    },
+    "frontend4": {
+      "version": "3.8.2",
+      "assets_verified": 31,
+      "recipient_routes": "PASS"
+    },
+    "frontend5": {
+      "version": "3.8.2",
+      "assets_verified": 31,
+      "recipient_routes": "PASS"
+    },
+    "frontend6": {
+      "version": "3.8.2",
+      "assets_verified": 31,
+      "recipient_routes": "PASS"
+    }
+  },
+  "scoped_postgresql_tests": 34,
+  "frontend_tests": 146,
+  "migrations_applied": [],
+  "identity_requests_enabled": false,
+  "identity_setting_rows_preserved": true,
+  "encrypted_backup_restore_verified": true,
+  "data_and_proxy_containers_preserved": true,
+  "lan_tv_board": {
+    "direct_url": "http://192.168.1.123/manage/monitoring/tv",
+    "status": 200,
+    "approved_ip_monitoring_data": true,
+    "frame_ancestors": [
+      "http://tv.ir",
+      "http://192.168.1.117:8080"
+    ],
+    "public_route_status": 404,
+    "ordinary_management_https_redirect": true,
+    "firewall_preserved": true
+  },
+  "live_provider_settings_preserved": true,
+  "https": {
+    "version": "3.8.2",
+    "transport": "domain_https_via_internal_nginx",
+    "tls_certificate_verified": true,
+    "feature_bundles": "PASS",
+    "manifest": "PASS",
+    "service_worker": "PASS",
+    "otp_is_real": true,
+    "package_checkout_enabled": false,
+    "anonymous_private_documentation": "denied",
+    "management_headers": "PASS",
+    "sms_edge": {
+      "https_direct_code_ready": true,
+      "http_direct_code_ready": true,
+      "prefixed_links": "PASS",
+      "unchanged_older_root_codes": "PASS",
+      "tls_verified": true
+    }
+  },
+  "management_settings_requires_authentication": true,
+  "verification_sms_sent": 0,
+  "verification_otp_sent": 0,
+  "verification_payments": 0,
+  "promotion": {
+    "pr": "https://github.com/moein-tavakoli/begamnagam/pull/16",
+    "merge_commit": "44b6786d543810bfb9a1f2a32096ae75b68093ae",
+    "ci": {
+      "backend": "PASS",
+      "frontend": "PASS",
+      "compose": "PASS"
+    }
+  },
+  "public_https": {
+    "public_hostname": "begamnagam.ir",
+    "public_version": "3.8.2",
+    "public_health": "ok",
+    "public_tv_board_status": 404,
+    "anonymous_trial_guard_status": 405,
+    "private_trial_page_headers": "PASS",
+    "public_provider_profile_matches_baseline": true,
+    "paid_checkout_enabled": false,
+    "live_otp_configured": true,
+    "preview_waiting_ui_asset_sha256": "968b07fb398d922d9683a7711babd4d8fc028d2a0de904dd3843b00ef8bacc8c",
+    "preview_waiting_ui_verified_over_public_https": true,
+    "check_origin": "CT115_via_external_public_DNS"
+  },
+  "public_browser": [
+    {
+      "width": 375,
+      "version": "3.8.2",
+      "transport": "domain_https_via_internal_nginx",
+      "pricing_club_example": true,
+      "trial_opens_verified_login": true
+    },
+    {
+      "width": 1440,
+      "version": "3.8.2",
+      "transport": "domain_https_via_internal_nginx",
+      "pricing_club_example": true,
+      "trial_opens_verified_login": true
+    }
+  ],
+  "lan_tv_browser": {
+    "board_url": "http://192.168.1.123/manage/monitoring/tv",
+    "player_origin": "http://192.168.1.117:8080",
+    "live_player_assets": true,
+    "actual_lan_board": true,
+    "charts_rendered_with_synthetic_data": true,
+    "live_unauthorized_iframe_status": 401,
+    "viewports": [
+      [
+        1024,
+        768
+      ],
+      [
+        768,
+        1024
+      ],
+      [
+        1280,
+        720
+      ]
+    ],
+    "measurements": [
+      {
+        "width": 1024,
+        "height": 768,
+        "viewport": 1024,
+        "documentWidth": 1024,
+        "boardWidth": 1024,
+        "viewportHeight": 768,
+        "documentHeight": 2338
+      },
+      {
+        "width": 768,
+        "height": 1024,
+        "viewport": 768,
+        "documentWidth": 768,
+        "boardWidth": 768,
+        "viewportHeight": 1024,
+        "documentHeight": 2423
+      },
+      {
+        "width": 1280,
+        "height": 720,
+        "viewport": 1280,
+        "documentWidth": 1280,
+        "boardWidth": 1280,
+        "viewportHeight": 720,
+        "documentHeight": 1057
+      }
+    ],
+    "full_width_and_vertical_scroll": true,
+    "scene_change_removes_frame": true,
+    "nonapproved_network_status": 401,
+    "forbidden_parent_blocked": true,
+    "physical_vidaa_verified": false
+  }
+}

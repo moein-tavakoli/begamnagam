@@ -9,6 +9,21 @@ Historical release reports below contain deployment evidence and limitations.
 
 ## Unreleased
 
+## 3.8.1 — 2026-11-22 — Play the TV board from the service IP
+
+- Serve the opt-in TV board and its read-only data through the existing
+  BegamNagam Traefik listener at the service's LAN address.
+- Replace the proposed central Nginx listener. The player URL uses the normal
+  HTTP port at `192.168.1.123`. [LAN setup](docs/monitoring.fa.md)
+
+## 3.8.0 — 2026-11-22 — Play the existing monitoring board in TV Studio
+
+- Reuse the existing Persian monitoring components on a dedicated LAN route.
+  Permit only the two TV Studio player origins to embed its document.
+- Add an opt-in Nginx listener for the document, static assets and the
+  monitoring GET API. Reuse the existing exact-IP checks for data access.
+  [LAN setup and verification](docs/monitoring.fa.md)
+
 ## 3.7.1 — 2026-11-21 — Shorter waits and reliable review time for SMS previews
 
 - Reduce exact-wording GapGPT preview latency by generating and independently
@@ -21,6 +36,10 @@ Historical release reports below contain deployment evidence and limitations.
   through the Next.js proxy, and six synthetic drafts with the real GapGPT
   provider (twelve calls, six approved first attempts).
   [Measured timings and regression scenarios](docs/deployments/local-preview-latency-3.7.1.json)
+- Deployed on 2026-11-21 after promotion PR #14. Verified the production image
+  with 882 PostgreSQL tests, all six frontends, public health and the updated
+  preview UI bundle. The public pricing-to-trial path passed on mobile and desktop.
+  [Deployment evidence](docs/deployments/ct115-3.7.1.json)
 
 ## 3.7.0 — 2026-11-21 — Keep chosen words during pre-purchase review
 

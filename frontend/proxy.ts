@@ -1,15 +1,26 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { contentSecurityPolicy } from "@/lib/security";
+import { contentSecurityPolicy, isMonitoringTvRequest, monitoringTvGatewayHeader, monitoringTvPath,
+  monitoringTvRenderHeader } from "@/lib/security";
 import { getSeoConfig, publicPages } from "@/lib/seo";
 
 export function proxy(request: NextRequest) {
   const nonce = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64");
+  const monitoringTv = isMonitoringTvRequest(request.nextUrl.pathname, request.method,
+    process.env.MONITORING_TV_ENABLED, request.headers.get(monitoringTvGatewayHeader));
   const policy = contentSecurityPolicy(nonce, process.env.NODE_ENV === "development",
-    getSeoConfig().baseUrl.protocol === "https:");
+    getSeoConfig().baseUrl.protocol === "https:", { monitoringTv });
+  if (request.nextUrl.pathname === monitoringTvPath && !monitoringTv) {
+    return new NextResponse(null, { status: 404, headers: {
+      "Cache-Control": "no-store", "Content-Security-Policy": policy,
+    } });
+  }
   const headers = new Headers(request.headers);
   // Overwrite attacker-supplied values; these headers authorize no API access.
   headers.set("x-nonce", nonce);
   headers.set("Content-Security-Policy", policy);
+  headers.delete(monitoringTvGatewayHeader);
+  headers.delete(monitoringTvRenderHeader);
+  if (monitoringTv) headers.set(monitoringTvRenderHeader, "1");
   const response = NextResponse.next({ request: { headers } });
   response.headers.set("Content-Security-Policy", policy);
   response.headers.set("Cache-Control", "private, no-store");

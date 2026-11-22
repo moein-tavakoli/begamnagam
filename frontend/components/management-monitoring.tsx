@@ -74,7 +74,7 @@ const signalPulse=keyframes`
   78%, 100% { transform: scale(2.6); opacity: 0; }
 `;
 
-function useMonitoring(interval:number,ready:boolean,onFailure:(error:unknown)=>void) {
+function useMonitoring(interval:number,ready:boolean,onFailure?: (error:unknown)=>void) {
   const [data,setData]=useState<MonitoringData|null>(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[paused,setPaused]=useState('');
   const [reload,setReload]=useState<()=>void>(()=>()=>{});
   useEffect(()=>{
@@ -84,7 +84,7 @@ function useMonitoring(interval:number,ready:boolean,onFailure:(error:unknown)=>
     const poll=startMonitoringPoll<MonitoringData>({intervalMs:interval*1000,active,
       request:async signal=>{if(mounted)setBusy(true);try{return await api<MonitoringData>('/manage/monitoring',{signal});}finally{if(mounted)setBusy(false);}},
       onData:result=>{if(mounted){setData(result);setError('');}},
-      onError:e=>{if(!mounted)return true;if(e instanceof ApiError&&['management_login_required','forbidden'].includes(e.code)){setData(null);setError('دسترسی به مانیتورینگ پایان یافت.');onFailure(e);return true;}setError(errorMessage(e));return false;},
+      onError:e=>{if(!mounted)return true;if(e instanceof ApiError&&['management_login_required','forbidden'].includes(e.code)){setData(null);setError('دسترسی به مانیتورینگ پایان یافت.');onFailure?.(e);return true;}setError(errorMessage(e));return false;},
       schedule:(fn,ms)=>window.setTimeout(fn,ms),cancel:id=>window.clearTimeout(id as number),
     });
     const changed=()=>{setPaused(!navigator.onLine?'ارتباط اینترنت قطع است':document.visibilityState!=='visible'?'به‌روزرسانی در تب پنهان متوقف است':'');if(active())poll.refresh();else poll.pause();};
@@ -217,7 +217,7 @@ function Charts({data}:{data:MonitoringData}) {
       </Panel></Grid>
   </Grid>;
 }
-export function ManagementMonitoring({onFailure}:{onFailure:(error:unknown)=>void}) {
+export function ManagementMonitoring({onFailure,displayOnly=false}:{onFailure?: (error:unknown)=>void;displayOnly?:boolean}) {
   const [interval,setInterval]=useState(30),[ready,setReady]=useState(false);
   useEffect(()=>{try{setInterval(monitoringInterval(localStorage.getItem(settingsKey)));}catch{}setReady(true);},[]);
   const changeInterval=useCallback((value:string)=>{const next=monitoringInterval(value);setInterval(next);try{localStorage.setItem(settingsKey,String(next));}catch{}},[]);
@@ -275,10 +275,10 @@ export function ManagementMonitoring({onFailure}:{onFailure:(error:unknown)=>voi
             sx={{minHeight:48,backgroundImage:'linear-gradient(110deg, #62e6f5, #9fb8ff)',boxShadow:'0 0 18px #62e6f52a','&:hover':{boxShadow:'0 0 22px #62e6f553'},'&.Mui-disabled':{backgroundImage:'none',boxShadow:'none'}}}>
             تازه‌سازی
           </Button>
-          <Button component={Link} href="/manage" variant="outlined" startIcon={<ArrowForwardRounded/>}
+          {!displayOnly&&<Button component={Link} href="/manage" variant="outlined" startIcon={<ArrowForwardRounded/>}
             sx={{gridColumn:'1 / -1',minHeight:48,borderColor:'divider',color:'text.primary','&:hover':{borderColor:'primary.main'}}}>
             بازگشت به مدیریت
-          </Button>
+          </Button>}
         </Box>
       </Stack>
       {busy&&<LinearProgress aria-label="دریافت آمار مانیتورینگ" sx={{position:'absolute',inset:'auto 0 0',height:2}}/>}

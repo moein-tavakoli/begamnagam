@@ -14,6 +14,7 @@ import { Header, Footer, MobileNav, SkipToContent } from "@/components/chrome";
 import { SupportWidget } from "@/components/support-widget";
 import { PWAFoundation } from "@/components/pwa-foundation";
 import { rootMetadata } from "@/lib/seo";
+import { monitoringTvRenderHeader } from "@/lib/security";
 
 export const metadata: Metadata = rootMetadata();
 export const viewport: Viewport = {
@@ -27,7 +28,11 @@ export default async function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   // Reading request headers opts every HTML page into dynamic rendering, so
   // Next applies the current CSP nonce instead of reusing a cached document.
-  const nonce = (await headers()).get("x-nonce") ?? undefined;
+  const requestHeaders = await headers();
+  if (requestHeaders.get(monitoringTvRenderHeader) === "1") {
+    return <html lang="fa" dir="rtl" data-theme="dark"><body>{children}</body></html>;
+  }
+  const nonce = requestHeaders.get("x-nonce") ?? undefined;
   return (
     <html lang="fa" dir="rtl" data-theme="light" suppressHydrationWarning>
       <head>

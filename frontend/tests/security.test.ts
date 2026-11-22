@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { contentSecurityPolicy } from "../lib/security.ts";
+import { contentSecurityPolicy, isMonitoringTvRequest } from "../lib/security.ts";
 import nextConfig from "../next.config.ts";
 
 const nonce = Buffer.alloc(32, 7).toString("base64");
@@ -38,4 +38,22 @@ test("CSP permits development Fast Refresh without forcing HTTPS on HTTP develop
   for (const invalid of ["", "attacker' ; script-src *", "x".repeat(32), nonce + "\n"]) {
     assert.throws(() => contentSecurityPolicy(invalid, false, true));
   }
+});
+
+test("the LAN monitoring document permits only the two TV Studio player origins", () => {
+  const policy = contentSecurityPolicy(nonce, false, true, { monitoringTv: true });
+  assert.ok(policy.includes("frame-ancestors http://tv.ir http://192.168.1.117:8080"));
+  assert.ok(!policy.includes("upgrade-insecure-requests"));
+  assert.ok(policy.includes("form-action 'none'"));
+  assert.ok(contentSecurityPolicy(nonce, false, true).includes("frame-ancestors 'none'"));
+});
+
+test("the framed monitoring policy needs the exact private GET route and enabled gateway", () => {
+  const path = "/manage/monitoring/tv";
+  assert.ok(isMonitoringTvRequest(path, "GET", "1", "1"));
+  assert.ok(isMonitoringTvRequest(path, "HEAD", "1", "1"));
+  assert.ok(!isMonitoringTvRequest(path, "POST", "1", "1"));
+  assert.ok(!isMonitoringTvRequest(path, "GET", "0", "1"));
+  assert.ok(!isMonitoringTvRequest(path, "GET", "1", null));
+  assert.ok(!isMonitoringTvRequest("/manage/monitoring", "GET", "1", "1"));
 });

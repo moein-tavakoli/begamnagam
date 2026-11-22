@@ -301,8 +301,10 @@ export function ManagementMonitoring({onFailure,displayOnly=false}:{onFailure?: 
           ثبت‌نام و فعالیت کاربران
         </Typography>
         <Box role="group" aria-label="کارت‌های ثبت‌نام و فعالیت کاربران" tabIndex={0} sx={{
-          display:'grid',gridAutoFlow:'column',gridAutoColumns:'minmax(9rem,1fr)',
-          gap:{xs:1,sm:1.5},minWidth:0,overflowX:'auto',pb:.5,
+          display:'grid',gap:{xs:1,sm:1.5},minWidth:0,pb:.5,
+          ...(displayOnly
+            ? {gridTemplateColumns:{xs:'repeat(2,minmax(0,1fr))',sm:'repeat(3,minmax(0,1fr))',lg:'repeat(7,minmax(0,1fr))'}}
+            : {gridAutoFlow:'column',gridAutoColumns:'minmax(9rem,1fr)',overflowX:'auto'}),
           '&:focus-visible':{outline:'2px solid var(--focus)',outlineOffset:2},
         }}>
           {signupChannels.map(({id,label}) => (
